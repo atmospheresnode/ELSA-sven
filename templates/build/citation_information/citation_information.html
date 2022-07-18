@@ -1,0 +1,128 @@
+{% extends 'main/base-k.html' %}
+{% load static %}
+
+{% block title_block %}
+Add Citation Information
+{% endblock %}
+
+{% block main_header_block %}
+Add citation information to {{ bundle }}
+{% endblock %}
+
+{% block body_block %}
+
+<!--Row-->
+<div class="row pt-2">
+    <!--Column-->
+    <div class="col-md-12">
+        <h3 class="card-header elegant-color white-text text-center z-depth-2">Add Citation</h3><br/>
+    </div>
+    <!--/.Column-->
+</div>
+<!--/.Row-->
+<!--Row-->
+<div class="row pt-2">
+    <!--Column-->
+    <div class="col-md-8">
+        <form method="post" action="">
+            {% csrf_token %}
+            <div id="form_citation_information">
+                {{ form_citation_information.as_p }}                
+            </div>
+            <input type="submit" value="Add Citation Information"/>
+        </form>
+    </div>
+    <!--/.Column-->
+    <!--Column-->
+    <div class="col-md-3 help">
+        <div class="form_citation_information">
+            <p>Author list info</p>
+            <p>Description info</p>
+            <p>Editor list info</p>
+            <p>Keyword info</p>
+            <p>Publication Year info</p>
+        </div>
+    </div>
+    <!--/.Column-->
+</div>
+<!--/.Row-->
+
+
+<!--Row-->
+<div class="row pt-2">
+    <!--Column-->
+    <div class="col-md-12">
+        <h3 class="card-header elegant-color white-text text-center z-depth-2">Current Citation Information</h3><br/>
+    </div>
+    <!--/.Column-->
+</div>
+<!--/.Row-->
+
+
+<!--Row-->
+<div class="row">
+    {% if citation_information_list %}
+        {% for citation in citation_information_list %}
+            <!--Column-->
+            <div class="col-sm-6 col-md-3">
+                <!--Card-->
+                <div class="card">
+                    <!--Card image-->
+                    <img class="img-fluid" src="{% static 'images/cite.png' %}" alt="Citation Image">
+                    <!--Card content-->
+                    <div class="card-body">
+                        <!--Text-->
+                        <p class="card-text">{{ citation.description }}</p>   
+                        <!--Buttons-->
+                        <a href="{% url 'main:construction' %}">
+                            <button type="button" class="btn btn-default">Delete</button>
+                        </a>                     
+                    </div>
+                    <!--/.Card content-->
+                </div>
+                <!--/.Card-->
+            </div>
+            <!--/.Column-->
+        {% endfor %}
+    {% else %}
+
+        <!--Column-->
+        <div class="col-sm-6 col-md-3">
+            <!--Card-->
+            <div class="card">
+                <!--Card image-->
+                <img class="img-fluid" src="{% static 'images/null.png' %}" alt="Null Citation Image">
+                <!--Card content-->
+                <div class="card-body">
+                    <!--Text-->
+                    <p class="card-text">No Citation Information</p>
+                </div>
+                <!--/.Card content-->
+            </div>
+            <!--/.Card-->
+        </div>
+        <!--/.Column-->
+
+    {% endif %}
+</div>
+<!--/.Row-->
+
+
+<hr/>
+
+
+<!--Row-->
+<div class="row pt-2">
+    <!--Column-->
+    <div class="col-md-12">
+        <a href="{% url 'build:bundle' bundle.pk %}">
+        <button type="button" class="btn btn-default">
+            <i class="fa fa-arrow-circle-left"></i>
+            Back to {{ bundle }}'s Bundle Detail
+        </button>
+        </a>
+    </div>
+    <!--/.Column-->
+</div>
+<!--/.Row-->
+{% endblock %}

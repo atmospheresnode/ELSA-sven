@@ -1,0 +1,130 @@
+{% extends 'main/base-k.html' %}
+{% load staticfiles %}
+
+
+
+
+{% block title_block %}
+App Archive
+{% endblock %}
+
+
+{% block main_header_block %}
+Archive of ELSA's Apps
+{% endblock %}
+
+
+
+
+{% block body_block %}
+    {% if user.is_authenticated %}
+        <!--First row-->
+        <div class="row pt-2">
+            
+            <!--First column of Four-->
+            <div class="col-sm-6 col-md-3">
+                <!--First card -->
+                <a href="{% url 'build:build' %}">
+                <div class="card">
+                   <!--Card image-->
+                    <img class="img-fluid" src="{% static 'images/build.png' %}" alt="Card image cap">
+                    <!--Card content-->
+                    <div class="card-body">
+                        <!--Title-->
+                        <h4 class="card-title">#BUILD</h4>
+                        <!--Text-->
+                        <p class="card-text">Create PDS4 compliant labels for new missions.</p>                        
+                    </div>
+                </div>
+                </a>
+                <!--/.First Card-->
+            </div>
+            <!--/.First column of Four-->
+            <!--Second column of Four-->
+            <div class="col-sm-6 col-md-3">
+                <!--Second card -->
+                <a href="{% url 'review:index' %}">
+                <div class="card">
+                   <!--Card image-->
+                    <img class="img-fluid" src="{% static 'images/review.png' %}" alt="Card image cap">
+                    <!--Card content-->
+                    <div class="card-body">
+                        <!--Title-->
+                        <h4 class="card-title">#REVIEW</h4>
+                        <!--Text-->
+                        <p class="card-text">Submit a peer review form to critique derived data.</p>
+                    </div>
+                </div>
+                <!--/.Second Card-->
+            </div>
+            </a>
+            <!--/.Second column of Four-->
+            <!--Third column of Four-->
+            <div class="col-sm-6 col-md-3">
+                <!--Third card -->
+                <a href="{% url 'main:construction' %}">
+                <div class="card">
+                   <!--Card image-->
+                    <img class="img-fluid" src="{% static 'images/submit.png' %}" alt="Card image cap">
+                    <!--Card content-->
+                    <div class="card-body">
+                        <!--Title-->
+                        <h4 class="card-title">#SUBMIT</h4>
+                        <!--Text-->
+                        <p class="card-text">Current functionality is not on ELSA.</p>
+                    </div>
+                </div>
+                </a>
+                <!--/.Third Card-->
+            </div>
+            <!--/.Third column of Four-->
+            <!--Fourth column of Four-->
+            <div class="col-sm-6 col-md-3">
+                <!--Fourth card -->
+                <a href="{% url 'main:construction' %}">
+                <div class="card">
+                   <!--Card image-->
+                    <img class="img-fluid" src="{% static 'images/search.png' %}" alt="Card image cap">
+                    <!--Card content-->
+                    <div class="card-body">
+                        <!--Title-->
+                        <h4 class="card-title">#TUTORIAL</h4>
+                        <!--Text-->
+                        <p class="card-text">Walk through ELSA with a tutorial.</p>
+                    </div>
+                </div>
+                </a>
+                <!--/.Fourth Card-->
+            </div>
+            <!--/.Fourth column of Four-->
+        </div>
+        <!--/.First row-->
+        <hr>
+        <!--Second row-->
+        <div class="row pt-2">
+            <div class="col-md-12">
+                <h4>Migrations</h4>
+                <p>Would you like to see a tool like ELSA to handle all of your PDS3 to PDS4 Bundle Migrations?  Here at atmos, we are hoping to develop an interface just for you.  <a href="{% url 'main:contact' %}">Contact ELSA</a> and let us know so we can push it up our list of items to-do!</p>
+            </div>
+        </div>
+        <!--/.Second row-->
+        <!--Third row-->
+        <div class="row pt-2">
+            <div class="col-md-12">
+                <br/><br/>
+            </div>
+        </div>
+        <!--/.Third row-->
+
+
+  
+    
+    {% else %}
+    If you see this message, you are not signed in.  You should not be able to access this message either.  Please contact the Atmospheres Node.
+    {% endif %}
+{% endblock %}
+
+
+{% block footie_block %}    
+{% endblock %}
+

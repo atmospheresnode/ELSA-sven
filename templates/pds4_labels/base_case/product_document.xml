@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-model href="http://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_AAAA.sch" schematypens="http://purl.oclc.org/dsdl/schematron"?>
+<Product_Document xmlns="http://pds.nasa.gov/pds4/pds/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://pds.nasa.gov/pds4/pds/v1 http://pds.nasa.gov/pds4/schema/released/pds/v1/PDS4_PDS_AAAA.xsd">
+    <Identification_Area>
+        <logical_identifier></logical_identifier>
+        <version_id></version_id>
+        <title></title>
+        <information_model_version>AAAA</information_model_version>
+        <product_class>Product_Document</product_class>
+        <Modification_History>
+        </Modification_History>
+    </Identification_Area>
+    <Reference_List>
+        <Internal_Reference>
+            <lid_reference></lid_reference>
+            <reference_type></reference_type>
+        </Internal_Reference>
+        <External_Reference>
+            <reference_text></reference_text>
+            <description></description>
+        </External_Reference>
+        <External_Reference>
+            <reference_text></reference_text>
+            <description></description>
+        </External_Reference>
+    </Reference_List>
+    <Document>
+        <revision_id></revision_id>
+        <document_name></document_name>
+        <author_list></author_list>  
+        <copyright></copyright>
+        <publication_date></publication_date>
+        <document_editions></document_editions>
+        <description></description>
+        <Document_Edition>
+            <edition_name></edition_name>
+            <language></language>
+            <files>1</files>
+            <Document_File>
+                <file_name>_________</file_name>
+                <local_identifier>_________</local_identifier>
+                <document_standard_id>_________</document_standard_id>
+            </Document_File>
+        </Document_Edition>
+    </Document>
+</Product_Document>

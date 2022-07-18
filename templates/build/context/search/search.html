@@ -1,0 +1,54 @@
+{% extends 'main/base-k.html' %}
+{% load staticfiles %}
+
+
+
+
+{% block title_block %}
+Add Instruments and Targets
+{% endblock %}
+
+
+
+
+{% block main_header_block %}
+Add Instruments and Targets
+{% endblock %}
+
+
+
+{% block body_block %}
+<!--First row-->
+<div class="row pt-2">
+    <!--Column-->
+    <div class="col-md-12">
+        <h4>Select your mission</h4>
+    </div>
+    <!--/.Column-->
+</div>
+<!--First row-->
+<!--Second row-->
+<div class="row pt-2">
+    <!--Column-->
+    <div class="col-md-12">
+        <form id="query01" method="post" action="{% url 'build:context_search' bundle.pk %}">
+            {% csrf_token %}
+            {{ form_mission }}
+
+            {{ form.errors }}
+            {{ form.non_field_errors }}
+
+            <input type="submit" class="btn btn-default" value="Submit"/>
+
+        </form>       
+    </div>
+    <!--/.Column-->
+</div>
+<!--/.Second row-->
+{% endblock %}
+
+
+
+{% block footie_block %}    
+{% endblock %}
+

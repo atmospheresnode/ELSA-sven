@@ -1,0 +1,51 @@
+{% extends 'main/base-k.html' %}
+{% load static %}
+
+
+{% block title_block %}
+Products
+{% endblock %}
+
+
+{% block main_header_block %}
+Products 
+{% endblock %}
+
+{% block about_header_block %}
+The current product types listed in your bundle are {{ products }}.
+{% endblock %}
+
+
+
+
+
+
+{#
+     Need to make a help here or something.  What is the best way to present a lot of information but   
+     not all of the time?
+
+     I am currently thinking the standards_reference_block listed below would be could.
+     Then we could design in some front end language how we want this block to behave.
+           I really want to learn React and React + Django is hand-in-hand.
+           I know DjangoCon does workshops for the two; however, I have yet to search
+           for the resources online. (k)
+#}
+
+
+
+
+
+{% block standards_reference_block %}
+2A.
+3 Products
+A 
+basic product is the simplest product in PDS4 — one or more data objects and their description objects, which constitute a single observation, document, etc.  Typically, a data object is a file containing a single image, table, or time series; description objects are typically text that describes both the format and content of the associated data object.  A label is an XML file, which is the concatenation of one or more closely related description objects (such as for the red, green, and blue components of a color image) with some XML overhead; the corresponding basic product is that label plus the RGB data objects.  A document basic product is constructed in the same way: the basic product is the set of files containing text, figures, and tables together with a label comprising the several description objects.  Certain XML files qualify as basic products by themselves — they are ‘XML documents’. 
+Digital objects which comprise observational data may be used in one and only one product. Product_Collection and Product_Bundle are aggregate products; they define an aggregation of basic products and an aggregation of collections, respectively.  They are not basic products.  All products, whether basic or aggregate, must have globally unique logical identifiers (see Section 6D).
+
+{% endblock %}
+
+
+{% block body_block %}
+
+
+{% endblock %}

@@ -1,0 +1,191 @@
+{% extends 'main/base-k.html' %}
+{% load staticfiles %}
+
+{% block title_block %}
+Contact Atmospheres Node
+{% endblock %}
+
+{% block main_header_block %}
+
+{% endblock %}
+
+{% block body_block %}
+
+        <!--First row-->
+        <div class="row pt-2">
+            <!--First column-->
+            <div class="col-md-4">
+                <img src="https://www.nasa.gov/images/content/256357main_Symbols1-xltn.jpg">
+            </div>
+            <!--Second column-->
+            <div class="col-md-8">
+                <h3><a href="https://pds-atmospheres.nmsu.edu">Planetary Atmospheres Node</a></h3>
+                <p><i class="fa fa-map-marker"></i>
+                Astronomy Department<br/>
+                New Mexico State University<br/>
+                P.O. Box 30001, Dept 4500<br/>
+                Las Cruces, NM 88003<br/>
+                </p>
+                <p><i class="fa fa-phone"></i>
+                Phone # Here.
+                </p>
+            </div>
+        </div>
+        <!--/.First row-->
+        <hr/>
+
+        <!--Second row-->
+        <div>
+            <!--First Column-->
+            <!-- 1. Want a form to send an email to ELSA.-->
+
+            <!--Section: Contact v.3-->
+            <section class="section mb-5 pt-5">
+
+                <!--Grid row-->
+                <div class="row">
+
+                    <!--Grid column-->
+                    <div class="col-md-12">
+                        {% if email_sent %}
+                        <div class="card">
+                            <div class="row">
+                                <div class="col-lg-12">
+                                    <div class="card-body form">
+                                        <!--Header-->
+                                        <div class="formHeader mb-1 pt-3">
+                                            <h3><i class="fa fa-thumbs-up"></i> Thanks for writing!
+                                            </h3>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% else %}
+                        <!--Form with header-->
+                        <div class="card">
+                            <div class="row">
+                                <div class="col-lg-12">
+                                    <div class="card-body form">
+                                        <!--Header-->
+                                        <div class="formHeader mb-1 pt-3">
+                                            <h3><i class="fa fa-envelope"></i> Write to us:</h3>
+                                        </div>
+
+                                        <br>
+                                        <!--Grid row-->
+                                        <div class="row">
+                                            <form id="contact_form">
+                                                <!--Grid column-->
+                                                <div class="col-md-12">
+                                                    {% csrf_token %}
+                                                    {{ contact_form.as_p }}
+                                                    <br/>
+                                                    <button type="submit" class="btn btn-default"/>Submit</button>
+                                                </div>
+                                                <!--Grid column-->
+                                            </form>
+                                        </div>
+                                        <!--Grid row-->
+
+                                    </div>
+                                </div>
+
+                            </div>       
+                        </div>
+                        <!--/Form with header-->
+                        {% endif %}
+                    </div>
+                    <!--Grid column-->
+                </div>
+                <!--Grid row-->
+            </section>
+            <!--Section: Contact v.3-->            
+        </div>
+        <!--/.Third row-->
+
+        <hr/>
+        <!--Second row-->
+        <div class="row pt-2">
+            <!--First column-->
+            <div class="col-md-4">
+                <!--Card-->
+                <div class="card">
+                    <!--Card image-->
+                    <div class="view overlay hm-white-slight">
+                        <img src="https://mdbootstrap.com/img/Photos/Horizontal/Nature/4-col/img%20%287%29.jpg" class="img-fluid" alt="">
+                        <a href="#">
+                            <div class="mask"></div>
+                        </a>
+                    </div>
+
+                    <!--Card content-->
+                    <div class="card-body">
+                        <!--Title-->
+                        <h4 class="card-title">Nancy Chanover</h4>
+                        <!--Text-->
+                        <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
+                        <a href="#" class="btn btn-primary">Button</a>
+                    </div>
+
+                </div>
+                <!--/.Card-->
+            </div>
+            <!--/.Column-->
+            <!--First column-->
+            <div class="col-md-4">
+                <!--Card-->
+                <div class="card">
+                    <!--Card image-->
+                    <div class="view overlay hm-white-slight">
+                        <img src="https://mdbootstrap.com/img/Photos/Horizontal/Nature/4-col/img%20%287%29.jpg" class="img-fluid" alt="">
+                        <a href="#">
+                            <div class="mask"></div>
+                        </a>
+                    </div>
+
+                    <!--Card content-->
+                    <div class="card-body">
+                        <!--Title-->
+                        <h4 class="card-title">Lynn Neakrase</h4>
+                        <!--Text-->
+                        <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
+                        <a href="#" class="btn btn-primary">Button</a>
+                    </div>
+
+                </div>
+                <!--/.Card-->
+            </div>
+            <!--/.Column-->
+            <!--First column-->
+            <div class="col-md-4">
+                <!--Card-->
+                <div class="card">
+                    <!--Card image-->
+                    <div class="view overlay hm-white-slight">
+                        <img src="https://mdbootstrap.com/img/Photos/Horizontal/Nature/4-col/img%20%287%29.jpg" class="img-fluid" alt="">
+                        <a href="#">
+                            <div class="mask"></div>
+                        </a>
+                    </div>
+
+                    <!--Card content-->
+                    <div class="card-body">
+                        <!--Title-->
+                        <h4 class="card-title">Lyle Huber</h4>
+                        <!--Text-->
+                        <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
+                        <a href="#" class="btn btn-primary">Button</a>
+                    </div>
+
+                </div>
+                <!--/.Card-->
+            </div>
+            <!--/.Column-->
+
+        </div>
+        <!--/.Second row-->
+
+
+{% endblock %}
+

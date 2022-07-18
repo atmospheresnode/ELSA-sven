@@ -1,0 +1,26 @@
+Contact Name:
+{{ contact_name }}
+
+Email:
+{{ contact_email }}
+
+Agency:
+{{ agency }}
+
+PDS data:
+{{ derived_data }}
+
+
+
+
+Does the data provide clear and concise documentation adequate for its usage?
+{{ question1 }}
+
+Are you able to manipulate and plot the data, interpret columns into tables, and understand the context and relationships of the data products?
+{{ question2 }}
+
+Are there any concerns about the creation/generation, calibration, or general usability of the data?
+{{ question3 }}
+
+Any further comments to PDS Atmospheres Node about the data?
+{{ question4 }}

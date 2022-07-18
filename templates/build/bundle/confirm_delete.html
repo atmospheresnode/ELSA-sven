@@ -1,0 +1,47 @@
+{% extends 'main/base-k.html' %}
+{% load static %}
+
+{% block title_block %}
+Delete
+{% endblock %}
+
+{% block main_header_block %}
+Delete {{ bundle }}
+{% endblock %}
+
+
+{% block body_block %}
+<!--First row-->
+<div class="row">
+    <!--First col-->
+    <div class="col-md-12">
+        <form id="delete_bundle" method="post" action="{% url 'build:bundle_delete' bundle.pk %}">
+             {% csrf_token %}
+             Are you sure you want to delete {{ bundle }}?<br/>
+             {{ delete_bundle_form }}
+             <input class="btn btn-default" type="submit" value="Submit"/>
+        </form>
+    </div>
+    <!--/.First col-->
+</div>
+<!--/.First row-->
+
+<!--First row-->
+<div class="row">
+    <!--First col-->
+    <div class="col-md-12">
+        {% if decision == 'was not' %}
+            Your bundle {{ decision }} deleted.
+            <a href="{% url 'build:bundle' bundle.pk %}">Go To Bundle</a>
+        {% elif decision == 'was' %}
+            Your bundle was deleted.
+        <ul>
+            <li>Want to make a new bundle?  Then go to <a href="{% url 'build' %}">Build <i class="fa fa-arrow-right" aria-hidden="true"></i></a></li>
+            <li>Want to see your current bundles?  Then go to <a href="{{ user.userprofile.get_absolute_url }}">your profile <i class="fa fa-arrow-right" aria-hidden="true"></i></a></li>
+        </ul>
+        {% endif %}
+    </div>
+    <!--/.First col-->
+</div>
+<!--/.First row-->
+{% endblock %}

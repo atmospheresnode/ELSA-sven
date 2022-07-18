@@ -1,0 +1,94 @@
+{% extends 'main/base-k.html' %}
+{% load static %}
+
+
+
+
+{% block title_block %}             Tutorial  {% endblock %}
+
+
+
+
+{% block main_header_block %}       Tutorials  {% endblock %}
+
+
+
+{% block body_block %}
+
+<!--First row-->
+<div id="row">
+    <!--First column-->
+    <div class="col-md-6">
+        <p>This page contains the following content: 1) beginning of tutorials-build, 2) archives for past posters and good stuff like that, 3)... </p>
+    </div>
+</div>
+<!--/.First row-->
+<!--Second row-->
+<div id="row">
+    <!--First column-->
+    <div class="col-md-12"><h3 class="card-header elegant-color white-text text-center z-depth-2">
+        How to use ELSA</h3><br/>
+    </div>
+</div>
+<div id="row">
+    <!--First column-->
+    <div class="col-md-12">
+        <ul>
+            <li>
+                <a href="{% url 'tutorial:build_a_bundle' %}">Build A Bundle Tutorial</a>
+            </li>
+            <li>
+                <a href="{% url 'main:construction' %}">Data Review Tutorial</a>
+            <li>
+                <a href="{% url 'main:construction' %}">Data Submission Tutorial</a>
+            </li>
+        </ul>
+    </div>
+</div>
+<!--/.Second row-->
+
+<!--Second row-->
+<div id="row">
+    <!--First column-->
+    <div class="col-md-12"><h3 class="card-header elegant-color white-text text-center z-depth-2">
+        ELSA Trainings and Posters</h3><br/>
+    </div>
+</div>
+<div id="row">
+    <!--First column-->
+    <div class="col-md-12">
+        <ul>
+            <li>
+                <p>Here is a nonexistent list of posters and tutorials</p>
+            </li>
+
+        </ul>
+    </div>
+</div>
+<!--/.Second row-->
+
+<!--Optional row-->
+<div id="row">
+    <!--First column-->
+    <div class="col-md-12"><h3 class="card-header elegant-color white-text text-center z-depth-2">
+        Historic ELSA Links</h3><br/>
+    </div>
+</div>
+<div id="row">
+    <!--First column-->
+    <div class="col-md-12">
+        <ul>
+            <li>
+                <a href="http://pds-atmospheres.nmsu.edu/ELSA/tutorial/buildBundle.html">PDS4 Label Tutorial</a>
+            </li>
+            <li>
+                <a href="http://pds-atmospheres.nmsu.edu/ELSA/build/title.html">Build-A-Bundle</a>
+</li>
+            <li></li>
+        </ul>
+    </div>
+</div>
+<!--/.Optional row-->
+{% endblock %}
+
+

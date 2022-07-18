@@ -1,0 +1,56 @@
+{% extends 'main/base-k.html' %}
+{% load static %}
+
+{% block title_block %}
+PDS Data Peer Review
+{% endblock %}
+
+{% block main_header_block %}
+PDS Data Peer Review
+{% endblock %}
+
+{% block body_block %}
+{% if email_sent %}
+<!--Third row-->
+<div class="row pt-2">
+    <div class="col-md-12">
+        <h3 class="card-header elegant-color white-text text-center z-depth-2">Thank you for your submission</h3><br/>
+    </div>
+</div>
+<!--/.Third row-->
+<!--First row-->
+<div class="row pt-2">
+    <!--First column-->
+    <div class="col-md-12">
+        Your review comments have been sent to ELSA.  <br/>If you have questions or comments about your submission, <a href="{% url 'main:contact' %}"><i class="fa fa-hand-o-right"></i> contact ELSA</a>.
+    </div>
+    <!--/.First column-->
+</div>
+<!--/.First row-->
+{% else %}
+<!--First row-->
+<div class="row pt-2">
+    <!--First column-->
+    <div class="col-md-12">
+        <!--Card-->
+        <div class="card">
+            <!--Card content-->
+            <div class="card-body">
+                <!--Title-->
+                <h4 class="card-title">Review Comments</h4>
+                <!--Text-->
+                <p class="card-text">
+                    <form role="form" action="" method="post">
+                        {% csrf_token %}
+                        {{ review_form.as_p }}
+                        <button type="submit" class="btn btn-primary">Submit</button>
+                    </form>
+                </p>
+            </div>
+        <!--/.Card-->
+    </div>
+    <!--/.First column-->
+</div>
+<!--/.First row-->
+{% endif %}
+{% endblock %}

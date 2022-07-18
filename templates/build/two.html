@@ -1,0 +1,96 @@
+{% extends 'main/base-k.html' %}
+{% load staticfiles %}
+
+
+
+
+{% block title_block %}
+Build A Bundle
+{% endblock %}
+
+
+
+
+{% block main_header_block %}
+
+{% endblock %}
+
+
+
+{% block body_block %}
+
+
+
+<!--Section: Blog v.3-->
+<section class="section extra-margins pb-3 text-center text-lg-left">
+    {% csrf_token %}
+    <!--Section heading-->
+    <h2 class="section-heading h1 pt-4">That was easy!</h2>
+    <!--Section description-->
+    <p class="section-description">ELSA has created your bundle directory, your collection directories, and began your Product_Bundle and Product_Collection labels.</p>
+    <hr class="mb-5">
+
+
+    <!--Grid row-->
+    <div class="row">
+
+        <!--Grid column-->
+        <div class="col-lg-4 mb-4">
+            <!--Featured image-->
+            <div class="view overlay hm-white-slight z-depth-1-half">
+
+
+        <!--One card-->
+        <a href="{% url 'build:bundle' bundle.pk %}">
+        <div class="card">
+            <!--Card image-->
+            <img class="img-fluid" src="{% static 'images/bundle.jpg' %}" alt="Bundle Image">
+            <!--Card content-->
+            <div class="card-body">
+                <!--Title-->
+                <h4 class="card-title">{{ Bundle }}</h4>
+                <!--Text-->
+                <p class="card-text">{{ Bundle.lid }}</p>
+            </div>
+        </div>
+        </a>
+        <!--/.One card-->
+
+
+                <a href="{% url 'build:bundle' bundle.pk %}">    <!-- IDK why I have this (k) but it threw me off for like 20 minutes when my link broke.  I probably should delete but I think the mask could be useful-->
+                    <div class="mask"></div>
+                </a>
+            </div>
+        </div>
+        <!--Grid column-->
+
+        <!--Grid column-->
+        <div class="col-lg-7 ml-xl-4 mb-4">
+<a href="" class="teal-text"><h6 class="pb-1"><i class="fa fa-snowflake-o"></i><strong>Build A Bundle with ELSA </strong></h6></a>
+            <!--Excerpt-->
+            <h4 class="mb-3"><strong>This is your Bundle Card.</strong></h4>
+            <p>You will now see this on your personal profile.  By clicking the Bundle Card, you will be able to navigate to your Bundle's Detail Page.  On your Bundle's Detail Page, you will be able to view your Bundle's Directory, view your current labels, and even more importantly, further build your bundle with ELSA.</p>
+            <p><strong>Click on your Bundle Card to proceed.</strong></p>
+        </div>
+        <!--Grid column-->
+
+    </div>
+    <!--Grid row-->
+
+
+
+    <hr class="mb-5">
+
+
+
+</section>
+<!--Section: Blog v.3-->
+
+
+{% endblock %}
+
+
+
+{% block footie_block %}    
+{% endblock %}
+

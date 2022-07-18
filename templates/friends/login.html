@@ -1,0 +1,30 @@
+{% extends 'main/base-k.html' %}
+{% load staticfiles %}
+
+{% block title_block %}
+Login
+{% endblock %}
+
+{% block main_header_block %}
+Login to Elsa
+{% endblock %}
+
+{% block body_block %}
+<!--First row-->
+<div class="row pt-2">
+    <!--First column-->
+    <div class="col-md-12">
+        <form id="login_form" method="post" action="{% url 'friends:login' %}">
+            {% csrf_token %}
+            Username: <input type="text" name="username" value="" size="50"/>
+            <br/>
+            Password: <input type="password" name="password" value="" size="50"/>
+            <br/>
+            <input type="submit" value="submit"/>
+        </form>
+    </div>
+    <!--/.First column-->
+</div>
+<!--/.First row-->
+{% endblock %}
+

@@ -1,0 +1,38 @@
+
+ABOUT_TEMPLATES.TXT
+
+
+This document details the templates directory located inside of the ELSA project.
+This document goes over the basic structure of the templates directory, which templates are located in which directory, and also goes over a couple features of the Django template language.
+
+
+
+STRUCTURE
+
+Inside of the templates directory, you will find a directory for each app in ELSA.  As of January 2018, this list means that you will find a blog, build, contacts, friends, main, review, test, and tutorial directory for the blog, build, contacts, friends, main, review, test, and tutorial apps.  (As I write this, I am unsure what test does or why it was created.  This needs to be inspected to see what the intent was and whether it is necessary to keep.)  The additional file in this directory is the about_templates.txt file in which you are reading at the moment.
+
+
+DIRECTORY DETAILS
+
+Each app has a directory in the templates directory as detailed above.  Within each app's directory will include an index.html and other supporting templates.  For example, the main app is responsible for the main page of ELSA and the main content (like about ELSA, contact ELSA, etc.).  So inside of the main template directory you will find an index.html (responsible for the main page of ELSA) and about.html and contact.html for the about and contact pages.  The extensions on these files are .html seeing as the Django Template's purpose is to layout the "template" of what your page will look like.  
+
+
+TEMPLATES
+
+All templates within the templates directory are written solely in HTML.  A seperate directory (/export/atmos1/htdocs/elsa/static/) contains any CSS, JS, or other webdev scripts.  This is a styling preference that is intended to allow for future students to easily distinguish where specific code is at by language type.  Also, in Django land, CSS, JS, and the likes all belong in a static folder rather than in a template.  Two birds, One stone.
+
+Django templates are awesome for a number of reasons.  The greatest reason is the Django template command {% extends %}.  I am thinking about pulling out the base-k.html file from the main directory (where it is currently located) and placing it simply in the templates directory since ALL templates extend base-k.html.  Feel free to open up base-k.html and index.html.  
+
+base-k.html contains all of the consistent design layout featured throughout the ELSA app.  This includes the header, the navbar, and the footer.  The reason this design also shows on the index page is because the first line of index.html states {% extends base-k.html%}.  So index.html does everything described within index.html plus what is described in base-k.html.  Within base-k.html you will find Django template language codes such as {% block main_header_block %}{% endblock %}.  Since index.html extends base-k.html, base-k.html can include template blocks.  Whatever is contained within the blocks in index.html will show up wherever the blocks are described in index.html.
+
+EXERCISE:
+.  Since index.html extends base-k.html, base-k.html can include template blocks.  Whatever is contained within the blocks in index.html will show up wherever the blocks are described in index.html.
+
+EXERCISE: Do the following 4 easy steps to learn how extends works in the Django Template language.  When you are finished, make sure to erase your work (but keep the original comments please).
+1. Open base-k.html and index.html
+2. Find the comments demarcated by SPOT FOR EXERCISE. (ctrl+f if necessary).
+3. In base-k.html duplicate the previous section-description but rename the block exercise_block.
+4. In index.html, add the exercise_block and fill it with your favorite message.
+
+
+

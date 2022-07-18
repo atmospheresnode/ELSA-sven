@@ -1,0 +1,28 @@
+
+    <!--Grid row-->
+    <div class="row">
+
+        <!--Grid column-->
+        <div class="col-md-3">
+
+
+            <p class="section-description">
+                <strong>LID: </strong>
+                {{ bundle.lid }}.
+            </p>
+            <p class="section-description">
+                <strong>Status: </strong>
+                {% if bundle.status == 'b' %} Build.
+                {% elif bundle.status == 'r' %} Review.
+                {% else %} Submit.
+                {% endif %}
+            </p>
+            <p class="section-description">
+                <strong>Creator:</strong>
+                {{bundle.user}}.
+            </p>
+        </div>
+        <!--Grid column-->
+
+
+

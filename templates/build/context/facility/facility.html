@@ -1,0 +1,139 @@
+{% extends 'main/base-k.html' %}
+{% load staticfiles %}
+
+
+
+
+{% block title_block %}
+Add Facility
+{% endblock %}
+
+
+
+
+{% block main_header_block %}
+Add Facility
+{% endblock %}
+
+
+
+{% block body_block %}
+
+<!--First row-->
+<div class="row pt-2">
+    <!--First column-->
+    <div class="col-md-12">
+        <h4>Below is a list of names of observatories and laboratories.  This list could be improved upon by allowing users to go directly to a list of observatories or a list of laboratories.</h4>
+       
+    </div>
+    <!--/.First column-->
+</div>
+<!--/.First row-->
+
+<hr/>
+
+<!--First row-->
+<div class="row pt-2">
+    <!--Column-->
+    <div class="col-md-12">
+    <h3 class="card-header elegant-color white-text text-center z-depth-2">Select a Facility</h3>
+    </div>
+</div>
+<!--/.First row-->
+<!--Second row-->
+<div class="row pt-2">
+    <!--Column-->
+    <div class="col-md-12">
+        <br/><br/>
+        <form id="form_facility" method="post" action="#">
+            {% csrf_token %}
+            {{ form_facility }}
+            {{ form.errors }}
+            {{ form.non_field_errors }}
+            <br/><br/>
+            <input type="submit" class="btn btn-default" value="Submit"/>
+
+        </form>
+    </div>
+    <!--/.Column-->
+</div>
+<!--/.Second row-->
+<hr/>
+<!--First row-->
+<div class="row pt-2">
+    <!--Column-->
+    <div class="col-md-12">
+    <h3 class="card-header elegant-color white-text text-center z-depth-2">Current Facilities</h3>
+    </div>
+</div>
+<!--/.First row-->
+<!--Third row-->
+<div class="row pt-2">
+{% if facility_list %} 
+    {% for facility in facility_list %}
+    <!--Column-->
+    <div class="col-md-4">
+        <!--Card-->
+        <div class="card">
+            <!--Card image-->
+            <img class="img-fluid" src="{% static 'images/facility.png' %}" alt="Facility Image">
+            <!--Card content-->
+            <div class="card-body">
+                <!--Title-->
+                <h4 class="card-title">{{ facility }}</h4>
+                <!--Text-->
+                <p class="card-text">{{ facility.lid }}</p>
+                <!--Buttons-->
+                <a href="{% url 'main:construction' %}">
+                    <button type="button" class="btn btn-danger">Remove</button> 
+                </a>
+            </div>
+        </div>
+        <!--/.Card-->
+    </div>
+    <!--/.Column-->
+    {% endfor %}
+{% else %}
+    <!--First column-->
+    <div class="col-md-3">
+        <!--Card-->
+        <div class="card">
+            <!--Card image-->
+            <img class="img-fluid" src="{% static 'images/null.png' %}" alt="An image representing building a label.">
+            <!--Card content-->
+            <div class="card-body">
+                <!--Title-->
+                <h4 class="card-title">Null</h4>
+                <!--Text-->
+                <p class="card-text">No facilities have been added</p>
+            </div>        
+        </div>
+        <!--/.Card-->
+    </div>
+    <!--/.First column-->
+{% endif %}
+</div>
+<!--/.Third row-->
+<hr/>
+<!--Sixth row-->
+<div class="row pt-2">
+    <!--First column-->
+    <div class="col-md-12">
+        <a href="{{ bundle.get_absolute_url }}">
+        <button type="button" class="btn btn-default">
+            <i class="fa fa-arrow-circle-left"></i>
+            Back to {{ bundle }}'s Bundle Detail
+        </button>
+        </a>
+    </div>
+    <!--/.First column-->
+</div>
+<!--/.Sixth row-->
+{% endblock %}
+
+
+
+{% block footie_block %}    
+{% endblock %}
+
+

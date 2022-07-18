@@ -1,0 +1,116 @@
+{% extends 'main/base-k.html' %}
+{% load staticfiles %}
+
+
+
+
+{% block title_block %}
+Add Context: Investigation
+{% endblock %}
+
+
+
+
+{% block main_header_block %}
+Add Context: Investigation
+{% endblock %}
+
+
+
+{% block body_block %}
+<!--First row-->
+<div class="row pt-2">
+    <!--Column-->
+    <div class="col-md-12">
+        <h4 class="card-header stylish-color white-text text-center z-depth-2">Select your Investigation</h4>
+</br>
+    </div>
+    <!--/.Column-->
+</div>
+<!--First row-->
+<!--Second row-->
+<div class="row pt-2">
+    <!--Column-->
+    <div class="col-md-12">
+        <form  class="card-header black-text text-left z-depth-2" id="query01" method="post" action="{% url 'build:context_search_investigation' bundle.pk  %}">
+	    <p> Select an investigation below associated with your bundle to add instrument hosts from that investigation to your bundle.</br> <strong>Investigations contain:</strong> Individual investigations, missions, observing campaigns, or other investigations </p>
+            {% csrf_token %}
+            {{ form_investigation }}
+            {{ form.errors }}
+            {{ form.non_field_errors }}
+
+            <input type="submit" class="btn btn-default" value="Submit"/>
+     
+	 </form> 
+	
+	</br>      
+    </div>
+    <!--/.Column-->
+</div>
+<!--/.Row-->
+<!--Row-->
+<div class="row pt-2">
+    <!--Column-->
+    <div class="col-md-12">
+        <h4 class="card-header stylish-color white-text text-center z-depth-2">All of {{ bundle.name }}'s Investigation Products</h4>
+	</br>
+        <p class="card-header black-text text-left z-depth-2">Select an investigation below associated with your bundle to add instrument hosts from that investigation to your bundle. Resume the bundle building process by adding instrument hosts, instruments, and targets to ensure a most complete PDS4 bundle.</br>
+	</p>
+</div>
+    <!--/.Column-->
+</div>
+<hr>
+	{% if investigation %}
+<div class="card-header black-text text-left z-depth-2">
+
+            <h3>Note: {{ investigation }} added to {{ bundle }}:</h3>
+        
+    {% for inv in bundle_investigation_set %}
+<div class="row">
+        <!--Card-->
+        <div class="col-sm-6 col-md-3">
+	<ul>
+        <div class="button">
+            <!--Link-->
+            <a href="{% url 'build:context_search_instrument_host' bundle.pk inv.pk %}">
+                <!--Card content-->
+                <div class="card-body">
+                    <!--Title-->
+                   <li> <h4 class="card-title">{{ inv.name }}</h4></li>
+                    <!--/.Title-->
+                    <!--Text-->
+                    <p class="card-text">{{ inv.lid }} <br/><br/></p>
+                    <!--/.Text-->
+                </div>
+                <!--/.Card content-->
+                <!--Image-->
+            </a>
+            <!--/.Link-->
+        </div>
+	</ul>
+        </div>
+        <!--/.Card-->
+       
+</div>
+
+    {% endfor %}
+	{% endif %}
+<!--/.Row-->
+<!--Row-->
+<div class="row pt-2">
+    <div class="col-md-12 text-right ">
+            <a href="{% url 'build:context_search' bundle.pk %}">
+            <input type="submit" class="btn btn-default" value="Go Back to Context Search"/>
+    </div>
+    <!--/.Column-->
+</div>
+<!--/.Row-->
+{% endblock %}
+
+
+
+{% block footie_block %}    
+{% endblock %}
+
+
+

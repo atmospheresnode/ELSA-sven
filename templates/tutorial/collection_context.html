@@ -1,0 +1,23 @@
+{% extends 'main/base-k.html' %}
+{% load static %}
+
+{% block title_block %}
+Collections
+{% endblock %}
+
+{% block main_header_block %}
+Context Collection
+{% endblock %}
+
+{% block about_header_block %}
+<p>
+Context products reference a physical or conceptual object like a facility (laboratory, observatory, telescope) or mission (instrument, target).  Context products are finalized and managed in a PDS master context bundle so that all data providers can access and use the same material.  The Product_Collection lists each context product associated with the bundle.  Each context product has a Product_Context label that briefly describes the physical or conceptual object.  
+</p>
+<p>
+A bundle is not required to include context products.  ELSA generates the list within the Product_Collection and then a simple text file (?) that lists the lids for each context product. <b>DOUBLE CHECK THIS</b>
+</p>
+{% endblock %}
+
+{% block body_block %}
+
+{% endblock %}

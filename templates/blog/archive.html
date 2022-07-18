@@ -1,0 +1,87 @@
+{% extends 'main/base-k.html' %}
+{% load staticfiles %}
+
+
+
+
+{% block title_block %}
+Blog
+{% endblock %}
+
+
+
+
+{% block main_header_block %}
+Elsa's Archive
+{% endblock %}
+
+
+
+{% block body_block %}
+
+    {# POST LISTING #}
+    <!--Row-->
+    <div class="row pt-2">
+        <!--Column-->
+        <div class="col-md-7">
+            {% for post in posts %}
+            <strong>
+                <a href="{% url 'blog:detail' pk_post=post.pk %}">{{ post.title }}</a>
+            </strong>         
+            -- {{ post.overview|linebreaksbr }}
+            <br/>
+            {% endfor %}
+        </div>
+        <!--/.Column-->
+        <!--Column-->
+        <div class="col-md-5">
+            <img class="featurette-image img-fluid mx-auto" src="{% static 'images/elsa_by_sakimichan.jpg' %}" alt="Picture of something frozen" />  PhotoCreds@<a href="http://sakimichan.deviantart.com/art/Elsa-432571504" >sakimichan</a>
+        </div> 
+        <!--/.Column-->
+    </div>
+    <!--/.Row-->
+    <!--Divider-->
+    <hr/>
+    <!--/.Divider-->
+    <!--Row-->
+    <div class="row pt-2">
+        <!-- Featurette -->
+        <hr class="featurette-divider">
+        <!--Row-->
+        <div class="row featurette">
+            <!--Column-->
+            <div class="col-md-7">
+                <h2 class="featurette-heading">Got something to say about <span class="text-muted">ELSA</span>?</h2>
+                <p class="lead">
+                    <ul>
+                        <li>Add your post to populate_blog.py.</li>
+                        <li>Once you've saved the document, run python populate_blog.py and your post will be added.</li>
+                        <li>If you need to edit your post, you can make a script for that.  Or simply delete the post from the database through admin, edit your post in populate_blog, and rerun populate_blog.</li>
+                    </ul>
+
+                </p>
+            </div>
+            <!--/.Column-->
+            <!--Column-->
+            <div class="col-md-5">
+                <h2 class="featurette-heading">... And you're in a rush??</h2>
+                <p class="lead">
+                    <ul>
+                        <button class="btn btn-default">Add A Post {# enter an add post form #}.</button>
+                        <li>Just make sure you add your post to populate_blog.py so that in the event of a database wipeout, we will have a copy of your post.</li>
+                        <li>Or simply when you develop this, create a way to let the add form update populate_blog.py.  It should be fairly easy.</li>
+                    </ul>
+
+                </p>
+            </div>
+            <!--/.Column-->
+        </div>
+        <!--/.Row-->
+    </div>
+    <!--/.Row-->
+{% endblock %}
+
+
+{% block footie_block %}    
+{% endblock %}
+

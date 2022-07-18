@@ -1,0 +1,27 @@
+{% extends 'main/base-k.html' %}
+{% load static %}
+
+{% block title_block %}
+Delete
+{% endblock %}
+
+{% block main_header_block %}
+Your bundle was deleted.
+{% endblock %}
+
+
+{% block body_block %}
+<!--Row-->
+<div class="row pt-2">
+    <!--Column-->
+    <div class="col-md-12">
+        <ul>
+            <li>Want to make a new bundle?  Then go to <a href="{% url 'build:build' %}">Build <i class="fa fa-arrow-right" aria-hidden="true"></i></a></li>
+            <li>Want to see your current bundles?  Then go to <a href="{{ user.userprofile.get_absolute_url }}">your profile <i class="fa fa-arrow-right" aria-hidden="true"></i></a></li>
+        </ul>
+    </div>
+    <!--/.Column-->
+</div>
+<!--/.Row-->
+
+{% endblock %}

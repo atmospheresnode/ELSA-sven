@@ -1,0 +1,64 @@
+{% extends 'blog/carousel-k.html' %}
+{% load staticfiles %}
+
+{% block title_block %}
+Atmos Student Blog
+{% endblock %}
+                    {% block carousel_one_block %}
+                        <li>
+                        <h1 class="h1-responsive flex-item">Welcome To ELSA's Secret Student Lair</h1>
+                        <li>
+                            <p class="flex-item">talk your heart out</p>
+                        </li>
+                        <li>
+                            <a href="{% url 'blog:add_post' %}" class="btn btn-primary btn-lg flex-item" rel="nofollow">Add Post</a>
+                        </li>
+                        <li>
+                            <a href="{% url 'blog:tasks' %}" class="btn btn-primary btn-lg flex-item"
+                                rel="nofollow">Tasks</a>
+                        </li>
+                         <li>
+                            <a href="#" class="btn btn-default btn-lg flex-item"
+                                rel="nofollow">Learn more</a>
+                        </li>
+                    {% endblock %}  
+                    {% block carousel_two_block %}
+                    <li>
+                        <h1 class="h1-responsive">For the Newbies</h1>
+                    </li>
+                    <li>
+                        <p class="flex-item">Here are some great posts to help you begin your journey with ELSA.</p>
+                    </li>
+                    <hr/>
+                    {% if posts %}
+                        {% for post in posts %}
+                        <li>
+                            <a href="{{ post.get_absolute_url }}" class="btn btn-primary btn-lg flex-item">
+                                <strong>{{ post.title }}</strong><br/>
+                                {{ post.overview }}
+                            </a><br/>
+                        </li>
+                        {% endfor %}
+                    {% else %}
+                    <li>
+                        <p class="flex-item">Uh oh, looks as if the database has been deleted.  Run populate_blog.py.</p>
+                    </li>
+                    {% endif %}
+                    {% endblock %}
+                    {% block carousel_three_block %}
+                    <li>
+                        <h1 class="h1-responsive">The Archives</h1>
+                    </li>
+                    <li>
+                        <p>The archives are well... the archives.</p>
+                    </li>
+                    <li>
+                        <a href="{% url 'blog:archive' %}" class="btn btn-default btn-lg" rel="nofollow">Archive</a>
+                    </li>
+                    {% endblock %}
+
+
+
+
+
+

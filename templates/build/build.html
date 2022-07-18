@@ -1,0 +1,110 @@
+{% extends 'base-k-se.html' %}
+{% load static %}
+
+
+
+
+{% block title_block %}
+Build A Bundle
+{% endblock %}
+
+
+
+
+{% block main_header_block %}
+So you want to build a bundle?
+{% endblock %}
+
+{% block about_header_block %}
+ELSA helps you to build PDS4 compliant labels for your data by building your bundle all at once and will provide a template package partially filled-out for you to work with your node representative. To begin, ELSA needs some basic information about your bundle. Provide a title for your bundle and select the version of the PDS4 IM you want to use (new users should choose the top-most selection for version). NOTE: Some collections are required by the ATM node and will be automatically generated for your use.
+{% endblock %}
+
+{% block standards_reference_block %}
+A bundle is a logical construct that can be used to archive to archive
+digital data within PDS. Bundles have a hierarchical structure that
+allow it to contain digial products within collections. PDS uses
+bundles as a way to provide a simple package to organize related data
+products as a data set. Each bundle contains a document collection and
+data collections. Your bundle may also contain other collections if
+needed (e.g., geometry, browse, calibration, etc.). Context and
+xml_schema collections are system collections that will be added by the Atmospheres Node (ATM) after your bundle is complete.
+.   
+{% endblock %}
+
+
+
+{% block body_block %}
+
+<!--Third row-->
+<div class="row pt-2">
+    <!--First column-->
+    <div class="col-md-12">
+        <h3 class="card-header elegant-color white-text text-center z-depth-2">Provide Bundle Information</h3><br/>
+    </div>
+    <!--/.First column-->
+</div>
+<!--/.Third row-->
+<!--First row-->
+<div class="row pt-2">
+    <!--First column-->
+    <div class="col-md-8">
+        <form id="query01" method="post" action="{% url 'build:build' %}">
+             {% csrf_token %}
+             <div id="form_bundle">
+                 {{ form_bundle.as_p }}
+             </div>
+             <br/>
+             <div id="form_collections">
+                 The following collections are required by ATM for your bundle: <br/>
+                 {{ form_collections.as_p }}
+             </div>
+             <br />
+ 
+            <input type="submit" value="Submit" />
+	    <style>
+	      .round-button {
+   	      display:inline-block;
+	      height:25px;
+	      width:25px;
+    	      color: white;
+   	      text-align: center;
+   	      margin: 4px 2px;
+    	      background-color: #008080;
+   	      font-size:16px;
+   	      font-weight:bold;
+	      border-color: #000000;
+	      }
+	      
+	      .round-button{border-radius: 50%;}
+	     </style>
+	     <button class="round-button" data-toggle="tiptool"
+	     data-placement="right" title="Submitting will create a stub of partially filled templates, based on your selection. If you are working directly with ATM and are unsure of which collections are in your bundle, send a message to ELSA and someone from ATM will get back to you shortly." disabled>?</button>
+        </form>       
+    </div>
+    <!--/.First column-->
+    <!--Second column-->
+    <div class="help  col-md-4">
+        <div class="form_bundle">
+            <p>The name of your bundle is the unique name you would like your bundle to be archived as.
+            </p>
+            <p>The version of your bundle should be the most up-to-date version unless otherwise noted by your node personnel.
+            </p>
+            <p>The type of bundle depends on your data.  If your bundle is meant to be archived, choose archive.  This option is what most bundle types are.  If your bundle contains supplemental data to an already archived bundle, choose supplemental.
+            </p>
+        </div>  
+
+        <div class="form_collections">
+            <p>Each bundle contains a document, context, and xml_schema collection.
+            </p>
+            <p>All other collections contained in your bundle will be decided between you, {{ user.first_name }}, and your node personnel.
+            </p>
+            <p>If you are working directly with Atmos and are unsure of which collections are in your bundle, <a href="{% url 'main:contact' %}">send a message to ELSA</a> and someone from Atmos will get back to you shortly.  If you are working with another node, please contact your node.
+            </p>
+        </div>   
+    </div>          
+    <!--/.Column-->
+</div>
+<!--/.Row-->
+{% endblock %}
+
+

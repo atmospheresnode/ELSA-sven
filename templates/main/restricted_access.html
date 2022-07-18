@@ -1,0 +1,22 @@
+{% extends 'main/base-k.html' %}
+{% load static %}
+
+{% block title_block %}
+RESTRICTED ACCESS
+{% endblock %}
+
+{% block main_header_block %}
+You are not authorized to view this page.
+{% endblock %}
+
+{% block body_block %}
+<!--First row-->
+<div class="row">
+    <div class="col-md-6">
+        <img class="img-fluid" src="{% static 'images/restricted_access.jpg' %}" alt="Restricted Access">
+    </div>
+</div>
+<!--/.First row-->
+{% endblock %}
+
+

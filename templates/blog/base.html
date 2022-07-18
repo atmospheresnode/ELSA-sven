@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+{% load staticfiles %}
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="ELSA is an educational tool used at NASA PDS's Atmospheres node for creating PDS4 compliant labels for data bundles.">
+    <meta name="author" content="NMSU Atmos Students">
+    <link rel="icon" href="<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link rel="icon" href="http://v4-alpha.getbootstrap.com/favicon.ico">
+
+    <title>ELSA - {% block title_block %}Educational Labeling System @Atmospheres{% endblock %}</title>
+
+    <!-- Bootstrap core CSS -->
+    <link href="http://v4-alpha.getbootstrap.com/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Custom styles for this template -->
+    <link href="http://getbootstrap.com/examples/dashboard/dashboard.css" rel="stylesheet">
+    <link href="{% static 'css/elsa-css.css/' %}" rel="stylesheet" type="text/css">
+  </head>
+
+  <body>
+    <nav class="navbar navbar-toggleable-md navbar-inverse fixed-top bg-inverse">
+      <button class="navbar-toggler navbar-toggler-right hidden-lg-up" type="button" data-toggle="collapse" data-target="#navbarsExampleDefault" aria-controls="navbarsExampleDefault" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <a class="navbar-brand" href="{% url 'elsa:index' %}">ELSA: Educational Labeling System @Atmospheres</a>
+
+      <div class="collapse navbar-collapse" id="navbarsExampleDefault">
+        <ul class="navbar-nav mr-auto">
+          <li class="nav-item active">
+            <a class="nav-link" href="{% url 'elsa:index' %}">Home</a>
+          </li>
+          {% if user.is_authenticated %}
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'blog:index' %}">Blog</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'elsa:build' %}">Bundle</a>
+          </li>
+          <!--
+          <li role="presentation" class="dropdown">              
+              <a class="dropdown-toggle" data-toggle="dropdown" href="{% url 'elsa:build' %}" role="baria-haspopup="true" aria-expanded="false">Bundle</a><span class="caret"></span>
+              </a>
+              <ul class="dropdown-menu">
+                <li><a href="{% url 'build_a_bundle:index' %}">Build</a></li>
+                <li><a href="{% url 'search_a_bundle:index' %}">Search</a></li>
+                <li><a href="{% url 'elsa:error' %}">Review</a></li>
+                <li><a href="{% url 'elsa:error' %}">Submit</a></li>
+                <li role="separator" class="divider"></li>
+                <li><a href="{% url 'elsa:error' %}">Tutorial</a></li>
+              </ul>
+          </li>
+          -->
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'elsa:contact' %}">Contact</a> <!-- EVENTUALLY DELETE -->
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'elsa:logout' %}">Logout</a>
+          </li>
+          {% else %}
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'elsa:register' %}">Sign Up</a> <!-- EVENTUALLY DELETE -->
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'elsa:login' %}">Log In</a> <!-- EVENTUALLY DELETE -->
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'elsa:contact' %}">Contact</a> <!-- EVENTUALLY DELETE -->
+          </li>
+          {% endif %}
+
+        </ul>
+
+      </div>
+    </nav>
+
+    <div class="container-fluid">
+      <div class="row">
+        <nav class="col-sm-3 col-md-2 hidden-xs-down bg-faded sidebar">
+          <ul class="nav nav-pills flex-column">
+            {% if user.is_authenticated %}
+            <li class="nav-item">
+              <a class="nav-link active" href="#">Welcome, {{ user.name }} <span class="sr-only">(current)</span></a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{% url 'blog:archive' %}">Blog Archive</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{% url 'blog:add_category' %}">Add Category</a>
+            </li>
+            {% endif %}
+
+          </ul>
+        </nav>
+
+        <main class="col-sm-9 offset-sm-3 col-md-10 offset-md-2 pt-3">
+            <h3>
+            {% block header_block %}{% endblock %}
+            </h3>
+            <hr>
+            {% block body_block %}{% endblock %}
+        </main>
+      </div>
+    </div>
+
+    <!-- Bootstrap core JavaScript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    <script src="https://code.jquery.com/jquery-3.1.1.slim.min.js" integrity="sha384-A7FZj7v+d/sdmMqp/nOQwliLvUsJfDHW+k9Omg/a/EheAdgtzNs3hpfag6Ed950n" crossorigin="anonymous"></script>
+    <script>window.jQuery || document.write('<script src="http://v4-alpha.getbootstrap.com/assets/js/vendor/jquery.min.js"><\/script>')</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tether/1.4.0/js/tether.min.js" integrity="sha384-DztdAPBWPRXSA/3eYEEUWrWCy7G5KFbe8fFjk5JAIxUYHKkDx6Qin1DkWx51bBrb" crossorigin="anonymous"></script>
+    <script src="http://v4-alpha.getbootstrap.com/dist/js/bootstrap.min.js"></script>
+    <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
+    <script src="http://v4-alpha.getbootstrap.com/assets/js/ie10-viewport-bug-workaround.js"></script>
+  </body>
+</html>
+

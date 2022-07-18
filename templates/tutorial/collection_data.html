@@ -1,0 +1,33 @@
+{% extends 'main/base-k.html' %}
+{% load static %}
+
+{% block title_block %}
+Collections
+{% endblock %}
+
+{% block main_header_block %}
+Data Collection
+{% endblock %}
+
+
+{% block about_header_block %}
+
+<p>
+The data collection consists of a Product_Collection that lists the data products found in the data collection and a Product_Observational for each data product.  PDS4 uses four fundamental data structures: 
+<ol><li>Array (images, spectral cubes)</li><li>Table (binary and/or character fixed-length tables)</li><li>Parsable Byte Stream (text files, XML files, CSV tables)</li><li>Encoded Byte Stream (PDF files, JPEG images) NOTE: Not used for science observations</li></ol>The vast majority of observational data can be described as either N-dimensional arrays or tables.  The type of data structure associated with your bundle is dependent upon the nature of the observational data.  This decision is to be made with your node representative.  To see a list of which subclasses exist for the Product_Observational class visit the <a href="https://pds.jpl.nasa.gov/pds4/doc/dph/current/PDS4_DataProvidersHandbook_1.9.0.pdf">Data Provider's Handbook, 6.2.2.1</a>
+</p>
+<p>
+When a data template is added to a bundle (whether it be 2D Array, Table Character Delimited, etc.), ELSA adds the product to the list in Product_Collection and creates a Product_Observational.  The Product_Observational contains: 
+<ul>
+    <li>a reference list area for articles and other products relevant to understanding the product</li>
+    <li>file area for identifying the file(s) containing the digital object(s) and includes classes that describe each digital object in the given file (e.g., the description and parameters of each header, table, and image).</li>
+</ul>
+
+</p>
+
+{% endblock %}
+
+
+{% block body_block %}
+
+{% endblock %}

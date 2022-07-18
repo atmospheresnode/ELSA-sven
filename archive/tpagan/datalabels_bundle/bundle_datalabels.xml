@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-model href="http://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_1D00.sch" schematypens="http://purl.oclc.org/dsdl/schematron"?>
+<Product_Bundle xmlns="http://pds.nasa.gov/pds4/pds/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://pds.nasa.gov/pds4/pds/v1 http://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_1D00.xsd">
+    <Identification_Area>
+        <logical_identifier>urn:nasa:pds:datalabels</logical_identifier>
+        <version_id>1.0</version_id>
+        <title>Datalabels</title>
+        <information_model_version>1.13.0.0</information_model_version>
+        <product_class>Product_Bundle</product_class>
+        <Modification_History>
+        </Modification_History>
+    </Identification_Area>
+    <Context_Area>
+        <Time_Coordinates>
+            <start_date_time/>
+            <stop_date_time/>
+        </Time_Coordinates>
+        <Investigation_Area>
+            <name/>
+            <type/>
+            <Internal_Reference>
+                <lid_reference/>
+                <reference_type/>
+            </Internal_Reference>
+        </Investigation_Area>
+        <Observing_System>
+            <name/>
+        </Observing_System>
+    </Context_Area>
+    <Reference_List>
+        <Internal_Reference>
+            <lid_reference/>
+            <reference_type/>
+        </Internal_Reference>
+    </Reference_List>
+    <Bundle>
+        <bundle_type/>
+    </Bundle>
+</Product_Bundle>

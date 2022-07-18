@@ -1,0 +1,176 @@
+{% extends 'main/base-k.html' %}
+{% load static %}
+
+{% block title_block %}
+Add Instruments and Targets
+{% endblock %}
+
+{% block main_header_block %}
+Add Instruments and Targets:  {{ instrument_host }}
+{% endblock %}
+
+{% block body_block %}
+<!--First row-->
+<div class="row pt-2">
+    <!--Column-->
+    <div class="col-md-12">
+        <h3 class="card-header elegant-color white-text text-center z-depth-2">Select instruments and targets</h3>
+    </div>
+    <!--/.Column-->
+</div>
+<!--/.First row-->
+<!--Second row-->
+<div class="row pt-2">
+    <!--Column-->
+    <div class="col-md-6">
+        <form method="post" action="#">
+            {% csrf_token %}
+            <div id="instrument_list">
+                {{ form_choose_instruments.as_table }}
+            </div>
+            <div id="target_list">
+                {{ form_choose_targets.as_table }}
+            </div>
+            <input type="submit" value="Add to bundle"/>
+        </form>
+    </div>
+    <!--/.Column-->
+    <!--Second column-->
+    <div class="col-md-6 help">
+        <div class="instrument_list">
+            The listed instruments are the full listing of instruments on {{ instrument_host }}.  Please select which instruments are associated with your given bundle.
+        </div>
+        <div class="target_list">
+            The listed targets are the full listing of targets on {{ instrument_host }}.  Please select which targets are associated with your given bundle.
+        </div>
+    </div>
+    <!--/.Second column-->
+</div>
+<!--/.Second Row-->
+<!--Third row-->
+<div class="row pt-2">
+    <!--Column-->
+    <div class="col-md-12">
+        <h3 class="card-header elegant-color white-text text-center z-depth-2">Current instruments</h3>
+    </div>
+    <!--/.Column-->
+</div>
+<!--/.Third row-->
+<!--Fourth row-->
+<div class="row pt-2">
+{% if instrument_list %}
+    {% for instrument in instrument_list %}
+    <!--Column-->
+    <div class="col-md-3">
+        <!--Card-->
+        <div class="card">
+            <!--Card image-->
+            <img class="img-fluid" src="{% static 'images/warp_zone.svg' %}" alt="Instrument Image">
+            <!--Card content-->
+            <div class="card-body">
+                <!--Title-->
+                <h4 class="card-title">{{ instrument }}</h4>
+                <!--Text-->
+                <p class="card-text">{{ instrument.lid }}</p>
+                <!--Buttons-->
+                <a href="{% url 'main:construction' %}">
+                    <button type="button" class="btn btn-danger">Remove</button> 
+                </a>
+            </div>
+        </div>
+        <!--/.Card-->
+    </div>
+    <!--/.Column-->
+    {% endfor %}
+{% else %}
+    <!--Column-->
+    <div class="col-md-3">
+        <!--Card-->
+        <div class="card">
+            <!--Card image-->
+            <img class="img-fluid" src="{% static 'images/null.png' %}" alt="Instrument Image">
+            <!--Card content-->
+            <div class="card-body">
+                <!--Title-->
+                <h4 class="card-title">Null</h4>
+                <!--Text-->
+                <p class="card-text">No instruments are associated with {{ bundle }}.</p>
+            </div>
+        </div>
+        <!--/.Card-->
+    </div>
+    <!--/.Column-->
+{% endif %}
+</div>
+<!--/.Fourth Row-->
+<!--Fifth Row-->
+<div class="row pt-2">
+    <!--Column-->
+    <div class="col-md-12">
+        <h3 class="card-header elegant-color white-text text-center z-depth-2">Current targets</h3>
+    </div>
+    <!--/.Column-->
+</div>
+<!--/.Fifth row-->
+<!--Sixth row-->
+<div class="row pt-2">
+{% if target_list %} 
+    {% for target in target_list %}
+    <!--Column-->
+    <div class="col-md-3">
+        <!--Card-->
+        <div class="card">
+            <!--Card image-->
+            <img class="img-fluid" src="{% static 'images/target.jpg' %}" alt="Target Image">
+            <!--Card content-->
+            <div class="card-body">
+                <!--Title-->
+                <h4 class="card-title">{{ target }}</h4>
+                <!--Text-->
+                <p class="card-text">{{ target.lid }}</p>
+                <!--Buttons-->
+                <a href="{% url 'main:construction' %}">
+                    <button type="button" class="btn btn-danger">Remove</button> 
+                </a>
+            </div>
+        </div>
+        <!--/.Card-->
+    </div>
+    <!--/.Column-->
+    {% endfor %}
+{% else %}
+    <!--First column-->
+    <div class="col-md-3">
+        <!--Card-->
+        <div class="card">
+            <!--Card image-->
+            <img class="img-fluid" src="{% static 'images/null.png' %}" alt="An image representing building a label.">
+            <!--Card content-->
+            <div class="card-body">
+                <!--Title-->
+                <h4 class="card-title">Null</h4>
+                <!--Text-->
+                <p class="card-text">No targets have been added</p>
+            </div>        
+        </div>
+        <!--/.Card-->
+    </div>
+    <!--/.First column-->
+{% endif %}
+</div>
+<!--/.Sixth Row-->
+<!--Sixth row-->
+<div class="row pt-2">
+    <!--First column-->
+    <div class="col-md-12">
+        <a href="{{ bundle.get_absolute_url }}">
+        <button type="button" class="btn btn-default">
+            <i class="fa fa-arrow-circle-left"></i>
+            Back to {{ bundle }}'s Bundle Detail
+        </button>
+        </a>
+    </div>
+    <!--/.First column-->
+</div>
+<!--/.Sixth row-->
+{% endblock %}

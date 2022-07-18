@@ -1,0 +1,21 @@
+{% extends 'elsa/base-k.html' %}
+
+{% load i18n %}
+
+{% block main_header_block %}{% trans "List" %}{% endblock %}
+
+{% block body_block %}
+    {% blocktrans %}
+	<center>
+
+{% for f in dirlist reversed %}
+<a href="127.0.0.1:8000/media{{ f }}"> <h1>{{ f }}</h1></a>
+{% endfor %}
+
+
+	</center>
+	
+	
+{% endblock %}
+
+

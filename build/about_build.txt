@@ -1,0 +1,10 @@
+The build app within the elsa project contains all of the functionality of building a new PDS4 bundle.  Currently, the build app incorporates a simple query system to begin building label templates for the user.  
+
+As of February 2018
+The build app:
+    - allows the user to set the name, version, and type of bundle.
+    - allows the user to add associated collections
+    - allows the user to select context products (facility, mission)
+    - allows the user to add document products (1 at a time)
+    - allows the user to add 2d table delimited products (1 at a time)
+    - allows the user to add alias, citation information to bundle

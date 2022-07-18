@@ -1,0 +1,39 @@
+{% extends 'main/base-k.html' %}
+{% load staticfiles %}
+
+{% block body_block %}
+    {% if user.is_authenticated %}
+        <!--Main layout-->
+        <div class="container">
+            <!--First row -->
+            <div class="row pt-2">
+                <div class="col-md-9">    
+                    <h3>Elsa's Friend List</h3>
+                    {% if friend_list %}
+                    <ul>
+                        {% for friend in friend_list %}
+                        <li>
+                            <a href="{{ friend.userprofile.get_absolute_url }}">{{friend.first_name}}</a> 
+                        </li>
+                        {% endfor %}
+                    {% else %}
+                    <img src="{% static 'images/castle.png' %}" alt="Picture of ELSA's Castle" height="540" width="960" />
+                    <br />  
+                    PhotoCreds@<a href="http://www.deviantart.com/art/TEST-652522843">Star41Gamer</a>
+                    {% endif %}
+                </div>
+            </div>
+            <!--/.First row-->
+        </div>
+        <!--/.Main layout-->
+
+    {% else %}
+        <p>You shouldn't be seeing this.  Error in security.  atmos/templates/friends.</p>
+    {% endif %}
+
+
+    <script type="text/javascript" src="{% static 'js/build_a_bundle.js' %}"></script>
+{% endblock %}
+
+
+

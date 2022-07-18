@@ -1,0 +1,163 @@
+{# PAGE NEEDS CLEANING -- SPACING OFF -- QUICK COPY & PASTE OF INFO FROM https://pds.nasa.gov/datastandards/documents/sr/current/StdRef_1.10.0.pdf -- ADD REFERENCE SECTION #}
+
+
+
+
+{% extends 'main/base-k.html' %}
+{% load static %}
+
+
+{% block title_block %}
+Products
+{% endblock %}
+
+
+{% block main_header_block %}
+Collections
+{% endblock %}
+
+{% block about_header_block %}
+Collections
+{% endblock %}
+
+
+{% block standards_reference_block %}
+2A.5 Collection Types
+Basic products must be organized into collections based on the type and function of the data.  
+Data providers are expected to assign products to appropriate collections (e.g., only ‘quick-look’ or ‘browse’ products are expected to be assigned to a browse collection); the assignments will be considered during peer review.  PDS recognizes the following types of collections. 
+    <li>browse</li>
+        {% block more_info_block %}
+A 
+browse
+ collection contains ‘quick-
+look’
+ products designed to facilitate use of the archive.  
+Products in a browse collection are defined using appropriate classes; possibilities include 
+Product_Browse and Product_Thumbnail. 
+        {% endblock %}
+
+
+    <li>calibration</li>
+        {% block more_info_block %}
+A 
+calibration
+ collection contains data and files necessary for the cali
+bration of basic products.  
+Products in a calibration collection are defined using the appropriate class; possibilities include 
+Product_Observational and Product_Document.
+        {% endblock %}
+
+
+    <li>context</li>
+        {% block more_info_block %}
+A 
+context
+ collection is the list of products comprising various
+ objects
+, identified within the PDS4 
+registry
+, that are specific to the science bundle.  
+These include physical objects such as 
+instruments, spacecraft, and planets and conceptual objects such as missions and PDS nodes.  All 
+products in a context collection will be secondary m
+embers of the collection, since the primary 
+versions are curated by the PDS Engineering Node
+ or other responsible agency
+. 
+        {% endblock %}
+
+
+    <li>data</li>
+        {% block more_info_block %}
+A 
+data
+ collection
+ contain
+s observational products
+, often separated according to processing level, 
+target, instrument mode, etc
+.; these
+ are the science data that most users seek.  Products in a data 
+collection will typically be defined using the Product_Observational class.
+        {% endblock %}
+
+
+    <li>geometry</li>
+        {% block more_info_block %}
+A 
+geometry
+collection contains non-
+SPICE geometry products — for example, Supplementary 
+Experiment Data Record (SEDR) data, 
+gazetteers
+, tables of anaglyph pairs, or footprint files
+.  
+Detailed information about particular cartographic projections utilized in the archive may also be 
+included.  Products in a geometry collection are defined using an appropriate class; possibilities 
+include Product_Observational
+, Product_Ancillary, and Product_Document.
+        {% endblock %}
+
+
+    <li>miscellaneous</li>
+        {% block more_info_block %}
+A 
+miscellaneous
+ collection
+ contains supplementa
+ry information deemed by the data provider to 
+be useful in
+ the interpretation
+ and use
+ of other collections
+ in the bundle but which does not fit 
+within the scope of the other collections
+.    For example,
+ meta
+-data catalogs,
+ data bas
+e dumps, and 
+records of modification history
+ could be included. 
+Because of the disparate nature of the files 
+included in a
+ miscellaneous collection
+, no single class exists for miscellaneous products.  T
+he 
+following are some of the possibilities: Product_Ancillary, Product_Document, 
+Product_File_Text, Product_Observational, Product_Thumbnail, and Product_Zipped.
+        {% endblock %}
+
+    <li>XML schema</li>
+        {% block more_info_block %}
+An 
+XML schema
+ collection contains all XML schema files included in or referenced by XML 
+labels in the bundle along with any Schematron files created for validation purposes.  A bundle is 
+required to contain an XML schema collection unless all of the collection members would be 
+secondary in which case the XML schema collection becomes optional. There can be no more 
+than one XML schema collection per bundle.
+        {% endblock %}
+
+    <li>SPICE kernels</li>
+        {% block more_info_block %}
+A 
+SPICE
+ kernels
+ collection contain
+s individual SPICE files
+ and their XML labels
+, organized by 
+kernel type.  Product
+s in a SPICE kernels collection must be
+ defined using the 
+Product_SPICE_K
+ernel class.
+        {% endblock %}
+    
+{% endblock %}
+
+
+{% block body_block %}
+
+{% endblock %}

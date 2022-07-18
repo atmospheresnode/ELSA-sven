@@ -1,0 +1,94 @@
+{% extends 'main/base-k.html' %}
+{% load static %}
+
+{% block title_block %}
+Display Dictionary
+{% endblock %}
+
+{% block main_header_block %}
+Display Dictionary
+{% endblock %}
+
+{% block about_header_block %}
+"The Display Dictionary contains classes, attributes, and rules for specifying how arrays (images) as stored, should be displayed to users. For example, defining the vertical display direction 'Bottom to Top' or horizontal direction 'Left to Right' and it can provide guidance on mapping multiband arrays for color display (red, green, and blue) or as a movie sequence (video). ." - <a href="https://pds.nasa.gov/datastandards/schema/released/#disp">PDS4 Display Dictionary</a>
+{% endblock %}
+
+{% block body_block %}
+
+<!--Row-->
+<div class="row pt-2">
+    <!--Column-->
+    <div class="col-md-12">
+        <h3 class="card-header elegant-color white-text text-center z-depth-2">Add Display Dictionary</h3><br/>
+    </div>
+    <!--/.Column-->
+</div>
+<!--/.Row-->
+<!--TRow-->
+<div class="row pt-2">
+    <!--Column-->
+    <div class="col-md-6">
+        <form id="form_product_document" method="post" action="">
+            {% csrf_token %}
+            <div id="form_product_document">
+                <h3>Color Display Settings</h3>
+                {{ form_color_display_settings }}
+
+                <h3>Display Direction</h3>
+                {{ form_display_direction }}
+
+
+                <h3>Display Settings</h3>
+                {{ form_display_settings }}
+
+
+                <h3>Movie Display Settings</h3>
+                {{ form_movie_display_settings }}
+            </div>
+            <input class="btn btn-default" type="submit" value="Add"/>
+        </form>
+    </div>
+    <!--/.Column-->
+    <!--Column-->
+    <div class="col-md-4 help">
+        <div class="document">			<!-- FIX -->
+            <p>The name of your document is the unique name to be associated with your lid</p>
+            <p>The title of your document can be the same as the name given; however, does not necessarily have to be.</p>
+        </div>
+    </div>
+    <!--/.Column-->
+</div>
+<!--/.Row-->
+<hr/>
+<!--Row-->
+<div class="row pt-2">
+    <!--Column-->
+    <div class="col-md-12">
+        <h3 class="card-header elegant-color white-text text-center z-depth-2">Current Display Dictionary Information</h3><br/>
+    </div>
+    <!--/.Column-->
+</div>
+<!--/.Row-->
+<!--Row-->
+<div class="row pt-2">
+
+</div>
+<!--/.Row-->
+<hr/>
+<!--Row-->
+<div class="row pt-2">
+    <!--Column-->
+    <div class="col-md-12">
+        <a href="{% url 'build:bundle' bundle.pk %}">
+        <button type="button" class="btn btn-default">
+            <i class="fa fa-arrow-circle-left"></i>
+            Back to {{ bundle }}'s Bundle Detail
+        </button>
+        </a>
+    </div>
+    <!--/.Column-->
+</div>
+<!--/.Row-->
+<hr/>
+
+{% endblock %}

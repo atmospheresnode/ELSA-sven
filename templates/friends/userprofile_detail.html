@@ -1,0 +1,174 @@
+{% extends 'main/base-k.html' %}
+{% load static %}
+
+{% block title_block %}
+{{ userprofile }}
+{% endblock %}
+
+{% block main_header_block %}
+{{ user.first_name }} {{ user.last_name}}.
+{% endblock %}
+
+{% block body_block %}
+<!--Row-->
+<div class="row pt-2">
+    <!--Column-->
+    <div class="col-md-8">
+        <!--Card-->
+        <div class="card">
+            <!--Card content-->
+            <div class="card-body">
+                <!--Title-->
+                <h4 class="card-title">Welcome to your ELSA profile</h4>
+                <!--Text-->
+                <p class="card-text">Your profile page is your hub
+	      for editing your bundles. Here you can:
+                    <ul>
+                        <li>Add new bundles</li>
+                        <li>View/Edit existing bundles</li>
+			<li>Download bundle templates</li>
+                        
+                    </ul>
+                </p>                        
+            </div>
+        </div>
+        <!--/.Card-->
+    </div>
+    <!--/.Column-->
+    <!--Column-->
+    <div class="col-md-4">
+        <img src="{% static 'images/team2.png' %}" class="img-fluid">
+    </div>
+    <!--/.Column-->
+</div>
+<!--/.Row-->
+<hr/>
+<!--Row-->
+<div class="row pt-2">
+    <div class="col-md-12">
+        <h3 class="card-header elegant-color white-text text-center z-depth-2">
+        Bundles
+        </h3>
+    </div>
+</div>
+<!--/.Row-->
+<hr/>
+<!--Row-->
+<div class="row pt-2">
+        <div class="col-sm-6 col-md-3">
+            <!--Card-->
+            <a href="{% url 'build:build' %}">
+            <div class="card">
+                <!--Card image-->
+                <img class="img-fluid" src="{% static 'images/add.png' %}" alt="An image representing building a bundle.">
+                <!--Card content-->
+                <div class="card-body">
+                    <!--Title-->
+                    <h4 class="card-title">Add Bundle!</h4>
+                    <!--Text-->
+                    <p class="card-text"></p>
+                </div>
+            </div>
+            </a>
+            <!--/.Card-->
+        </div>
+    {% if bundles %}
+        {% for bundle in bundles %}
+            <!--Column-->
+            <div class="col-sm-6 col-md-3">
+                <!--Card -->
+                <a href="{{ bundle.absolute_url }}">
+                <div class="card">
+                   <!--Card image-->
+                    <img class="img-fluid" src="{% static 'images/bundle.jpg' %}" alt="Bundle Image">
+                    <!--Card content-->
+                    <div class="card-body">
+                        <!--Title-->
+                        <h4 class="card-title">{{ bundle }}</h4>
+                        <!--Text-->
+                        <p class="card-text">{{ bundle.lid }}</p>                        
+                    </div>
+                </div>
+                </a>
+                <!--/.Card-->
+            </div>
+            <!--/.Column-->
+
+        {% endfor %}        
+    {% else %}
+        <!--Column-->
+        <div class="col-sm-6  col-md-3">
+            <!--Card-->
+            <div class="card">
+                <!--Card image-->
+                <img class="img-fluid" src="{% static 'images/null.png' %}" alt="An image representing no bundles.">
+                <!--Card content-->
+                <div class="card-body">
+                    <!--Title-->
+                    <h4 class="card-title">No bundles!</h4>
+                    <!--Text-->
+                    <p class="card-text"></p>
+                </div>
+            </div>
+            <!--/.Card-->
+            </p>
+        </div>
+        <!--/.Column-->
+    {% endif %}
+        <!--Column-->
+        <div class="col-sm-6 col-md-3">
+            <!--Card-->
+            <a href="{% url 'build:build' %}">
+            <div class="card">
+                <!--Card image-->
+                <img class="img-fluid" src="{% static 'images/add.png' %}" alt="An image representing building a bundle.">
+                <!--Card content-->
+                <div class="card-body">
+                    <!--Title-->
+                    <h4 class="card-title">Add Bundle!</h4>
+                    <!--Text-->
+                    <p class="card-text"></p>
+                </div>
+            </div>
+            </a>
+            <!--/.Card-->
+        </div>
+        <!--/.Column-->
+</div>
+<!--/.Row-->
+<hr/>
+<!--Row-->
+<div class="row pt-2">
+    <div class="col-md-12">
+        <h3 class="card-header elegant-color white-text text-center z-depth-2">
+        {{ user.first_name }}'s Settings
+        </h3>
+    </div>
+</div>
+<!--/.Row-->
+<!--Row-->
+<div class="row pt-2">
+    <!--Column-->
+    <div class="col-md-12">
+        <div class="col-sm-6 col-md-3">
+            <!--Card-->
+            <a href="{% url 'friends:settings' user.pk %}">
+            <div class="card">
+                <!--Card image-->
+                <img class="img-fluid" src="{% static 'images/211751_gear_icon.png' %}" alt="An image representing building a bundle.">
+                <!--Card content-->
+                <div class="card-body">
+                    <!--Title-->
+                    <h4 class="card-title">Change Settings!</h4>
+                    <!--Text-->
+                    <p class="card-text"></p>
+                </div>
+            </div>
+            </a>
+            <!--/.Card-->
+        </div>
+    </div>
+    <!--Column-->
+</div>
+<!--/.Row-->
+{% endblock %}

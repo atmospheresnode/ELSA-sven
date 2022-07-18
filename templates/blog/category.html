@@ -1,0 +1,25 @@
+{% extends 'blog/base-k.html' %}
+{% load staticfiles %}
+
+{% block title_block%}
+    {{ category.name }}
+{% endblock %}
+
+{% block body_block %}
+    {% if category %}
+      <h1>{{ category.name }} </h1>
+        {% if pages %}
+            <ul>
+            {% for page in pages %}
+                <li><a href="{{ page.url }}">{{ page.title }}</a></li>
+            {% endfor %}
+            </ul>
+            <hr />
+            <h2>Want to add a page to this category?</h2>
+            <a href="{% url 'blog:add_page' category.slug %}">Add Page</a>
+            <hr />            
+        {% else %}
+            <strong>No pages currently in category.</strong>
+        {% endif %}
+    {% endif %}
+{% endblock %}

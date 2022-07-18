@@ -1,0 +1,153 @@
+{% extends 'main/base-k.html' %}
+{% load static %}
+
+{% block title_block %}
+Document Collection
+{% endblock %}
+
+{% block main_header_block %}
+Edit {{ document }} Document
+{% endblock %}
+
+{% block about_header_block %}
+"Documents include any textual or text-based information supplied to assist the user in
+understanding, interpreting, calibrating, or otherwise manipulating the data. Documents may themselves be data products. Frequently documents include graphics and/or images to assist in comprehension." - <a href="https://pds.nasa.gov/pds4/doc/concepts/Concepts_1.8.0_170406_clean.pdf">PDS4 Concepts</a>
+{% endblock %}
+
+{% block body_block %}
+
+<!--Row-->
+<div class="row pt-2">
+    <!--Column-->
+    <div class="col-md-12">
+        <h3 class="card-header elegant-color white-text text-center z-depth-2">Edit {{ document.title }}</h3><br/>
+    </div>
+    <!--/.Column-->
+</div>
+<!--/.Row-->
+<!--Row-->
+<div class="row pt-2">
+    <!--Column-->
+    <div class="col-md-6">
+        <form id="form_document" method="post" action="">
+            {% csrf_token %}
+            <div id="form_document">
+                {{ form_document_edit.as_p }}
+            </div>
+            <input class="btn btn-default" type="submit" value="Add"/>
+        </form>
+    </div>
+    <!--/.Column-->
+    <!--Column-->
+    <div class="col-md-4 help">
+    </div>
+    <!--/.Column-->
+</div>
+<!--/.Row-->
+<!--Border-->
+<hr/>
+<!--/.Border-->
+<!--Row-->
+<div class="row pt-2">
+    <!--Column-->
+    <div class="col-md-12">
+        <h3 class="card-header elegant-color white-text text-center z-depth-2">Add a document edition</h3><br/>
+    </div>
+    <!--/.Column-->
+</div>
+<!--/.Row-->
+<!--Row-->
+<div class="row">
+    <!--Column-->
+    <div class="col-md-12">
+        <p>Not every document has a document edition.  If your document has a document edition, 
+            <a href="{% url 'main:construction' %}">
+                <button class="btn btn-default">Add Document Edition</button>
+            </a>
+        </p>
+    </div>
+    <!--/.Column-->
+</div>
+<!--/.Row-->
+<!--Border-->
+<hr/>
+<!--/.Border-->
+<!--Row-->
+<div class="row pt-2">
+    <!--Column-->
+    <div class="col-md-12">
+        <h3 class="card-header elegant-color white-text text-center z-depth-2">Current Document Products</h3><br/>
+    </div>
+    <!--/.Column-->
+</div>
+<!--/.Row-->
+<!--Row-->
+<div class="row pt-2">
+    {% if documents %}
+        {% for document in documents %}
+            <!--Column-->
+            <div class="col-sm-6 col-md-3">
+                <!--Card-->
+                <a href="{{ document.get_absolute_url }}">
+                <div class="card">
+                    <!--Card image-->
+                    <img class="img-fluid" src="{% static 'images/label.jpg' %}" alt="Label Image">
+                    <!--Card content-->
+                    <div class="card-body">
+                        <!--Title-->
+                        <h4 class="card-title">{{ document }}</h4>
+                        <!--Text-->
+                        <p class="card-text">{{ document.lid }}</p>
+                        <!--Buttons-->
+                        <a href="{{ document.get_archive_url }}">
+                            <button type="button" class="btn btn-default">View</button>
+                        </a>
+                        <a href="{{ document.get_edit_url }}">
+                            <button type="button" class="btn btn-success">Edit</button>
+                        </a>
+                    </div>
+                </div>
+                </a>
+                <!--/.Card-->
+            </div>
+            <!--/.Column-->
+        {% endfor %}
+    {% else %}
+        <!--Column-->
+        <div class="col-md-3">
+            <!--Card-->
+            <div class="card">
+                <!--Card image-->
+                <img class="img-fluid" src="{% static 'images/null.png' %}" alt="An image representing no labels.">
+                <!--Card content-->
+                <div class="card-body">
+                    <!--Title-->
+                    <h4 class="card-title"></h4>
+                    <!--Text-->
+                    <p class="card-text">No Product Document labels</p>
+                </div>
+            </div>
+            <!--/.Card-->
+            </p>
+        </div>
+        <!--/.Column-->
+    {% endif %}
+</div>
+<!--/.Row-->
+<hr/>
+<!--Row-->
+<div class="row pt-2">
+    <!--Column-->
+    <div class="col-md-12">
+        <a href="{{ bundle.get_absolute_url }}">
+        <button type="button" class="btn btn-default">
+            <i class="fa fa-arrow-circle-left"></i>
+            Back to {{ bundle }}'s Bundle Detail
+        </button>
+        </a>
+    </div>
+    <!--/.Column-->
+</div>
+<!--/.Row-->
+
+{% endblock %}

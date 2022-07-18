@@ -1,0 +1,50 @@
+{% extends 'main/base-k.html' %}
+{% load static %}
+
+{% block title_block %}
+Fill Data
+{% endblock %}
+
+{% block main_header_block %}
+Specify Some Data
+{% endblock %}
+
+{% block body_block %}
+
+<script src="{% static 'js/build_a_bundle.js' %}" language="Javascript" type="text/javascript"></script>
+
+<div class="row pt-2">
+    <!--First column-->
+    <div class="col-md-12">
+        <h3 class="card-header elegant-color white-text text-center z-depth-2">Fill Data Tables</h3><br/>
+    </div>
+    <!--/.First column-->
+</div>
+
+<div class="card">
+<h3>{{ data_object.name }}</h3>
+
+    <!--First column-->
+    <div class="card-body">
+	<form id = "data_form" method="post" action="">
+        {% csrf_token %}
+	    {{ data_form.as_p }}
+	    <input type="submit" value="Submit" />
+	</form>
+    </div>
+</div>
+<!--/.Row-->
+<div class="row pt-2">
+    <!--First column-->
+    <div class="col-md-12">
+        <a href="{% url 'build:bundle' bundle.pk %}">
+        <button type="button" class="btn btn-default">
+            <i class="fa fa-arrow-circle-left"></i>
+            Back to {{ bundle }}'s Bundle Detail
+        </button>
+        </a>
+    </div>
+    <!--/.First column-->
+</div>
+
+{% endblock %}

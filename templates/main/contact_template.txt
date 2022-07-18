@@ -1,0 +1,13 @@
+Contact Name:
+{{ name }}
+
+Email:
+{{ email }}
+
+Company:
+{{ agency }}
+
+
+
+Message:
+{{ message }}

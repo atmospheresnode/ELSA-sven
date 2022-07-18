@@ -1,0 +1,41 @@
+
+
+@media (min-width: 776px) {
+    .carousel .view ul li {
+        display: inline;
+    }
+    .carousel .view .full-bg-img ul li .flex-item {
+        margin-bottom: 1.5rem;
+    }
+}
+
+
+html,
+body,
+header,
+.view,
+.carousel,
+.carousel-item,
+.active,
+.carousel-inner {
+    height: 100%;
+}
+
+.carousel-item:nth-child(1) {
+    background-image: url("/static/images/Frozenlandscape.jpg");
+    background-repeat: no-repeat;
+    background-size: cover;
+}
+
+.carousel-item:nth-child(2) {
+    background-image: url("/static/images/frozen-tea-party.jpg");
+    background-repeat: no-repeat;
+    background-size: cover;
+}
+
+.carousel-item:nth-child(3) {
+    background-image: url("/static/images/frozen-fear.jpg");
+    background-repeat: no-repeat;
+    background-size: cover;
+}
+            

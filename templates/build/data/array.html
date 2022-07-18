@@ -1,0 +1,183 @@
+
+
+
+{% extends 'base-k-se.html' %}
+{% load static %}
+{% block title_block %}
+Array Data
+{% endblock %}
+{% block main_header_block %}
+Array Data
+{% endblock %}
+{% block about_header_block %}
+"Array data info" - <a href="#">PDS4 Concepts</a>
+{% endblock %}
+{% block body_block %}
+<!--Row-->
+<div class="row pt-2">
+   <!--Column-->
+   <div class="col-md-12">
+      <h3 class="card-header elegant-color white-text text-center z-depth-2">Observational Product</h3>
+      <br/>
+   </div>
+   <!--/.Column-->
+</div>
+<!--/.Row-->
+<!--Row-->
+<div class="row">
+   <div class="col-md-12">
+      <p class="card-header black-text text-left z-depth-2">Information about a product observational here</br>
+      </p>
+      <br/>
+   </div>
+</div>
+<!--/.Row-->
+<!--Row-->
+<div class="row pt-2">
+   <!--Column-->
+   <div class="col-md-8">
+      <!--Card-->
+      <div class="button">
+         <!--Card content-->
+         <div class="card-body">
+            <!--Title-->
+            <h4 class="card-title">Title: {{ product_observational.title }}</h4>
+            <!--/.Title-->
+            <!--Text-->
+            <p class="card-text">
+            <ul>
+               <li>Bundle: {{ product_observational.bundle }}</li>
+               <li>Processing Level: {{ product_observational.data.processing_level }}</li>
+               <li>Domain: {{ product_observational.domain }}</li>
+               <li>Discipline: {{ product_observational.discipline }}</li>
+               <li>Purpose: {{ product_observational.purpose }}</li>
+               <li>Structure: {{ product_observational.type_of }}</li>
+            </ul>
+            </p>
+            <!--/.Text-->
+         </div>
+         <!--/.Card content-->
+      </div>
+      <!--/.Card-->
+   </div>
+   <!--/.Column-->
+</div>
+<!--/.Row-->
+<div id="collections_detail">
+   <!--Row-->
+   <div class="row">
+      <div class="col-md-12" id="data_collection" onclick="displayArraySection()">
+         <p class="card-header stylish-color white-text text-center z-depth-2">Array</p>
+         <br/>
+      </div>
+   </div>
+   <!--/.Row-->
+   <!--Data collection detail-->
+   <div id="array_detail">
+      <!--Row-->
+      <div class="row">
+         <!--Column-->
+         <div class="col-md-12">
+            <p class="card-header black-text text-left z-depth-2">
+               Add arrays to your observational product
+               </br>
+               <input type="button" onclick="displayArrayForm()" value="+ Add Array" class="btn btn-teal">
+            </p>
+         </div>
+         <!--/.Column-->
+         <!--Column-->
+         <div class="col-md-12 " id="displayArrayForm">
+            </br>
+            <div class="rgba-indigo-slight">
+               <form id="form_data" method="post" action="{% url 'build:array' bundle.pk data.pk product_observational.pk %}">
+                  {% csrf_token %}
+                  <div id="form_data">
+                     {{ form_array.as_p }}
+                  </div>
+                  <input class="btn btn-default" type="submit" value="Submit"/>
+               </form>
+            </div>
+         </div>
+         <!--/.Column-->
+         <!--Column-->
+         <!--<div class="col-md-4 help">
+            <div class="array">
+               <p>Array help here.</p>
+            </div>
+         </div>-->
+         <!--/.Column-->
+      </div>
+      <!--/.Row-->
+      <hr>
+      <!--Row-->
+      <div class="row">
+         <!--Column-->
+         <div class="col-md-12    black-text text-center z-depth-2" onclick="displayArraySet()">
+            <strong>View Array Products   <i class="fa fa-eye"></i></strong>
+            <!--Row-->
+            <div class="row" id="array_set">
+               {% for array in arrays %}
+               <!--Column-->
+               <div class="col-md-4">
+                  <!--Card-->
+                  <div class="card">
+                     <!--Card content-->
+                     <div class="card-body">
+                        <!--Title-->
+                        <h4 class="card-title">Name: {{ array.name }}</h4>
+                        <!--/.Title-->
+                        <!--Text-->
+                        <p class="card-text">
+                        
+                           Dimensions: {{ array.array_dimensions }}</br>
+                           Type: {{ array.array_type }}</br>
+                           LID: {{ array.local_identifier }}</br>
+                           Offset: {{ array.offset }}</br>
+                           Axes: {{ array.axes }}</br>
+                           Axis Index Order: {{ array.axis_index_order }}</br>
+                           Description: {{ array.description }}</br>
+
+
+      <a href="{% url 'main:construction' %}">
+      <input class="btn btn-danger" type="submit" value="Delete Alias"/>
+      </a>
+
+                        
+                        </p>
+                        <!--/.Text-->
+                     </div>
+                     <!--/.Card content-->
+                  </div>
+                  <!--/.Card-->
+               </div>
+               <!--/.Column-->
+               {% endfor %}
+            </div>
+            <!--/.Row-->
+         </div>
+         <!--/.Column-->
+      </div>
+      <!--/.Row-->
+   </div>
+   <!--/.Data Collection Detail-->
+</div>
+<!--/.End collections detail-->
+<hr/>
+<!--Row-->
+<div class="row pt-2">
+   <!--Column-->
+   <div class="col-md-12">
+      <a href="{% url 'build:bundle' bundle.pk %}">
+      <button type="button" class="btn btn-default">
+      <i class="fa fa-arrow-circle-left"></i>
+      Back to {{ bundle }}'s Bundle Detail
+      </button>
+      </a>
+   </div>
+   <!--/.Column-->
+</div>
+<!--/.Row-->
+<hr/>
+{% endblock %}
+
+

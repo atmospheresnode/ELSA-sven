@@ -1,0 +1,679 @@
+{% extends 'base-k-se.html' %}
+{% load static %}
+
+
+
+
+{% block title_block %}
+Bundle
+{% endblock %}
+
+
+
+
+{% block main_header_block %}
+Bundle
+{% endblock %}
+
+{% block about_header_block %}
+
+{% endblock %}
+
+{% block standards_reference_block %}
+2A.1
+ Bundles 
+A 
+bundle
+ is the default logical construct for archiving digital data in the PDS.
+ (Recall that 
+terms 
+such as bundle, collection, and basic product are defined in the glossary of the 
+PDS4 Concepts
+document.) 
+Bundles have a simple hierarchical structure.  A bundle has one or more member 
+collections
+, 
+each of which has one or more member 
+basic
+products
+ (Figure 2A-1).  PDS does not impose 
+requirements on how bundles are defined except that (1) bundles must be distinct (their 
+LIDs/LIDVID
+s must be distinct) within the overall holdings of PDS, and (2) each bundle must 
+be approved by a PDS peer review. 
+Fig
+ure 2A-1: Archive structure. 
+Members of a bundle are listed in a Product_Bundle, an XML file which serves as both a label 
+and the bundle inventory.  Product_Bundle is described and uniquely identified using the 
+Product_Bundle class definition (see Section 9D for information on constructing 
+Product_Bundle).   
+An optional “readme” file may be included as part of Product_Bundle; it is described by the 
+bundle label so is not a separate product.  The “readme” file provides a general overview of the 
+bundle contents and organization in human readable format.  
+It may also contain general 
+instructions for use of the bundle and contact information for data provider or discipline node 
+personnel.  The “readme” file must be formatted either as 7-
+bit ASCII text o
+r as UTF
+-8 text
+.   
+{% endblock %}
+
+
+
+{% block body_block %}
+
+
+
+    <!--Grid row-->
+    <div class="row">
+
+        <!--Grid column-->
+        <div class="col-md-3">
+
+
+            <p class="section-description">
+                <strong>Congratulations, you’ve started to build a bundle with ELSA.</strong>
+                
+            </p>
+            <p class="section-description">
+                <strong>Your templates aren’t valid yet, just a stub with a few pieces filled in.</strong>
+                
+            </p>
+            <p class="section-description">
+                <strong>Now you can start to populate and edit the templates for your bundle.</strong>
+                
+            </p>
+        </div>
+        <!--Grid column-->
+
+        <!--Grid column-->
+
+            <div class="col-md-3">
+                <a href="{% url 'build:bundle_download' bundle.pk %}">
+                    <button type="button" class="btn btn-cyan">Download {{ bundle }} Bundle</button>
+                </a>
+            </div>
+            <div class="col-md-3">
+               <a href="https://atmos.nmsu.edu/elsa/archive/{{user.username}}/{{bundle}}_bundle">
+                    <button type="button" class="btn btn-teal">View {{ bundle }} Directory</button>
+                </a>
+            </div>
+            <div class="col-md-3">
+                <a href="{% url 'build:bundle_delete' bundle.pk %}">
+                    <button type="button" class="btn btn-warning">Delete {{ bundle }} Bundle</button>
+                </a>
+            </div>
+
+
+        <!--Grid column-->
+
+
+
+    </div>
+    <!--/.Grid row-->
+    <!--Divider-->
+    <hr class="mb-5">
+    <!--/.Divider-->
+    <!--Row-->
+    <div class="row">
+        <div class="col-md-12">
+          <h3 class="card-header elegant-color white-text text-center z-depth-2">
+            <button class="container" type="button" data-toggle="collapse" data-target="#contextcollapse" aria-expanded="true" aria-controls="contextcollapse">
+	      Context
+            </button>
+          </h3><br/>
+        </div>
+    </div>
+    <!--/.Row-->
+    <!--Row-->
+
+    <div class="row">
+
+        <!--/.Column-->
+        <!--Column-->
+       <div id="contextcollapse" class="collapse in">
+        <div class="col-sm-6 col-md-3">
+            <!--Card-->
+            <div class="button">
+                <!--Link-->
+		    <a href="{% url 'build:context_search' bundle.pk %}">
+                <!--<a href="{% url 'main:construction' %}">-->
+                    <!--Card content-->
+                    <div class="card-body">
+                        <!--Title-->
+                        <h4 class="card-title">CONTEXT</h4>
+                        <!--/.Title-->
+                        <!--Text-->
+                        <p class="card-text">Add facility, mission information.<br/><br/><br/></p>
+                        <!--/.Text-->
+                    </div>
+                    <!--/.Card content-->
+                    <!--Image-->
+                    <img class="img-fluid" src="{% static 'images/add.png' %}" alt="An image representing an arrow."/>
+                    <!--/.Image-->
+                </a>
+                <!--/.Link-->
+            </div>
+            <!--/.Card-->
+        </div>
+    </div>
+        <!--/.Column-->
+
+
+    </div>
+    <!--/.Grid row-->
+    <!--Divider-->
+    <hr class="mb-5">
+    <!--/.Divider-->
+    <!--Row-->
+    <div class="row">
+        <div class="col-md-12">
+           <h3 class="card-header elegant-color white-text text-center z-depth-2">
+            <button class="container" type="button" data-toggle="collapse" data-target="#productcollapse" aria-expanded="true" aria-controls="productcollapse">
+             Product_Bundle
+            </button>
+           </h3><br/>            
+        </div>
+    </div>
+    <!--/.Row-->
+    <!--Row-->
+    <div class="row">
+        <!--Card-->
+       <div id="productcollapse" class="collapse in">
+        <div class="col-sm-6 col-md-3">
+         <div class="button">
+            <!--Link-->
+            <a href="{% url 'build:alias' bundle.pk %}">
+                <!--Card content-->
+                <div class="card-body">
+                    <!--Title-->
+                    <h4 class="card-title">ALIAS</h4>
+                    <!--/.Title-->
+                    <!--Text-->
+                    <p class="card-text">Add an alias if your data has multiple names.<br/><br/><br/></p>
+                    <!--/.Text-->
+                </div>
+                <!--/.Card content-->
+                <!--Image-->
+                <img class="img-fluid" src="{% static 'images/add.png' %}" alt="An image representing addition."/>
+                <!--/.Image-->
+            </a>
+            <!--/.Link-->
+         </div>
+        <!--/.Card-->
+        </div>
+
+        <!--/.Column-->
+        <!--Column-->
+        <div class="col-sm-6 col-md-3">
+            <!--Card-->
+            <div class="button">
+                <!--Link-->
+                <a href="{% url 'build:citation_information' bundle.pk %}">
+                    <!--Card content-->
+                    <div class="card-body">
+                        <!--Title-->
+                        <h4 class="card-title">CITATION INFORMATION</h4>
+                        <!--/.Title-->
+                        <!--Text-->
+                        <p class="card-text">Add citation information to your bundle.<br/><br/></p>
+                        <!--/.Text-->
+                    </div>
+                    <!--/.Card content-->
+                    <!--Image-->
+                    <img class="img-fluid" src="{% static 'images/add.png' %}" alt="An image representing addition."/>
+                    <!--/.Image-->
+                </a>
+                <!--/.Link-->
+            </div>
+            <!--/.Card-->
+        </div>
+        <!--/.Column-->
+       </div>
+
+
+    </div>
+    <!--/.Row-->
+    <!--Divider-->
+    <hr class="mb-5">
+    <!--/.Divider-->
+    <!--Row-->
+    <div class="row pt-2">
+        <div class="col-md-12">
+            <h3 class="card-header elegant-color white-text text-center z-depth-2">
+            <button class="container" type="button" data-toggle="collapse" data-target="#collectionscollapse" aria-expanded="true" aria-controls="collectionscollapse">Collections
+            </button></h3><br/>
+
+        </div>
+    </div>
+    <!--/.Row-->
+    <!--Row-->
+    <div class="row">
+        <!--Column-->
+       <div id="collectionscollapse" class="collapse in">
+        <div class="col-sm-6 col-md-3">
+            <!--Card-->
+            <div class="button">
+            <!--Link-->
+            <a href="{% url 'build:document'  bundle.pk %}">
+                <!--Card content-->
+                <div class="card-body">
+                    <!--Title-->
+                    <h4 class="card-title">DOCUMENT</h4>
+                    <!--/.Title-->
+                    <!--Text-->
+                    <p class="card-text">Add textual information about data.</p>
+                    <!--/.Text-->
+                </div>
+                <!--/.Card content-->
+                <!--Image-->
+                <img class="img-fluid" src="{% static 'images/arrow.png' %}" alt="An image representing an arrow."/>
+                <!--/.Image-->
+            </a>
+            <!--/.Link-->
+            </div>
+            <!--/.Card-->
+        </div>
+       </div>
+    </div>
+        <!--/.Column-->
+	<br>
+
+        {% if bundle.collections.has_raw_data %}
+	<br>
+	<div class="row pt-6">
+	    <div class="col-10">
+	    	<h4 class="card-header elegant-color white-text text-center z-depth-2">Raw Data</h4>
+	    </div>
+	</div>
+	<br>
+	<div class="row pt-6">
+	    <div class="col-3">
+		<h3>Edit Label</h3>
+	    </div>
+            <div class="button col-3">
+	    <a href="{% url 'main:construction' %}">
+                <!--Card content-->
+                <div class="card-body col-6">
+                    <!--Title-->
+                    <h4 class="card-title">Alias</h4>
+                    <!--/.Title-->
+                </div>
+                <!--/.Card content-->
+                <!--Image-->
+                <img style="width:100px;height:100px;" src="{% static 'images/add.png' %}" alt="An image representing addition."/>
+                <!--/.Image-->
+            </a>
+	    </div>
+            <div class="button col-0">
+	    <a href="{% url 'main:construction' %}">
+                <!--Card content-->
+                <div class="card-body col-6">
+                    <!--Title-->
+                    <h4 class="card-title">Modification History</h4>
+                    <!--/.Title-->
+                </div>
+                <!--/.Card content-->
+                <!--Image-->
+                <img style="width:100px;height:100px;" src="{% static 'images/add.png' %}" alt="An image representing addition."/>
+                <!--/.Image-->
+            </a>
+	    </div>
+	</div>
+	<div class="row pt-2">
+	    <div class="col-3">
+		<h3>Add Data</h3>
+	    </div>
+	{% if raw_data_objects %}
+            {% for data in raw_data_objects %}
+            <!--Column-->
+            <div class="col-3">
+                <!--Card -->
+                <a href="{% url 'build:table_creation' bundle.pk data.id %}">
+                <div class="card">
+                   <!--Card image-->
+                    <img class="img-fluid"  src="{% static 'images/bundle.jpg' %}" alt="Bundle Image">
+                    <!--Card content-->
+                    <div class="card-body">
+                        <!--Title-->
+                        <h4 class="card-title">{{ data.name }}</h4>
+			<h5> {{ data.data_type }} </h5>
+                    </div>
+                </div>
+                </a>
+                <!--/.Card-->
+            </div>
+            <!--/.Column-->
+
+            {% endfor %} 
+	{% endif %}
+	<!--Column-->
+        <div class="col-3">
+            <!--Card-->
+            <form method="post" action="{% url 'build:bundle' bundle.pk %}">
+            {% csrf_token %}
+            <div class="card">
+                <!--Card image-->
+                <img class="img-fluid" src="{% static 'images/add.png' %}" alt="An image representing building a plus.">
+                <!--Card content-->
+                <div class="card-body">
+                    <!--Title-->
+                    <div id="form_data">
+			{{ form_raw_data.as_p }}
+		    </div>
+	            <input type="submit" name="add_raw" value="Add Data" />
+                    <!--Text-->
+                    <p class="card-text"></p>
+                </div>
+            </div>
+            </form>
+            <!--/.Card-->
+        </div>
+        <!--/.Column-->
+	</div>
+        {% endif %}
+
+
+        {% if bundle.collections.has_calibrated_data %}
+	<br>
+	<div class="row pt-6">
+	    <div class="col-10">
+	    	<h4 class="card-header elegant-color white-text text-center z-depth-2">Calibrated Data</h4>
+	    </div>
+	</div>
+	<br>
+	<div class="row pt-6">
+	    <div class="col-3">
+		<h3>Edit Label</h3>
+	    </div>
+            <div class="button col-3">
+	    <a href="{% url 'main:construction' %}">
+                <!--Card content-->
+                <div class="card-body col-6">
+                    <!--Title-->
+                    <h4 class="card-title">Alias</h4>
+                    <!--/.Title-->
+                </div>
+                <!--/.Card content-->
+                <!--Image-->
+                <img style="width:100px;height:100px;" src="{% static 'images/add.png' %}" alt="An image representing addition."/>
+                <!--/.Image-->
+            </a>
+	    </div>
+            <div class="button col-0">
+	    <a href="{% url 'main:construction' %}">
+                <!--Card content-->
+                <div class="card-body col-6">
+                    <!--Title-->
+                    <h4 class="card-title">Modification History</h4>
+                    <!--/.Title-->
+                </div>
+                <!--/.Card content-->
+                <!--Image-->
+                <img style="width:100px;height:100px;" src="{% static 'images/add.png' %}" alt="An image representing addition."/>
+                <!--/.Image-->
+            </a>
+	    </div>
+	</div>
+	<div class="row pt-2">
+	    <div class="col-3">
+		<h3>Add Data</h3>
+	    </div>
+	{% if bundle_data %}
+            {% for data in calibrated_data_objects %}
+            <!--Column-->
+            <div class="col-3">
+                <!--Card -->
+                <a href="{% url 'build:table_creation' bundle.pk data.id %}">
+                <div class="card">
+                   <!--Card image-->
+                    <img class="img-fluid"  src="{% static 'images/bundle.jpg' %}" alt="Bundle Image">
+                    <!--Card content-->
+                    <div class="card-body">
+                        <!--Title-->
+                        <h4 class="card-title">{{ data.name }}</h4>                     
+                    </div>
+                </div>
+                </a>
+                <!--/.Card-->
+            </div>
+            <!--/.Column-->
+
+            {% endfor %} 
+	{% endif %}
+	<!--Column-->
+        <div class="col-3">
+            <!--Card-->
+            <form method="post" action="{% url 'build:bundle' bundle.pk %}">
+            {% csrf_token %}
+            <div class="card">
+                <!--Card image-->
+                <img class="img-fluid" src="{% static 'images/add.png' %}" alt="An image representing building a plus.">
+                <!--Card content-->
+                <div class="card-body">
+                    <!--Title-->
+                    <div id="form_data">
+			{{ form_calibrated_data.as_p }}
+		    </div>
+	            <input type="submit" name="add_calibrated" value="Add Data" />
+                    <!--Text-->
+                    <p class="card-text"></p>
+                </div>
+            </div>
+            </form>
+            <!--/.Card-->
+        </div>
+        <!--/.Column-->
+	</div>
+        {% endif %}
+
+        {% if bundle.collections.has_derived_data %}
+	<br>
+	<div class="row pt-6">
+	    <div class="col-10">
+	    	<h4 class="card-header elegant-color white-text text-center z-depth-2">Derived Data</h4>
+	    </div>
+	</div>
+	<br>
+	<div class="row pt-6">
+	    <div class="col-3">
+		<h3>Edit Label</h3>
+	    </div>
+            <div class="button col-3">
+	    <a href="{% url 'main:construction' %}">
+                <!--Card content-->
+                <div class="card-body col-6">
+                    <!--Title-->
+                    <h4 class="card-title">Alias</h4>
+                    <!--/.Title-->
+                </div>
+                <!--/.Card content-->
+                <!--Image-->
+                <img style="width:100px;height:100px;" src="{% static 'images/add.png' %}" alt="An image representing addition."/>
+                <!--/.Image-->
+            </a>
+	    </div>
+            <div class="button col-0">
+	    <a href="{% url 'main:construction' %}">
+                <!--Card content-->
+                <div class="card-body col-6">
+                    <!--Title-->
+                    <h4 class="card-title">Modification History</h4>
+                    <!--/.Title-->
+                </div>
+                <!--/.Card content-->
+                <!--Image-->
+                <img style="width:100px;height:100px;" src="{% static 'images/add.png' %}" alt="An image representing addition."/>
+                <!--/.Image-->
+            </a>
+	    </div>
+	</div>
+	<div class="row pt-2">
+	    <div class="col-3">
+		<h3>Add Data</h3>
+	    </div>
+	{% if bundle_data %}
+            {% for data in derived_data_objects %}
+            <!--Column-->
+            <div class="col-3">
+                <!--Card -->
+                <a href="{% url 'build:table_creation' bundle.pk data.id %}">
+                <div class="card">
+                   <!--Card image-->
+                    <img class="img-fluid"  src="{% static 'images/bundle.jpg' %}" alt="Bundle Image">
+                    <!--Card content-->
+                    <div class="card-body">
+                        <!--Title-->
+                        <h4 class="card-title">{{ data.name }}</h4>                     
+                    </div>
+                </div>
+                </a>
+                <!--/.Card-->
+            </div>
+            <!--/.Column-->
+
+            {% endfor %} 
+	{% endif %}
+	<!--Column-->
+        <div class="col-3">
+            <!--Card-->
+            <form method="post" action="{% url 'build:bundle' bundle.pk %}">
+            {% csrf_token %}
+            <div class="card">
+                <!--Card image-->
+                <img class="img-fluid" src="{% static 'images/add.png' %}" alt="An image representing building a plus.">
+                <!--Card content-->
+                <div class="card-body">
+                    <!--Title-->
+                    <div id="form_data">
+			{{ form_derived_data.as_p }}
+		    </div>
+	            <input type="submit" name="add_derived" value="Add Data" />
+                    <!--Text-->
+                    <p class="card-text"></p>
+                </div>
+            </div>
+            </form>
+            <!--/.Card-->
+        </div>
+        <!--/.Column-->
+	</div>
+        {% endif %}
+
+        {% if bundle.collections.has_data %}
+        <!--Column-->
+        <div class="col-sm-6 col-md-3">
+            <!--Card-->
+            <div class="button">
+
+            <!--Link-->
+            <a href="{% url 'main:construction' %}">
+                <!--Card content-->
+                <div class="card-body">
+                    <!--Title-->
+                    <h4 class="card-title">DATA</h4>
+                    <!--/.Title-->
+                    <!--Text-->
+                    <p class="card-text">Add data products.<br/></p>
+                    <!--/.Text-->
+                </div>
+                <!--/.Card content-->
+                <!--Image-->
+                <img class="img-fluid" src="{% static 'images/arrow.png' %}" alt="An image representing an arrow."/>
+                <!--/.Image-->
+            </a>
+            <!--/.Link-->
+            </div>
+            <!--/.Card-->
+        </div>
+        <!--/.Column-->
+        {% endif %}
+        {% if bundle.collections.has_browse %}
+        <!--Column-->
+        <div class="col-sm-6 col-md-3">
+            <!--Card-->
+            <div class="button">
+            <!--Link-->
+            <a href="{% url 'main:construction' %}">  <!--PLEASE FIX THIS LINK-->
+                <!--Card content-->
+                <div class="card-body">
+                    <!--Title-->
+                    <h4 class="card-title">BROWSE</h4>
+                    <!--/.Title-->
+                    <!--Text-->
+                    <p class="card-text">Undetermined - Under construction.</p>
+                    <!--/.Text-->
+                </div>
+                <!--/.Card content-->
+                <!--Image-->
+                <img class="img-fluid" src="{% static 'images/arrow.png' %}" alt="An image representing an arrow."/>
+                <!--/.Image-->
+            </a>
+            <!--/.Link-->
+            </div>
+            <!--/.Card-->
+        </div>
+        <!--/.Column-->
+        {% endif %}
+        {% if bundle.collections.has_calibrated %}
+        <!--Column-->
+        <div class="col-sm-6 col-md-3">
+            <!--Card-->
+            <div class="button">
+            <!--Link-->
+            <a href="{% url 'main:construction' %}">
+                <!--Card content-->
+                <div class="card-body">
+                    <!--Title-->
+                    <h4 class="card-title">CALIBRATED</h4>
+                    <!--/.Title-->
+                    <!--Text-->
+                    <p class="card-text">Undetermined - Under Construction</p>
+                    <!--/.Text-->
+                </div>
+                <!--/.Card content-->
+                <!--Image-->
+                <img class="img-fluid" src="{% static 'images/arrow.png' %}" alt="An image representing an arrow."/>
+                <!--/.Image-->
+                </a>
+            </a>
+            <!--/.Link-->
+            </div>
+            <!--/.Card-->
+        </div>
+        <!--/.Column-->
+        {% endif %}
+        {% if bundle.collections.has_geometry %}
+        <!--Column-->
+        <div class="col-sm-6 col-md-3">
+            <!--Card-->
+            <div class="button">
+            <!--Link-->
+            <a href="{% url 'main:construction' %}">
+                <!--Card content-->
+                <div class="card-body">
+                    <!--Title-->
+                    <h4 class="card-title">GEOMETRY</h4>
+                    <!--/.Title-->
+                    <!--Text-->
+                    <p class="card-text">Undetermined - Under Construction</p>
+                    <!--/.Text-->
+                </div>
+                <!--/.Card content-->
+                <!--Image-->
+                <img class="img-fluid" src="{% static 'images/arrow.png' %}" alt="An image representing an arrow."/>
+                <!--/.Image-->
+                </a>
+            </a>
+            <!--/.Link-->
+        </div>
+        <!--/.Card-->
+        {% endif %}
+
+
+
+
+{% endblock %}
+
+

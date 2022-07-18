@@ -1,0 +1,55 @@
+{% extends 'main/base-k.html' %}
+{% load static %}
+
+{% block title_block %}
+{{ userprofile }} - Profile Settings
+{% endblock %}
+
+{% block main_header_block %}
+{{ user.first_name }} {{ user.last_name}}
+{% endblock %}
+
+{% block body_block %}
+<!--Row-->
+<div class="row pt-2">
+    <!--Column-->
+    <div class="col-md-8">
+        <!--Card-->
+        <div class="card">
+            <!--Card content-->
+            <div class="card-body">
+                <!--Title-->
+                <h4 class="card-title">Profile Settings</h4>
+                <!--Text-->
+                <p class="card-text">Here you can:
+                    <ul>
+                        <li>Edit your name, agency, email, and other details about yourself.</li>
+                        <li>Change your password.</li>
+                        <li>Manage your groups.</li>
+                    </ul>
+                </p>                        
+            </div>
+        </div>
+        <!--/.Card-->
+    </div>
+    <!--/.Column-->
+    <!--Column-->
+    <div class="col-md-4">
+        <img src="{% static 'images/team2.png' %}" class="img-fluid">
+    </div>
+    <!--/.Column-->
+</div>
+<!--/.Row-->
+<hr/>
+<!--Row-->
+<div class="row pt-2">
+    <div class="col-md-12">
+        <h3 class="card-header elegant-color white-text text-center z-depth-2">
+        Bundles
+        </h3>
+    </div>
+</div>
+<!--/.Row-->
+<hr/>
+
+{% endblock %}

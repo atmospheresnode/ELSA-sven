@@ -1,0 +1,76 @@
+{% extends 'main/base-k.html' %}
+{% load static %}
+
+
+
+
+{% block title_block %}
+Build A Bundle
+
+
+
+{% endblock %}
+
+
+
+
+{% block main_header_block %}
+So you want to build a bundle?<br/>
+{% endblock %}
+
+{% block about_header_block %}
+<p>
+A bundle is a list of related collections.  A collection is a list of related basic products.  A basic product is the simplest product in PDS4 and there are two types, observational and non-observational products.  Examples of basic products are Product_Context, Product_Document, Product_XML_Schema, and Product_Observational.  This is not a complete list of PDS4 basic products; however, these products will be discussed within this tutorial.  Aside from basic products, PDS4 has aggregate products.  Product_Bundle and Product_Collection are aggregate products and are the only two products that are not basic products.  Each bundle has exactly one Product_Bundle and each collection has exactly one Product_Collection.  
+</p>
+<p>
+Enter the name of your bundle below and select the appropriate collections that your bundle is composed of.  ELSA then creates the overarching bundle directory structure and begins the Product_Bundle and Product_Collection labels within your bundle. The following steps of this tutorial then go into PDS4's basic products for the document, context, xml_schema, and data collections.
+</p>
+<p>
+For more information, please visit <a href="https://pds.jpl.nasa.gov/pds4/doc/concepts/Concepts_1.9.0.pdf">PDS4 Concepts</a>.
+</p>
+{% endblock %}
+
+
+
+{% block body_block %}
+<script src="{% static 'js/build_a_bundle.js' %}" language="Javascript" type="text/javascript"></script>
+<!--Third row-->
+<div class="row pt-2">
+    <!--First column-->
+    <div class="col-md-12">
+        <h3 class="card-header elegant-color white-text text-center z-depth-2">Provide Bundle Information</h3><br/>
+    </div>
+    <!--/.First column-->
+</div>
+<!--/.Third row-->
+<!--First row-->
+<div class="row pt-2">
+    <!--First column-->
+    <div class="col-md-6">
+        <form method="post">
+             {% csrf_token %}
+             <div id="">
+                 {{ form_bundle.as_p }}
+             </div>
+             <br/>
+             <div id="">
+                 Pick and assign collections for your bundle: <br/>
+                 {{ form_collections.as_p }}
+             </div>
+             <br />
+ 
+            <input class="btn btn-default" type="submit" value="Submit" />
+        </form>       
+    </div>
+    <!--/.First column-->
+    <!--Second column-->
+    <div class="tutorial col-md-6">
+        <p>Helloooooo
+        </p>
+    </div>           
+    <!--/.Second column-->
+</div>
+<!--/.First row-->
+{% endblock %}
+
+

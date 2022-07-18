@@ -1,0 +1,3 @@
+ABOUT_MAIN.txt
+
+The main application in ELSA is responsible for all the standard website content like homepage, about page, contact page, construction page, etc.  

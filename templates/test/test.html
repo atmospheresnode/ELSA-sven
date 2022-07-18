@@ -1,0 +1,23 @@
+{% extends 'main/base-k.html' %}
+{% load static %}
+
+{% block title_block %}
+DEVELOPMENT
+{% endblock %}
+
+{% block main_header_block %}
+Test Page
+{% endblock %}
+
+{% block about_header_block %}
+This page is NOT intended for users.
+{% endblock %}
+
+{% block body_block %}
+<div class="row">
+    <br/>
+    <a href="{% url 'build:recursive_add' bundle.pk %}">
+        <button type="button" class="btn btn-danger">Click this if you dare</button>
+    </a>
+</div>
+{% endblock %}

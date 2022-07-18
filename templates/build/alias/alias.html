@@ -1,0 +1,124 @@
+{% extends 'main/base-k.html' %}
+{% load static %}
+
+{% block title_block %}
+    Add Alias
+{% endblock %}
+
+{% block main_header_block %}
+    Add alias to {{ bundle }}
+{% endblock %}
+
+{% block body_block %}
+<!--Row-->
+<div class="row pt-2">
+    <!--Column-->
+    <div class="col-md-12">
+        <h3 class="card-header elegant-color white-text text-center z-depth-2">Add Alias</h3><br/>
+    </div>
+    <!--/.Column-->
+</div>
+<!--/.Row-->
+<!--Row-->
+<div class="row pt-2">
+    <!--Column-->
+    <div class="col-md-8">
+        <form id="form_alias" method="post" action="">
+            {% csrf_token %}
+            <div id="form_alias">
+                {{ form_alias }}
+            </div>
+            <input type="submit" class="btn btn-success"value="Add"/>
+        </form>
+    </div>
+    <!--/.Column-->
+    <!--Column-->
+    <div class="col-md-4 help form_alias">
+        <p>An Alias provides an alternate name and identification for this product in this or some other archive or data system.
+        </p>
+        <p>A Bundle can have more than one Alias; however, an Alias can have at most one id, title, and comment.</p>
+    </div>
+    <!--/.Column-->
+</div>
+<!--/.Third row-->
+
+
+<!--Fourth row-->
+<div class="row pt-2">
+    <!--First column-->
+    <div class="col-md-12">
+        <h3 class="card-header elegant-color white-text text-center z-depth-2">Current Aliases</h3><br/>
+    </div>
+    <!--/.First column-->
+</div>
+<!--/.Fourth row-->
+<!--Fifth row-->
+<div class="row pt-2">
+    {% if alias_list %}
+        {% for alias in alias_list %}
+            <!--One column of Two (mobile) or Four (any other screen)-->
+            <div class="col-sm-6 col-md-3">
+                <!--One card-->
+                <div class="card">
+                    <!--Card image-->
+                    <!--<img class="img-fluid" src="{% static 'images/Snowflake.png' %}" alt="Alias Image">-->
+                    <!--Card content-->
+                    <div class="card-body">
+                        <!--Title-->
+                        <h4 class="card-title">{{ alias }}</h4>
+                        <!--Text-->
+                        <p class="card-text">{{ alias.comment }}</p>
+                        <!--Buttons-->
+                        <!--<form id="delete" method="post" action="">
+		            {% csrf_token %}
+			    <input type="submit" class="btn btn-danger" value="Delete {{alias}}"/>
+			</form> -->
+			<!--<a href="{% url 'main:construction' %}">-->
+                	<a href="{% url 'build:alias_delete' bundle.pk alias.alternate_id %}">
+                    	    <button type="button" class="btn btn-danger">Delete {{ alias }} </button>
+                	</a>
+                    </div>
+                </div>
+                </a>
+                <!--/.One card-->
+            </div>
+            <!--/.One column of Two or Four-->
+        {% endfor %}
+    {% else %}
+        <!--First column-->
+        <div class="col-md-3">
+            <!--First card-->
+            <div class="card">
+                <!--Card image-->
+                <img class="img-fluid" src="{% static 'images/null.png' %}" alt="No Aliases Image">
+                <!--Card content-->
+                <div class="card-body">
+                    <!--Title-->
+                    <h4 class="card-title"></h4>
+                    <!--Text-->
+                    <p class="card-text">No Aliases for {{ bundle }}</p>
+                </div>
+            </div>
+            <!--/.First card-->
+            </p>
+        </div>
+        <!--/.First column-->
+    {% endif %}
+</div>
+<!--/.Fifth row-->
+<hr/>
+<!--Sixth row-->
+<div class="row pt-2">
+    <!--First column-->
+    <div class="col-md-12">
+        <a href="{% url 'build:bundle' bundle.pk %}">
+        <button type="button" class="btn btn-default">
+            <i class="fa fa-arrow-circle-left"></i>
+            Back to {{ bundle }}'s Bundle Detail
+        </button>
+        </a>
+    </div>
+    <!--/.First column-->
+</div>
+<!--/.Sixth row-->
+{% endblock %}

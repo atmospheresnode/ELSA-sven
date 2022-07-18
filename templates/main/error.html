@@ -1,0 +1,34 @@
+{% extends 'main/base-k.html' %}
+{% load staticfiles %}
+
+
+
+{% block title_block %}
+    Build A Bundle - Development
+{% endblock %}
+
+
+
+{% block header_block %}
+    This part of ELSA is currently undergoing development.<br />
+    Do not pass go, do not collect $200..<br />
+{% endblock %}
+
+
+
+{% block body_block %}
+<!--First row-->
+<div class="row pt-2">
+    <div class="col-md-12">    
+        <p>In the meantime, enjoy this joke.</p>
+        <p> 
+            <strong>Question:</strong> {{ random_joke.question }}  <br />   
+            <strong>Answer:</strong> {{ random_joke.answer }} Change to hidden next time js'ing.
+        </p>
+    </div>
+</div>
+<!--/.First row-->
+
+
+{% endblock %}
+

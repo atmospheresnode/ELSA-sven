@@ -1,0 +1,36 @@
+{% extends 'main/base-k.html' %}
+{% load static %}
+
+
+{% block title_block %}
+In Development
+{% endblock %}
+
+
+{% block main_header_block %}
+Sorry, the feature you are trying to access is in development.
+{% endblock %}
+
+
+{% block body_block %}
+<hr/>
+<!--First row-->
+<div class="row">
+    <!--First column-->
+    <div class="col-md-4">
+        <img class="img-fluid" src="{% static 'images/idea.jpg' %}"/>
+    </div>
+    <!--/.First column-->
+    <!--Second column-->
+    <div class="col-md-8">
+        <strong>Please try again at a later point in time.</strong>
+        <hr/>
+        To get back to your prior location, press the back button on your browser now.
+        <hr/>
+        If you would like to be notified when this feature is implemented or if you would like to implement this feature yourself, feel free to contact ELSA at elsa@atmos.nmsu.edu.
+    </div>
+    <!--/.First column-->
+</div>
+<!--/.First row-->
+
+{% endblock %}

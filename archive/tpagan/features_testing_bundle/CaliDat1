@@ -1,0 +1,125 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<?xml-model href="http://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_AAAA.sch" schematypens="http://purl.oclc.org/dsdl/schematron"?>
+<Product_Observational xmlns="http://pds.nasa.gov/pds4/pds/v1" xmlns:pds="http://pds.nasa.gov/pds4/pds/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://pds.nasa.gov/pds4/pds/v1 http://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_AAAA.xsd">  
+    <Identification_Area>
+        <logical_identifier/>
+        <version_id/>
+        <title/>
+        <information_model_version>AAAA</information_model_version>
+        <product_class>Product_Observational</product_class>
+        <Modification_History>
+            <Modification_Detail>
+                <modification_date/>
+                <version_id/>
+                <description/>
+            </Modification_Detail>
+        </Modification_History>
+    </Identification_Area>  
+    <Observation_Area>
+        <Time_Coordinates>
+            <start_date_time/>
+            <stop_date_time/>
+            <local_mean_solar_time/>
+            <local_true_solar_time/>
+            <solar_longitude/>
+        </Time_Coordinates> 
+        <Primary_Result_Summary>
+            <purpose></purpose>
+            <processing_level></processing_level> 
+            <Science_Facets>
+                <wavelength_range></wavelength_range>
+                <domain></domain>
+                <discipline_name></discipline_name>
+                <facet1></facet1>
+            </Science_Facets>
+        </Primary_Result_Summary>
+        <Investigation_Area>
+            <name/>
+            <type/>
+            <Internal_Reference>
+                <lid_reference/>
+                <reference_type/>
+            </Internal_Reference>
+        </Investigation_Area>
+        <Observing_System>
+            <name/>
+            <Observing_System_Component>
+                <name/>
+                <type/>
+                <Internal_Reference>
+                    <lid_reference/>
+                    <reference_type/>
+                </Internal_Reference>
+            </Observing_System_Component>
+            <Observing_System_Component>
+                <name/>
+                <type/>
+                <Internal_Reference>
+                    <lid_reference/>
+                    <reference_type/>
+                </Internal_Reference>
+            </Observing_System_Component>
+        </Observing_System>
+        <Target_Identification>
+            <name/>
+            <type/>
+            <Internal_Reference>
+                <lid_reference/>
+                <reference_type/>
+            </Internal_Reference>
+        </Target_Identification> 
+    </Observation_Area>  
+    <Reference_List>
+        <Internal_Reference>
+            <lid_reference></lid_reference>
+            <reference_type></reference_type>
+            <comment></comment>
+        </Internal_Reference>
+    </Reference_List>
+    <File_Area_Observational>
+        <File>
+            <file_name/>
+            <local_identifier/>
+            <creation_date_time/>
+            <file_size unit="byte"/>
+            <records/>
+        </File>    
+        <Table_Binary>
+            <name/>
+            <local_identifier/>
+            <offset unit="byte"/>
+            <records/>
+            <Record_Binary>
+                <fields/>
+                <groups/>
+                <record_length unit="byte"/>
+                <Field_Binary>
+                    <name/>
+                    <field_number/>
+                    <field_location unit="byte"/>
+                    <data_type/>
+                    <field_length unit="byte"/>
+                    <unit/>
+                    <scaling_factor/>
+                    <value_offset/>
+                    <description/>
+                </Field_Binary>
+                <Group_Field_Binary>
+                    <name></name>
+                    <repetitions></repetitions>
+                    <fields></fields>
+                    <groups></groups>
+                    <group_location unit="byte"></group_location>
+                    <group_length unit="byte"></group_length>
+                    <Field_Binary>
+                        <name></name>
+                        <field_number></field_number>
+                        <field_location unit="byte"></field_location>
+                        <data_type></data_type>
+                        <field_length unit="byte"></field_length>
+                    </Field_Binary>
+                </Group_Field_Binary>
+            </Record_Binary>
+        </Table_Binary>
+    </File_Area_Observational>  
+</Product_Observational>

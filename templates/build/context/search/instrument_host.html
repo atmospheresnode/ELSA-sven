@@ -1,0 +1,50 @@
+{% extends 'main/base-k.html' %}
+{% load staticfiles %}
+
+
+
+
+{% block title_block %}
+Add Instruments and Targets
+{% endblock %}
+
+
+
+
+{% block main_header_block %}
+Add Instruments and Targets
+{% endblock %}
+
+
+
+{% block body_block %}
+<!--First row-->
+<div class="row pt-2">
+    <!--Column-->
+    <div class="col-md-12">
+    <h3 class="card-header elegant-color white-text text-center z-depth-2">Select an Instrument Host</h3>
+    </div>
+</div>
+<!--/.First row-->
+<!--Second row-->
+<div class="row pt-2">
+    {% for host in instrument_host_list %}
+        <!--Column-->
+        <div class="col-md-4">
+        <a href="{% url 'build:instrument_host_detail' bundle.pk host.pk %}">
+            <button type="button" class="btn btn-default">{{ host }}</button>
+        </a>
+        </div>
+        <!--/.Column-->
+    {% endfor %}
+</div>
+<!--/.Second row-->
+
+{% endblock %}
+
+
+
+{% block footie_block %}    
+{% endblock %}
+
+

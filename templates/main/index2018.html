@@ -1,0 +1,131 @@
+{% extends 'main/base-k.html' %}
+{% load staticfiles %}
+
+{% block main_header_block%}
+Welcome to <span class="text-muted">ELSA</span>.<hr/>
+{% endblock %}
+
+{% block body_block %}
+    {% if user.is_authenticated %}
+        <!--Row-->
+        <div class="row pt-2">
+            <!--Column-->
+            <div class="col-md-12">    
+                <!--Panel-->
+                <div class="card">
+                    <!--Header-->
+                    <h3 class="card-header elegant-color white-text text-center z-depth-2">
+                    What does ELSA do?
+                    </h3>
+                    <!--/.Header-->
+                    <!--Body-->
+                    <div class="card-body">
+                        <br/>
+                        <h4 class="card-title">Take a walk with ELSA, {{ user.first_name }}.</h4>
+                        <p class="card-text">ELSA is a user-centered application that aids in the creation of PDS4 compliant labels for your data bundles.  Since ELSA is a user-centered application, let's first take you to your profile page.  {k}.</p>
+                        <center><a class="btn btn-default" href="{{ user.userprofile.get_absolute_url }}">@{{ user }}</a></center>
+                    </div>
+                    <!--/.Body-->
+                </div>
+                <!--/.Panel-->
+            </div>
+            <!--/.Column-->
+        </div>
+        <!--/.Row-->
+        <hr/>
+        <!--Row -->
+        <div class="row pt-2">
+            <!--Column-->
+            <div class="col-md-12">    
+                <!--Panel-->
+                <div class="card">
+                    <!--Header-->
+                    <h3 class="card-header elegant-color white-text text-center z-depth-2">
+                    Who is ELSA for?
+                    </h3>
+                    <!--/.Header-->
+                    <!--Body-->
+                    <div class="card-body">
+                        <br/>
+                        <h4 class="card-title">Are you part of the PDS4 community?</h4>
+                        <p class="card-text">ELSA was created to help lessen the learning curve involved for new PDS4 users.  Check out the Planetary Data System's page to learn more about data archiving and distribution.</p>
+                        <center><a class="btn btn-default" href="https://pds.jpl.nasa.gov/">@PDS4.</a></center>
+                    </div>
+                    <!--/.Body-->
+                </div>
+                <!--/.Panel-->
+            </div>
+            <!--/.Column-->
+        </div>
+        <!--/.Row-->
+        <hr/>
+        <!--Row -->
+        <div class="row pt-2">
+            <!--Column-->
+            <div class="col-md-12">    
+                <!--Panel-->
+                <div class="card">
+                    <!--Header-->
+                    <h3 class="card-header elegant-color white-text text-center z-depth-2">
+                    Why ELSA?
+                    </h3>
+                    <!--/.Header-->
+                    <!--Body-->
+                    <div class="card-body">
+                        <br/>
+                        <h4 class="card-title">Well, ELSA is great!</h4>
+                        <p class="card-text">ELSA is an educational tool.  ELSA is currently in development but is making pretty good progress.  You can read more about ELSA below.</p>
+                        <center><a class="btn btn-default" href="{% url 'main:about' %}">@ABOUT.</a></center>
+                    </div>
+                    <!--/.Body-->
+                </div>
+                <!--/.Panel-->
+            </div>
+            <!--/.Column-->
+        </div>
+        <!--/.Row-->
+        <hr/>
+
+
+        
+    {% else %}
+        <!--Row-->
+        <div class="row pt-2">
+            <!--Column-->
+            <div class="col-md-8">
+                <p>The Educational Labeling System @Atmospheres (ELSA) is a tool designed to help streamline the creation of PDS4 compliant labels.  Here at Atmos we believe in taking a top-down approach when it comes to your data.  ELSA begins with the unique name of your bundle, trickles down through your collections, and ends with the nitty gritty details of your data to provide you with PDS4 labels.</p>
+           </div>
+           <!--/.Column-->
+           <!--Column-->
+           <div class="col-md-4">
+              
+           </div>
+           <!--/.Column-->
+       </div>
+       <!--/.Row-->
+       <hr/>
+       <!--Row-->
+       <div class="row pt-2">
+           <!--Column-->
+           <div class="col-md-7 push-md-5">
+              <p class="lead">
+              Sign in below or sign up <a href="{% url 'friends:register' %}">here</a>.
+                  <form id="login_form" method="post" action="{% url 'friends:login' %}">
+                      {% csrf_token %}
+                      Username:  <input type="text" name="username" value="" size="50" /><br />
+                      Password:  <input type="password" name="password" value="" size="50"/><br />
+                  <input type="submit" value="submit" />
+                  </form>
+              </p>
+          </div>
+          <!--/.Column-->
+          <!--Column-->
+          <div class="col-md-5 pull-md-7">
+
+          </div>
+          <!--/.Column-->
+      </div>
+      <!--/.Row-->
+    {% endif %}
+{% endblock %}
+

@@ -1,0 +1,16 @@
+{% extends 'main/base-k.html' %}
+{% load static %}
+
+
+{% block title_block %}
+{% endblock %}
+
+{% block main_header_block %}
+{% endblock %}
+
+{% block body_block %}
+<form action="{% url 'build:documents' pk=bundle.pk %}" method="post">{% csrf_token %}
+    <p>Are you sure you want to delete "{{ object }}"?</p>
+    <input type="submit" value="Confirm" />
+</form>
+{% endblock %}

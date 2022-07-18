@@ -1,0 +1,45 @@
+{% extends 'base-k-se.html' %}
+{% load static %}
+
+
+
+
+{% block title_block %}
+Array Detail
+{% endblock %}
+
+
+
+
+{% block main_header_block %}
+Bundle: {{ bundle.name }}
+{% endblock %}
+
+{% block about_header_block %}
+{{ product_observational.title }}
+{{ product_observational.data.processing_level }}
+{% endblock %}
+
+{% block standards_reference_block %} <!-- Should make a question mark where people can expand to read this -- Look at base-k-se template for more details. Base-k-se is where the actual collapsing should happen, not in an individual template -->
+{% endblock %}
+
+
+
+{% block body_block %}
+
+
+    <!--Row-->
+    <div class="row">
+        <div class="col-md-12">
+          <h3 class="card-header elegant-color white-text text-center z-depth-2">
+	      Current Information
+          </h3><br/>
+        </div>
+    </div>
+    <!--/.Row-->
+
+
+
+{% endblock %}
+
+

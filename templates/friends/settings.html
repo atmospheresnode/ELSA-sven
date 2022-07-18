@@ -1,0 +1,86 @@
+{% extends 'main/base-k.html' %}
+{% load static %}
+
+{% block title_block %}
+{{ userprofile }} - Profile Settings
+{% endblock %}
+
+{% block main_header_block %}
+Profile Settings
+{% endblock %}
+
+{% block body_block %}
+<!--Row-->
+<div class="row pt-2">
+    <!--Column-->
+    <div class="col-md-8">
+        <!--Card-->
+        <div class="card">
+            <!--Card content-->
+            <div class="card-body">
+                <!--Title-->
+                <h3 class="card-title">Profile Settings</h3>
+		<hr >
+                <!--Text-->
+		<h4>Update First Name</h4>
+                <form id="first_form" method="post" action="{% url 'friends:settings' user.pk %}">
+            	    {% csrf_token %}
+            	    New First Name: <input type="text" name="first_name" value="" size="50"/>
+            	    <br/>
+		    <input type="submit" value="submit"/>
+		</form>
+		<hr>
+		<h4>Update Last Name</h4>
+                <form id="last_form" method="post" action="{% url 'friends:settings' user.pk %}">
+            	    {% csrf_token %}
+            	    New Last Name: <input type="text" name="last_name" value="" size="50"/>
+            	    <br/>
+            	    <input type="submit" value="submit"/>
+        	</form> 
+		<hr>  
+		<!--<h4>Update Agency</h4>
+                <form id="agency_form" method="post" action="{% url 'friends:settings' user.pk %}">
+            	    {% csrf_token %}
+            	    New Agency: <input type="text" name="agency" value="" size="50"/>
+            	    <br/>
+            	    <input type="submit" value="submit"/>
+        	</form> 
+		<hr>-->
+		<h4>Update Email</h4>
+                <form id="email_form" method="post" action="{% url 'friends:settings' user.pk %}">
+            	    {% csrf_token %}
+            	    New Email: <input type="text" name="email" value="" size="50"/>
+            	    <br/>
+            	    <input type="submit" value="submit"/>
+        	</form> 
+		<hr>
+		<h4>Update Password</h4>
+                <form id="password_form" method="post" action="{% url 'friends:settings' user.pk %}">
+            	    {% csrf_token %}
+            	    Current Password: <input type="password" name="current_password" value="" size="50"/>
+            	    <br/>
+            	    New Password: <input type="password" name="new_password" value="" size="50"/>
+            	    <br/>
+            	    Confirm New Password: <input type="password" name="confirm_password" value="" size="50"/>
+            	    <br/>
+            	    <input type="submit" value="submit"/>
+        	</form>                  
+            </div>
+        </div>
+        <!--/.Card-->
+    </div>
+    <!--/.Column-->
+    <!--Column-->
+    <div class="col-md-4">
+        <img src="{% static 'images/team2.png' %}" class="img-fluid">
+    </div>
+    <!--/.Column-->
+</div>
+<!--/.Row-->
+<hr/>
+<!--Row-->
+
+<!--/.Row-->
+<hr/>
+
+{% endblock %}

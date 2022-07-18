@@ -1,0 +1,12 @@
+//  elsa-new.css
+
+.new{
+    display: none;
+    background-color: #ad1457;
+    border-radius: 5px;
+    color: #ffffff;
+    padding: 10px;
+    border: 0px;
+}
+
+

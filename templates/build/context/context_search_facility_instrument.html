@@ -1,0 +1,123 @@
+{% extends 'main/base-k.html' %}
+{% load staticfiles %}
+
+
+
+
+{% block title_block %}
+Add Context: Instrument
+{% endblock %}
+
+
+
+
+{% block main_header_block %}
+Add Context: Instrument
+{% endblock %}
+
+
+
+{% block body_block %}
+<!--First row-->
+<div class="row pt-2">
+    <!--Column-->
+    <div class="col-md-12">
+        <h4>Select your instrument</h4>
+    </div>
+    <!--/.Column-->
+</div>
+<!--First row-->
+<!--Second row-->
+<div class="row pt-2">
+    <!--Column-->
+    <div class="col-md-12">
+        <form id="query01" method="post" action="{% url 'build:context_search_facility_instrument' bundle.pk facility.pk %}">
+            {% csrf_token %}
+            {{ form_instrument }}
+            
+            {{ form.errors }}
+            {{ form.non_field_errors }}
+            
+            <input type="submit" class="btn btn-default" value="Submit"/>
+            
+        </form>       
+    </div>
+    <!--/.Column-->
+</div>
+<!--/.Row-->
+<!--Row-->
+<div class="row pt-2">
+    <!--Column-->
+    <div class="col-md-12">
+        <h4>All of {{ bundle.name }}'s Instrument Products</h4>
+        <p>No need to Select an instrument.</p>
+    </div>
+    <!--/.Column-->
+</div>
+<!--/.Row-->
+<!--Row-->
+<div class="row pt-2">
+    <!--Column-->
+    <div class="col-md-12">
+        {% if instrument %}
+        <p>Note: {{ instrument }} added to {{ bundle }}.</p>
+        {% endif %}
+    </div>
+    <!--/.Column-->
+</div>
+<!--/.Row-->
+<!--Row-->
+
+{% for ins in bundle_instrument_set %}
+<div class="row">
+    <!--Card-->
+    <div class="col-sm-6 col-md-3">
+        <div class="button">
+            <!--Link-->
+            <a href="#">
+                <!--Card content-->
+                <div class="card-body">
+                    <!--Title-->
+                    <h4 class="card-title">{{ ins.name }}</h4>
+                    <!--/.Title-->
+                    <!--Text-->
+                    <p class="card-text">{{ ins.lid }} <br/><br/><br/></p>
+                    <!--/.Text-->
+                </div>
+                <!--/.Card content-->
+                <!--Image-->
+            </a>
+            <!--/.Link-->
+        </div>
+    </div>
+    <!--/.Card-->
+    </br></br>
+</div>
+
+{% endfor %}
+<!--/.Row-->
+<!--Row-->
+<div class="row pt-2">
+    <!--Column-->
+    <div class="col-md-8">
+        <p>This is the last step to adding context products starting from facility.</p>
+    </div>
+    <!--/.Column-->
+    
+    <!--Column-->
+    <div class="col-md-4">
+        <a href="{% url 'build:bundle' bundle.pk %}">
+            <input type="submit" class="btn btn-success" value="Go Back to Bundle"/>
+        </a>
+    </div>
+    <!--/.Column-->
+</div>
+<!--/.Row-->
+
+{% endblock %}
+
+
+
+{% block footie_block %}    
+{% endblock %}
+

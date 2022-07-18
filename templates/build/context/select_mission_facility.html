@@ -1,0 +1,158 @@
+{% extends 'main/base-k.html' %}
+{% load static %}
+
+{% block title_block %}
+Context
+{% endblock %}
+
+{% block main_header_block %}
+Context Collection
+{% endblock %}
+
+{% block about_header_block %}
+Brief introduction to the context collection here.
+{% endblock %}
+
+
+
+{% block body_block %}
+<!--Row-->
+<div class="row pt-2">
+    <!--Column-->
+    <div class="col-md-12">
+        <h3 class="card-header elegant-color white-text text-center z-depth-2">Search for Context Products</h3>       
+    </div>
+    <!--/.Column-->
+</div>
+<!--/.Row-->
+<!--Row-->
+<div class="row pt-2">
+    <!--Column-->
+    <div class="col-md-4">
+        <p>Please select where your data comes from: </p>
+    </div>
+    <!--/.Column-->
+    <!--Column-->
+    <div class="col-md-4">
+        <a href="{% url 'build:context_search_facility' bundle.pk %}">
+            <button type="button" class="btn btn-default" id="facility">Facility</button>
+        </a>
+        <a href="{% url 'build:context_search' bundle.pk %}">
+            <button type="button" class="btn btn-default" id="mission">Mission</button>
+        </a>
+    </div>
+    <!--/.Column-->
+    <!--Column-->
+    <div class="col-md-3 help">
+        <div class="facility">
+            <p>A facility is a laboratory or an observatory that exists within an institution.  Select facility if the bundle data is related to a laboratory or an observatory.</p>
+        </div>
+        <div class="mission">
+        </div>
+    </div>
+    <!--/.Column-->
+</div>
+<!--/.Row-->
+<!--Divider-->
+<hr/>
+<!--/.Divider-->
+<!--Row-->
+<div class="row pt-2">
+    <!--Column-->
+    <div class="col-md-12">
+        <h3 class="card-header elegant-color white-text text-center z-depth-2">Current Context Products</h3>
+    </div>
+    <!--/.Column-->
+</div>
+<!--/.Second row-->
+<!--Row-->
+<div class="row pt-2">
+{% if instrument_list %}    
+    {% for instrument in instrument_list %}
+    <!--Column-->
+    <div class="col-md-3">
+        <!--Card-->
+        <div class="card">
+            <!--Card image-->
+            <img class="img-fluid" src="{% static 'images/warp_zone.svg' %}" alt="Instrument Image">
+            <!--Card content-->
+            <div class="card-body">
+                <!--Title-->
+                <h4 class="card-title">{{ instrument }}</h4>
+                <!--Text-->
+                <p class="card-text">{{ instrument.lid }}</p>
+                <!--Buttons-->
+                <a href="{% url 'main:construction' %}">
+                    <button type="button" class="btn btn-danger">Remove</button> 
+                </a>
+            </div>
+        </div>
+        <!--/.Card-->
+    </div>
+    <!--/.Column-->
+    {% endfor %}
+{% else %}
+    <!--Column-->
+    <div class="col-md-3">
+        <!--Card-->
+        <div class="card">
+            <!--Card image-->
+            <img class="img-fluid" src="{% static 'images/null.png' %}" alt="Instrument Image">
+            <!--Card content-->
+            <div class="card-body">
+                <!--Title-->
+                <h4 class="card-title">Null</h4>
+                <!--Text-->
+                <p class="card-text">No instruments are associated with {{ bundle }}.</p>
+            </div>
+        </div>
+        <!--/.Card-->
+    </div>
+    <!--/.Column-->
+{% endif %}
+{% if target_list %}    
+    {% for target in target_list %}   
+    <!--Column-->
+    <div class="col-md-3">
+        <!--Card-->
+        <div class="card">
+            <!--Card image-->
+            <img class="img-fluid" src="{% static 'images/target.jpg' %}" alt="Target Image">
+            <!--Card content-->
+            <div class="card-body">
+                <!--Title-->
+                <h4 class="card-title">{{ target }}</h4>
+                <!--Text-->
+                <p class="card-text">{{ target.lid }}</p>
+                <!--Buttons-->
+                <a href="{% url 'main:construction' %}">
+                    <button type="button" class="btn btn-danger">Remove</button> 
+                </a>
+            </div>
+        </div>
+        <!--/.Card-->
+    </div>
+    <!--/.Column-->
+    {% endfor %}
+{% else %}
+    <!--First column-->
+    <div class="col-md-3">
+        <!--Card-->
+        <div class="card">
+            <!--Card image-->
+            <img class="img-fluid" src="{% static 'images/null.png' %}" alt="An image representing building a label.">
+            <!--Card content-->
+            <div class="card-body">
+                <!--Title-->
+                <h4 class="card-title">Null</h4>
+                <!--Text-->
+                <p class="card-text">No targets are associated with {{ bundle }}.</p>
+            </div>        
+        </div>
+        <!--/.Card-->
+    </div>
+    <!--/.First column-->
+{% endif %}    
+</div>
+<!--/.Third row-->
+{% endblock %}

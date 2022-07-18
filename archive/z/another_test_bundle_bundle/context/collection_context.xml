@@ -1,0 +1,63 @@
+<?xml version='1.0' encoding='utf-8'?>
+<Product_Collection xmlns="http://pds.nasa.gov/pds4/pds/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://pds.nasa.gov/pds4/pds/v1 http://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_1900.xsd">
+<Product_Collection xmlns="http://pds.nasa.gov/pds4/pds/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://pds.nasa.gov/pds4/pds/v1 http://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_1900.xsd">
+  <Identification_Area>
+    <logical_identifier>urn:nasa:pds:another_test_bundle:Context</logical_identifier>
+    <version_id>1.0</version_id>
+    <title>Another Test Bundle</title>
+    <information_model_version>1.9.0.0</information_model_version>
+    <product_class>Product_Collection</product_class>
+    <Modification_History>
+        </Modification_History>
+  <Alias_List><Alias><alternate_id>urn:nasa:pds:another_test_bundle_alias</alternate_id><alternate_title>idk it's a fake alias</alternate_title><comment>yea</comment></Alias></Alias_List></Identification_Area>
+  <Context_Area>
+    <Time_Coordinates>
+      <start_date_time/>
+      <stop_date_time/>
+    </Time_Coordinates>
+    <Investigation_Area>
+      <name/>
+      <type/>
+      <Internal_Reference>
+        <lid_reference/>
+        <reference_type/>
+      </Internal_Reference>
+    </Investigation_Area>
+    <Observing_System>
+      <name/>
+      <Observing_System_Component>
+        <name>juno</name>
+        <type>mission</type>
+        <Internal_Reference>
+          <lid_reference>urn:nasa:pds:context:investigation:mission.juno</lid_reference>
+          <reference_type>is_investigation</reference_type>
+        </Internal_Reference>
+      </Observing_System_Component>
+    </Observing_System>
+  </Context_Area>
+  <Reference_List/>
+  <Collection>
+    <collection_type/>
+  </Collection>
+  <File_Area_Inventory>
+    <File>
+      <file_name/>
+      <local_identifier/>
+      <creation_date_time/>
+    </File>
+    <Inventory>
+      <local_identifier/>
+      <offset unit="byte">0</offset>
+      <parsing_standard_id>PDS DSV 1</parsing_standard_id>
+      <records>3</records>
+      <record_delimiter>Carriage-Return Line-Feed</record_delimiter>
+      <field_delimiter>Comma</field_delimiter>
+      <Record_Delimited>
+        <fields/>
+        <groups/>
+        <maximum_record_length unit="byte">77</maximum_record_length>
+      </Record_Delimited>
+      <reference_type>inventory_has_member_product</reference_type>
+    </Inventory>
+  </File_Area_Inventory>
+</Product_Collection>

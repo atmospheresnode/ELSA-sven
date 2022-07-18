@@ -1,0 +1,75 @@
+{% extends 'main/base.html' %}
+{% load staticfiles %}
+
+
+
+
+{% block title_block %}
+Context Products
+{% endblock %}
+
+
+
+
+{% block header_block %}
+So you want to build a bundle?<br/>
+{{ title_mission }}'s Instruments and Targets.
+{% endblock %}
+
+
+
+{% block body_block %}
+
+    {# If the Mission is new to ELSA then display what was found on Starbase. #}    
+    {% if instrument_string_list %}
+        ELSA searched Starbase and found the following instruments for {{ Mission }}:<br/>
+        {{ instrument_string_list }}<br/>
+    {% endif %}
+    {% if target_string_list %}
+        ELSA searched Starbase and found the following targets for {{ Mission }}:<br/>
+        {{ target_string_list }}<br/>
+    {% endif %}
+
+
+    <hr/>
+
+
+    {# Regardless if Mission is new or not, we must display the following: #}
+    {% if instrument_list %}
+        Choose instruments:
+        <ul>
+        {% for instrument in instrument_list %}
+            <input type="radio" name="{{instrument.id}}" />
+                {{ instrument }} -- {{ instrument.type_of }}<br/>
+     
+        {% endfor %}
+        </ul>
+    {% else %}
+        {{ Mission }} does not have any listed instruments.<br/>
+        If you find this is an error please contact the
+        <a href="{% url 'main:contact' %}">Atmospheres Node</a>.<br/>
+    {% endif %}
+
+
+    {% if target_list %}
+        Choose targets:
+        <ul>
+        {% for target in target_list %}
+           <input type="radio" name="{{item.id}}" />  {{ target }} -- {{ target.type_of }} <br/>
+        {% endfor %}
+        </ul>
+    {% else %}
+        {{ Mission }} does not have any listed targets.<br/>
+        If you find this is an error please contact the
+        <a href="{% url 'main:contact' %}">Atmospheres Node</a>.<br/>
+    {% endif %}
+    
+    <input type="submit" value="Submit">
+{% endblock %}
+
+
+
+{% block footie_block %}    
+{% endblock %}
+
+

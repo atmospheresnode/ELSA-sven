@@ -1,0 +1,27 @@
+{% extends 'main/base-k.html' %}
+{% load static %}
+
+{% block title_block %}
+    {{ post.title }}
+{% endblock %}
+
+{% block main_header_block %}
+    {{ post.title }}
+{% endblock %}
+
+{% block body_block %}
+    {{ post.date }} -- {{ post.user }} -- {{ post.category }}<br/><hr/>
+    {{ post.content }}
+
+
+    {% for comment in comment_list %}
+    {{ comment.author }}
+    {{ comment.content }}
+    {% endfor %}
+
+    <hr/>
+
+    <button class="btn btn-default">Archive</button>
+
+
+{% endblock %}

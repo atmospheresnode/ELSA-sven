@@ -1,0 +1,42 @@
+{% extends 'main/base-k.html' %}
+{% load static %}
+
+{% block title_block %}
+    Delete Alias {{ alias }}
+{% endblock %}
+
+{% block main_header_block %}
+    Are you sure you want to delete {{ alias }}?
+{% endblock %}
+
+{% block body_block %}
+<!--Row-->
+<div class="row pt-2">
+    <!--Column-->
+    <div class="col-md-12">
+        <h3 class="card-header elegant-color white-text text-center z-depth-2"></h3><br/>
+	    <div class="text-center">
+  	        <img class="img-fluid center" src="{% static 'images/trash.png' %}" alt="Delete Alias Image" height="300" width="300">
+	    </div>
+	    <div class="row">
+	        <div class="col-md-6">	
+		    <a href="{% url 'build:alias' bundle.pk %}">
+		        <button type="submit" class="btn btn-success">Return to {{bundle}}'s Alias Page</button>
+		    <a/>
+	        </div>
+	        <div class="col-md-1">
+   		    <a href="{% url 'build:alias' bundle.pk %}">
+	            <form method="post" action="" class="">
+		        {% csrf_token %}
+		        {{form.as_p}}
+
+		    <input name = "delete_alias" type="submit" class="btn btn-danger float-right" value = "Delete"/>
+		    </form>
+	        <a/>
+	        </div>
+	    </div>
+    </div>
+    <!--/.Column-->
+</div>
+<!--/.Row-->
+{% endblock %}

@@ -1,0 +1,116 @@
+{% extends 'main/base-k.html' %}
+{% load staticfiles %}
+
+
+
+
+{% block title_block %}
+Add Context: Instrument Host
+{% endblock %}
+
+
+
+
+{% block main_header_block %}
+Add Context: Instrument Host
+{% endblock %}
+
+
+
+{% block body_block %}
+<!--First row-->
+<div class="row pt-2">
+    <!--Column-->
+    <div class="col-md-12">
+        <h4 class="card-header stylish-color white-text text-center z-depth-2">Select your instrument host</h4>
+</br>
+    </div>
+    <!--/.Column-->
+</div>
+<!--First row-->
+<!--Second row-->
+<div class="row pt-2">
+    <!--Column-->
+    <div class="col-md-12">
+        <form class="card-header black-text text-left z-depth-2" id="query01" method="post" action="{% url 'build:context_search_instrument_host' bundle.pk investigation.pk  %}">
+		<p>From the drop-down menu, select which type of host you plan to use. The initial selection will be <strong>instrument host</strong>(for mobile hosts) or <strong>facility</strong>(for stationary hosts). After selecting one of these two options you will be given a pull-down menu for the appropriate set. Instrument hosts include mobile platforms like spacecraft, rovers, landers, etc. whereas facilities include laboratories and observatories. If you plan to use telescopes and/or instruments not associated with a host, select the No Host option.</p>
+
+            {% csrf_token %}
+            {{ form_instrument_host }}
+
+            {{ form.errors }}
+            {{ form.non_field_errors }}
+
+            <input type="submit" class="btn btn-default" value="Submit"/>
+
+        </form> 
+	</br>      
+    </div>
+    <!--/.Column-->
+</div>
+<!--/.Row-->
+<!--Row-->
+<div class="row pt-2">
+    <!--Column-->
+    <div class="col-md-12">
+        <h4 class="card-header stylish-color white-text text-center z-depth-2">All of {{ bundle.name }}'s Instrument Host Products</h4>
+	</br>
+        <p class="card-header black-text text-left z-depth-2">Select an instrument host below associated with your bundle to add instruments and targets to your bundle. Resume the bundle building process by selecting an instrument host and then adding instruments and targets to ensure a most complete PDS4 bundle.</br></p>
+    </div>
+    <!--/.Column-->
+</div>
+<hr>
+        {% if instrument_host %}
+    <div class="card-header black-text text-left z-depth-2">
+       
+            <h3>Note: {{ instrument_host }} added to {{ bundle }}.</h3>
+        
+
+
+    {% for ins in bundle_instrument_host_set %}
+<div class="row">
+        <!--Card-->
+        <div class="col-sm-6 col-md-3">
+	<ul>
+        <div class="button">
+            <!--Link-->
+            <a href="{% url 'build:context_search_target' bundle.pk investigation.pk ins.pk %}">
+                <!--Card content-->
+                <div class="card-body">
+                    <!--Title-->
+                    <li> <h4 class="card-title">{{ ins.name }}</h4></li>
+                    <!--/.Title-->
+                    <!--Text-->
+                    <p class="card-text">{{ ins.lid }} <br/><br/></p>
+                    <!--/.Text-->
+                </div>
+                <!--/.Card content-->
+                <!--Image-->
+            </a>
+            <!--/.Link-->
+        </div>
+        </div>
+        <!--/.Card-->
+        
+</div>
+
+    {% endfor %}
+       {% endif %}
+<!--/.Row-->
+<!--Row-->
+
+    <div class="col-md-12 text-right ">
+            <a href="{% url 'build:context_search' bundle.pk %}">
+            <input type="submit" class="btn btn-default" value="Go Back to Context Search"/>
+    </div>
+    <!--/.Column-->
+
+<!--/.Row-->
+
+{% endblock %}
+
+
+
+{% block footie_block %}    
+{% endblock %}
+

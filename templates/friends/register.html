@@ -1,0 +1,47 @@
+{% extends 'main/base-k.html' %}
+{% load staticfiles %}
+
+{% block title_block %}
+Register
+{% endblock %}
+
+{% block main_header_block %}
+    {% if user.is_authenticated %}
+    Hey, {{ user }}.
+    {% else %}
+    Register here
+    {% endif %}
+{% endblock %}
+
+{% block body_block %}
+    {% if user.is_authenticated %}
+    <!--First row-->
+    <div class="row pt-2">
+        <!--First column-->
+        <div class="col-md-12">
+            Looks like you're already friends with Elsa.
+            <a href="{% url 'elsa:index' %}">Visit Elsa</a>.
+        </div>
+        <!--/.First column-->
+    </div>
+    <!--/.First row-->
+
+    {% else %}
+    <!--First row-->
+    <div class="row pt-2">
+        <!--First column-->
+        <div class="col-md-12">
+            <form id="register_form" method="post" action="{% url 'friends:register' %}" enctype="multipart/form-data">
+                {% csrf_token %}
+                {{ user_form.as_p }}
+                {{ profile_form.as_p }}
+                <input type="submit" name="submit" value="Register" class="btn btn-default"/>
+            </form>
+        </div>
+        <!--/.First column-->
+    </div>
+    <!--/.First row-->
+    {% endif %}
+
+<!--/.Main layout-->
+{% endblock %}

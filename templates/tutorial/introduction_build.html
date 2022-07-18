@@ -1,0 +1,34 @@
+{% extends 'main/base-k.html' %}
+{% load static %}
+
+
+
+
+{% block title_block %}             Tutorial - Build A Bundle  {% endblock %}
+
+
+
+
+{% block main_header_block %}       Build A Bundle Tutorial  {% endblock %}
+{% block about_header_block %}
+
+This tutorial covers the base case of building bundles.  The tutorial takes users through a linear progression of the Build A Bundle app.  The user will be required to: <ol><li> create a bundle,</li><li> add collections,</li><li> add a product,</li><li> add instruments and targets,</li><li> and refine the small details within the bundle using the editor.</li></ol>  The intent of this tutorial is not to walk a user through the precise specificity of their bundle; rather, the intent is to give the user a feel for how ELSA works and then from there the user will obtain enough knowledge about the basics.  Seperate tutorials can be created to teach users different parts of ELSA once those parts are built. 
+
+<p>
+Graphic here that documents the flow of the tutorial.  We could use this graphic as a pagination type of thing.  So under each section, a bar or checkmark will go off once a user completes a page ?  Think about it.  
+</p>
+  {% endblock %}
+
+
+
+{% block body_block %}
+<div id="row">
+    <!--First column-->
+    <div class="col-md-12">
+        <a href="{% url 'tutorial:bundle_and_collections' %}"><button type="button" class="btn btn-default">Begin Tutorial</button></a>        
+    </div>
+
+</div>
+<!--/.Second row-->
+
+{% endblock %}

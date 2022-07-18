@@ -1,0 +1,72 @@
+{% extends 'elsa/base-k.html' %}
+{% load staticfiles %}
+
+
+
+
+{% block title_block %}
+Add Post
+{% endblock %}
+
+
+
+
+{% block main_header_block %}
+{% endblock %}
+
+
+
+{% block body_block %}
+<div class="row pt-2">
+        <!-- one -->
+        <hr class="featurette-divider">
+
+        <div class="row featurette">
+            <div class="col-md-7">
+                <h2 class="featurette-heading">Got something to say about <span class="text-muted">ELSA</span>?</h2>
+                <p class="lead">
+                    <ol>
+                        <li>Open populate_blog.py.</li>
+                        <li>If you are a new user, add your user to the Atmos Student Users list. Example: Some_New_User = User.objects.get(username='Some_New_User')</li>
+                        <li>Categories currently are not implemented so skip that section.</li>
+                        <li>Copy and paste the commented out post template to the bottom of the list.  Uncomment it and fill in the blanks. Ensure you stay within the char limits.</li>
+                        <li>Save populate_blog.py</li>
+                        <li>Run python populate_blog.py in your terminal. The script will let you know how many blog posts were added.</li>                    
+
+                    </ol>
+
+                </p>
+            </div>
+            <div class="col-md-5">
+                <img class="featurette-image img-fluid mx-auto" src="{% static 'images/elsa_by_sakimichan.jpg' %}" alt="Picture of something frozen" />  PhotoCreds@<a href="http://sakimichan.deviantart.com/art/Elsa-432571504" >sakimichan</a>
+            </div>
+        </div>
+
+        <!-- two -->
+        <hr class="featurette-divider">
+        <div class="row featurette">
+            <div class="col-md-5">
+                <img class="featurette-image img-fluid mx-auto" src="{% static 'images/elsa_by_cuouz_2.png' %}" alt="Picture of something frozen" />  PhotoCreds@<a href="http://sakimichan.deviantart.com/art/Elsa-432571504" >sakimichan</a>
+            </div>
+            <div class="col-md-7">
+                <h2 class="featurette-heading">Editing a <span class="text-muted">Post</span>?</h2>
+                <p class="lead">
+                    <ol>
+                        <li>Head over to the post section of the admin page and delete your post.  Don't worry, this post should be saved in populate_blog.py</li>                    
+                        <li>Open populate_blog.py.</li>
+                        <li>Edit the post you were wanting to edit</li>
+                        <li>Save populate_blog.py</li>
+                        <li>Run python populate_blog.py in your terminal. The script will let you know if your edited post was re-added.</li>
+                    </ol>
+
+                </p>
+            </div>
+
+        </div>
+</div>
+{% endblock %}
+
+
+{% block footie_block %}    
+{% endblock %}
+

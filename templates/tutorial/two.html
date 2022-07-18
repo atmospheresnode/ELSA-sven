@@ -1,0 +1,159 @@
+{% extends 'main/base-k.html' %}
+{% load static %}
+
+{% block title_block %}
+Context
+{% endblock %}
+
+{% block main_header_block %}
+Context Query
+{% endblock %}
+
+{% block body_block %}
+<!--First row-->
+<div class="row pt-2">
+    <!--First column-->
+    <div class="col-md-12">
+        <h4>First ELSA needs to know whether your bundle requires facility information or instrument and target information.  Please click the appropriate button below.</h4>
+       
+    </div>
+    <!--/.First column-->
+</div>
+<!--/.First row-->
+<!--First row-->
+<div class="row pt-2">
+    <!--First column-->
+    <div class="col-md-4">
+        <a href="{% url 'build:context_search_facility' bundle.pk %}">
+            <button type="button" class="btn btn-default" id="facility">Facility</button>
+        </a>
+        <a href="{% url 'build:context_search' bundle.pk %}">
+            <button type="button" class="btn btn-default" id="mission">Mission</button>
+        </a>
+    </div>
+    <!--/.First column-->
+    <!--Second column-->
+    <div class="col-md-8 help">
+    </div>
+    <!--/.Second column-->
+</div>
+<!--/.First row-->
+<hr/>
+<!--Second row-->
+<div class="row pt-2">
+    <!--First column-->
+    <div class="col-md-12">
+        <h3 class="card-header elegant-color white-text text-center z-depth-2">Current Instruments</h3>
+    </div>
+    <!--/.First column-->
+</div>
+<!--/.Second row-->
+<!--Third row-->
+<div class="row pt-2">
+{% if instrument_list %}    
+    {% for instrument in instrument_list %}
+
+    <!--Column-->
+    <div class="col-md-3">
+        <!--Card-->
+        <div class="card">
+            <!--Card image-->
+            <img class="img-fluid" src="{% static 'images/warp_zone.svg' %}" alt="Instrument Image">
+            <!--Card content-->
+            <div class="card-body">
+                <!--Title-->
+                <h4 class="card-title">{{ instrument }}</h4>
+                <!--Text-->
+                <p class="card-text">{{ instrument.lid }}</p>
+                <!--Buttons-->
+                <a href="{% url 'main:construction' %}">
+                    <button type="button" class="btn btn-danger">Remove</button> 
+                </a>
+            </div>
+        </div>
+        <!--/.Card-->
+    </div>
+    <!--/.Column-->
+    {% endfor %}
+{% else %}
+    <!--Column-->
+    <div class="col-md-3">
+        <!--Card-->
+        <div class="card">
+            <!--Card image-->
+            <img class="img-fluid" src="{% static 'images/null.png' %}" alt="Instrument Image">
+            <!--Card content-->
+            <div class="card-body">
+                <!--Title-->
+                <h4 class="card-title">Null</h4>
+                <!--Text-->
+                <p class="card-text">No instruments are associated with {{ bundle }}.</p>
+            </div>
+        </div>
+        <!--/.Card-->
+    </div>
+    <!--/.Column-->
+{% endif %}
+</div>
+<!--/.Third row-->
+<hr/>
+<!--Second row-->
+<div class="row pt-2">
+    <!--First column-->
+    <div class="col-md-12">
+        <h3 class="card-header elegant-color white-text text-center z-depth-2">Current Targets</h3>
+    </div>
+    <!--/.First column-->
+</div>
+<!--/.Second row-->
+<!--Third row-->
+<div class="row pt-2">
+{% if target_list %}    
+    {% for target in target_list %}
+    
+    <!--Column-->
+    <div class="col-md-3">
+        <!--Card-->
+        <div class="card">
+            <!--Card image-->
+            <img class="img-fluid" src="{% static 'images/target.jpg' %}" alt="Target Image">
+            <!--Card content-->
+            <div class="card-body">
+                <!--Title-->
+                <h4 class="card-title">{{ target }}</h4>
+                <!--Text-->
+                <p class="card-text">{{ target.lid }}</p>
+                <!--Buttons-->
+                <a href="{% url 'main:construction' %}">
+                    <button type="button" class="btn btn-danger">Remove</button> 
+                </a>
+            </div>
+        </div>
+        <!--/.Card-->
+    </div>
+    <!--/.Column-->
+
+    {% endfor %}
+{% else %}
+    <!--First column-->
+    <div class="col-md-3">
+        <!--Card-->
+        <div class="card">
+            <!--Card image-->
+            <img class="img-fluid" src="{% static 'images/null.png' %}" alt="An image representing building a label.">
+            <!--Card content-->
+            <div class="card-body">
+                <!--Title-->
+                <h4 class="card-title">Null</h4>
+                <!--Text-->
+                <p class="card-text">No targets have been added</p>
+            </div>        
+        </div>
+        <!--/.Card-->
+    </div>
+    <!--/.First column-->
+{% endif %}
+    
+</div>
+<!--/.Third row-->
+{% endblock %}
