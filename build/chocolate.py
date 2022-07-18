@@ -1,8 +1,6 @@
 from __future__ import print_function
 #    chocolate.py
 
-
-
 # Elsa is very fond of chocolate.  Despite being locked in her room, Elsa ate all the triple-double-fudge
 # sundaes she wanted.  Therefore, this document contains all of the functions that aren't a necessity
 # for Elsa, yet make Elsa's life better.
