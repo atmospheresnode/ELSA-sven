@@ -238,12 +238,6 @@ class Version(models.Model):
             didn't do the deleting-the-preamble thing that made us manually re-
             add the first two lines in close_label in the first place?
             
-            - determine namespace from the label, instead of hard-coding
-            it in
-            
-            -currently replaces only the version_id tag, replacing version 
-            numbers in the schematron filenames is a work in progress
-            
             -obviously, test this out on a full offline version of ELSA. The 
             vpn is being a pain today so I'm small-scale testing on my laptop
             for now
@@ -251,16 +245,30 @@ class Version(models.Model):
             '''
 
         #function from chocolate. still doing imports the old way for now
-        label_path, label_root, tree = open_label_with_tree(label_path) 
+        label_path, label_root, tree = open_label_with_tree(label_path)
         
-        #maps the namespace string to something shorter, so our call to 
-        #findall() is cleaner
-        ns = {'d':'http://pds.nasa.gov/pds4/pds/v1'} 
+        location = '{http://www.w3.org/2001/XMLSchema-instance}schemaLocation'
+        schemas = label_root.attrib[location].split(' ')
+        schemas = [s for s in schemas if '.xsd' in s]
         
-        #find the version_id tag
-        for version_id in label_root.findall("d:Identification_Area/d:version_id", ns):
-            #replace with new version number
-            version_id.text=self.with_dots(number) 
+        #Singles out just the regular pds4 info model, so we don't touch any
+        #other dictionary schema (for now)
+        info_model=[s for s in schema if '/pds/' in s][0]
+        schemas.remove(info_model)
+        
+        #Isolates the 4-character version number
+        old_number=info_model.split('/')[-1].split('.')[0].split('_')[-1]
+        
+        schemas.append(info_model.replace(old_number, number), 0)
+        label_root.set(location, ' '.join(schemas)) #replace version number
+        
+        #maps the namespace string (label_root.tag.split et cetera) to 
+        #something shorter    
+        ns = {'d':label_root.tag.split('{')[1].split('}')[0]} 
+        
+        #find the information_model_version tag
+        for im_version in label_root.findall("d:Identification_Area/d:information_model_version", ns):
+            im_version.text=self.with_dots(number) #replace version number
             
         close_label(label_path, label_root) #also from chocolate
         
