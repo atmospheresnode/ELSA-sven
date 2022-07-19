@@ -107,6 +107,7 @@ def get_user_document_directory(instance, filename):
 
 """
     Note:  Most names in ELSA are explicit.  However, we could not make a 'number' attribute to identify the version number (ex: 1800, 1A00, 1A10) because it conflicted with Django's number attribute given to each model.
+    
 """
 @python_2_unicode_compatible
 class Version(models.Model):
@@ -224,14 +225,57 @@ class Version(models.Model):
         pass
 
     # Main Functions
+    
+    def version_update_new(self, number, label_path):
+        '''Updates the pds4 information model version number in an xml file,
+        given the new version number and the path to that file (both strings).
+        
+        Zena's TODO:
+            -keep an eye out for label-is-not-well-formed types of errors, from 
+            close_label (in chocolate) repeating the first two lines of the 
+            label an extra time. No clue why that happened when I tested this, 
+            may be related to me having/testing with a newer lxml version? that
+            didn't do the deleting-the-preamble thing that made us manually re-
+            add the first two lines in close_label in the first place?
+            
+            - determine namespace from the label, instead of hard-coding
+            it in
+            
+            -currently replaces only the version_id tag, replacing version 
+            numbers in the schematron filenames is a work in progress
+            
+            -obviously, test this out on a full offline version of ELSA. The 
+            vpn is being a pain today so I'm small-scale testing on my laptop
+            for now
+            
+            '''
+
+        #function from chocolate. still doing imports the old way for now
+        label_path, label_root, tree = open_label_with_tree(label_path) 
+        
+        #maps the namespace string to something shorter, so our call to 
+        #findall() is cleaner
+        ns = {'d':'http://pds.nasa.gov/pds4/pds/v1'} 
+        
+        #find the version_id tag
+        for version_id in label_root.findall("d:Identification_Area/d:version_id", ns):
+            #replace with new version number
+            version_id.text=self.with_dots(number) 
+            
+        close_label(label_path, label_root) #also from chocolate
+        
+        
     def version_update(self, number, inFile, outFile):
+        ''''Original version of this function, to be replaced with above and 
+        renamed (or deleted?) once I'm positive the new one works. Keep this 
+        one around for now, for reference and for when the new one breaks.'''
         
         j=0
         i=0
 
         #read the bundle and collection template files and store their contents in strings.
         #If the file is invalid a statement will be printed and the function will quit.
-        try:
+        try: 
                 fil = open(inFile,'r')
 
                 fileText = fil.read()
