@@ -253,7 +253,7 @@ class Version(models.Model):
         
         #Singles out just the regular pds4 info model, so we don't touch any
         #other dictionary schema (for now)
-        info_model=[s for s in schema if '/pds/' in s][0]
+        info_model=[s for s in schemas if '/pds/' in s][0]
         schemas.remove(info_model)
         
         #Isolates the 4-character version number
