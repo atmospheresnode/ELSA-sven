@@ -1,3 +1,2 @@
 # -ELSA-
-The one and only repository for the Educational Labeling System for Atmospheres (ELSA)
-# data_comparison
+Most up to date repository for the Educational Labeling System for Atmospheres (ELSA) on Python 3
