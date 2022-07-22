@@ -230,17 +230,6 @@ class Version(models.Model):
         '''Updates the pds4 information model version number in an xml file,
         given the new version number and the path to that file (both strings).
         
-        Zena's TODO:
-            -keep an eye out for label-is-not-well-formed types of errors, from 
-            close_label (in chocolate) repeating the first two lines of the 
-            label an extra time. No clue why that happened when I tested this, 
-            may be related to me having/testing with a newer lxml version? that
-            didn't do the deleting-the-preamble thing that made us manually re-
-            add the first two lines in close_label in the first place?
-            
-            -obviously, test this out on a full offline version of ELSA. The 
-            vpn is being a pain today so I'm small-scale testing on my laptop
-            for now
             
             '''
 
@@ -249,17 +238,16 @@ class Version(models.Model):
         
         location = '{http://www.w3.org/2001/XMLSchema-instance}schemaLocation'
         schemas = label_root.attrib[location].split(' ')
-        schemas = [s for s in schemas if '.xsd' in s]
         
         #Singles out just the regular pds4 info model, so we don't touch any
         #other dictionary schema (for now)
-        info_model=[s for s in schemas if '/pds/' in s][0]
+        info_model=[s for s in schemas if '/pds/' in s and '.xsd/' in s][0]
         schemas.remove(info_model)
         
         #Isolates the 4-character version number
         old_number=info_model.split('/')[-1].split('.')[0].split('_')[-1]
         
-        schemas.append(info_model.replace(old_number, number), 0)
+        schemas.insert(1, info_model.replace(old_number, number))
         label_root.set(location, ' '.join(schemas)) #replace version number
         
         #maps the namespace string (label_root.tag.split et cetera) to 
