@@ -3,3 +3,5 @@ tommy testing permissions
 git clone and commit test
 
 git clone-pull test
+
+git online-pull test
