@@ -1,5 +1,3 @@
-from future import standard_library
-standard_library.install_aliases()
 from builtins import object
 from django import forms
 from django.contrib.auth.models import User

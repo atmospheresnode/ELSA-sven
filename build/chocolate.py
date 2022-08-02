@@ -6,8 +6,6 @@ from __future__ import print_function
 # for Elsa, yet make Elsa's life better.
 
 # imports for MediaInfo and MediaObject
-from future import standard_library
-standard_library.install_aliases()
 from django.template import Context, loader
 from lxml import etree
 from xml.dom import minidom
