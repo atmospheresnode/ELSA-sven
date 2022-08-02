@@ -83,7 +83,7 @@ SECRET_KEY = secret_key()
 
 #     SECURITY WARNING: don't run with debug turned on in production!
 #                   use live debug for quick checks in production.
-DEBUG = True
+DEBUG = False
 
 
 
@@ -251,7 +251,7 @@ LOGGING = {
         'file': {
             'level': 'DEBUG',
             'class': 'logging.FileHandler',
-            'filename': '/home/sajomont/Documents/elsaVersions/elsa/elsa.log',
+            'filename': '/export/atmos1/htdocs/elsa/elsa.log',
         },
     },
     'loggers': {
