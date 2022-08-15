@@ -69,6 +69,17 @@ def profile(request, pk_user):
     context_dict['user'] = User.objects.get(userprofile=context_dict['userprofile'])
     context_dict['bundles'] = Bundle.objects.filter(user=context_dict['user'])
     context_dict['bundle_count'] = Bundle.objects.filter(user=context_dict['user']).count()
+    
+    #This block checks that all bundles actually exist in the archive-
+    #if not, it deletes that bundle from the database.
+    for b in context_dict['bundles']:
+        if os.path.isdir(b.directory()):
+            pass
+        else:
+            b.remove_bundle()
+            context_dict['bundles'] = Bundle.objects.filter(user=context_dict['user'])
+            context_dict['bundle_count'] = Bundle.objects.filter(user=context_dict['user']).count()
+
 
     if request.user == context_dict['user']:
         return render(request, 'friends/userprofile_detail.html', context_dict)

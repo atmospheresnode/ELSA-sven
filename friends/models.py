@@ -15,7 +15,6 @@ from django.utils.encoding import python_2_unicode_compatible
 
 
 
-
 # Create your models here.
 
 # UserProfile is an extension of the User model.  So each User has a UserProfile.  And each UserProfile lists the associated user, their agency to be used in the urn, and their related user directory.
