@@ -33,7 +33,7 @@ Bundle
       </a>
    </div>
    <div class="col-md-3">
-      <a href="https://atmos.nmsu.edu/elsa/archive/{{user.username}}/">
+      <a href="{% url 'build:directory_view' bundle.relative_dir %}">
       <button type="button" class="btn btn-blue">View {{ bundle }} Directory</button>
       </a>
    </div>
@@ -166,7 +166,6 @@ Bundle
 <div class="row">
    <!--Alias Form-->
    <div id="displayAlias" class="collapse col-md-12 rgba-indigo">
-	
         <div clas="rgba-indigo-slight">
          <form id="form_data" method="post" action="{% url 'build:bundle' bundle.pk %}">
             {% csrf_token %}
@@ -476,14 +475,6 @@ The inventory file will be a 2-column listing of member status (Primary or Secon
    </br>
    </div>
 </div>
-<!--/ <div class="row pt-2">
-    <!--First column-->
-    <div class="col-md-8">
-        <form id="query01" method="post" action="{% url 'build:build' %}">
-             {% csrf_token %}
-	<div id="form_collections">
-             <!--/     Pick and assign collections for your bundle: <br/>
-                 {{ form_collections.as_p }}-->
 	</br>
          </div>
 </div>
@@ -513,16 +504,14 @@ The inventory file will be a 2-column listing of member status (Primary or Secon
       <div class="row">
          <!--Document Form-->
          <div id="displayDocumentCollection" class="collapse col-md-12 rgba-indigo">
-            </br>
             <div class="rgba-indigo">
-               <form id="form_document" method="post" action="{% url 'build:bundle' bundle.pk %}">
+               <form id="form_data" method="post" action="{% url 'build:bundle' bundle.pk %}">
                   {% csrf_token %}
-                  <div id="form_document">
+                  <div id="form_data">
                      {{ form_document.as_p }}
                   </div>
                   <input class="btn btn-default" type="submit" value="Submit"/>
                </form>
-               </br>
             </div>
          </div>
          <!--/.Document Form-->
@@ -578,8 +567,8 @@ The inventory file will be a 2-column listing of member status (Primary or Secon
             {% else %}
             <!--Column-->
 	    <hr>
-            <div class="col-md-12"
-	    <p class="card-header black-text text-left z-depth-2"> No Documents </p>
+            <div class="col-md-12">
+	         <p class="card-header black-text text-left z-depth-2"> No Documents </p>
             </div>
             <!--/.Column-->
             {% endif %}
