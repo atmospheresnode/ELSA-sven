@@ -2383,6 +2383,45 @@ def instruments(request):
 
     return render(request, 'context/repository/instruments.html', context_dict)
 
+# Directory View Functions
+#utils functions
+def _get_abs_virtual_root():
+    return _eventual_path(settings.BASE_DIR)
+
+def _eventual_path(path):
+    return os.path.abspath(os.path.realpath(os.path.join('archive/', path)))
+
+def index(request, path):
+    def index_maker():
+        def _index(inpath):
+            contents = os.listdir(inpath)
+            contents.reverse()
+            for mfile in contents:
+                t = os.path.join(inpath, mfile)
+                if os.path.isdir(t):
+                    link_target = os.path.relpath(t, start=os.path.join(_get_abs_virtual_root(), 'archive/'))
+                    yield loader.render_to_string('build/directory/list_folder.html', {'file': mfile, 'subfiles': _index(os.path.join(inpath, t)), 'link': link_target})
+                    continue
+                if os.path.isfile(t):
+                    link_target = os.path.relpath(t, start=os.path.join(_get_abs_virtual_root(), 'archive/'))
+                    yield loader.render_to_string('build/directory/list_file.html', {'file': mfile, 'link': link_target})
+        
+        return _index(eventual_path)
+
+    directory_name = os.path.basename(path)
+
+    eventual_path = _eventual_path(path)
+    if os.path.isfile(eventual_path):
+        print(path)
+        return HttpResponse(open(eventual_path).read(), content_type='text/xml')
+    
+    c = index_maker()
+    data = {
+        'directory_name': directory_name,
+        'subfiles': c
+    }
+    # print(list(c))
+    return render(request, 'build/directory/list.html', data)
 
 
 
