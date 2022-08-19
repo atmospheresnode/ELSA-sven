@@ -1722,7 +1722,10 @@ class Bundle(models.Model):
         bundle_directory = os.path.join(bundle_directory, self.name_directory_case())
         return bundle_directory
 
-
+    def relative_dir(self):
+        # rel_dir = os.path.join('archive/', self.user.username)
+        rel_dir = os.path.join(self.user.username, self.name_directory_case())
+        return rel_dir
 
     """
     - name_title_case
