@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+{% load staticfiles %}
+<html lang="en">
+
+
+<!--Hello.  If you are seeing this, you are one curious person.  If you are looking for a piece of code executed within this app, feel free to email me at elsa@atmos.nmsu.edu.  Happy to help when I can.-->
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <title>ELSA: {% block title_block %}Educational Labeling System @Atmospheres{% endblock %}</title>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.6.0/css/font-awesome.min.css">
+    <!-- Bootstrap core CSS -->
+    <link href="{% static 'css/bootstrap.min.css' %}" rel="stylesheet">
+    <!-- Material Design Bootstrap -->
+    <link href="{% static 'css/mdb.min.css' %}" rel="stylesheet">
+    <!-- Your custom styles (optional) -->
+    <link href="{% static 'css/style.css' %}" rel="stylesheet">
+    <link href="{% static 'css/elsa-help.css' %}" rel="stylesheet">
+    <link href="{% static 'css/elsa-tutorial.css' %}" rel="stylesheet">
+    <link href="{% static 'css/elsa-new.css' %}" rel="stylesheet">
+    <!--<link href="{% static 'css/elsa-todo.css' %}" rel="stylesheet">-->
+</head>
+
+<body>
+
+    <!-- Start your project here-->
+    <header>
+
+        <!--Navbar-->
+        <nav class="navbar fixed-top navbar-expand-lg navbar-dark elegant-color-dark">
+
+            <!-- Navbar brand -->
+            <a class="navbar-brand" href="{% url 'main:index' %}">
+                <img src="{% static 'images/ELSA-Logo-White.png' %}" style="text-shadow: none; font-size: 25px; color: rgb(43, 187, 173); height: 50px; width: 95px; line-height: 75px; border-radius: ; text-align: center;"></img> 
+             </a>
+
+            <!-- Collapse button -->
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent"
+        aria-expanded="false" aria-label="Toggle navigation"><span class="navbar-toggler-icon"></span></button>
+
+            <!-- Collapsible content -->
+            <div class="collapse navbar-collapse" id="navbarSupportedContent">
+
+                <!-- Links -->
+                <ul class="navbar-nav mr-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'main:about' %}"><i class="fa fa-snowflake-o" aria-hidden="true"></i> About</a>
+                    </li>
+                    {% if user.is_authenticated %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'main:services' %}"><i class="fa fa-briefcase"></i> Bundle Apps</a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'blog:index' %}"><i class="fa fa-newspaper-o"></i> Blog</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'main:contact' %}"><i class="fa fa-envelope"></i> Contact</a>
+                    </li>
+
+                    <!-- Dropdown -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" id="navbarDropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><i class="fa fa-user"></i> {{ user }}</a>
+                        <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+                            <a class="dropdown-item" href="{{ user.userprofile.get_absolute_url }}">{{ user.first_name }}'s Profile</a>
+                            <a class="dropdown-item" href="{% url 'friends:settings' user.pk %}">Profile Settings</a>
+                            <a class="dropdown-item" href="{% url 'friends:logout' %}">Logout</a>
+                        </div>
+                    </li>
+                    {% else %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'friends:register' %}"><i class="fa fa-hand-spock-o" aria-hidden="true"></i> Sign Up</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'friends:login' %}"><i class="fa fa-sign-in" aria-hidden="true"></i> Login</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'main:contact' %}"><i class="fa fa-envelope"></i> Contact</a>
+                    </li>
+                    {% endif %}
+
+                </ul>
+                <!-- Links -->
+
+            </div>
+            <!-- Collapsible content -->
+            <!-- Navbar brand -->
+            <a href="https://pds-atmospheres.nmsu.edu/">
+                <img src="{% static 'images/PDS_Planets_inv_clrbk_no_words.png' %}" style="text-shadow: none; font-size: 25px; color: rgb(43, 187, 173); height: 50px; width: 95px; line-height: 75px; border-radius: ; text-align: center; "></i> 
+                
+             </a>
+
+        </nav>
+        <!--/.Navbar-->              
+    </header>
+    <!--/.Header-->
+
+<!-- TO DO LIST IS... AS DANAE WOULD SAY, JANKY!!  Fix before show!!
+    <aside>
+        <!--To do list
+        <div id="mySidenav" class="sidenav">
+
+ <div id="myDIV" class="header">
+  <h2>My To Do List</h2>
+  <input type="text" id="myInput" placeholder="Title...">
+  <span onclick="newElement()" class="addBtn">Add</span>
+</div>
+
+<ul id="myUL">
+  <li>Hit the gym</li>
+  <li class="checked">Pay bills</li>
+  <li>Meet George</li>
+  <li>Buy eggs</li>
+  <li>Read a book</li>
+  <li>Organize office</li>
+</ul> 
+
+          <a href="javascript:void(0)" class="closebtn" onclick="closeNav()">&times;</a>
+        </div>
+
+        <div id="main">  
+          <br/><br/><br/><br/>        
+          <span style="font-size:30px;cursor:pointer" onclick="openNav()">&#9776; to-do</span>
+        </div>
+
+        <!--/.To do list
+    </aside>
+-->
+
+
+    <!--Main-->
+    <main class="mt-5">
+        <div class="container">
+
+            <div class="d-flex justify-content-center">
+                <div class="container">
+
+
+<!--Section: Blog v.3-->
+<section class="section extra-margins pb-3 text-center text-lg-left">
+
+    <!--Section heading-->
+    <h2 class="section-heading h1 pt-4">{% block main_header_block %}{% endblock %}</h2>
+    <!--Section description-->
+    <p class="section-description">{% block about_header_block %}{% endblock %}</p>
+
+
+    <!--Find a spot for standards_reference_block around here.  Make it expandable for users who want to read it.  Actually, we should make a conditional dependent on bundle count whether a dialog help box appears or not or something for the new user while minimizing info for the experienced user-->
+
+</section>
+<!--Section: Blog v.3-->
+                    <!--Body block-->
+                    {% block body_block %}
+                    {% endblock %}
+                    <!--/.Body block-->
+                </div>
+            </div>
+        </div>
+    </main>
+    <!--/.Main-->
+
+    <!--Footer-->
+    <footer class="page-footer elegant-color center-on-small-only fixed-bottom"> <!-- fixed-bottom class-->
+        <!--Footer Links-->
+        <div class="container">
+            <div class="row">
+
+                <!--First column-->
+                <div class="col-md-6">
+                    <a href="{% url 'main:index' %}">
+                    <h6 class="title">
+ <i id="icon" class="fa fa-snowflake-o" style="text-shadow: rgb(32, 32, 32) 0px 0px 0px, rgb(33, 33, 33) 1px 1px 0px, rgb(34, 34, 34) 2px 2px 0px, rgb(35, 35, 35) 3px 3px 0px, rgb(35, 35, 35) 4px 4px 0px, rgb(36, 36, 36) 5px 5px 0px, rgb(37, 37, 37) 6px 6px 0px, rgb(38, 38, 38) 7px 7px 0px, rgb(38, 38, 38) 8px 8px 0px, rgb(39, 39, 39) 9px 9px 0px, rgb(40, 40, 40) 10px 10px 0px, rgb(41, 41, 41) 11px 11px 0px, rgb(41, 41, 41) 12px 12px 0px, rgb(42, 42, 42) 13px 13px 0px, rgb(43, 43, 43) 14px 14px 0px, rgb(44, 44, 44) 15px 15px 0px, rgb(44, 44, 44) 16px 16px 0px, rgb(45, 45, 45) 17px 17px 0px; font-size: 50px; color: rgb(43, 187, 173); height: 107px; width: 107px; line-height: 107px; border-radius: ; text-align: center; background-color: rgb(46, 46, 46);"></i> 
+                    Educational Labeling System @Atmospheres
+                    </a>
+                    </h6>
+                </div>
+                <!--/.First column-->
+
+
+
+                <!--Second column-->
+
+                <div class="col-md-6">
+                    <h6 class="title">
+                    <a href="http://atmos.nmsu.edu/">
+ 
+ <i id="icon" class="fa fa-cloud" style="text-shadow: rgb(32, 32, 32) 0px 0px 0px, rgb(33, 33, 33) 1px 1px 0px, rgb(34, 34, 34) 2px 2px 0px, rgb(35, 35, 35) 3px 3px 0px, rgb(35, 35, 35) 4px 4px 0px, rgb(36, 36, 36) 5px 5px 0px, rgb(37, 37, 37) 6px 6px 0px, rgb(38, 38, 38) 7px 7px 0px, rgb(38, 38, 38) 8px 8px 0px, rgb(39, 39, 39) 9px 9px 0px, rgb(40, 40, 40) 10px 10px 0px, rgb(41, 41, 41) 11px 11px 0px, rgb(41, 41, 41) 12px 12px 0px, rgb(42, 42, 42) 13px 13px 0px, rgb(43, 43, 43) 14px 14px 0px, rgb(44, 44, 44) 15px 15px 0px, rgb(44, 44, 44) 16px 16px 0px, rgb(45, 45, 45) 17px 17px 0px; font-size: 50px; color: rgb(43, 187, 173); height: 107px; width: 107px; line-height: 107px; border-radius: ; text-align: center; background-color: rgb(46, 46, 46);"></i> 
+                    Planetary Atmospheres Node
+                    </a>
+                    </h6>
+                </div>
+                <!--/.Second column-->
+            </div>
+        </div>
+        <!--/.Footer Links-->
+
+        <!--Copyright-->
+        <div class="footer-copyright">
+            <div class="container">
+                © 2022 New Mexico State University: <a href="{% url 'main:index' %}"> https://atmos.nmsu.edu/elsa/ </a>
+            </div>
+        </div>
+        <!--/.Copyright-->
+	<!-- <h5 align="left">V1</h5> -->
+     
+</footer>
+    <!--/.Footer-->
+
+    <!-- /Start your project here-->
+
+    <!-- SCRIPTS -->
+    <!-- JQuery -->
+    <script type="text/javascript" src="{% static 'js/jquery-3.1.1.min.js' %}"></script>
+    <!-- Bootstrap tooltips -->
+    <script type="text/javascript" src="{% static 'js/popper.min.js' %}"></script>
+    <!-- Bootstrap core JavaScript -->
+    <script type="text/javascript" src="{% static 'js/bootstrap.min.js' %}"></script>
+    <!-- MDB core JavaScript -->
+    <script type="text/javascript" src="{% static 'js/mdb.min.js' %}"></script>
+    <!-- ELSA JavaScript -->
+    <script type="text/javascript" src="{% static 'js/elsa-help.js' %}"></script>
+    <script type="text/javascript" src="{% static 'js/elsa-new.js' %}"></script>
+    <script type="text/javascript" src="{% static 'js/elsa-tutorial.js' %}"></script>
+    <!--<script type="text/javascript" src="{% static 'js/elsa-todo.js' %}"></script>-->
+    <!-- Font Awesome -->
+    <script src="https://use.fontawesome.com/dc496c8662.js"></script>
+
+</body>
+
+</html>
