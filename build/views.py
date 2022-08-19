@@ -678,6 +678,9 @@ def bundle(request, pk_bundle):
             context_dict['alias_set'] = alias_set
             context_dict['alias_set_count'] =  len(alias_set)
 
+            #fixes the refresh duplication issue - deric
+            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
+
 
         # After ELSAs friend hits submit, if the forms are completed correctly, we should enter
         # this conditional.
@@ -723,6 +726,8 @@ def bundle(request, pk_bundle):
             form_citation_information = CitationInformationForm()
             context_dict['form_citation_information'] = form_citation_information
 
+            #fixes the refresh duplication issue - deric
+            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
             
         # satisfy this conditional
         if form_data.is_valid():
@@ -758,8 +763,11 @@ def bundle(request, pk_bundle):
             print('form_modification_history is valid')
             # Create modification_history model object
             modification_history = form_modification_history.save(commit=False)
+            print('cp 1')
             modification_history.bundle = bundle
+            print('cp 2')
             modification_history.save()
+            print('cp 3')
             print('modification_history model object: {}'.format(modification_history))
 
             # Find appropriate label(s).  modification_history gets added to all Product_Bundle and 
@@ -794,6 +802,9 @@ def bundle(request, pk_bundle):
             context_dict['modification_history_set_count'] = len(modification_history_set)
             form_modification_history = ModificationHistoryForm()
             context_dict['form_modification_history'] = form_modification_history
+
+            #fixes the refresh duplication issue - deric
+            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
 
             
         # satisfy this conditional
@@ -879,7 +890,10 @@ def bundle(request, pk_bundle):
 
             form_document = ProductDocumentForm()
             context_dict['form_document'] = form_document
-            context_dict['documents'] = Product_Document.objects.filter(bundle=bundle)    
+            context_dict['documents'] = Product_Document.objects.filter(bundle=bundle)
+            
+            #fixes the refresh duplication issue - deric
+            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
 
         return render(request, 'build/bundle/bundle.html', context_dict)
 
@@ -1858,7 +1872,7 @@ def document(request, pk_bundle):
         product_document = form_product_document.save(commit=False)
         product_document.bundle = bundle
         product_document.save()
-        print('Product_Document model object: {}').format(product_document)
+        print('Product_Document model object: {}'.format(product_document))
 
         # Build Product_Document label using the base case template found in templates/pds4/basecase
         print('\n---------------Start Build Product_Document Base Case------------------------')
@@ -1886,7 +1900,7 @@ def document(request, pk_bundle):
         all_labels.extend(product_collections_list)  
 
         for label in all_labels:
-            print('- Label: {}').format(label)
+            print('- Label: {}'.format(label))
             print(' ... Opening Label ... ')
             label_list = open_label_with_tree(label.label())
             label_object = label_list[0]
@@ -2021,9 +2035,7 @@ def product_document(request, pk_bundle, pk_product_document):
             'doi':product_document.doi,
             'editor_list':product_document.editor_list,
             'publication_date':product_document.publication_date,
-            'revision_id':product_document.revision_id,
-            'modification_date':product_document.modification_date,
-            'version_id':product_document.version_id,
+            'revision_id':product_document.revision_id
         }
         form_product_document = ProductDocumentForm(request.POST or None, initial=initial_product)
 
@@ -2062,12 +2074,6 @@ def product_document(request, pk_bundle, pk_product_document):
 
                 elif change == 'revision_id':
                    product_document.revision_id = form_product_document['revision_id'].value()
-
-                elif change == 'modification_date':
-                   product_document.modification_date = form_product_document['modification_date'].value()
-
-                elif change == 'version_id':
-                   product_document.version_id = form_product_document['version_id'].value()
         documents = Product_Document.objects.filter(bundle=bundle)
 
         context_dict = {
