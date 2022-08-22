@@ -2389,7 +2389,7 @@ def _get_abs_virtual_root():
     return _eventual_path(settings.BASE_DIR)
 
 def _eventual_path(path):
-    return os.path.abspath(os.path.realpath(os.path.join('archive/', path)))
+    return os.path.abspath(os.path.realpath(path))
 
 def index(request, path):
     def index_maker():
@@ -2410,7 +2410,7 @@ def index(request, path):
 
     directory_name = os.path.basename(path)
 
-    eventual_path = _eventual_path(path)
+    eventual_path = _eventual_path(os.path.join(settings.ARCHIVE_DIR, path))
     if os.path.isfile(eventual_path):
         print(path)
         return HttpResponse(open(eventual_path).read(), content_type='text/xml')
@@ -2420,5 +2420,29 @@ def index(request, path):
         'directory_name': directory_name,
         'subfiles': c
     }
-    # print(list(c))
     return render(request, 'build/directory/list.html', data)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

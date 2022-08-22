@@ -166,6 +166,7 @@ Bundle
 <div class="row">
    <!--Alias Form-->
    <div id="displayAlias" class="collapse col-md-12 rgba-indigo">
+	
         <div clas="rgba-indigo-slight">
          <form id="form_data" method="post" action="{% url 'build:bundle' bundle.pk %}">
             {% csrf_token %}
@@ -504,14 +505,16 @@ The inventory file will be a 2-column listing of member status (Primary or Secon
       <div class="row">
          <!--Document Form-->
          <div id="displayDocumentCollection" class="collapse col-md-12 rgba-indigo">
+            </br>
             <div class="rgba-indigo">
-               <form id="form_data" method="post" action="{% url 'build:bundle' bundle.pk %}">
+               <form id="form_document" method="post" action="{% url 'build:bundle' bundle.pk %}">
                   {% csrf_token %}
-                  <div id="form_data">
+                  <div id="form_document">
                      {{ form_document.as_p }}
                   </div>
                   <input class="btn btn-default" type="submit" value="Submit"/>
                </form>
+               </br>
             </div>
          </div>
          <!--/.Document Form-->
@@ -567,8 +570,8 @@ The inventory file will be a 2-column listing of member status (Primary or Secon
             {% else %}
             <!--Column-->
 	    <hr>
-            <div class="col-md-12">
-	         <p class="card-header black-text text-left z-depth-2"> No Documents </p>
+            <div class="col-md-12"
+	    <p class="card-header black-text text-left z-depth-2"> No Documents </p>
             </div>
             <!--/.Column-->
             {% endif %}
@@ -715,5 +718,3 @@ The inventory file will be a 2-column listing of member status (Primary or Secon
 <!--/.Geometry Collection Detail-->
 {% endif %}
 {% endblock %}
-
-
