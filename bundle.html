@@ -1,0 +1,785 @@
+{% extends 'base-k-se.html' %}
+{% load static %}
+{% block title_block %}
+Bundle
+{% endblock %}
+{% block main_header_block %}
+<!--Grid row-->
+</br>
+<div class="row">
+   <!--Grid column-->
+   <div>
+      Bundle View:<p>{{ bundle.name }}</p>
+   </div>
+   
+   <hr>
+   <!--Grid column-->
+</div>
+<!--/.Row-->
+{% endblock %}
+{% block about_header_block %}
+<!--Row-->
+</br>
+<div class="row center">
+      <!--Column-->
+</br>  
+      <!--Help Button-->
+      <div class="col-md-2">
+         <button class="btn btn-teal" data-toggle= "collapse" href="#content" role="button" >What is a bundle?  </button>  
+         </div>
+
+         <div class="col-md-3">
+            <a href="{% url 'build:bundle_delete' bundle.pk %}">
+            <button role="button" class="btn btn-red">Delete {{ bundle }} Bundle</button>
+            </a>
+         </div>
+      
+         <div id="content" class="collapse">
+            <div class="col align self end">
+            <div class="card card-body">
+         
+                     <strong>Bundles:</strong>
+                     </br>
+                     A bundle is the default logical construct for archiving digital data in the PDS. Bundles have a simple hierarchical structure. A bundle has one or more member collections, each of which has one or more member basic products. PDS does not impose requirements on how bundles are defined except that (1) bundles must be distinct with unique identifiers within the overall holdings of PDS, and (2) each bundle must be approved by a PDS peer review. 
+                </br>
+                     <strong>Archive structure:</strong> </br>
+                     Members of a bundle are listed in a Product_Bundle, an XML file which serves as a label and collection listing. Product_Bundle is described and uniquely identified using the Product_Bundle class definition.   
+                  </br>
+                  
+            </div>
+           
+               </div>
+               </div>
+             
+         <div class="col-md-3">
+            <a href="https://atmos.nmsu.edu/elsa/archive/{{user.username}}/">
+            <button role="button" class="btn btn-blue">View {{ bundle }} Directory</button>
+            </a>
+         </div>
+         
+         <div class="col-md-4">
+         
+            <a href="{% url 'build:bundle_download' bundle.pk %}   ">
+          <button role="button" width="500 px" class="btn btn-cyan" data-toggle="tiptool" data-placement="right" title="Click this button to download a zip file of the current bundle template package as it currently is. The resulting package will contain all label templates you've included in your bundle and may or may not be complete depending on how much tailoring you've done throughout the system.">Download {{ bundle }} Bundle Template Package</button>
+            </a>
+         </div>
+       
+         
+         
+
+
+  
+       
+      <!--/.Help Detail-->
+ 
+   <!--/.Column-->
+</div>
+
+<!--/.Row-->
+{% endblock %}
+{% block body_block %}
+<!--Row-->
+
+<div class="row">
+   <!--Grid column-->
+   <div class="col-md-12">
+      <p class="card-header black-text text-left z-depth-2">
+         <!--p class="section-description"-->
+         <strong>LID: </strong>
+         {{ bundle.lid }}.</br>
+         <!--/p-->
+         <!--p class="section-description"-->
+         <strong>Status: </strong>
+         {% if bundle.status == 'b' %} Build.</br>
+         {% elif bundle.status == 'r' %} Review.</br>
+         {% else %} Submit.</br>
+         {% endif %}
+         <!--/p-->
+         <!--p class="section-description"-->
+         <strong>Creator:</strong>
+         {{bundle.user}}.</br>
+	</br>
+	Below are several sections that ELSA needs you to fill out to make your templates as complete as possible. Several sections are used universally throughout your bundle (e.g., Investigation Area and Context). The Collections section will allow you to add, view, and edit collections that you would like to include in your bundle.
+      </p>
+   </div>
+   <!--Grid column-->
+</div>
+<!--/.Row-->
+<hr>
+
+
+<!--/.Row-->
+<!--Divider-->
+<!--/.Divider-->
+<!--Row-->
+<div class="row">
+   <div class="col-md-12" >
+      <h3 class="card-header elegant-color white-text text-center z-depth-2"class="btn btn-teal" data-toggle= "collapse" href="#context_detail" role="button" >
+         Context
+         <i class="fa fa-caret-down"></i>
+      </h3>
+      <br/>
+   </div>
+</div>
+
+
+
+<!--/.Row-->
+<div id="context_detail" class="collapse">
+   <!--Row-->
+   <div class="row">
+      <div class="col-md-12">
+         <p class="card-header black-text text-left z-depth-2">Adding context products entails associating your bundle with the missions, facilities, telescopes, instruments, the hosts of those instruments, targets, and the like that relate to the data within your bundle.</br>
+            <a href="{% url 'build:context_search' bundle.pk %}">
+            <input type="button" value="+ Add Context Products" class="btn btn-teal">
+            </a>
+         </p>
+         </br>
+      </div>
+   </div>
+   <div class="row">
+      <!--/.Column-->
+      <!--Column-->
+ <div class="row pt-2">     
+      <div class="col-md-12">
+ 	<p class="card-header bg-info text-white text-center z-depth-2"  >
+            <strong>View Current {{ bundle.name }} Context Products </strong> </p>
+	</br>
+<div class="row pt-2">
+         {% if instrument_list %}    
+    {% for instrument in instrument_list %}
+    <!--Column-->
+    <div class="col-md-3">
+        <!--Card-->
+        <div class="card">
+            <!--Card image-->
+            <img class="img-fluid" src="{% static 'images/warp_zone.svg' %}" alt="Instrument Image">
+            <!--Card content-->
+            <div class="card-body">
+                <!--Title-->
+                <h4 class="card-title">{{ instrument }}</h4>
+                <!--Text-->
+                <p class="card-text">{{ instrument.lid }}</p>
+                <!--Buttons-->
+                <a href="{% url 'main:construction' %}">
+                    <button type="button" class="btn btn-danger">Remove</button> 
+                </a>
+            </div>
+        </div>
+        <!--/.Card-->
+    </div>
+    <!--/.Column-->
+    {% endfor %}
+{% else %}
+    <!--Column-->
+    <div class="col-md-3">
+        <!--Card-->
+        <div class="card">
+            <!--Card image-->
+            <img class="img-fluid" src="{% static 'images/null.png' %}" alt="Instrument Image">
+            <!--Card content-->
+            <div class="card-body">
+                <!--Title-->
+                <h4 class="card-title">Null</h4>
+                <!--Text-->
+                <p class="card-text">No instruments are associated with {{ bundle }}.</p>
+		
+            </div>
+        </div>
+        <!--/.Card-->
+    </div>
+    <!--/.Column-->
+{% endif %}
+{% if target_list %}    
+    {% for target in target_list %}   
+    <!--Column-->
+    <div class="col-md-3">
+        <!--Card-->
+        <div class="card">
+            <!--Card image-->
+            <img class="img-fluid" src="{% static 'images/target.jpg' %}" alt="Target Image">
+            <!--Card content-->
+            <div class="card-body">
+                <!--Title-->
+                <h4 class="card-title">{{ target }}</h4>
+                <!--Text-->
+                <p class="card-text">{{ target.lid }}</p>
+                <!--Buttons-->
+                <a href="{% url 'main:construction' %}">
+                    <button type="button" class="btn btn-danger">Remove</button> 
+                </a>
+            </div>
+        </div>
+        <!--/.Card--> 
+    </div>
+    <!--/.Column-->
+    {% endfor %}
+{% else %}
+    <!--First column-->
+    <div class="col-md-3">
+        <!--Card-->
+        <div class="card">
+            <!--Card image-->
+            <img class="img-fluid" src="{% static 'images/null.png' %}" alt="An image representing building a label.">
+            <!--Card content-->
+            <div class="card-body">
+                <!--Title-->
+                <h4 class="card-title">Null</h4>
+                <!--Text-->
+                <p class="card-text">No targets are associated with {{ bundle }}.</p>
+            </div>        
+        </div>
+        <!--/.Card-->
+    </div>
+    <!--/.First column-->
+{% endif %}
+      </div>
+      <!--/.Column-->
+   </div>
+   <!--/.Grid row-->
+   <!--Divider-->
+   <hr class="mb-5">
+</div>
+</div>
+</div>
+   <hr>
+
+   <div class="row">
+      <div class="col-md-12" >
+         <h3
+        class="card-header elegant-color white-text text-center z-depth-2"   class="btn btn-teal" data-toggle= "collapse" href="#investigation" role="button" >
+            Investigation Area  
+            <i class="fa fa-caret-down"></i>
+      </h3>
+         <br/>
+      </div>
+   </div>
+   
+   
+   <div id="investigation" class="collapse">
+      
+      <!--Row-->
+      <div class="row">
+         <!--Grid column-->
+         <div class="col-md-12">
+         
+            <p class="card-header black-text text-left z-depth-2">
+         The <strong>INVESTIGATION AREA </strong> provides references for your bundle including alternative names for your dataset <strong>(Alias)</strong>, citation information for giving credit to those working on your data <strong>(Citation Information)</strong>, and updates to the editing of the bundle <strong>(Modification History)</strong>.
+            </p>
+         </div>
+         <!--Grid column-->
+      </div>
+      <!--/.Row-->
+      <hr>
+      <div class="row">
+         <div class="col-md-12" id="alias_detail">
+            <p class="card-header  black-text text-left z-depth-2">
+               {% if alias_set_count == 0 %}
+               <!--Display Case 1: No alias-->
+               <strong>Alias:</strong> None</br>
+               An alias is not required but is sometimes useful.</br>
+               {% else %}
+               <!--Display Case 2: Aliases associated with bundle-->
+               <strong>Alias: You may edit Alias information of your choosing, by clicking on the blue link below </strong>
+               {% for alias in alias_set %}
+               <!--Link-->
+               <a href="{% url 'build:alias_edit' bundle.pk alias.pk %}" data-toggle="tiptool" data-placement="right" title="Click me to edit this Alias Form" >
+                  <!--Card content-->
+                  <!--Title-->
+                  </br>{{ alias.alternate_id }}: {{ alias.alternate_title }}: {{ alias.comment }}
+                  <!--/.Card content-->
+               </a>
+               <!--/.Link-->
+               {% endfor %}
+               </br>
+               {% endif %}
+      
+           <button class="btn btn-teal" data-toggle= "collapse" href="#displayAlias" role="button" data-toggle="tiptool" data-placement="right" title="Aliases’ provide alternative ways to reference your data. Some spacecraft and instruments may have abbreviated names that are well-known. Adding Aliases allows these alternative names to be used in searching for your data across the PDS. Spacecraft especially, may also have alternative identifiers such as SPICE ids or OLAF ids, which are special identifiers for other systems within NASA." >+ Add Alias </button> 
+         <style>
+               .round-button {
+                  display:inline-block;
+               height:25px;
+               width:25px;
+                   color: white;
+                  text-align: center;
+                  margin: 4px 2px;
+                   background-color: #008080;
+                  font-size:16px;
+                  font-weight:bold;
+               border-color: #000000;
+               }
+               
+               .round-button{border-radius: 50%;}
+           </style>
+         <!-- <button class="round-button" data-toggle="tiptool" data-placement="right" title="Aliases’ provide alternative ways to reference your data. Some spacecraft and instruments may have abbreviated names that are well-known. Adding Aliases allows these alternative names to be used in searching for your data across the PDS. Spacecraft especially, may also have alternative identifiers such as SPICE ids or OLAF ids, which are special identifiers for other systems within NASA."disabled>?</button>  -->
+            </p>
+         </div>
+        
+         <!--/.Column-->
+      </div>
+      <!--/.Row-->
+      <!--Row-->
+      <hr>
+      <div class="row">
+         <!--Alias Form-->
+         <div id="displayAlias" class="collapse col-md-12 rgba-indigo">
+         
+              <div clas="rgba-indigo-slight">
+               <form id="form_data" method="post" action="{% url 'build:bundle' bundle.pk %}">
+                  {% csrf_token %}
+                  <div id="form_data">
+                     {{ form_alias.as_p }}
+                  </div>
+                  <input class="btn btn-default" type="submit" value="Submit"/>
+               </form>
+              </div>
+            </div>
+         
+         <!--/.Alias Form-->
+      </div>
+      
+      
+      <!--Row-->
+      <div class="row">
+         <div class="col-md-12">
+            <p class="card-header black-text text-left z-depth-2">
+               {% if citation_information_set_count == 0 %}
+               <!--Display Case 1: No Citation Information Added-->
+               <strong>Citation Information:</strong> None</br>
+           <button class="btn btn-teal" data-toggle= "collapse" href="#displayCitation" role="button" >+ Add Citation Information </button> 
+         <style>
+               .round-button {
+                  display:inline-block;
+               height:25px;
+               width:25px;
+                   color: white;
+                  text-align: center;
+                  margin: 4px 2px;
+                   background-color: #008080;
+                  font-size:16px;
+                  font-weight:bold;
+               border-color: #000000;
+               }
+               
+               .round-button{border-radius: 50%;}
+           </style>
+          <button class="round-button" data-toggle="tiptool" data-placement="right" title="Adding citation information allows you to give credit to the investigators (authors) that worked on creating the labels and collating the data. You may also add citations to PDS personnel that assisted (editors). Date information here refers to date of publication of the archive bundle. Names are typically listes as 'Last Name First Initial' and separated by a semi-colon if there is a list. Publication Year here refers to the date of publication of the archive bundle and should be an estimate at this time in mm/dd//YYYY format."disabled>?</button>
+               {% else %}
+               <!--Display Case 2: Citation Information associated with bundle-->
+               <strong>Citation Information:</strong>
+               {% for citation_information in citation_information_set %}
+               </br>Author List: {{ citation_information.author_list }}
+               </br>Editor List: {{ citation_information.editor_list }}
+               </br>Keyword(s): {{ citation_information.editor_list }}
+               </br>Publication Year: {{ citation_information.publication_year }}
+               </br>Description: {{ citation_information.description }}
+               </br>
+         <button class="btn btn-success" role="button" >Edit </button> 
+         <button class="btn btn-danger" role="button" >Delete </button> 
+               {% endfor %}
+               {% endif %}
+              
+            </p>
+         </div>
+         <!--/.Column-->
+      </div>
+      <!--Row-->
+      <div class="row">
+         <!--Citation Information Form-->
+         <div id="displayCitation" class="collapse col-md-12 rgba-indigo">
+            </br>
+            <div class="rgba-indigo">
+               <form id="form_data" method="post" action="{% url 'build:bundle' bundle.pk %}">
+                  {% csrf_token %}
+                  <div id="form_data">
+                     {{ form_citation_information.as_p }}
+                  </div>
+                  <input class="btn btn-default" type="submit" value="Submit"/>
+               </form>
+               </br>
+            </div>
+         </div>
+         <!--/.Citation Information Form-->
+      </div>
+      <hr>
+      <!--Row-->
+      <!--Modificaiton History --> 
+      <div class="row">
+         <div class="col-md-12">
+            <p class="card-header black-text text-left z-depth-2">
+               {% if modification_history_set_count == 0 %}
+               <!--Display Case 1: No Mod history Information Added-->
+               <strong>Modification History:</strong> None</br>
+               {% else %}
+               <!--Display Case 2: modification history associated with bundle-->
+               <strong>Modification History:</strong>
+               {% for mofification_history in modification_history_set %}
+               </br>Description: {{ mofification_history.description }}
+               </br>Version ID: {{ mofification_history.version_id}}
+               </br>Modification date: {{ mofification_history.modification_date }}
+               </br>
+               {% endfor %}
+               {% endif %}
+               <button class="btn btn-teal" data-toggle= "collapse" href="#displayModification" role="button" data-toggle="tiptool" data-placement="right" title="‘Modification History’ allows you to add details about updates to your labels. So, if you make changes to the templates in response to review comments or have new metadata to add to the label, you should add a new Modification Detail – these blocks of information will be added to the Modification History." >+ Add Modification History (Detail) </button> 
+         <style>
+               .round-button {
+                  display:inline-block;
+               height:25px;
+               width:25px;
+                   color: white;
+                  text-align: center;
+                  margin: 4px 2px;
+                   background-color: #008080;
+                  font-size:16px;
+                  font-weight:bold;
+               border-color: #000000;
+               }
+               
+               .round-button{border-radius: 50%;}
+           </style>
+         
+            </p>
+         </div>
+         <!--/.Column-->
+      </div>
+      <!--Row-->
+      <div class="row">
+         <!--mod_history Form-->
+         <div id="displayModification" class="collapse col-md-12 rgba-indigo">
+            </br>
+            <div class="rgba-indigo">
+               <form id="form_data" method="post" action="{% url 'build:bundle' bundle.pk %}">
+                  {% csrf_token %}
+                  <div id="form_data">
+                     {{ form_modification_history.as_p }}
+                  </div>
+                  <input class="btn btn-default" type="submit" value="Submit"/>
+               </form>
+               </br>
+            </div>
+         </div>
+         
+      </div>
+      </div>
+   <!--/.Row-->
+   <hr>
+   <!--Row-->
+
+<!--/.End context detail-->
+<!--Row-->
+<div class="row pt-2">
+   <div class="col-md-12">
+      <h3 class="card-header elegant-color white-text text-center z-depth-2"   class="btn btn-teal" data-toggle= "collapse" href="#collection" role="button" >
+         Collections
+         <i class="fa fa-caret-down"></i>
+      </h3>
+      <br/>
+      </div>
+   </div>
+
+<div id="collection" class="collapse">   
+   <div class="row">
+      <div class="col-md-12">
+         <div class="card-header black-text text-left z-depth-2"> In this section you should be able to manage your bundle's collections.You can edit exsiting collection (label metadata, adding files to the collection), and add new colections.The Context and XML Schema collections are used for system managemetn and will be generated automatically and therefore are not neccessary to edit. You may add multiple document and data collections as needed. ATM requires that you have at least one document collection to ensure your fianl bundle will have adequate background documentation. 
+</br>
+</br> 
+<h5><Strong> Current Bundle {{ bundle.name }}:</strong></h5>
+Context Collections <i>(required)</i> 
+</br>
+XML Schema Collection <i>(required)</i>
+</br>
+Document Collection <i>(required)</i>
+</br>
+</br>
+<button class="btn btn-teal" data-toggle= "collapse"  role="button" >+ Add collection</button>
+<button class="btn btn-teal" data-toggle= "collapse" href="#Collections" role="button" >What is a Collection? </button> 
+</div>
+<br>
+
+
+	<div class="row" id="Collections" >
+         <div class="col-md-12" class="collapse">
+            <p class="card-header black-text text-left z-depth-2">Collections refer to groupings of files with common purpose or subject. Collections are made up of at least two files, the label (.xml) and the inventory file (.csv). Label files for the collections provide more metadata information for the type of collection and its contents as well as a formal link to the inventory file. Collection files at ATM will tend to have filenames of the form: </br>
+<strong>collection_bundle-id_collection-id.xml</strong></br>
+with the associated inventory file being:</br>
+<strong>collection_bundle-id_collection-id_inventory.csv</strong></br>
+The inventory file will be a 2-column listing of member status (Primary or Secondary) and the Logical_Identifier::Version_Identifer, which is the unique identifier that will be assigned within the PDS4 system as a Uniform Resource Name (URN).</p></br>
+
+   </div>
+   </br>
+   </div>
+
+<!--/ <div class="row pt-2">
+    <! --First column-->
+    <div class="col-md-8">
+        <form id="query01" method="post" action="{% url 'build:build' %}">
+             {% csrf_token %}
+	<div id="form_collections">
+             <!--/     Pick and assign collections for your bundle: <br/>
+                 {{ form_collections.as_p }}-->
+	</br>
+         </div>
+</div>
+
+<hr>
+<!--/.Row-->
+<div class="row">
+   <div class="col-md-12">
+      <p class="card-header stylish-color white-text text-center z-depth-2" class="btn btn-teal" data-toggle= "collapse" href="#document_collection_detail" role="button" >
+         Document Collection
+         <i class="fa fa-caret-down"></i>
+      </p>
+      <br/>
+   </div>
+</div>
+   <!--Row-->
+  
+   <!--/.Row-->
+   <div id="document_collection_detail" class="collapse">
+      <!--Row-->
+      <div class="row">
+         <div class="col-md-12">
+            <p class="card-header black-text text-left z-depth-2">Documents include any textual or text-based information supplied to assist the user in understanding, interpreting, calibrating, or otherwise manipulating the data. Documents may themselves be data products. Frequently documents include graphics and/or images to assist in comprehension.</br>
+               <button class="btn btn-teal" data-toggle= "collapse" href="#displayDocumentCollection" role="button" >+ Document products</button> 
+            </p>
+            <br/>
+         </div>
+      </div>
+      <!--/.Row-->
+      <!--Row-->
+<div id="collections_detail"></div>
+      <div class="row">
+         <!--Document Form-->
+         <div id="displayDocumentCollection" class="collapse col-md-12 rgba-indigo">
+            </br>
+            <div class="rgba-indigo">
+               <form id="form_document" method="post" action="{% url 'build:bundle' bundle.pk %}">
+                  {% csrf_token %}
+                  <div id="form_document">
+                     {{ form_document.as_p }}
+                  </div>
+                  <input class="btn btn-default" type="submit" value="Submit"/>
+               </form>
+               </br>
+            </div>
+         </div>
+         <!--/.Document Form-->
+      </div>
+      <!--/.Row-->
+      <!--Row-->
+      <div class="row">
+         <!--Column-->
+          <div class="col-md-12">
+      <p  class="card-header bg-info text-white text-center z-depth-2"  >
+            <strong>View {{ bundle.name }} Document Products </strong> </p>
+            <!--/.Column-->
+            {% if documents %}
+
+	<br/>
+            <!--Row-->
+            <div class="row" id="documents_detail">
+               {% for document in documents %} 
+               <!--Column-->
+               <div class="col-md-4 col-md-3">
+                  <!--Card-->
+                  <div class="button">
+                     <!--Link-->
+                     <a href="{%  url 'build:product_document' bundle.pk document.pk %}">
+                        <!--Card content-->
+                        <div class="card-body z-depth-2">
+                           <h5> Product Documents:</h5>
+                           <strong>Document name:</strong>{{ document.document_name }}
+                           <br><strong>Acknowledgment list:</strong>{{ document.acknowledgement_text }}
+                           <br><strong>Author list:</strong>{{ document.author_list }}
+                           <br><strong>Copyright:</strong>{{ document.copyright }}
+                           <br><strong>Description:</strong>{{ document.description }}
+                           <br ><strong>Document editions:</strong>{{ document.document_editions }}
+                           <br ><strong>DOI:</strong>{{ document.doi }}
+                           <br ><strong>Editor list</strong>{{ document.editor_list }}
+                           <br ><strong>Publication date:</strong>{{ document.publication_date }}
+                           <br><strong>revision ID:</strong>{{ document.revision_id }}<br>
+                         <br>
+		<!--	<a href="{%  url 'build:product_document' bundle.pk document.pk %}"> -->
+        	<!--	<button type="button" class="sm btn-success">Edit</button> </a>	--> 
+                          
+                        </div>
+                        
+                     
+                  </div>
+                  
+               </div>
+               
+               {% endfor %}
+            </div>
+            <!--/.Row-->
+
+            {% else %}
+            <!--Column-->
+	    <hr>
+            <div class="col-md-12"
+	    <p class="card-header black-text text-left z-depth-2"> No Documents </p>
+            </div>
+            <!--/.Column-->
+            {% endif %}
+         </div>
+         <!--/.Column-->
+      </div>
+      <!--/.Row-->
+   </div>
+   <!--/.Document Collection Detail-->
+   <hr>
+
+
+
+
+   {% if bundle.collections.has_data %}
+   <!--Row-->
+   
+   <div class="row">
+      <div class="col-md-12">
+         <p class="card-header stylish-color white-text text-center z-depth-2" class="btn btn-teal" data-toggle= "collapse" href="#data_collection" role="button" >
+            Data Collection
+            <i class="fa fa-caret-down"></i>
+         </p>
+         <br/>
+      </div>
+   </div>
+
+   
+   
+   <div id="data_collection" class="collapse">
+   <!--/.Row-->
+   <!--Data collection detail-->
+   <div id="data_collection_detail">
+      <!--Row-->
+      <div class="row">
+         <!--Column-->
+         <div class="col-md-12">
+            <p class="card-header black-text text-left z-depth-2">
+               Add collections of data to your bundle. Collections are separated by processing level, like raw data, calibrated data, and so on. Multiple collections of the same processing level can be created within a bundle, for instance two different collections of calibrated data.
+               </br>
+               <button class="btn btn-teal" data-toggle= "collapse" href="#displayDATA" role="button"> + Add Data </button> 
+            </p>
+         </div>
+         <!--/.Column-->
+         <!--Column-->
+         
+            </br>
+	    <div class=" col-md-12 rgba-indigo">
+            
+	<hr>
+               <form id="displayDATA" method="post" action="{% url 'build:bundle' bundle.pk %}">
+                  {% csrf_token %}
+                  <div id="form_data"> 
+                     {{ form_data.as_p }} 
+                  </div>
+
+                  <input class="btn btn-default" type="submit" value="Submit"/>
+               </form>
+            </div>
+         </div>
+         <!--/.Column-->
+      </div>
+      <!--/.Row-->
+      <hr>
+      <!--Row-->
+      <div class="row">
+         <!--Column-->
+        <div class="col-md-12">
+      <p  class="card-header bg-info text-white text-center z-depth-2"  >
+            <strong>View {{ bundle.name }} Data Products </strong>
+	</p>
+	 <br/>
+            <!--Row-->
+            <div class="row" id="data_collections_detail">
+               {% for data in data_set %} <!-- WE WANT THIS TO BE DATA LEVEL -->
+               <!--Column-->
+               <div class="col-sm-6 col-md-3">
+                  <!--Card-->
+                  <div class="button">
+                     <!--Link-->
+                     <a href="{% url 'build:data' bundle.pk data.pk %}">
+                        <!--Card content-->
+                        <div class="card-body z-depth-2">
+                           <!--Title-->
+                           <h4 class="card-title" data-toggle="tiptool" data-placement="right" title="This link will enable you to access and edit your newly created Data Collection set as well as edit the Display Dictionary section">Data Raw {{ data.name }}</h4>
+                          </a>
+                           
+                           <!--<p class="card-text">{{ data.name }}</p>-->
+                           <p class="card-text">This is your data now take care of it</p>
+
+                           <!--/.Text-->
+                        </div>
+
+                        <!--/.Card content-->
+                        <!--Image-->
+                        
+                        <!--/.Image-->
+                     
+                     <!--/.Link-->
+                  </div>
+
+                  <!--/.Card-->
+               </div>
+
+               <!--/.Column-->
+               {% endfor %}
+            </div>
+            <!--/.Row-->
+         </div>
+         <!--/.Column-->
+      </div>
+      <!--/.Row-->
+   </div>
+   <!--/.Data Collection Detail-->
+   {% endif %}
+</div>
+</div>
+</div>
+</div>
+
+<!--/.End collections detail-->
+{% if bundle.collections.has_geometry %}
+<div id="geometry_collection_detail">
+<!--Row-->
+<div class="row">
+   <div class="col-md-12">
+      <p class="card-header stylish-color white-text text-center z-depth-2">Geometry Collection
+      </h3><br/>
+   </div>
+</div>
+<!--/.Row-->
+<!--Row-->
+<div class="row">
+   <!--Column-->
+   <div class="col-sm-6 col-md-3">
+      <!--Card-->
+      <div class="button">
+         <!--Link-->
+         <a href="{% url 'main:construction' %}">
+            <!--Card content-->
+            <div class="card-body">
+               <!--Title-->
+               <h4 class="card-title">GEOMETRY</h4>
+               <!--/.Title-->
+               <!--Text-->
+               <p class="card-text">Undetermined - Under Construction</p>
+               <!--/.Text-->
+            </div>
+            <!--/.Card content-->
+            <!--Image-->
+            <img class="img-fluid" src="{% static 'images/arrow.png' %}" alt="An image representing an arrow."/>
+            <!--/.Image-->
+         </a>
+         </a>
+         <!--/.Link-->
+      </div>
+      <!--/.Card-->
+   </div>
+   <!--/.Row-->
+</div>
+<!--/.Geometry Collection Detail-->
+{% endif %}
+{% endblock %}
+</div>
+
