@@ -226,7 +226,7 @@ class Version(models.Model):
 
     # Main Functions
     
-    def version_update_new(self, number, label_path):
+    def version_update(self, number, label_path):
         '''Updates the pds4 information model version number in an xml file,
         given the new version number and the path to that file (both strings).
         
@@ -261,7 +261,7 @@ class Version(models.Model):
         close_label(label_path, label_root) #also from chocolate
         
         
-    def version_update(self, number, inFile, outFile):
+    def version_update_old(self, number, inFile, outFile):
         ''''Original version of this function, to be replaced with above and 
         renamed (or deleted?) once I'm positive the new one works. Keep this 
         one around for now, for reference and for when the new one breaks.'''
