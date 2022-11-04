@@ -83,7 +83,7 @@ SECRET_KEY = secret_key()
 
 #     SECURITY WARNING: don't run with debug turned on in production!
 #                   use live debug for quick checks in production.
-DEBUG = False
+DEBUG = True
 
 
 
@@ -177,7 +177,7 @@ WSGI_APPLICATION = 'elsa.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'test_elsa_newdb',
+        'NAME': 'test_elsa_newdb', #Change this to whatever database is required
         'HOST': '/var/lib/mysql/mysql.sock',
 
         # 'ENGINE': 'django.db.backends.sqlite3',
@@ -185,6 +185,7 @@ DATABASES = {
     }
 }
 
+SILENCED_SYSTEM_CHECKS = ['mysql.E001']
 
 # Password validation
 # https://docs.djangoproject.com/en/1.11/ref/settings/#auth-password-validators
