@@ -107,6 +107,7 @@ def get_user_document_directory(instance, filename):
 
 """
     Note:  Most names in ELSA are explicit.  However, we could not make a 'number' attribute to identify the version number (ex: 1800, 1A00, 1A10) because it conflicted with Django's number attribute given to each model.
+    
 """
 @python_2_unicode_compatible
 class Version(models.Model):
@@ -224,14 +225,53 @@ class Version(models.Model):
         pass
 
     # Main Functions
-    def version_update(self, number, inFile, outFile):
+    
+    def version_update(self, number, label_path):
+        '''Updates the pds4 information model version number in an xml file,
+        given the new version number and the path to that file (both strings).
+        
+            
+            '''
+
+        #function from chocolate. still doing imports the old way for now
+        label_path, label_root, tree = open_label_with_tree(label_path)
+        
+        location = '{http://www.w3.org/2001/XMLSchema-instance}schemaLocation'
+        schemas = label_root.attrib[location].split(' ')
+        
+        #Singles out just the regular pds4 info model, so we don't touch any
+        #other dictionary schema (for now)
+        info_model=[s for s in schemas if '/pds/' in s and '.xsd/' in s][0]
+        schemas.remove(info_model)
+        
+        #Isolates the 4-character version number
+        old_number=info_model.split('/')[-1].split('.')[0].split('_')[-1]
+        
+        schemas.insert(1, info_model.replace(old_number, number))
+        label_root.set(location, ' '.join(schemas)) #replace version number
+        
+        #maps the namespace string (label_root.tag.split et cetera) to 
+        #something shorter    
+        ns = {'d':label_root.tag.split('{')[1].split('}')[0]} 
+        
+        #find the information_model_version tag
+        for im_version in label_root.findall("d:Identification_Area/d:information_model_version", ns):
+            im_version.text=self.with_dots(number) #replace version number
+            
+        close_label(label_path, label_root) #also from chocolate
+        
+        
+    def version_update_old(self, number, inFile, outFile):
+        ''''Original version of this function, to be replaced with above and 
+        renamed (or deleted?) once I'm positive the new one works. Keep this 
+        one around for now, for reference and for when the new one breaks.'''
         
         j=0
         i=0
 
         #read the bundle and collection template files and store their contents in strings.
         #If the file is invalid a statement will be printed and the function will quit.
-        try:
+        try: 
                 fil = open(inFile,'r')
 
                 fileText = fil.read()
