@@ -83,7 +83,7 @@ SECRET_KEY = secret_key()
 
 #     SECURITY WARNING: don't run with debug turned on in production!
 #                   use live debug for quick checks in production.
-DEBUG = False
+DEBUG = True
 
 
 
@@ -177,13 +177,14 @@ WSGI_APPLICATION = 'elsa.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'test_elsa_newdb',
+        'NAME': 'test_elsa_offline_2',
         'HOST': '/var/lib/mysql/mysql.sock',
 
         # 'ENGINE': 'django.db.backends.sqlite3',
         # 'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
     }
 }
+SILENCED_SYSTEM_CHECKS = ['mysql.E001']
 
 
 # Password validation
@@ -255,7 +256,8 @@ LOGGING = {
         'file': {
             'level': 'DEBUG',
             'class': 'logging.FileHandler',
-            'filename': '/export/atmos1/htdocs/elsa/elsa.log',
+            #'filename': '/export/atmos1/htdocs/elsa/elsa.log',
+            'filename': '/home/zenalisa/elsa/elsa.log'
         },
     },
     'loggers': {

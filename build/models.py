@@ -109,6 +109,8 @@ def get_user_document_directory(instance, filename):
     Note:  Most names in ELSA are explicit.  However, we could not make a 'number' attribute to identify the version number (ex: 1800, 1A00, 1A10) because it conflicted with Django's number attribute given to each model.
 """
 @python_2_unicode_compatible
+
+
 class Version(models.Model):
 
     num = models.CharField(max_length=4)
@@ -790,8 +792,16 @@ class Investigation(models.Model):
     type_of = models.CharField(max_length=MAX_CHAR_FIELD, choices=INVESTIGATION_TYPES)
     lid = models.CharField(max_length=MAX_LID_FIELD)
     vid = models.FloatField(default=1.0)
-    internal_references = []
+
     starbase_label = models.CharField(max_length=MAX_CHAR_FIELD)    
+
+    # Relational Attributes
+    # (added 11/2/22 by zena)
+    # note we have to give these fields the name of the model, not the model
+    # objects themselves, because these models haven't been defined yet
+
+    instrument_hosts = models.ManyToManyField("Instrument_Host")
+    targets = models.ManyToManyField("Target")
 
     # Attributes used to manage Investigation object
     #objects = InvestigationManager()
@@ -1032,6 +1042,8 @@ class Instrument(models.Model):
         ('X-ray Fluorescence Spectrometer','X-ray Fluorescence Spectrometer'),
     ]
     # Relational Attributes
+    # (added 11/2/22 by zena)
+    instrument_hosts = models.ManyToManyField("Instrument_Host")
 
     # Attributes used for crawler
     lid = models.CharField(max_length=MAX_LID_FIELD)
