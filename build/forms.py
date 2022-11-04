@@ -174,11 +174,14 @@ class ModificationHistoryForm(forms.ModelForm):
     Collections
 """
 class CollectionsForm(forms.ModelForm):
-    has_document = forms.BooleanField(required=True, initial=True)
-    has_context = forms.BooleanField(required=True, initial=True)
-   # has_xml_schema = forms.BooleanField(required=True, initial=True)
-    has_data = forms.BooleanField(required=False, initial=False)   
-    #has_raw_data = forms.BooleanField(required=False, initial=False)
+  #  has_document = forms.BooleanField(initial=True)
+    # has_data = forms.BooleanField(required=False, initial=False)
+    has_document = True
+  #  has_context = forms.BooleanField(initial=True)
+    has_context = True
+    has_xml_schema = True
+       
+   # has_raw_data = forms.BooleanField(required=False, initial=False)
     #has_calibrated_data = forms.BooleanField(required=False, initial=False)
     #has_derived_data = forms.BooleanField(required=False, initial=False)
     #data_enum = forms.IntegerField(required=False, min_value = 0, max_value=25)
@@ -186,6 +189,14 @@ class CollectionsForm(forms.ModelForm):
     class Meta(object):
         model = Collections
         exclude = ('bundle',)
+
+
+class AdditionalCollectionForm(forms.ModelForm):
+
+    class Meta(object):
+        model = AdditionalCollections
+        exclude = ('bundle', 'collection')
+
 
 
 """
@@ -348,8 +359,6 @@ class ProductCollectionForm(forms.ModelForm):
     class Meta(object):
         model = Product_Collection
         exclude = ('bundle', 'collection')
-
-
 
 
 
