@@ -1,0 +1,86 @@
+<?xml version='1.0' encoding='utf-8'?>
+<Product_Collection xmlns="http://pds.nasa.gov/pds4/pds/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://pds.nasa.gov/pds4/pds/v1 http://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_1F00.xsd">
+  <Identification_Area>
+    <logical_identifier>urn:nasa:pds:el:Context</logical_identifier>
+    <version_id>1.0</version_id>
+    <title>El</title>
+    <information_model_version>1.15.0.0</information_model_version>
+    <product_class>Product_Collection</product_class>
+    <Modification_History>
+        </Modification_History>
+    <Citation_Information>
+      <author_list>d</author_list>
+      <editor_list>saf</editor_list>
+      <keyword>as</keyword>
+      <publication_year>5245-01-01</publication_year>
+      <description>fds</description>
+    </Citation_Information>
+    <Alias_List>
+      <Alias>
+        <alternate_id>Tyler</alternate_id>
+        <alternate_title>main test</alternate_title>
+        <comment>just doing stuff</comment>
+      </Alias>
+    </Alias_List>
+    <Modification_History>
+      <version_id>gg</version_id>
+      <description>gg</description>
+      <modification_date>5/7/2021</modification_date>
+    </Modification_History>
+    <Modification_History>
+      <version_id>22</version_id>
+      <description>gg</description>
+      <modification_date>5/7/2021</modification_date>
+    </Modification_History>
+  </Identification_Area>
+  <Context_Area>
+    <Time_Coordinates>
+      <start_date_time/>
+      <stop_date_time/>
+    </Time_Coordinates>
+    <Investigation_Area>
+      <name/>
+      <type/>
+      <Internal_Reference>
+        <lid_reference/>
+        <reference_type/>
+      </Internal_Reference>
+    </Investigation_Area>
+    <Observing_System>
+      <name/>
+      <Observing_System_Component>
+        <name>2001_mars_odyssey</name>
+        <type>mission</type>
+        <Internal_Reference>
+          <lid_reference>urn:nasa:pds:context:investigation:mission.2001_mars_odyssey</lid_reference>
+          <reference_type>is_investigation</reference_type>
+        </Internal_Reference>
+      </Observing_System_Component>
+    </Observing_System>
+  </Context_Area>
+  <Reference_List/>
+  <Collection>
+    <collection_type/>
+  </Collection>
+  <File_Area_Inventory>
+    <File>
+      <file_name/>
+      <local_identifier/>
+      <creation_date_time/>
+    </File>
+    <Inventory>
+      <local_identifier/>
+      <offset unit="byte">0</offset>
+      <parsing_standard_id>PDS DSV 1</parsing_standard_id>
+      <records>3</records>
+      <record_delimiter>Carriage-Return Line-Feed</record_delimiter>
+      <field_delimiter>Comma</field_delimiter>
+      <Record_Delimited>
+        <fields/>
+        <groups/>
+        <maximum_record_length unit="byte">77</maximum_record_length>
+      </Record_Delimited>
+      <reference_type>inventory_has_member_product</reference_type>
+    </Inventory>
+  </File_Area_Inventory>
+</Product_Collection>

@@ -177,7 +177,7 @@ WSGI_APPLICATION = 'elsa.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'test_elsa_offline_2',
+        'NAME': 'test_elsa_offline_3',
         'HOST': '/var/lib/mysql/mysql.sock',
 
         # 'ENGINE': 'django.db.backends.sqlite3',

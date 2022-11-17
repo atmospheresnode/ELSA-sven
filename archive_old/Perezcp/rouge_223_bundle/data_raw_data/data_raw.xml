@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-model href="http://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_AAAA.sch" schematypens="http://purl.oclc.org/dsdl/schematron"?>
+<Product_Collection  xmlns="http://pds.nasa.gov/pds4/pds/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://pds.nasa.gov/pds4/pds/v1 http://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_AAAA.xsd">
+    <Identification_Area>
+        <logical_identifier></logical_identifier>
+        <version_id></version_id>
+        <title></title>
+        <information_model_version>AAAA</information_model_version>
+        <product_class>Product_Collection</product_class>
+        <Modification_History>
+        </Modification_History>
+    </Identification_Area>
+    <Context_Area>
+        <Time_Coordinates>
+            <start_date_time></start_date_time>
+            <stop_date_time></stop_date_time>
+        </Time_Coordinates>
+        <Investigation_Area>
+            <name></name>
+            <type></type>
+            <Internal_Reference>
+                <lid_reference></lid_reference>
+                <reference_type></reference_type>
+            </Internal_Reference>
+        </Investigation_Area>
+        <Observing_System>
+            <name></name>
+        </Observing_System>
+    </Context_Area>
+    <Reference_List></Reference_List>
+    <Collection>
+        <collection_type></collection_type>
+    </Collection>
+    <File_Area_Inventory>
+        <File>
+            <file_name></file_name>
+            <local_identifier></local_identifier>
+            <creation_date_time></creation_date_time>
+        </File>
+        <Inventory>
+            <local_identifier></local_identifier>
+            <offset unit="byte">0</offset>
+            <parsing_standard_id>PDS DSV 1</parsing_standard_id>
+            <records>3</records>
+            <record_delimiter>Carriage-Return Line-Feed</record_delimiter>
+            <field_delimiter>Comma</field_delimiter>
+            <Record_Delimited>
+                <fields></fields>
+                <groups></groups>
+                <maximum_record_length unit="byte">77</maximum_record_length>
+            </Record_Delimited>
+            <reference_type>inventory_has_member_product</reference_type>
+        </Inventory>
+    </File_Area_Inventory>
+</Product_Collection>

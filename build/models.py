@@ -788,10 +788,12 @@ class Investigation(models.Model):
     ]
 
     # Attributes used for crawler
+    # null=true's added by zena 11/22
+    
     name = models.CharField(max_length=MAX_CHAR_FIELD)
-    type_of = models.CharField(max_length=MAX_CHAR_FIELD, choices=INVESTIGATION_TYPES)
+    type_of = models.CharField(max_length=MAX_CHAR_FIELD, choices=INVESTIGATION_TYPES, null=True)
     lid = models.CharField(max_length=MAX_LID_FIELD)
-    vid = models.FloatField(default=1.0)
+    vid = models.FloatField(default=1.0, null=True)
 
     starbase_label = models.CharField(max_length=MAX_CHAR_FIELD)    
 
@@ -1046,10 +1048,11 @@ class Instrument(models.Model):
     instrument_hosts = models.ManyToManyField("Instrument_Host")
 
     # Attributes used for crawler
+    # null=true's added 11/22 by zena
     lid = models.CharField(max_length=MAX_LID_FIELD)
-    name = models.CharField(max_length=MAX_CHAR_FIELD)
-    type_of = models.CharField(max_length=MAX_CHAR_FIELD, choices=INSTRUMENT_TYPES)
-    vid = models.FloatField(default=1.0)
+    name = models.CharField(max_length=MAX_CHAR_FIELD, null=True)
+    type_of = models.CharField(max_length=MAX_CHAR_FIELD, choices=INSTRUMENT_TYPES, null=True)
+    vid = models.FloatField(default=1.0, null=True)
     starbase_label = models.CharField(max_length=MAX_CHAR_FIELD)
 
     # Attributes used to manage Instrument Host object
@@ -1212,10 +1215,12 @@ class Target(models.Model):
     # Relational Attributes
 
     # Attributes used for crawler
+    # null=true's added 11/22 by zena
+
     lid = models.CharField(max_length=MAX_LID_FIELD)
-    name = models.CharField(max_length=MAX_CHAR_FIELD)
-    type_of = models.CharField(max_length=MAX_CHAR_FIELD, choices=TARGET_TYPES)
-    vid = models.FloatField(default=1.0)
+    name = models.CharField(max_length=MAX_CHAR_FIELD, null=True)
+    type_of = models.CharField(max_length=MAX_CHAR_FIELD, choices=TARGET_TYPES, null=True)
+    vid = models.FloatField(default=1.0, null=True)
     starbase_label = models.CharField(max_length=MAX_CHAR_FIELD)
 
     # Attributes used to manage Instrument Host object
@@ -1339,10 +1344,12 @@ class Instrument_Host(models.Model):
     targets = models.ManyToManyField(Target)
 
     # Attributes used for crawler
+    # null=true's added 11/22 by zena
+
     lid = models.CharField(max_length=MAX_LID_FIELD)
-    name = models.CharField(max_length=MAX_CHAR_FIELD)
-    type_of = models.CharField(max_length=MAX_CHAR_FIELD, choices=INSTRUMENT_HOST_TYPES)
-    vid = models.FloatField(default=1.0)
+    name = models.CharField(max_length=MAX_CHAR_FIELD, null=True)
+    type_of = models.CharField(max_length=MAX_CHAR_FIELD, choices=INSTRUMENT_HOST_TYPES, null=True)
+    vid = models.FloatField(default=1.0, null=True)
     starbase_label = models.CharField(max_length=MAX_CHAR_FIELD)
 
     # Attributes used to manage Instrument Host object
@@ -1447,10 +1454,12 @@ class Facility(models.Model):
     instruments = models.ManyToManyField(Instrument)
 
     # Characteristic attributes
+    # null = true's added 11/22 by zena
+
     lid = models.CharField(max_length=MAX_LID_FIELD)
-    name = models.CharField(max_length=MAX_CHAR_FIELD)
-    type_of = models.CharField(max_length=MAX_CHAR_FIELD, choices=FACILITY_TYPES) 
-    version = models.FloatField(default=1.0)
+    name = models.CharField(max_length=MAX_CHAR_FIELD, null=True)
+    type_of = models.CharField(max_length=MAX_CHAR_FIELD, choices=FACILITY_TYPES, null=True) 
+    version = models.FloatField(default=1.0, null=True)
 
     vid = models.FloatField(default=1.0)
     starbase_label = models.CharField(max_length=MAX_CHAR_FIELD)
@@ -1586,9 +1595,11 @@ class Telescope(models.Model):
     facilities = models.ManyToManyField(Facility)
 
     # Attributes used for crawler
+    # null = true's added 11/22 by zena
+
     lid = models.CharField(max_length=MAX_LID_FIELD)
-    name = models.CharField(max_length=MAX_CHAR_FIELD)
-    vid = models.FloatField(default=1.0)
+    name = models.CharField(max_length=MAX_CHAR_FIELD, null=True)
+    vid = models.FloatField(default=1.0, null=True)
     starbase_label = models.CharField(max_length=MAX_CHAR_FIELD)
 
     # Attributes used to manage Instrument Host object
