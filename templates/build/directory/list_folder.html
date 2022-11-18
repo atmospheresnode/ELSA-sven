@@ -1,0 +1,12 @@
+
+    <div class="btn btn-teal" data-toggle="collapse" href="#{{ file }}" type="button">
+        {{ file }} 
+        <i class="fa fa-caret-down"></i>
+    </div>
+    <div class="collapse" id="{{ file }}">
+        
+    {% for f in subfiles %}
+    {{ f }}
+    {% endfor %}
+            
+    </div>
