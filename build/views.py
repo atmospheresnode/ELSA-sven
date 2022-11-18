@@ -741,7 +741,7 @@ def bundle(request, pk_bundle):
             additional_collections = form_additional_collections.save(commit=False)
             additional_collections.bundle = bundle
             additional_collections.append_list()
-            additional_collections.save_collection()
+            additional_collections.save()
             additional_collections.build_directories()
             # product_collection = form_product_collection.save(commit=False)
             # product_collection.bundle = bundle
