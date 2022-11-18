@@ -1980,7 +1980,7 @@ class AdditionalCollections(models.Model):
         ('Geometry','Geometry'),
         ('Calibration','Calibration'),
     )
-    bundle = models.OneToOneField(Bundle)
+    bundle = models.ForeignKey(Bundle, on_delete=models.CASCADE)
     collection_name = models.CharField(max_length=MAX_CHAR_FIELD)
     collection_type = models.CharField(max_length=MAX_CHAR_FIELD, choices=ADDITIONAL_COLLECTION_CHOICES, default='Data')
     collections_list = []
