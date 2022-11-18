@@ -728,7 +728,8 @@ Bundle
 
 
 
-   {% if additional_collections_count != 0 %}
+   {% if additional_collections_count == 0 %}
+   {% else %}
    <!--Row-->
    {% for additional_collection in additional_collections_set %}
    {% for collection in additional_collection.collections_list %}
