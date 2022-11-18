@@ -1997,7 +1997,7 @@ class AdditionalCollections(models.Model):
         return self.collections_list
 
     def __str__(self):
-       return '{0} Bundle has data'.format(self.bundle)
+       return self.collection_name
     #   return '{0} bundle.format{1}, document={2}, context={3}, data={4}'.format(self.bundle, self.has_context, self.has_document, self.has_data)
        
     class Meta(object):
