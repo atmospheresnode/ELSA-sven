@@ -360,11 +360,13 @@ def build(request):
     # Get forms
     form_bundle = BundleForm(request.POST or None)
     form_collections = CollectionsForm(request.POST or None)
+    form_product_collection = ProductCollectionForm(request.POST or None)
 
     # Declare context_dict for template
     context_dict = {
         'form_bundle':form_bundle,
         'form_collections':form_collections,
+        'form_product_collection': form_product_collection,
         'user':request.user,
     }
 
@@ -379,7 +381,16 @@ def build(request):
     # After ELSAs friend hits submit, if the forms are completed correctly, we should enter here
     # this conditional.
     if form_bundle.is_valid() and form_collections.is_valid():
-        print('form_bundle and form_collections are valid')
+        print('form_bundle are valid')
+
+        print('form_collections are valid')
+        # Create Collections Model Object and list of Collections, list of Collectables
+        # bundle_name = form_bundle['name']
+        # bundle_user = request.user
+        # bundle_count = Bundle.objects.filter(name=bundle_name, user=bundle_user).count()
+        # product_bundle = ProductBundleForm().save(commit=False)
+        # product_bundle.bundle = bundle
+        
 
         # Check Uniqueness  --- GOTTA BE A BETTER WAY (k)
         bundle_name = form_bundle.cleaned_data['name']
@@ -422,25 +433,21 @@ def build(request):
             close_label(product_bundle.label(), label_root) 
 
             print('---------------- End Build Product_Bundle Base Case -------------------------')
-  
-            # Create Collections Model Object and list of Collections, list of Collectables
+
             collections = form_collections.save(commit=False)
             collections.bundle = bundle
             collections.save()
             print('\nCollections model object:    {}'.format(collections))
 
 
-            
             # Create PDS4 compliant directories for each collection within the bundle.            
             collections.build_directories()
 
-            # Each collection in collections needs 1) a model, 2) a bundle member entry in product
-            # bundle, 3) a directory for the collection, and 4) its own product collection label
             for collection in collections.list():
                 print(collection)
 
                 # Create Product_Collection model for each collection
-                product_collection = ProductCollectionForm().save(commit=False)
+                product_collection = form_product_collection.save(commit=False)
                 product_collection.bundle = bundle
                 if collection == 'document':
                     product_collection.collection = 'Document'
@@ -448,19 +455,7 @@ def build(request):
                     product_collection.collection = 'Context'
                 elif collection == 'xml_schema':
                     product_collection.collection = 'XML_Schema'
-                elif collection == 'data':
-                    product_collection.collection = 'Data'
-                elif collection == 'browse':
-                    product_collection.collection = 'Browse'
-                elif collection == 'geometry':
-                    product_collection.collection = 'Geometry'
-                elif collection == 'calibration':
-                    product_collection.collection = 'Calibration'
-                elif collection == 'data_enum':
-                    print("saw the data enum")
-                    break
                 product_collection.save()
-                print('\n\n{} Collection Directory:    {}'.format(collection, product_collection.directory()))
 
                 # Fill Product_Bundle with Collection Bundle Member Entries
                 label_list = open_label_with_tree(product_bundle.label()) #list = [label_object, label_root]
@@ -489,7 +484,7 @@ def build(request):
                     print(' ... Closing Label ... ')
                     close_label(product_collection.label(), label_root)
                     print('-------------End Build Product_Collection Base Case-----------------')
-           
+  
             # Further develop context_dict entries for templates            
             context_dict['Bundle'] = bundle
             context_dict['Product_Bundle'] = Product_Bundle.objects.get(bundle=bundle)
@@ -501,6 +496,8 @@ def build(request):
 
             return redirect(url, request, context_dict)
             #return render(request, 'build/two.html', context_dict)
+        
+
 
     return render(request, 'build/build.html', context_dict)
 
@@ -588,6 +585,8 @@ def bundle(request, pk_bundle):
         # get set of aliases associated with the bundle
         alias_set = Alias.objects.filter(bundle=bundle)
 
+        additional_collections_set = AdditionalCollections.objects.filter(bundle=bundle)
+
         # get citation information associated with bundle
         citation_information_set = Citation_Information.objects.filter(bundle=bundle)
         modification_history_set = Modification_History.objects.filter(bundle=bundle)
@@ -604,11 +603,15 @@ def bundle(request, pk_bundle):
         # Forms present on bundle detail page
         #     - Alias Form
         #     - Data Form 
-        form_alias = AliasForm(request.POST or None)  
+        form_alias = AliasForm(request.POST or None) 
+        form_bundle = BundleForm(request.POST or None) 
         form_citation_information = CitationInformationForm(request.POST or None)
         form_modification_history = ModificationHistoryForm(request.POST or None)     
         form_data = DataForm(request.POST or None)
         form_document = ProductDocumentForm(request.POST or None)
+        form_collections = CollectionsForm(request.POST or None)
+        form_product_collection = ProductCollectionForm(request.POST or None)
+        form_additional_collections = AdditionalCollectionForm(request.POST or None)
 
         # Context dictionary for template
         context_dict = {
@@ -621,17 +624,23 @@ def bundle(request, pk_bundle):
             'modification_history_set_count':len(modification_history_set),      
             'data_set':data_set,
             'form_alias':form_alias,
+            'form_bundle':form_bundle,
             'form_citation_information':form_citation_information,
             'form_data':form_data,
             'form_modification_history':form_modification_history,
             'form_document':form_document,
-            'collections': Collections.objects.get(bundle=bundle),
+         #   'collections': Collections.objects.get(bundle=bundle),
+            'form_collections':form_collections,
+            'form_product_collection': form_product_collection,
+            'form_additional_collections': form_additional_collections,
+            'additional_collections_count': len(additional_collections_set),
             'instruments': bundle.instruments.all(),
             'targets': bundle.targets.all(),
             'product_observational_set':product_observational_set,
-            'documents':Product_Document.objects.filter(bundle=bundle)
+            'documents':Product_Document.objects.filter(bundle=bundle),
+            'additional_collections_set': additional_collections_set,
+            'user':request.user,
         }
-
 
         # satisfy this conditional
         if form_alias.is_valid():
@@ -723,169 +732,153 @@ def bundle(request, pk_bundle):
             form_citation_information = CitationInformationForm()
             context_dict['form_citation_information'] = form_citation_information
 
-            
-        # satisfy this conditional
-        if form_data.is_valid():
-            print('Creating data object...')
-            # Make Data object
-            data = form_data.save(commit=False)
-            data.bundle = bundle
-            data.save()
-            print('Data object: {}'.format(data))
+        additional_collections_list = []
+        if form_additional_collections.is_valid():
+            # collections = form_collections.save(commit=False)
+            # collections.bundle = bundle
+            # collections.build_directories()
 
-            # Make data directory
-            print('Checking to see if data directory needs to be made')
-            new_directory = data.build_directory()
+            additional_collections = form_additional_collections.save(commit=False)
+            additional_collections.bundle = bundle
+            additional_collections.append_list()
+            additional_collections.save()
+            additional_collections.build_directories()
+            # product_collection = form_product_collection.save(commit=False)
+            # product_collection.bundle = bundle
+            additional_collections_list = additional_collections.list()
+            # for collection in additional_collections_list:
 
-            # If it's a new directory, we need a product_collection to describe the
-            # collection. *** Currently: Just does base case. Fix in data model.
-            if new_directory:
-                data.build_product_collection()
+            # if collection == 'data':
+            # product_collection.collection = 'Data'
+            # product_collection.save()
 
-            # Update data_set
-            context_dict['data_set'] = Data.objects.filter(bundle=pk_bundle)
-            
-            # Refresh page 
-#            return render(request, 'build/bundle/bundle.html', context_dict)
-
-
-
-        # After ELSAs friend hits submit, if the forms are completed correctly, we should enter
-        # this conditional.  We must do [] things: 1. Create the Document model object, 2. Add a Product_Document label to the Document Collection, 3. Add the Document as an Internal_Reference to the proper labels (like Product_Bundle and Product_Collection).
-
-        print('\n\n----------------- Modification_History INFO -------------------------')
-        if form_modification_history.is_valid():
-            print('form_modification_history is valid')
-            # Create modification_history model object
-            modification_history = form_modification_history.save(commit=False)
-            modification_history.bundle = bundle
-            modification_history.save()
-            print('modification_history model object: {}'.format(modification_history))
-
-            # Find appropriate label(s).  modification_history gets added to all Product_Bundle and 
-            # Product_Collection labels in a Bundle.  The Data collection is excluded since it is 
-            # handled different from the other collections.
-            all_labels = []
             product_bundle = Product_Bundle.objects.get(bundle=bundle)
-            product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
-            all_labels.append(product_bundle)             # Append because a single item
-            all_labels.extend(product_collections_list)   # Extend because a list
 
-            for label in all_labels:
-
-                # Open appropriate label(s).  
-                print('- Label: {}'.format(label))
-                print(' ... Opening Label ... ')
-                label_list = open_label_with_tree(label.label())
-                label_root = label_list[1]
-        
-                # Build modification_history
-                print(' ... Building Label ... ')
-                label_root = modification_history.build_modification_history(label_root)
-
-                # Close appropriate label(s)
-                print(' ... Closing Label ... ')
-                close_label(label.label(), label_root)
-
-                print('------------- End Build modification_history -------------------')        
-         # Update context_dict with the current v models associated with the user's bundle
-            modification_history_set = Modification_History.objects.filter(bundle=bundle)
-            context_dict['modification_history_set'] = modification_history_set
-            context_dict['modification_history_set_count'] = len(modification_history_set)
-            form_modification_history = ModificationHistoryForm()
-            context_dict['form_modification_history'] = form_modification_history
-
-            
-        # satisfy this conditional
-        if form_data.is_valid():
-            print('Creating data object...')
-            # Make Data object
-            data = form_data.save(commit=False)
-            data.bundle = bundle
-            data.save()
-            print('Data object: {}'.format(data))
-
-            # Make data directory
-            print('Checking to see if data directory needs to be made')
-            new_directory = data.build_directory()
-
-            # If it's a new directory, we need a product_collection to describe the
-            # collection. *** Currently: Just does base case. Fix in data model.
-            if new_directory:
-                data.build_product_collection()
-
-            # Update data_set
-            context_dict['data_set'] = Data.objects.filter(bundle=pk_bundle)
-            
-            # Refresh page 
-#            return render(request, 'build/bundle/bundle.html', context_dict)
-
-
-
-        # After ELSAs friend hits submit, if the forms are completed correctly, we should enter
-        # this conditional.  We must do [] things: 1. Create the Document model object, 2. Add a Product_Document label to the Document Collection, 3. Add the Document as an Internal_Reference to the proper labels (like Product_Bundle and Product_Collection).
-        print('\n\n---------------------- DOCUMENT INFO -------------------------------')
-        if form_document.is_valid():
-            print('form_product_document is valid')  
-
-            # Create Document Model Object
-            product_document = form_document.save(commit=False)
-            product_document.bundle = bundle
-            product_document.save()
-            print('Product_Document model object: {}'.format(product_document))
-
-            # Build Product_Document label using the base case template found
-            # in templates/pds4/basecase
-            print('\n---------------Start Build Product_Document Base Case------------------------')
-            product_document.build_base_case()
-            # Open label - returns a list where index 0 is the label object and 1 is the tree
-            print(' ... Opening Label ... ')
-            label_list = open_label_with_tree(product_document.label())
+            # Fill Product_Bundle with Collection Bundle Member Entries
+            label_list = open_label_with_tree(product_bundle.label()) #list = [label_object, label_root]
             label_root = label_list[1]
-            # Fill label - fills 
+            print(' ... Adding Bundle Member Entries ... ')
+            label_root = product_bundle.build_additional_bundle_member_entry(label_root, additional_collections)
+            close_label(product_bundle.label(), label_root)
+            
+            
+            print('before build base case')
+            additional_collections.build_base_case()
+            print('after build base case')
+
+            # Open Product_Collection label
+            print(' ... Opening Label ... ')
+            label_list = open_label_with_tree(additional_collections.label())
+            label_root = label_list[1]
+
+            # Fill label
             print(' ... Filling Label ... ')
             #label_root = bundle.version.fill_xml_schema(label_root)
-            label_root = product_document.fill_base_case(label_root)
-            # Close label    
+            label_root = additional_collections.fill_base_case(label_root)
+
+            # Close label
             print(' ... Closing Label ... ')
-            close_label(label_list[0], label_root)          
-            print('---------------- End Build Product_Document Base Case -------')             
+            close_label(additional_collections.label(), label_root)
+            print('-------------End Build Product_Collection Base Case-----------------')
 
-            # Add Document info to proper labels.  For now, I simply have Product_Bundle and Product_Collection with a correction for the data collection.  The variable all_labels_kill_data means all Product_Collection labels except those associated with data.  Further below, you will see the correction for the data collection where our label set is now data_labels.
-            print('\n---------------Start Build Internal_Reference for Document-------------------')
-            all_labels = []
-            product_bundle = Product_Bundle.objects.get(bundle=bundle)
-            product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+            additional_collections_set = AdditionalCollections.objects.filter(bundle=bundle)
+            context_dict['additional_collections_set'] = additional_collections_set
+            context_dict['additional_collections_count'] =  len(additional_collections_set)
+                    
+        # if form_collections.is_valid():
+        #     print('form_collections are valid')
+        # # Create Collections Model Object and list of Collections, list of Collectables
+        #     bundle_name = form_bundle['name']
+        #     bundle_user = request.user
+        #     bundle_count = Bundle.objects.filter(name=bundle_name, user=bundle_user).count()
+        #     product_bundle = ProductBundleForm().save(commit=False)
+        #     product_bundle.bundle = bundle
+            
+        #     # if bundle_count == 0 or Bundle.objects.filter(name=bundle_name, user=bundle_user).exists():
+        #     collections = form_collections.save(commit=False)
+        #     collections.bundle = bundle
+        #     print('\nCollections model object:    {}'.format(collections))
 
-            all_labels.append(product_bundle)
-            all_labels.extend(product_collections_list)  
 
+            
+            
 
-            for label in all_labels:
+        #     # Each collection in collections needs 1) a model, 2) a bundle member entry in product
+        #     # bundle, 3) a directory for the collection, and 4) its own product collection label
+        #     for collection in collections.list():
+        #         print(collection)
+
+        #         # Create Product_Collection model for each collection
+        #         product_collection = ProductCollectionForm().save(commit=False)
+        #         product_collection.bundle = bundle
+        #         if collection == 'document':
+        #             product_collection.collection = 'Document'
+        #         elif collection == 'context':
+        #             product_collection.collection = 'Context'
+        #         elif collection == 'xml_schema':
+        #             product_collection.collection = 'XML_Schema'
+        #         elif collection == 'data':
+        #             product_collection.collection = 'Data'
+        #             # Create PDS4 compliant directories for each collection within the bundle.            
+        #             collections.build_directories()
+        #         # elif collection == 'browse':
+        #         #     product_collection.collection = 'Browse'
+        #         # elif collection == 'geometry':
+        #         #     product_collection.collection = 'Geometry'
+        #         # elif collection == 'calibration':
+        #         #     product_collection.collection = 'Calibration'
+        #         # elif collection == 'data_enum':
+        #             print("saw the data enum")
+        #             break
+        #         product_collection.save()
+        #         print('\n\n{} Collection Directory:    {}'.format(collection, product_collection.directory()))
+
                 
-                print('- Label: {}'.format(label))
-                print(' ... Opening Label ... ')
-                label_list = open_label_with_tree(label.label())
-                label_root = label_list[1]
-        
-                # Build Internal_Reference
-                print(' ... Building Internal_Reference ... ')
-                label_root = label.build_internal_reference(label_root, product_document)
 
-                # Close appropriate label(s)
-                print(' ... Closing Label ... ')
-                close_label(label.label(), label_root)
-            print('\n----------------End Build Internal_Reference for Document-------------------')
+        #         # Fill Product_Bundle with Collection Bundle Member Entries
+        #         label_list = open_label_with_tree(product_bundle.label()) #list = [label_object, label_root]
+        #         label_root = label_list[1]
+        #         print(' ... Adding Bundle Member Entries ... ')
+        #         label_root = product_bundle.build_bundle_member_entry(label_root, product_collection)
+        #         close_label(product_bundle.label(), label_root)
+        #         print(' ... Bundle Member Entry Added: {} ...'.format(product_collection.lid))               
 
-            form_document = ProductDocumentForm()
-            context_dict['form_document'] = form_document
-            context_dict['documents'] = Product_Document.objects.filter(bundle=bundle)    
+        #         # Build Product_Collection label for all labels other than those found in the data collection.
+        #         print('-------------Start Build Product_Collection Base Case-----------------')
+        #         # if collection != 'data':
+        #         product_collection.build_base_case()
+
+        #         # Open Product_Collection label
+        #         print(' ... Opening Label ... ')
+        #         label_list = open_label_with_tree(product_collection.label())
+        #         label_root = label_list[1]
+
+        #         # Fill label
+        #         print(' ... Filling Label ... ')
+        #         #label_root = bundle.version.fill_xml_schema(label_root)
+        #         label_root = product_collection.fill_base_case(label_root)
+
+        #         # Close label
+        #         print(' ... Closing Label ... ')
+        #         close_label(product_collection.label(), label_root)
+        #         print('-------------End Build Product_Collection Base Case-----------------')
+           
+        #         # Further develop context_dict entries for templates            
+        #         context_dict['Bundle'] = bundle
+        #         context_dict['Product_Bundle'] = Product_Bundle.objects.get(bundle=bundle)
+        #         context_dict['Product_Collection_Set'] = Product_Collection.objects.filter(bundle=bundle)
+        #         collections.save()
+
+              #  return render(request, 'build/bundle/bundle.html' , context_dict)
+
 
         return render(request, 'build/bundle/bundle.html', context_dict)
-
     else:
-        print('unauthorized user attempting to access a restricted area.')
-        return redirect('main:restricted_access')
+            print('unauthorized user attempting to access a restricted area.')
+            return redirect('main:restricted_access')
+
+
+
 
 
 
@@ -1037,8 +1030,8 @@ def citation_information(request, pk_bundle, pk_citation_infromation):
                 'keyword':citation_information.keyword,
              }
         form_citation_information = CitationInformationForm(request.POST or None, initial=initial_citation_information)
-        if form_citation_information and form_citation_infmation.has_changed:
-            print('changed: {}',fomrat(form_citation_information.changed_data))
+        if form_citation_information and form_citation_information.has_changed:
+            print('changed: {}',format(form_citation_information.changed_data))
 
             for change in form_citation_information.changed_data:
                 if change == 'author_list':
@@ -2377,28 +2370,41 @@ def instruments(request):
 
     return render(request, 'context/repository/instruments.html', context_dict)
 
+# Directory View Functions
+#utils functions
+def _get_abs_virtual_root():
+    return _eventual_path(settings.BASE_DIR)
 
+def _eventual_path(path):
+    return os.path.abspath(os.path.realpath(path))
 
+def index(request, path):
+    def index_maker():
+        def _index(inpath):
+            contents = os.listdir(inpath)
+            contents.reverse()
+            for mfile in contents:
+                t = os.path.join(inpath, mfile)
+                if os.path.isdir(t):
+                    link_target = os.path.relpath(t, start=os.path.join(_get_abs_virtual_root(), 'archive/'))
+                    yield loader.render_to_string('build/directory/list_folder.html', {'file': mfile, 'subfiles': _index(os.path.join(inpath, t)), 'link': link_target})
+                    continue
+                if os.path.isfile(t):
+                    link_target = os.path.relpath(t, start=os.path.join(_get_abs_virtual_root(), 'archive/'))
+                    yield loader.render_to_string('build/directory/list_file.html', {'file': mfile, 'link': link_target})
+        
+        return _index(eventual_path)
 
+    directory_name = os.path.basename(path)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    eventual_path = _eventual_path(os.path.join(settings.ARCHIVE_DIR, path))
+    if os.path.isfile(eventual_path):
+        print(path)
+        return HttpResponse(open(eventual_path).read(), content_type='text/xml')
+    
+    c = index_maker()
+    data = {
+        'directory_name': directory_name,
+        'subfiles': c
+    }
+    return render(request, 'build/directory/list.html', data)

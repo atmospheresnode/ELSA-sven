@@ -44,7 +44,8 @@ def replace_all( r, s, t ):
 def make_directory(path):
     try:
         os.mkdir(path)
-    except OSError as e:   
+    except OSError as e: 
+        print(e)  
         if e.errno ==17:
             # Dir already exists.
             # Elsa will use the existing directory
