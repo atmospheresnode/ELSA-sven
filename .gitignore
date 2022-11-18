@@ -7,3 +7,4 @@ Scratch\ code/*
 /._populate_context.py
 /db.sqlite3
 /elsa/*
+/elsa/settings.py
