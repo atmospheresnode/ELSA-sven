@@ -5,12 +5,7 @@ from .chocolate import replace_all
 #from django.forms import modelformset_factory
 
 from lxml import etree
-import urllib.request
-import urllib.error
-import urllib.parse
-import urllib.request
-import urllib.parse
-import urllib.error
+import urllib.request, urllib.error, urllib.parse, urllib.request, urllib.parse, urllib.error
 import datetime
 
 from .models import *
@@ -20,8 +15,8 @@ from .models import *
 #
 #                                           FORMS
 #
-#    The following forms are mostly associated with models.  The first form, ConfirmForm, is an example
-# of a form that is not associated with any models.  The specification for the PDS4 components
+#    The following forms are mostly associated with models.  The first form, ConfirmForm, is an example 
+# of a form that is not associated with any models.  The specification for the PDS4 components 
 # (ex: Alias, Bundle, ...) can be found in models.py with the corresponding model object.  The comments
 # for the following forms should include the input format rules.  This information may or may not need
 # to be in models over forms.  I'm not too sure where we will decide to do our data checking as of yet.
@@ -31,22 +26,18 @@ from .models import *
 #
 # ------------------------------------------------------------------------------------------------------ #
 
-# Hello Tommy How do I change the port
+
 """
     Confirm
 """
-
-
 class ConfirmForm(forms.Form):
-    CHOICES = [('Yes', 'Yes'), ('No', 'No')]
+    CHOICES = [('Yes','Yes') , ('No','No')]
     decision = forms.ChoiceField(choices=CHOICES, widget=forms.RadioSelect())
 
 
 """
     Alias
 """
-
-
 class AliasForm(forms.ModelForm):
     alternate_id = forms.CharField(required=True)
     alternate_title = forms.CharField(required=True)
@@ -67,26 +58,23 @@ class AliasDelete(forms.ModelForm):
 """
     Array
 """
-
-
 class ArrayForm(forms.ModelForm):
     class Meta(object):
         model = Array
         exclude = ('product_observational', 'local_identifier')
 
 
+
 """
     Bundle
 """
-
-
 class BundleForm(forms.ModelForm):
-    name = forms.CharField(initial='Enter name here',
-                           required=True, max_length=50)
+    name = forms.CharField( initial='Enter name here', required=True, max_length=50)
 
     class Meta(object):
-        model = Bundle
+        model = Bundle              
         fields = ('name', 'bundle_type', 'version', )
+
 
     """
         clean should ensure the following:
@@ -98,9 +86,7 @@ class BundleForm(forms.ModelForm):
               cleansing of data.
             - The user should not append bundle to the end of the bundle name.
     """
-
-    # name_edit can be removed from this function
-    def clean(self):
+    def clean(self):                                     # name_edit can be removed from this function
         cleaned_data = self.cleaned_data
         name = cleaned_data.get('name')
 
@@ -109,30 +95,23 @@ class BundleForm(forms.ModelForm):
         if len(name) <= 255:
             name_edit = name
             name_edit = name_edit.lower()
-            # replace spaces with underscores
-            name_edit = replace_all(name_edit, ' ', '_')
+            name_edit = replace_all(name_edit, ' ', '_') # replace spaces with underscores
             if name_edit.endswith("bundle"):
-                # seven because there is probably an underscore by now
-                name_edit = name_edit[:-7]
+                name_edit = name_edit[:-7] # seven because there is probably an underscore by now
             if name_edit.find(':') != -1:
-                raise forms.ValidationError(
-                    "The colon (:) is used to delimit segments of a urn and thus is not permitted within a bundle name.")
+                raise forms.ValidationError("The colon (:) is used to delimit segments of a urn and thus is not permitted within a bundle name.")
         else:
-            raise forms.ValidationError(
-                "The length of your bundle name is too large")
+            raise forms.ValidationError("The length of your bundle name is too large");
 
 
 """
     Citation_Information
 """
-
-
 class CitationInformationForm(forms.ModelForm):
 
     description = forms.CharField(required=True)
     #publication_year = forms.DateField(required=True, input_formats=['%m/%d/%Y','%d/%m/%Y','%Y-%m-%d','%m-%d-%Y','%d-%m-%Y'])
-    # validators=[RegexValidator(r'^\d{1,10}$')])
-    publication_year = forms.CharField(required=True)
+    publication_year = forms.CharField(required=True) #validators=[RegexValidator(r'^\d{1,10}$')])
     author_list = forms.CharField(required=False)
     editor_list = forms.CharField(required=False)
     keyword = forms.CharField(required=False)
@@ -141,39 +120,32 @@ class CitationInformationForm(forms.ModelForm):
         model = Citation_Information
         exclude = ('bundle',)
 
+
     """
         clean should do nothing to the description.  For publication_year, CitationInformationForm uses Django's DateField form field.  Django's DateField form field (https://docs.djangoproject.com/en/2.0/_modules/django/forms/fields/#DateField) simply sees if the input could be converted to a date time object.  Therefore, values like 6020 can be input.  We need to decide if we want to prevent user errors such as this, raise warnings to the user, do nothing, etc...
     """
-
     def clean(self):
         pass
 
 
 """
-Test
-"""
-
-
-"""
     Modification History 
 """
-
-
 class ModificationHistoryForm(forms.ModelForm):
 
     description = forms.CharField(required=True)
-    # validators=[RegexValidator(r'^\d{1,10}$')])
-    modification_date = forms.CharField(required=True)
+    modification_date = forms.CharField(required=True) #validators=[RegexValidator(r'^\d{1,10}$')])
     version_id = forms.CharField(required=False)
+
 
     class Meta(object):
         model = Modification_History
         exclude = ('bundle',)
 
+
     """
         clean should do nothing to the description.  For publication_year, CitationInformationForm uses Django's DateField form field.  Django's DateField form field (https://docs.djangoproject.com/en/2.0/_modules/django/forms/fields/#DateField) simply sees if the input could be converted to a date time object.  Therefore, values like 6020 can be input.  We need to decide if we want to prevent user errors such as this, raise warnings to the user, do nothing, etc...
     """
-
     def clean(self):
         pass
 
@@ -181,19 +153,12 @@ class ModificationHistoryForm(forms.ModelForm):
 """
     Collections
 """
-
-
 class CollectionsForm(forms.ModelForm):
-
-  #  has_document = forms.BooleanField(initial=True)
-    # has_data = forms.BooleanField(required=False, initial=False)
-    has_document = True
-  #  has_context = forms.BooleanField(initial=True)
-    has_context = True
-    has_xml_schema = True
-       
-   # has_raw_data = forms.BooleanField(required=False, initial=False)
-
+    has_document = forms.BooleanField(required=True, initial=True)
+    has_context = forms.BooleanField(required=True, initial=True)
+    #has_xml_schema = forms.BooleanField(required=True, initial=True)
+    has_data = forms.BooleanField(required=False, initial=False)   
+    #has_raw_data = forms.BooleanField(required=False, initial=False)
     #has_calibrated_data = forms.BooleanField(required=False, initial=False)
     #has_derived_data = forms.BooleanField(required=False, initial=False)
     #data_enum = forms.IntegerField(required=False, min_value = 0, max_value=25)
@@ -201,14 +166,6 @@ class CollectionsForm(forms.ModelForm):
     class Meta(object):
         model = Collections
         exclude = ('bundle',)
-
-
-class AdditionalCollectionForm(forms.ModelForm):
-
-    class Meta(object):
-        model = AdditionalCollections
-        exclude = ('bundle', 'collection')
-
 
 
 """
@@ -237,8 +194,6 @@ class DataEnum(forms.ModelForm):
 """
     Data
 """
-
-
 class DataForm(forms.ModelForm):
     class Meta(object):
         model = Data
@@ -249,21 +204,15 @@ class DataForm(forms.ModelForm):
 """
     Facility
 """
-
-
 class FacilityForm(forms.Form):
-    facility = forms.ModelChoiceField(
-        queryset=Facility.objects.all(), required=True)
+    facility = forms.ModelChoiceField(queryset=Facility.objects.all(), required=True)
 
 
 """
     Telescope
 """
-
-
 class TelescopeForm(forms.Form):
-    telescope = forms.ModelChoiceField(
-        queryset=Telescope.objects.all(), required=True)
+    telescope = forms.ModelChoiceField(queryset=Telescope.objects.all(), required=True)
 
 
 """
@@ -271,28 +220,21 @@ class TelescopeForm(forms.Form):
     
     HERE : https://medium.com/@MicroPyramid/understanding-djangos-model-fromsets-in-detail-and-their-advanced-usage-131dfe66853d
 """
-
-
 class FacilityInstrumentForm(forms.Form):
 
-    instrument = forms.ModelChoiceField(
-        queryset=Instrument.objects.all(), required=True)
+    instrument = forms.ModelChoiceField(queryset = Instrument.objects.all(), required=True)
 
     def __init__(self, *args, **kwargs):
         self.pk_fac = kwargs.pop('pk_fac')
-        super(FacilityInstrumentForm, self).__init__(*args, **kwargs)
-        self.fields['instrument'] = forms.ModelChoiceField(
-            queryset=Instrument.objects.filter(facility=self.pk_fac), required=True)
+        super(FacilityInstrumentForm,self).__init__(*args, **kwargs)
+        self.fields['instrument'] = forms.ModelChoiceField(queryset=Instrument.objects.filter(facility=self.pk_fac), required=True)
 
 
 """
     Investigation
 """
-
-
 class InvestigationForm(forms.Form):
-    investigation = forms.ModelChoiceField(queryset=Investigation.objects.all(
-    ), required=True, help_text="Note: Investigations contain: individual investigations, missions, observing campaigns, or other investigations</br>")
+    investigation = forms.ModelChoiceField(queryset=Investigation.objects.all(), required=True, help_text="Note: Investigations contain: individual investigations, missions, observing campaigns, or other investigations</br>")
 
 
 """
@@ -300,18 +242,14 @@ class InvestigationForm(forms.Form):
     
     HERE : https://medium.com/@MicroPyramid/understanding-djangos-model-fromsets-in-detail-and-their-advanced-usage-131dfe66853d
 """
-
-
 class InstrumentHostForm(forms.Form):
 
-    instrument_host = forms.ModelChoiceField(
-        queryset=Instrument_Host.objects.all(), required=True)
+    instrument_host = forms.ModelChoiceField(queryset = Instrument_Host.objects.all(), required=True)
 
     def __init__(self, *args, **kwargs):
         self.pk_inv = kwargs.pop('pk_inv')
-        super(InstrumentHostForm, self).__init__(*args, **kwargs)
-        self.fields['instrument_host'] = forms.ModelChoiceField(
-            queryset=Instrument_Host.objects.filter(investigations=self.pk_inv), required=True)
+        super(InstrumentHostForm,self).__init__(*args, **kwargs)
+        self.fields['instrument_host'] = forms.ModelChoiceField(queryset=Instrument_Host.objects.filter(investigations=self.pk_inv), required=True)
 
 
 """
@@ -319,18 +257,14 @@ class InstrumentHostForm(forms.Form):
     
     HERE : https://medium.com/@MicroPyramid/understanding-djangos-model-fromsets-in-detail-and-their-advanced-usage-131dfe66853d
 """
-
-
 class TargetForm(forms.Form):
 
-    target = forms.ModelChoiceField(
-        queryset=Target.objects.all(), required=True)
+    target = forms.ModelChoiceField(queryset = Target.objects.all(), required=True)
 
     def __init__(self, *args, **kwargs):
         self.pk_ins = kwargs.pop('pk_ins')
-        super(TargetForm, self).__init__(*args, **kwargs)
-        self.fields['target'] = forms.ModelChoiceField(
-            queryset=Target.objects.filter(instrument_host=self.pk_ins), required=True)
+        super(TargetForm,self).__init__(*args, **kwargs)
+        self.fields['target'] = forms.ModelChoiceField(queryset=Target.objects.filter(instrument_host=self.pk_ins), required=True)
 
 
 """
@@ -338,25 +272,19 @@ class TargetForm(forms.Form):
     
     HERE : https://medium.com/@MicroPyramid/understanding-djangos-model-fromsets-in-detail-and-their-advanced-usage-131dfe66853d
 """
-
-
 class InstrumentForm(forms.Form):
 
-    instrument = forms.ModelChoiceField(
-        queryset=Instrument.objects.all(), required=True)
+    instrument = forms.ModelChoiceField(queryset = Instrument.objects.all(), required=True)
 
     def __init__(self, *args, **kwargs):
         self.pk_ins = kwargs.pop('pk_ins')
-        super(InstrumentForm, self).__init__(*args, **kwargs)
-        self.fields['instrument'] = forms.ModelChoiceField(
-            queryset=Instrument.objects.filter(instrument_host=self.pk_ins), required=True)
+        super(InstrumentForm,self).__init__(*args, **kwargs)
+        self.fields['instrument'] = forms.ModelChoiceField(queryset=Instrument.objects.filter(instrument_host=self.pk_ins), required=True)
 
 
 """
     ProductBundle
 """
-
-
 class ProductBundleForm(forms.ModelForm):
 
     class Meta(object):
@@ -367,14 +295,11 @@ class ProductBundleForm(forms.ModelForm):
 """
     ProductCollection
 """
-
-
 class ProductCollectionForm(forms.ModelForm):
 
     class Meta(object):
         model = Product_Collection
         exclude = ('bundle', 'collection')
-
 
 
 """
@@ -414,30 +339,25 @@ Association                data_object                1        Digital_Object
 Inherited Association        none                           
 Referenced from        Product_Document                           
 """
-
-# List of STD_ID types for file types - deric
+# List of STD_ID types for file types - deric, doesnt show up for some reason
 STD_ID = [
-    ('PDF/A', 'PDF/A'),
-    ('ASCII', '7-Bit ASCII'),
-    ('Encapsulated Postscript', 'Encapsulated Postscript'),
-    ('GIF', 'GIF'),
-    ('HTML v2.0', 'HTML v2.0'),
-    ('HTML v3.2', 'HTML v3.2'),
-    ('HTML v4.0', 'HTML v4.0'),
-    ('HTML v4.01', 'HTML v4.01'),
-    ('JPEG', 'JPEG'),
-    ('LaTEX', 'LaTEX'),
-    ('MPEG', 'MPEG-4'),
-    ('Excel', 'MS Excel'),
-    ('Word', 'MS Word'),
-    ('PDF', 'PDF'),
-    ('PNG', 'PNG'),
-    ('Postscript', 'Postscript'),
-    ('Rich Text', 'Rich Text'),
-    ('TIFF', 'TIFF'),
-    ('UTF-8', 'UTF-8 Text')
+        ('PDF/A', 'PDF/A'),
+        ('ASCII', '7-Bit ASCII'),
+        ('Encapsulated Postscript' , 'Encapsulated Postscript'),
+        ('GIF', 'GIF'),
+        ('HTML','HTML'),
+        ('JPEG','JPEG'),
+        ('LaTEX','LaTEX'),
+        ('MPEG', 'MPEG-4'),
+        ('Excel', 'MS Excel'),
+        ('Word','MS Word'),
+        ('PDF', 'PDF'),
+        ('PNG', 'PNG'),
+        ('Postscript', 'Postscript'),
+        ('Rich Text', 'Rich Text'),
+        ('TIFF', 'TIFF'),
+        ('UTF-8', 'UTF-8 Text')
 ]
-
 
 class ProductDocumentForm(forms.ModelForm):
     document_name = forms.CharField(required=True)
@@ -455,7 +375,7 @@ class ProductDocumentForm(forms.ModelForm):
     files = forms.IntegerField(required=False)
     file_name = forms.CharField(required=False)
     local_id = forms.CharField(required=False)
-    document_std_id = forms.ChoiceField(required=False, choices=STD_ID)
+    document_std_id = forms.ChoiceField(required=False, choices = STD_ID)
 
     class Meta(object):
         model = Product_Document
@@ -465,24 +385,22 @@ class ProductDocumentForm(forms.ModelForm):
 """
     ProductObservational
 """
-
-
 class ProductObservationalForm(forms.ModelForm):
     OBSERVATIONAL_TYPES = [
 
-        ('Array', 'Array'),
-        ('Table', 'Table'),
+        ('Array','Array'),
+        ('Table','Table'),
         #('Table Binary','Table Binary'),
         #('Table Character','Table Character'),
         #('Table Delimited','Table Delimited'),
     ]
     PURPOSE_TYPES = [
-        ('Calibration', 'Calibration'),
-        ('Checkout', 'Checkout'),
-        ('Engineering', 'Engineering'),
-        ('Navigation', 'Navigation'),
-        ('Observation Geometry', 'Observation Geometry'),
-        ('Science', 'Science'),
+        ('Calibration','Calibration'),
+        ('Checkout','Checkout'),
+        ('Engineering','Engineering'),
+        ('Navigation','Navigation'),
+        ('Observation Geometry','Observation Geometry'),
+        ('Science','Science'),
     ]
     purpose = forms.ChoiceField(required=True, choices=PURPOSE_TYPES)
     title = forms.CharField(required=True)
@@ -507,19 +425,19 @@ class Table_Delimited_Form(forms.Form):
 class Table_Delimited_Form(forms.ModelForm):
     class Meta(object):
         model = Table_Delimited
-        exclude = ('bundle', 'name',)
+        exclude = ('bundle','name',)
 
 
 class Table_Binary_Form(forms.ModelForm):
     class Meta(object):
         model = Table_Binary
-        exclude = ('bundle', 'name',)
+        exclude = ('bundle','name',)        
 
 
 class Table_Fixed_Width_Form(forms.ModelForm):
     class Meta(object):
         model = Table_Fixed_Width
-        exclude = ('bundle', 'name',)
+        exclude = ('bundle','name',)
 
 
 class Field_Delimited_Form(forms.ModelForm):
@@ -543,19 +461,15 @@ class Field_Character_Form(forms.ModelForm):
 """
     Table
 """
-
-
 class TableForm(forms.ModelForm):
     class Meta(object):
         model = Table
-        exclude = ('product_observational',
-                   'observational_type', 'local_identifier')
+        exclude = ('product_observational', 'observational_type', 'local_identifier')
 
 
 """
     Context Forms 
 """
-
 
 '''
 """
@@ -567,15 +481,6 @@ class InstrumentHostForm(forms.ModelForm):
         exclude = ('',)
 
 
-
-
-
-
-
-
-
-
-
 """
     Instrument
 """
@@ -583,15 +488,6 @@ class InstrumentForm(forms.ModelForm):
     class Meta:
         model = Instrument
         exclude = ('',)
-
-
-
-
-
-
-
-
-
 
 
 """
@@ -603,17 +499,6 @@ class MissionForm(forms.ModelForm):
         exclude = ('',)
 
 
-
-
-
-
-
-
-
-
-
-
-
 """
     Target
 """
@@ -621,16 +506,6 @@ class TargetForm(forms.ModelForm):
     class Meta:
         model = Target
         exclude = ('',)
-
-
-
-
-
-
-
-
-
-
 
 
 """
@@ -669,6 +544,8 @@ The red_channel_band attribute identifies the
         band along the band axis has band number 1.
     """
 
+
+
     class Meta(object):
         model = Color_Display_Settings
         exclude = ('display_dictionary',)
@@ -697,6 +574,8 @@ The vertical_display_direction attribute
         that data along the vertical axis of an Array is supposed to be
         displayed.
     """
+
+
 
     class Meta(object):
         model = Display_Direction
@@ -730,6 +609,8 @@ The time_display_axis attribute identifies, by
         the rate at which these bands are to be
         displayed.
     """
+
+
 
     class Meta(object):
         model = Display_Settings
@@ -768,14 +649,14 @@ The time_display_axis attribute identifies, by
         displayed.
     """
     LOOP_DELAY_UNIT_CHOICES = [
-        ('microseconds', 'microseconds'),
-        ('ms', 'milliseconds'),
-        ('s', 'seconds'),
-        ('min', 'minute'),
-        ('hr', 'hour'),
-        ('day', 'day'),
-        ('julian day', 'julian day'),
-        ('yr', 'year'),
+        ('microseconds','microseconds'),
+        ('ms','milliseconds'),
+        ('s','seconds'),
+        ('min','minute'),
+        ('hr','hour'),
+        ('day','day'),
+        ('julian day','julian day'),
+        ('yr','year'),
     ]
     loop_delay_unit = forms.RadioSelect(choices=LOOP_DELAY_UNIT_CHOICES)
 
@@ -784,7 +665,7 @@ The time_display_axis attribute identifies, by
         exclude = ('display_dictionary',)
 
 
-# class DisplayDictionaryForm(forms.ModelForm):
+#class DisplayDictionaryForm(forms.ModelForm):
     """
     This dictionary describes how to display Array data on a display device
 The Color_Display_Settings class provides
@@ -812,9 +693,6 @@ The Movie_Display_Settings class provides
 """
     Confirm
 """
-
-
 class DictionaryForm(forms.Form):
-    CHOICES = [('Display', 'Display'), ('testing', 'testing'), ]
-    dictionary_type = forms.MultipleChoiceField(
-        choices=CHOICES, widget=forms.CheckboxSelectMultiple())
+    CHOICES = [('Display','Display') , ('testing','testing'),]
+    dictionary_type = forms.MultipleChoiceField(choices=CHOICES, widget=forms.CheckboxSelectMultiple())
