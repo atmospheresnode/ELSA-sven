@@ -613,9 +613,34 @@ def bundle(request, pk_bundle):
         form_product_collection = ProductCollectionForm(request.POST or None)
         form_additional_collections = AdditionalCollectionForm(request.POST or None)
 
-
-
-        
+        # Context dictionary for template
+        context_dict = {
+            'bundle':bundle,
+            'alias_set':alias_set,
+            'alias_set_count':len(alias_set), 
+            'citation_information_set':citation_information_set,  
+            'citation_information_set_count':len(citation_information_set),    
+            'modification_history_set':modification_history_set,  
+            'modification_history_set_count':len(modification_history_set),      
+            'data_set':data_set,
+            'form_alias':form_alias,
+            'form_bundle':form_bundle,
+            'form_citation_information':form_citation_information,
+            'form_data':form_data,
+            'form_modification_history':form_modification_history,
+            'form_document':form_document,
+         #   'collections': Collections.objects.get(bundle=bundle),
+            'form_collections':form_collections,
+            'form_product_collection': form_product_collection,
+            'form_additional_collections': form_additional_collections,
+            'additional_collections_count': len(additional_collections_set),
+            'instruments': bundle.instruments.all(),
+            'targets': bundle.targets.all(),
+            'product_observational_set':product_observational_set,
+            'documents':Product_Document.objects.filter(bundle=bundle),
+            'additional_collections_set': additional_collections_set,
+            'user':request.user,
+        }
 
         # satisfy this conditional
         if form_alias.is_valid():
@@ -757,6 +782,8 @@ def bundle(request, pk_bundle):
             print('-------------End Build Product_Collection Base Case-----------------')
 
             additional_collections_set = AdditionalCollections.objects.filter(bundle=bundle)
+            context_dict['additional_collections_set'] = additional_collections_set
+            context_dict['additional_collections_count'] =  len(additional_collections_set)
                     
         # if form_collections.is_valid():
         #     print('form_collections are valid')
@@ -844,34 +871,6 @@ def bundle(request, pk_bundle):
 
               #  return render(request, 'build/bundle/bundle.html' , context_dict)
 
-        # Context dictionary for template
-        context_dict = {
-            'bundle':bundle,
-            'alias_set':alias_set,
-            'alias_set_count':len(alias_set), 
-            'citation_information_set':citation_information_set,  
-            'citation_information_set_count':len(citation_information_set),    
-            'modification_history_set':modification_history_set,  
-            'modification_history_set_count':len(modification_history_set),      
-            'data_set':data_set,
-            'form_alias':form_alias,
-            'form_bundle':form_bundle,
-            'form_citation_information':form_citation_information,
-            'form_data':form_data,
-            'form_modification_history':form_modification_history,
-            'form_document':form_document,
-         #   'collections': Collections.objects.get(bundle=bundle),
-            'form_collections':form_collections,
-            'form_product_collection': form_product_collection,
-            'form_additional_collections': form_additional_collections,
-            'additional_collections_count': len(additional_collections_set),
-            'instruments': bundle.instruments.all(),
-            'targets': bundle.targets.all(),
-            'product_observational_set':product_observational_set,
-            'documents':Product_Document.objects.filter(bundle=bundle),
-            'additional_collections_set': additional_collections_set,
-            'user':request.user,
-        }
 
         return render(request, 'build/bundle/bundle.html', context_dict)
     else:
