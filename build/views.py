@@ -1384,6 +1384,11 @@ def context_search_target(request, pk_bundle, pk_investigation, pk_instrument_ho
         if request.method == 'POST':
             if form_target.is_valid():
                 i = Target.objects.get(name=form_target.cleaned_data['target'])
+                # problem with above line is these names don't always seem to be unique. Maybe search using LID instead? -z
+                #for key in form_target.cleaned_data:
+                #    print (key) 
+                #i = Target.objects.get(lid=form_target.cleaned_data['lid'])
+                #print(i)
                 context_dict['target'] = i
                 bundle.targets.add(i)
                 i.fill_label(bundle)
