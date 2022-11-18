@@ -5,6 +5,8 @@ from __future__ import print_function
 
 from builtins import str
 from builtins import object
+from enum import unique
+from queue import Empty
 from django.db import models
 from django.conf import settings
 from django.contrib.auth.models import User
@@ -21,7 +23,6 @@ from shutil import *
 import datetime
 import shutil
 import os
-
 
 
 
@@ -107,6 +108,7 @@ def get_user_document_directory(instance, filename):
 
 """
     Note:  Most names in ELSA are explicit.  However, we could not make a 'number' attribute to identify the version number (ex: 1800, 1A00, 1A10) because it conflicted with Django's number attribute given to each model.
+    
 """
 @python_2_unicode_compatible
 class Version(models.Model):
@@ -224,14 +226,53 @@ class Version(models.Model):
         pass
 
     # Main Functions
-    def version_update(self, number, inFile, outFile):
+    
+    def version_update(self, number, label_path):
+        '''Updates the pds4 information model version number in an xml file,
+        given the new version number and the path to that file (both strings).
+        
+            
+            '''
+
+        #function from chocolate. still doing imports the old way for now
+        label_path, label_root, tree = open_label_with_tree(label_path)
+        
+        location = '{http://www.w3.org/2001/XMLSchema-instance}schemaLocation'
+        schemas = label_root.attrib[location].split(' ')
+        
+        #Singles out just the regular pds4 info model, so we don't touch any
+        #other dictionary schema (for now)
+        info_model=[s for s in schemas if '/pds/' in s and '.xsd/' in s][0]
+        schemas.remove(info_model)
+        
+        #Isolates the 4-character version number
+        old_number=info_model.split('/')[-1].split('.')[0].split('_')[-1]
+        
+        schemas.insert(1, info_model.replace(old_number, number))
+        label_root.set(location, ' '.join(schemas)) #replace version number
+        
+        #maps the namespace string (label_root.tag.split et cetera) to 
+        #something shorter    
+        ns = {'d':label_root.tag.split('{')[1].split('}')[0]} 
+        
+        #find the information_model_version tag
+        for im_version in label_root.findall("d:Identification_Area/d:information_model_version", ns):
+            im_version.text=self.with_dots(number) #replace version number
+            
+        close_label(label_path, label_root) #also from chocolate
+        
+        
+    def version_update_old(self, number, inFile, outFile):
+        ''''Original version of this function, to be replaced with above and 
+        renamed (or deleted?) once I'm positive the new one works. Keep this 
+        one around for now, for reference and for when the new one breaks.'''
         
         j=0
         i=0
 
         #read the bundle and collection template files and store their contents in strings.
         #If the file is invalid a statement will be printed and the function will quit.
-        try:
+        try: 
                 fil = open(inFile,'r')
 
                 fileText = fil.read()
@@ -1424,7 +1465,7 @@ Inherited Association        none
 
 Referenced from        Product_Context                           
 """
-@python_2_unicode_compatible
+
 class Facility(models.Model):
     FACILITY_TYPES = [
         ('Laboratory','Laboratory'),
@@ -1727,6 +1768,8 @@ class Bundle(models.Model):
         rel_dir = os.path.join(self.user.username, self.name_directory_case())
         return rel_dir
 
+
+
     """
     - name_title_case
       Returns the bundle name in normal Title case with spaces.
@@ -1856,7 +1899,7 @@ class Bundle(models.Model):
         # modification_history_set --> Needs to be created still
 
         # Products
-        document_set = Document.objects.filter(bundle=self)
+        document_set = document.objects.filter(bundle=self)
 #        data_set = Data.objects.filter(data=self)
 
 #        print alias_set
@@ -1870,14 +1913,12 @@ class Bundle(models.Model):
 """
 @python_2_unicode_compatible
 class Collections(models.Model):
-
-
     # Attributes
     bundle = models.OneToOneField(Bundle, on_delete=models.CASCADE)
-    has_document = models.BooleanField(default=True)
-    has_context = models.BooleanField(default=True)
-   # has_xml_schema = models.BooleanField(default=True)
     has_data = models.BooleanField(default=False)
+    has_document = True
+    has_context = True
+    has_xml_schema = True
     #has_raw_data = models.BooleanField(default=False)
     #has_calibrated_data = models.BooleanField(default=False)
     #has_derived_data = models.BooleanField(default=False)
@@ -1887,12 +1928,12 @@ class Collections(models.Model):
     # Cleaners
     def list(self):
         collections_list = []
-        if self.has_document:
-            collections_list.append("document")
-        if self.has_context:
-            collections_list.append("context")
+      #  if self.has_document:
+        collections_list.append("document")
+       # if self.has_context:
+        collections_list.append("context")
        # if self.has_xml_schema:
-         #   collections_list.append("xml_schema")
+        collections_list.append("xml_schema")
         if self.has_data:
             collections_list.append("data")
         return collections_list
@@ -1902,7 +1943,9 @@ class Collections(models.Model):
     #     Note: When we call on Collections, we want to be able to have a list of all collections 
     #           pertaining to a bundle.
     def __str__(self):
-        return '{0} Bundle has document={1}, context={2}, data={3}'.format(self.bundle, self.has_document, self.has_context, self.has_data)
+       return '{0} Bundle has document={1}, context={2}, data={3}, xml_schema={4}'.format(self.bundle, self.has_document, self.has_context, self.has_data, self.has_xml_schema)
+    #   return '{0} bundle.format{1}, document={2}, context={3}, data={4}'.format(self.bundle, self.has_context, self.has_document, self.has_data)
+       
     class Meta(object):
         verbose_name_plural = 'Collections'        
 
@@ -1920,9 +1963,118 @@ class Collections(models.Model):
                 # exist. The model object that creates the data collection folders is the Data model 
                 # object.
 
+            if collection == "data": 
+                self.build_data_directories(collection)
+                # If no other data collections, data as a name is fine
+                # If data exists fill in <name> in data_<name> through some means
+
     def build_data_directories(self, data):
         collection_directory = os.path.join(self.bundle.directory(), data)
         make_directory(collection_directory)
+
+
+class AdditionalCollections(models.Model):
+    ADDITIONAL_COLLECTION_CHOICES = (
+        ('Data','Data'),
+        ('Browse','Browse'),
+        ('Geometry','Geometry'),
+        ('Calibration','Calibration'),
+    )
+    bundle = models.OneToOneField(Bundle)
+    collection_name = models.CharField(max_length=MAX_CHAR_FIELD)
+    collection_type = models.CharField(max_length=MAX_CHAR_FIELD, choices=ADDITIONAL_COLLECTION_CHOICES, default='Data')
+    collections_list = []
+    
+
+
+    def list(self):
+        return self.collections_list
+
+    def append_list(self):
+        collection = [self.collection_name, self.collection_type]
+        if collection not in self.collections_list:
+            self.collections_list.append(collection)
+        return self.collections_list
+
+    def __str__(self):
+       return '{0} Bundle has data'.format(self.bundle)
+    #   return '{0} bundle.format{1}, document={2}, context={3}, data={4}'.format(self.bundle, self.has_context, self.has_document, self.has_data)
+       
+    class Meta(object):
+        verbose_name_plural = 'AdditionalCollections'
+
+    def build_directories(self):
+        for collection in self.list():
+            if collection[0] == self.collection_name: 
+                collection_directory = os.path.join(self.bundle.directory(), collection[0])
+                make_directory(collection_directory)
+                # If no other data collections, data as a name is fine
+                # If no other data collections, data as a name is fine
+                # If data exists fill in <name> in data_<name> through some means    
+
+    def save_collection(self):
+        AdditionalCollections.objects.get_or_create(bundle_id=self.bundle.id)
+
+
+    def directory(self):
+        name_edit = self.collection_name.lower()
+        collection_directory = os.path.join(self.bundle.directory(), name_edit)
+        return collection_directory
+
+    def name_label_case(self):
+
+        # Append cleaned collection name to name edit for Product_Collection xml label
+        name_edit = self.collection_name.lower()
+        name_edit = 'collection_{}.xml'.format(name_edit)
+        return name_edit
+
+    def label(self):
+        return os.path.join(self.directory(), self.name_label_case())
+    
+    def build_base_case(self):
+        # Locate base case Product_Collection template found in templates/pds4_labels/base_case/
+        source_file = os.path.join(PDS4_LABEL_TEMPLATE_DIRECTORY, 'base_case')
+        source_file = os.path.join(source_file, 'product_collection.xml')
+
+        # Locate collection directory and create path for new label
+        label_file = os.path.join(self.directory(), self.name_label_case())
+
+        #set selected version
+        update = Version()
+        bundle = Bundle()
+        update.version_update_old(self.bundle.version, source_file,label_file)
+
+        return
+
+    def fill_base_case(self, root):
+        Product_Collection = root
+         
+        # Fill in Identification_Area
+        Identification_Area = Product_Collection.find('{}Identification_Area'.format(NAMESPACE))
+
+        #     lid
+        logical_identifier = Identification_Area.find('{}logical_identifier'.format(NAMESPACE))
+        logical_identifier.text = 'urn:{0}:{1}:{2}'.format(self.bundle.user.userprofile.agency, self.bundle.name_lid_case(), self.collection_name) # where agency is something like nasa:pds
+        
+
+        #     version_id --> Note:  Can be changed to be more dynamic once we implement bundle versions (which is different from PDS4 versions)
+        version_id = Identification_Area.find('{}version_id'.format(NAMESPACE))
+        version_id.text = '1.0'  
+
+        #     title
+        title = Identification_Area.find('{}title'.format(NAMESPACE))
+        title.text = self.bundle.name_title_case()
+
+        collection = Product_Collection.find('{}Collection'.format(NAMESPACE))
+        col_type = collection.find('{}collection_type'.format(NAMESPACE))
+        col_type.text = self.collection_type
+
+        #     information_model_version
+        #information_model_version = Identification_Area.find('{}information_model_version'.format(NAMESPACE))
+        #information_model_version = self.bundle.version.name_with_dots()
+        
+        return Product_Collection
+
 
 """
 @python_2_unicode_compatible
@@ -2211,7 +2363,7 @@ class Product_Bundle(models.Model):
         update = Version()
         bundle = Bundle()
         print(bundle.version + "<<<<<<<<")
-        update.version_update(self.bundle.version, source_file, self.label())
+        update.version_update_old(self.bundle.version, source_file, self.label())
 
         # Copy the base case template to the correct directory
         #copyfile(source_file, self.label())
@@ -2315,7 +2467,32 @@ class Product_Bundle(models.Model):
         reference_type = etree.SubElement(Bundle_Member_Entry, 'reference_type')
         reference_type.text = 'bundle_has_{}_collection'.format(collection.collection.lower())   
 
-        return root   
+        return root
+
+    def build_additional_bundle_member_entry(self, root, collection):
+        """
+        build_internal_reference builds and fills the Internal_Reference information within the 
+        Reference_List of Product_Bundle.  The relation is used within reference_type to associate what 
+        the bundle is related to, like bundle_to_document.  Therefore, relation is a model object in 
+        ELSA, like Document.  The possible relations as of V1A00 are errata, document, investigation, 
+        instrument, instrument_host, target, resource, associate.
+        """
+        print('---DEBUG---')
+        print('Root: {}'.format(root))
+
+        
+        Bundle_Member_Entry = etree.SubElement(root, 'Bundle_Member_Entry')
+
+        lid_reference = etree.SubElement(Bundle_Member_Entry, 'lid_reference')
+        lid_reference.text = '{}:{}'.format(self.bundle.lid(), collection.collection_name.lower())
+
+        member_status = etree.SubElement(Bundle_Member_Entry, 'member_status')
+        member_status.text = 'Primary'
+
+        reference_type = etree.SubElement(Bundle_Member_Entry, 'reference_type')
+        reference_type.text = 'bundle_has_{}_collection'.format(collection.collection_name.lower())   
+
+        return root
 
 
 
@@ -2379,15 +2556,12 @@ class Product_Collection(models.Model):
 
     )
     bundle = models.ForeignKey(Bundle, on_delete=models.CASCADE)
-    collection = models.CharField(max_length=MAX_CHAR_FIELD, choices=COLLECTION_CHOICES, default='Not_Set')
+    collection = models.CharField(max_length=MAX_CHAR_FIELD, choices=COLLECTION_CHOICES)
     
-
-
-
 #    def __str__(self):
 
 #        return "{0}\nProduct Collection for {1} Collection".format(self.collections.bundle, self.collection)
-
+    
     def lid(self):
         """Builds lid for collection
         """
@@ -2436,7 +2610,7 @@ class Product_Collection(models.Model):
     """
     def label(self):
         if self.collection == 'Data':
-            pass                         # Need to fix with new data collection changes
+            return os.path.join(self.directory(), self.name_label_case())                        # Need to fix with new data collection changes
         else:
             return os.path.join(self.directory(), self.name_label_case())
 
@@ -2444,8 +2618,7 @@ class Product_Collection(models.Model):
     """
     """
     def build_base_case(self):
-        if self.collection == 'Data':
-            pass
+        
         
         # Locate base case Product_Collection template found in templates/pds4_labels/base_case/
         source_file = os.path.join(PDS4_LABEL_TEMPLATE_DIRECTORY, 'base_case')
@@ -2457,7 +2630,7 @@ class Product_Collection(models.Model):
         #set selected version
         update = Version()
         bundle = Bundle()
-        update.version_update(self.bundle.version, source_file,label_file)
+        update.version_update_old(self.bundle.version, source_file,label_file)
 
 
         # Copy the base case template to the correct directory
@@ -2516,6 +2689,10 @@ class Product_Collection(models.Model):
         #     title
         title = Identification_Area.find('{}title'.format(NAMESPACE))
         title.text = self.bundle.name_title_case()
+
+        collection = Product_Collection.find('{}Collection'.format(NAMESPACE))
+        col_type = collection.find('{}collection_type'.format(NAMESPACE))
+        col_type.text = self.collection
 
         #     information_model_version
         #information_model_version = Identification_Area.find('{}information_model_version'.format(NAMESPACE))
@@ -3121,7 +3298,7 @@ class Product_Document(models.Model):
         #set selected version
         update = Version()
         bundle = Bundle()
-        update.version_update(self.bundle.version, source_file, label_file)
+        update.version_update_old(self.bundle.version, source_file, label_file)
 
         # Copy the base case template to the correct directory
 #        copyfile(source_file, label_file)
