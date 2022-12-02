@@ -269,7 +269,7 @@ class Version(models.Model):
         #read the bundle and collection template files and store their contents in strings.
         #If the file is invalid a statement will be printed and the function will quit.
         try: 
-                fil = open(inFile,'r')
+            fil = open(inFile,'r')
 
             fileText = fil.read()
 
