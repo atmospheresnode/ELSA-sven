@@ -800,13 +800,23 @@ class Investigation(models.Model):
     ]
 
     # Attributes used for crawler
-    name = models.CharField(max_length=MAX_CHAR_FIELD)
+    # null=true's added 11/2022
+
+    name = models.CharField(max_length=MAX_CHAR_FIELD, null=True)
     type_of = models.CharField(
-        max_length=MAX_CHAR_FIELD, choices=INVESTIGATION_TYPES)
+        max_length=MAX_CHAR_FIELD, choices=INVESTIGATION_TYPES, null=True)
     lid = models.CharField(max_length=MAX_LID_FIELD)
     vid = models.FloatField(default=1.0)
     internal_references = []
     starbase_label = models.CharField(max_length=MAX_CHAR_FIELD)
+
+    # Relational Attributes
+    # (added 11/2022 by zena)
+    # note we have to give these fields the name of the model, not the model
+    # objects themselves, because these models haven't been defined yet
+
+    instrument_hosts = models.ManyToManyField("Instrument_Host")
+    targets = models.ManyToManyField("Target")
 
     # Attributes used to manage Investigation object
     #objects = InvestigationManager()
@@ -1055,12 +1065,15 @@ class Instrument(models.Model):
         ('X-ray Fluorescence Spectrometer', 'X-ray Fluorescence Spectrometer'),
     ]
     # Relational Attributes
+    instrument_hosts = models.ManyToManyField("Instrument_Host")
 
     # Attributes used for crawler
+    # null=true's added 11/2022 
+
     lid = models.CharField(max_length=MAX_LID_FIELD)
-    name = models.CharField(max_length=MAX_CHAR_FIELD)
+    name = models.CharField(max_length=MAX_CHAR_FIELD, null=True)
     type_of = models.CharField(
-        max_length=MAX_CHAR_FIELD, choices=INSTRUMENT_TYPES)
+        max_length=MAX_CHAR_FIELD, choices=INSTRUMENT_TYPES, null=True)
     vid = models.FloatField(default=1.0)
     starbase_label = models.CharField(max_length=MAX_CHAR_FIELD)
 
@@ -1226,9 +1239,11 @@ class Target(models.Model):
     # Relational Attributes
 
     # Attributes used for crawler
+    # null=True's added 11/2022
+
     lid = models.CharField(max_length=MAX_LID_FIELD)
-    name = models.CharField(max_length=MAX_CHAR_FIELD)
-    type_of = models.CharField(max_length=MAX_CHAR_FIELD, choices=TARGET_TYPES)
+    name = models.CharField(max_length=MAX_CHAR_FIELD, null=True)
+    type_of = models.CharField(max_length=MAX_CHAR_FIELD, choices=TARGET_TYPES, null=True)
     vid = models.FloatField(default=1.0)
     starbase_label = models.CharField(max_length=MAX_CHAR_FIELD)
 
@@ -1355,10 +1370,12 @@ class Instrument_Host(models.Model):
     targets = models.ManyToManyField(Target)
 
     # Attributes used for crawler
+    # null=True's added 11/2022
+
     lid = models.CharField(max_length=MAX_LID_FIELD)
-    name = models.CharField(max_length=MAX_CHAR_FIELD)
+    name = models.CharField(max_length=MAX_CHAR_FIELD, null=True)
     type_of = models.CharField(
-        max_length=MAX_CHAR_FIELD, choices=INSTRUMENT_HOST_TYPES)
+        max_length=MAX_CHAR_FIELD, choices=INSTRUMENT_HOST_TYPES, null=True)
     vid = models.FloatField(default=1.0)
     starbase_label = models.CharField(max_length=MAX_CHAR_FIELD)
 
@@ -1466,10 +1483,12 @@ class Facility(models.Model):
     instruments = models.ManyToManyField(Instrument)
 
     # Characteristic attributes
+    # null=True's added 11/2022
+
     lid = models.CharField(max_length=MAX_LID_FIELD)
-    name = models.CharField(max_length=MAX_CHAR_FIELD)
+    name = models.CharField(max_length=MAX_CHAR_FIELD, null=True)
     type_of = models.CharField(
-        max_length=MAX_CHAR_FIELD, choices=FACILITY_TYPES)
+        max_length=MAX_CHAR_FIELD, choices=FACILITY_TYPES, null=True)
     version = models.FloatField(default=1.0)
 
     vid = models.FloatField(default=1.0)
@@ -1611,8 +1630,10 @@ class Telescope(models.Model):
     facilities = models.ManyToManyField(Facility)
 
     # Attributes used for crawler
+    # null=True's added 11/2022
+
     lid = models.CharField(max_length=MAX_LID_FIELD)
-    name = models.CharField(max_length=MAX_CHAR_FIELD)
+    name = models.CharField(max_length=MAX_CHAR_FIELD, null=True)
     vid = models.FloatField(default=1.0)
     starbase_label = models.CharField(max_length=MAX_CHAR_FIELD)
 
