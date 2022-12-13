@@ -28,7 +28,7 @@ from django.core.mail import EmailMessage
 from django.shortcuts import render
 from django.template.loader import get_template
 from .models import Joke
-from .forms import ContactForm, UserContactForm, UploadedDocumentForm # I'm not sure uploaded document form should be here (k).
+# from .forms import ContactForm, UserContactForm, UploadedDocumentForm # I'm not sure uploaded document form should be here (k).
 import random
 import os
 import logging  # This document logs errors and is currently not in use in ELSA.  Feel free to develop this (k).

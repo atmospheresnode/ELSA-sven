@@ -83,7 +83,7 @@ SECRET_KEY = secret_key()
 
 #     SECURITY WARNING: don't run with debug turned on in production!
 #                   use live debug for quick checks in production.
-DEBUG = True
+DEBUG = False
 
 
 
@@ -177,8 +177,9 @@ WSGI_APPLICATION = 'elsa.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'test_elsa_offline_again', #Change this to whatever database is required
+        'NAME': 'test_elsa_newdb', #Change this to whatever database is required
         'HOST': '/var/lib/mysql/mysql.sock',
+        
 
         # 'ENGINE': 'django.db.backends.sqlite3',
         # 'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
