@@ -676,6 +676,12 @@ def bundle(request, pk_bundle):
             context_dict['alias_set'] = alias_set
             context_dict['alias_set_count'] = len(alias_set)
 
+            # fixes the refresh duplication issue - deric
+            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
+
+            # #fixes the refresh duplication issue, use this one for offline testing - deric
+            # return HttpResponseRedirect('/build/' + pk_bundle + '/')
+
         # After ELSAs friend hits submit, if the forms are completed correctly, we should enter
         # this conditional.
         print('\n\n----------------- CITATION_INFORMATION INFO -------------------------')
@@ -726,6 +732,12 @@ def bundle(request, pk_bundle):
                 citation_information_set)
             form_citation_information = CitationInformationForm()
             context_dict['form_citation_information'] = form_citation_information
+
+            # fixes the refresh duplication issue - deric
+            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
+
+            # #fixes the refresh duplication issue, use this one for offline testing - deric
+            # return HttpResponseRedirect('/build/' + pk_bundle + '/')
 
         additional_collections_list = []
         if form_additional_collections.is_valid():
@@ -784,85 +796,11 @@ def bundle(request, pk_bundle):
             context_dict['additional_collections_count'] = len(
                 additional_collections_set)
 
-        # if form_collections.is_valid():
-        #     print('form_collections are valid')
-        # # Create Collections Model Object and list of Collections, list of Collectables
-        #     bundle_name = form_bundle['name']
-        #     bundle_user = request.user
-        #     bundle_count = Bundle.objects.filter(name=bundle_name, user=bundle_user).count()
-        #     product_bundle = ProductBundleForm().save(commit=False)
-        #     product_bundle.bundle = bundle
+            # fixes the refresh duplication issue - deric
+            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
 
-        #     # if bundle_count == 0 or Bundle.objects.filter(name=bundle_name, user=bundle_user).exists():
-        #     collections = form_collections.save(commit=False)
-        #     collections.bundle = bundle
-        #     print('\nCollections model object:    {}'.format(collections))
-
-        #     # Each collection in collections needs 1) a model, 2) a bundle member entry in product
-        #     # bundle, 3) a directory for the collection, and 4) its own product collection label
-        #     for collection in collections.list():
-        #         print(collection)
-
-        #         # Create Product_Collection model for each collection
-        #         product_collection = ProductCollectionForm().save(commit=False)
-        #         product_collection.bundle = bundle
-        #         if collection == 'document':
-        #             product_collection.collection = 'Document'
-        #         elif collection == 'context':
-        #             product_collection.collection = 'Context'
-        #         elif collection == 'xml_schema':
-        #             product_collection.collection = 'XML_Schema'
-        #         elif collection == 'data':
-        #             product_collection.collection = 'Data'
-        #             # Create PDS4 compliant directories for each collection within the bundle.
-        #             collections.build_directories()
-        #         # elif collection == 'browse':
-        #         #     product_collection.collection = 'Browse'
-        #         # elif collection == 'geometry':
-        #         #     product_collection.collection = 'Geometry'
-        #         # elif collection == 'calibration':
-        #         #     product_collection.collection = 'Calibration'
-        #         # elif collection == 'data_enum':
-        #             print("saw the data enum")
-        #             break
-        #         product_collection.save()
-        #         print('\n\n{} Collection Directory:    {}'.format(collection, product_collection.directory()))
-
-        #         # Fill Product_Bundle with Collection Bundle Member Entries
-        #         label_list = open_label_with_tree(product_bundle.label()) #list = [label_object, label_root]
-        #         label_root = label_list[1]
-        #         print(' ... Adding Bundle Member Entries ... ')
-        #         label_root = product_bundle.build_bundle_member_entry(label_root, product_collection)
-        #         close_label(product_bundle.label(), label_root)
-        #         print(' ... Bundle Member Entry Added: {} ...'.format(product_collection.lid))
-
-        #         # Build Product_Collection label for all labels other than those found in the data collection.
-        #         print('-------------Start Build Product_Collection Base Case-----------------')
-        #         # if collection != 'data':
-        #         product_collection.build_base_case()
-
-        #         # Open Product_Collection label
-        #         print(' ... Opening Label ... ')
-        #         label_list = open_label_with_tree(product_collection.label())
-        #         label_root = label_list[1]
-
-        #         # Fill label
-        #         print(' ... Filling Label ... ')
-        #         #label_root = bundle.version.fill_xml_schema(label_root)
-        #         label_root = product_collection.fill_base_case(label_root)
-
-        #         # Close label
-        #         print(' ... Closing Label ... ')
-        #         close_label(product_collection.label(), label_root)
-        #         print('-------------End Build Product_Collection Base Case-----------------')
-
-        #         # Further develop context_dict entries for templates
-        #         context_dict['Bundle'] = bundle
-        #         context_dict['Product_Bundle'] = Product_Bundle.objects.get(bundle=bundle)
-        #         context_dict['Product_Collection_Set'] = Product_Collection.objects.filter(bundle=bundle)
-        #         collections.save()
-
-        #  return render(request, 'build/bundle/bundle.html' , context_dict)
+            # #fixes the refresh duplication issue, use this one for offline testing - deric
+            # return HttpResponseRedirect('/build/' + pk_bundle + '/')
 
         print('\n\n---------------------- DOCUMENT INFO -------------------------------')
         if form_document.is_valid():
@@ -926,6 +864,12 @@ def bundle(request, pk_bundle):
             context_dict['form_document'] = form_document
             context_dict['documents'] = Product_Document.objects.filter(
                 bundle=bundle)
+
+            # fixes the refresh duplication issue - deric
+            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
+
+            # #fixes the refresh duplication issue, use this one for offline testing - deric
+            # return HttpResponseRedirect('/build/' + pk_bundle + '/')
 
         return render(request, 'build/bundle/bundle.html', context_dict)
     else:
