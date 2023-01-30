@@ -3276,8 +3276,7 @@ class Product_Document(models.Model):
     files = models.CharField(max_length=MAX_CHAR_FIELD, default='')
     file_name = models.CharField(max_length=MAX_CHAR_FIELD, default='')
     local_id = models.CharField(max_length=MAX_CHAR_FIELD, default='')
-    document_std_id = models.CharField(
-        max_length=MAX_CHAR_FIELD, default='PDF/A')
+    document_std_id = models.CharField(max_length=MAX_CHAR_FIELD, default='PDF/A')
 
     # Meta
 
@@ -3530,6 +3529,30 @@ class Alias(models.Model):
             alternate_title.text = self.alternate_title
         if self.comment:
             comment = etree.SubElement(Alias, 'comment')
+            comment.text = self.comment
+
+        return label_root
+
+    # added for edit alias fixing purposes - deric
+    def find_alias(self, label_root):
+        # Find Identification_Area
+        Identification_Area = label_root.find('{}Identification_Area'.format(NAMESPACE))
+
+        # Find Alias_List.  If no Alias_List is found, make one.
+        Alias_List = Identification_Area.find('{}Alias_List'.format(NAMESPACE))
+        if Alias_List is None:
+            Alias_List = etree.SubElement(Identification_Area, 'Alias_List')
+
+        # Add Alias information
+        Alias = Alias_List.find('{}Alias'.format(NAMESPACE))
+        if self.alternate_id:
+            alternate_id = Alias.find('{}alternate_id'.format(NAMESPACE))
+            alternate_id.text = self.alternate_id
+        if self.alternate_title:
+            alternate_title = Alias.find('{}alternate_title'.format(NAMESPACE))
+            alternate_title.text = self.alternate_title
+        if self.comment:
+            comment = Alias.find('{}comment'.format(NAMESPACE))
             comment.text = self.comment
 
         return label_root

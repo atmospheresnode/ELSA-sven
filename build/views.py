@@ -1836,93 +1836,6 @@ def document(request, pk_bundle):
     return render(request, 'build/document/document.html', context_dict)
 
 
-# def document(request, pk_bundle):
-#     print('\n\n')
-#     print('-------------------------------------------------------------------------')
-#     print('\n\n--------------------- Add Document with ELSA ------------------------')
-#     print('------------------------------ DEBUGGER ---------------------------------')
-
-#     # Get bundle
-#     bundle = Bundle.objects.get(pk=pk_bundle)
-# #    collections = Collections.objects.get(bundle=bundle)
-
-#     # Secure ELSA by seeing if the user logged in is the same user associated with the Bundle
-#     if request.user == bundle.user:
-#         print('authorized user: {}'.format(request.user))
-
-#         # Get forms
-#         form_product_document = ProductDocumentForm(request.POST or None)
-
-#         # Declare context_dict for template
-#         context_dict = {
-#             'form_product_document':form_product_document,
-#             'bundle':bundle,
-
-#         }
-
-#         # After ELSAs friend hits submit, if the forms are completed correctly, we should enter
-#         # this conditional.  We must do [] things: 1. Create the Document model object, 2. Add a Product_Document label to the Document Collection, 3. Add the Document as an Internal_Reference to the proper labels (like Product_Bundle and Product_Collection).
-#         print('\n\n---------------------- DOCUMENT INFO -------------------------------')
-#         if form_product_document.is_valid():
-#             print('form_product_document is valid')
-
-#             # Create Document Model Object
-#             product_document = form_product_document.save(commit=False)
-#             product_document.bundle = bundle
-#             product_document.save()
-#             print('Product_Document model object: {}'.format(product_document))
-
-#             # Build Product_Document label using the base case template found
-#             # in templates/pds4/basecase
-#             print('\n---------------Start Build Product_Document Base Case------------------------')
-#             product_document.build_base_case()
-#             # Open label - returns a list where index 0 is the label object and 1 is the tree
-#             print(' ... Opening Label ... ')
-#             label_list = open_label_with_tree(product_document.label())
-#             print(label_list)
-#             label_root = label_list
-#             # Fill label - fills
-#             print(' ... Filling Label ... ')
-#             #label_root = bundle.version.fill_xml_schema(label_root)
-#             label_root = product_document.fill_base_case(label_root)
-#             # Close label
-#             print(' ... Closing Label ... ')
-#             close_label(label_list, label_root)
-#             print('---------------- End Build Product_Document Base Case -------------------------')
-
-#             # Add Document info to proper labels.  For now, I simply have Product_Bundle and Product_Collection with a correction for the data collection.  The variable all_labels_kill_data means all Product_Collection labels except those associated with data.  Further below, you will see the correction for the data collection where our label set is now data_labels.
-#             print('\n---------------Start Build Internal_Reference for Document-------------------')
-#             all_labels = []
-#             product_bundle = Product_Bundle.objects.get(bundle=bundle)
-#             product_collections_list = Product_Collection.objects.filter(bundle=bundle)
-
-#             all_labels.append(product_bundle)
-#             all_labels.extend(product_collections_list)
-
-#             for label in all_labels:
-#                 print('- Label: {}'.format(label))
-#                 print(' ... Opening Label ... ')
-#                 label_list = open_label_with_tree(label.label())
-#                 label_root = label_list
-
-#                 # Build Internal_Reference
-#                 print(' ... Building Internal_Reference ... ')
-#                 label_root = label.build_internal_reference(label_root, product_document)
-
-#                 # Close appropriate label(s)
-#                 print(' ... Closing Label ... ')
-#                 close_label(label.label(), label_root)
-#             print('\n----------------End Build Internal_Reference for Document-------------------')
-
-
-#         context_dict['documents'] = Product_Document.objects.filter(bundle=bundle)
-#         return render(request, 'build/document/document.html',context_dict)
-
-#     # Secure: Current user is not the user associated with the bundle, so...
-#     else:
-#         print('unauthorized user attempting to access a restricted area.')
-#         return redirect('main:restricted_access')
-
 
 def product_document(request, pk_bundle, pk_product_document):
     print('\n\n')
@@ -1939,82 +1852,109 @@ def product_document(request, pk_bundle, pk_product_document):
         product_document = Product_Document.objects.get(pk=pk_product_document)
 
         initial_product = {
-            'acknowledgement_text': product_document.acknowledgement_text,
-            'author_list': product_document.author_list,
-            'copyright': product_document.copyright,
-            'description': product_document.description,
-            'document_editions': product_document.document_editions,
-            'document_name': product_document.document_name,
-            'doi': product_document.doi,
-            'editor_list': product_document.editor_list,
-            'publication_date': product_document.publication_date,
-            'revision_id': product_document.revision_id,
-            'modification_date': product_document.modification_date,
-            'version_id': product_document.version_id,
+            'author_list':product_document.author_list,
+            'copyright':product_document.copyright,
+            'description':product_document.description,
+            'document_editions':product_document.document_editions,
+            'document_name':product_document.document_name,
+            'publication_date':product_document.publication_date,
+            'revision_id':product_document.revision_id,
+            'edition_name': product_document.edition_name,
+            'language': product_document.language,
+            'files': product_document.files,
+            'file_name': product_document.file_name,
+            'local_id': product_document.local_id,
+            'document_std_id': product_document.document_std_id,
         }
-        form_product_document = ProductDocumentForm(
-            request.POST or None, initial=initial_product)
 
+        form_product_document = ProductDocumentForm(request.POST or None, initial=initial_product)
+        documents = Product_Document.objects.filter(bundle=bundle)
+        
         if form_product_document.is_valid and form_product_document.has_changed:
-            print('Changed: {}'.format(form_product_document.changed_data))
+            
+            
+            all_labels = []
+            product_bundle = Product_Bundle.objects.get(bundle=bundle)
+            product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+            # We need to check for Product_Collections associated with Data products now.
+                    
+            all_labels.append(product_bundle)
+            all_labels.append(product_collections_list)
+
+            # Open appropriate label(s).  
+            print(' ... Opening Label ... ')
+
+            #breaks here
+            label_list = open_label_with_tree(product_document.label())
+            old_name = product_document.label()
 
             for change in form_product_document.changed_data:
-
-                if change == 'acknowledgement_text':
-                    product_document.acknowledgement_text = form_product_document['acknowledgement_text'].value(
-                    )
-
-                elif change == 'author_list':
-                    product_document.author_list = form_product_document['author_list'].value(
-                    )
+                if change == 'author_list':
+                   product_document.author_list = form_product_document['author_list'].value()
 
                 elif change == 'copyright':
-                    product_document.copyright = form_product_document['copyright'].value(
-                    )
+                   product_document.copyright = form_product_document['copyright'].value()
 
                 elif change == 'description':
-                    product_document.description = form_product_document['description'].value(
-                    )
+                   product_document.description = form_product_document['description'].value()
 
                 elif change == 'document_editions':
-                    product_document.document_editions = form_product_document['document_editions'].value(
-                    )
+                   product_document.document_editions = form_product_document['document_editions'].value()
 
                 elif change == 'document_name':
-                    product_document.document_name = form_product_document['document_name'].value(
-                    )
-
-                elif change == 'doi':
-                    product_document.doi = form_product_document['doi'].value()
-
-                elif change == 'editor_list':
-                    product_document.editor_list = form_product_document['editor_list'].value(
-                    )
+                   product_document.document_name = form_product_document['document_name'].value()
 
                 elif change == 'publication_date':
-                    product_document.publication_date = form_product_document['publication_date'].value(
-                    )
+                   product_document.publication_date = form_product_document['publication_date'].value()
 
                 elif change == 'revision_id':
-                    product_document.revision_id = form_product_document['revision_id'].value(
-                    )
+                   product_document.revision_id = form_product_document['revision_id'].value()
+                
+                elif change == 'edition_name':
+                    product_document.edition_name = form_product_document['edition_name'].value()
+                
+                elif change == 'language':
+                    product_document.language = form_product_document['language'].value()
+                
+                elif change == 'files':
+                    product_document.files = form_product_document['files'].value()
+                
+                elif change == 'file_name':
+                    product_document.file_name = form_product_document['file_name'].value()
+                
+                elif change == 'local_id':
+                    product_document.local_id = form_product_document['local_id'].value()
+                
+                elif change == 'document_std_id':
+                    product_document.document_std_id = form_product_document['document_std_id'].value()
+                
+                product_document.save()
 
-                elif change == 'modification_date':
-                    product_document.modification_date = form_product_document['modification_date'].value(
-                    )
+            label_root = label_list[1]
 
-                elif change == 'version_id':
-                    product_document.version_id = form_product_document['version_id'].value(
-                    )
-        documents = Product_Document.objects.filter(bundle=bundle)
+            # fix the document name path change error - deric
+            os.rename(old_name, product_document.label())
+
+            # Build document label
+            print(' ... Building Label ... ')
+            label_root = product_document.fill_base_case(label_root)
+            #alias.alias_list.append(label_root)
+
+            # Close appropriate label(s)
+            print(' ... Closing Label ... ')
+            close_label(product_document.label(), label_root)
+
+
+        print('Changed: {}'.format(form_product_document.changed_data))
 
         context_dict = {
-            'bundle': bundle,
-            'documents': documents,
-            'form_product_document': form_product_document,
-            'product_document': product_document,
+            'bundle':bundle,
+            'documents':documents,
+            'form_product_document':form_product_document,
+            'product_document':product_document,
         }
 
+        #possibly change this to redirect to the home bundle page
         return render(request, 'build/document/product_document.html', context_dict)
 
     # Secure: Current user is not the user associated with the bundle, so...
