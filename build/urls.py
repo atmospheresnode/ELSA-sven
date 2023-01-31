@@ -79,7 +79,7 @@ urlpatterns = [
     url(r'^(?P<pk_bundle>\d+)/data/array/display_dictionary/$', views.display_dictionary, name='display_dictionary'),
     
     # Directory 
-    url(r'^(?P<path>.*)/$', views.index, name='directory_view'),
+    url(r'^(?P<path>.*)/$', views.dir_index, name='directory_view'),
 
     # Document
     url(r'^(?P<pk_bundle>\d+)/document/$', views.document, name='document'),
