@@ -1,54 +1,3 @@
-{% extends 'main/base-k.html' %}
-{% load staticfiles %}
-
-
-
-
-{% block title_block %}
-Add Context: Instrument Host
-{% endblock %}
-
-
-
-
-{% block main_header_block %}
-Add Context: Instrument Host
-{% endblock %}
-
-
-
-{% block body_block %}
-<!--First row-->
-<div class="row pt-2">
-    <!--Column-->
-    <div class="col-md-12">
-        <h4 class="card-header stylish-color white-text text-center z-depth-2">Select your instrument host</h4>
-</br>
-    </div>
-    <!--/.Column-->
-</div>
-<!--First row-->
-<!--Second row-->
-<div class="row pt-2">
-    <!--Column-->
-    <div class="col-md-12">
-        <form class="card-header black-text text-left z-depth-2" id="query01" method="post" action="{% url 'build:context_search_instrument_host' bundle.pk investigation.pk  %}">
-		<p>From the drop-down menu, select which type of host you plan to use. The initial selection will be <strong>instrument host</strong>(for mobile hosts) or <strong>facility</strong>(for stationary hosts). After selecting one of these two options you will be given a pull-down menu for the appropriate set. Instrument hosts include mobile platforms like spacecraft, rovers, landers, etc. whereas facilities include laboratories and observatories. If you plan to use telescopes and/or instruments not associated with a host, select the No Host option.</p>
-
-            {% csrf_token %}
-            {{ form_instrument_host }}
-
-            {{ form.errors }}
-            {{ form.non_field_errors }}
-
-            <input type="submit" class="btn btn-default" value="Submit"/>
-
-        </form> 
-	</br>      
-    </div>
-    <!--/.Column-->
-</div>
-<!--/.Row-->
 <!--Row-->
 <div class="row pt-2">
     <!--Column-->
@@ -106,11 +55,3 @@ Add Context: Instrument Host
     <!--/.Column-->
 
 <!--/.Row-->
-
-{% endblock %}
-
-
-
-{% block footie_block %}    
-{% endblock %}
-

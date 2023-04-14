@@ -22,11 +22,11 @@ Specify Some Data
 </div>
 
 <div class="card">
-<h3>{{ data_object.name }}</h3>
+<!-- <h3>{{ data_object.name }}</h3> -->
 
     <!--First column-->
     <div class="card-body">
-	<form id = "data_form" method="post" action="">
+	<form id ="data_form" method="post" action="{% url 'build:table_creation' bundle.pk data_object.pk %}">
         {% csrf_token %}
 	    {{ data_form.as_p }}
 	    <input type="submit" value="Submit" />

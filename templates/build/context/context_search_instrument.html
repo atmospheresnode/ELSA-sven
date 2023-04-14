@@ -22,9 +22,14 @@ Add Context: Instrument
 <div class="row pt-2">
     <!--Column-->
     <div class="col-md-12">
-        <h4>Select your instrument</h4>
+        <h4 class="card-header stylish-color white-text text-center z-depth-2">Select your Investigation</h4>
+    </br>
+</div>
+
+<div class="card">
+    <div class="card-header black-text text-left z-depth-2">
+        <p>Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational.</p>
     </div>
-    <!--/.Column-->
 </div>
 <!--First row-->
 <!--Second row-->
@@ -46,73 +51,67 @@ Add Context: Instrument
 </div>
 <!--/.Row-->
 <!--Row-->
-<div class="row pt-2">
-    <!--Column-->
-    <div class="col-md-12">
-        <h4>All of {{ bundle.name }}'s Instrument Products</h4>
-        <p>This is the last step to adding context products starting from investigation.</p>
-    </div>
-    <!--/.Column-->
-</div>
+
 <!--/.Row-->
 <!--Row-->
 <div class="row pt-2">
     <!--Column-->
     <div class="col-md-12">
         {% if instrument %}
-        <p>Note: {{ instrument }} added to {{ bundle }}.</p>
+        <div class="row pt-2">
+            <!--Column-->
+            <div class="col-md-12">
+                <h4 class="card-header stylish-color white-text text-center z-depth-2">Recently Added Instrument</h4>
+            </br>
+            <p class="card-header black-text text-left z-depth-2">Select an investigation below associated with your bundle to add instrument hosts from that investigation to your bundle. Resume the bundle building process by adding instrument hosts, instruments, and targets to ensure a most complete PDS4 bundle.</br>
+            </p>
+            </div>
+        </div>
+        <br>
+
+        <div class="card-header black-text text-left z-depth-2">
+        <div class="row">
+            <!--Card-->
+            <div class="col-sm-6 col-md-3">
+                <div class="button">
+                    <!--Link-->
+                    <a href="{% url 'build:context_search_target_investigation' bundle.pk investigation.pk %}">
+                        <!--Card content-->
+                        <div class="card-body">
+                            <!--Title-->
+                            <h4 class="card-title">{{ instrument.name }}</h4>
+                            <!--/.Title-->
+                            <!--Text-->
+                            <p class="card-text">{{ instrument.lid }} <br/><br/><br/></p>
+                            <!--/.Text-->
+                        </div>
+                        <!--/.Card content-->
+                        <!--Image-->
+                    </a>
+                    <!--/.Link-->
+                </div>
+            </div>
+            <!--/.Card-->
+            </br></br>
+        </div>
+        </div>
+
         {% endif %}
     </div>
     <!--/.Column-->
 </div>
 <!--/.Row-->
 <!--Row-->
+<hr>
 
-{% for ins in bundle_instrument_set %}
-<div class="row">
-    <!--Card-->
-    <div class="col-sm-6 col-md-3">
-        <div class="button">
-            <!--Link-->
-            <a href="#">
-                <!--Card content-->
-                <div class="card-body">
-                    <!--Title-->
-                    <h4 class="card-title">{{ ins.name }}</h4>
-                    <!--/.Title-->
-                    <!--Text-->
-                    <p class="card-text">{{ ins.lid }} <br/><br/><br/></p>
-                    <!--/.Text-->
-                </div>
-                <!--/.Card content-->
-                <!--Image-->
-            </a>
-            <!--/.Link-->
-        </div>
-    </div>
-    <!--/.Card-->
-    </br></br>
-</div>
-
-{% endfor %}
-<!--/.Row-->
-<!--Row-->
 <div class="row pt-2">
-    <!--Column-->
-    <div class="col-md-8">
-        <p>This is the last step to adding context to ensure a most complete PDS4 bundle.</p>
-    </div>
-    <!--/.Column-->
-    
-    <!--Column-->
-    <div class="col-md-4">
-        <a href="{% url 'build:bundle' bundle.pk %}">
-        <input type="submit" class="btn btn-success" value="Go Back to Bundle"/>
+    <div class="col-md-12 text-right ">
+        <a href="{% url 'build:context_search' bundle.pk %}">
+            <input type="submit" class="btn btn-default" value="Go Back to Context Search"/>
         </a>
     </div>
     <!--/.Column-->
 </div>
-<!--/.Row-->
 
 {% endblock %}
 
