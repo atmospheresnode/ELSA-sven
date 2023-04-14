@@ -39,15 +39,18 @@ urlpatterns = [
 
 
     # Context
+    url(r'^$', views.context, name='context'),
     url(r'^(?P<pk_bundle>\d+)/contextsearch/$', views.context_search, name='context_search'),
     url(r'^(?P<pk_bundle>\d+)/contextsearch/investigation/$', views.context_search_investigation, name='context_search_investigation'),
-    url(r'^(?P<pk_bundle>\d+)/contextsearch/investigation/(?P<pk_investigation>\d+)/instrument_host/$', views.context_search_instrument_host, name='context_search_instrument_host'),
-    url(r'^(?P<pk_bundle>\d+)/contextsearch/investigation/(?P<pk_investigation>\d+)/instrument_host/(?P<pk_instrument_host>\d+)/target/$', views.context_search_target, name='context_search_target'),
+    url(r'^(?P<pk_bundle>\d+)/contextsearch/investigation/(?P<pk_investigation>\d+)/instrument_host/$', views.context_search_instrument_host_and_facility, name='context_search_instrument_host_and_facility'),
+    url(r'^(?P<pk_bundle>\d+)/contextsearch/investigation/(?P<pk_investigation>\d+)/target/$', views.context_search_target_inv, name='context_search_target_investigation'),
     url(r'^(?P<pk_bundle>\d+)/contextsearch/investigation/(?P<pk_investigation>\d+)/instrument_host/(?P<pk_instrument_host>\d+)/instrument/$', views.context_search_instrument, name='context_search_instrument'),
     url(r'^(?P<pk_bundle>\d+)/contextsearch/facility/$', views.context_search_facility, name='context_search_facility'),
-    url(r'^(?P<pk_bundle>\d+)/contextsearch/facility/(?P<pk_facility>\d+)/instrument/$', views.context_search_facility_instrument, name='context_search_facility_instrument'),
-    url(r'^(?P<pk_bundle>\d+)/contextsearch/telescope/$', views.context_search_telescope, name='context_search_telescope'),
-    url(r'^$', views.context, name='context'),
+    url(r'^(?P<pk_bundle>\d+)/contextsearch/investigation/(?P<pk_investigation>\d+)/facility/(?P<pk_facility>\d+)/instrument/$', views.context_search_facility_instrument, name='context_search_facility_instrument'),
+    url(r'^(?P<pk_bundle>\d+)/contextsearch/investigation/(?P<pk_investigation>\d+)/facility/(?P<pk_facility>\d+)/telescope/$', views.context_search_telescope, name='context_search_telescope'),
+    url(r'^(?P<pk_bundle>\d+)/contextsearch/investigation/(?P<pk_investigation>\d+)/facility/(?P<pk_facility>\d+)/instrument_target/$', views.context_search_target_and_instrument, name='context_search_target_and_instrument'),
+    url(r'^(?P<pk_bundle>\d+)/contextsearch/target/$', views.context_search_target, name='context_search_target'),
+
     url(r'^investigations/$', views.investigations, name='investigations'),
     url(r'^instruments/$', views.instruments, name='instruments'),
     url(r'^instrument_hosts/$', views.instrument_hosts, name='instrument_hosts'),

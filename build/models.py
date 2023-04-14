@@ -135,10 +135,6 @@ class Version(models.Model):
             if number[i].isalpha() is False:
                 new_number = new_number + number[i] + "."
             else:
-                if number[i] == 'A':
-                    new_number = new_number + '10' + "."
-                if number[i] == 'B':
-                    new_number = new_number + '11' + "."
                 if number[i] == 'C':
                     new_number = new_number + '12' + "."
                 if number[i] == 'D':
@@ -149,7 +145,14 @@ class Version(models.Model):
                     new_number = new_number + '15' + "."
                 if number[i] == 'G':
                     new_number = new_number + '16' + "."
+                if number[i] == 'H':
+                    new_number = new_number + '17' + "."
+                if number[i] == 'I':
+                    new_number = new_number + '18' + "."
+                if number[i] == 'J':
+                    new_number = new_number + '19' + "."
             i = i + 1
+
         '''
         # Add a period after each digit.  Ex: 1234 -> 1.2.3.4.
         for each_digit in version_number:
@@ -787,7 +790,7 @@ class InvestigationManager(models.Manager):
     def update_version(self, product_dict):
         self.vid = product_dict['vid']
         self.lid = product_dict['lid']
-        self.starbase_label = product_dict['url']
+        self.file_ref = product_dict['url']
         self.save()
 
 
@@ -808,7 +811,7 @@ class Investigation(models.Model):
     lid = models.CharField(max_length=MAX_LID_FIELD)
     vid = models.FloatField(default=1.0)
     internal_references = []
-    starbase_label = models.CharField(max_length=MAX_CHAR_FIELD)
+    file_ref = models.CharField(max_length=MAX_CHAR_FIELD)
 
     # Relational Attributes
     # (added 11/2022 by zena)
@@ -824,14 +827,16 @@ class Investigation(models.Model):
     def update_version(self, product_dict):
         self.vid = product_dict['vid']
         self.lid = product_dict['lid']
-        self.starbase_label = product_dict['url']
+        self.file_ref = product_dict['url']
         self.save()
 
     def __str__(self):
         return self.name
 
     def fill_label(self, bundle):
+        # Investigation = root
 
+        # Below is cursed do not touch - Said
         # Get all xml labels in bundle directory
         xml_path_list = get_xml_path(bundle.directory())
 
@@ -991,7 +996,7 @@ class InstrumentManager(models.Manager):
     def update_version(self, product_dict):
         self.vid = product_dict['vid']
         self.lid = product_dict['lid']
-        self.starbase_label = product_dict['url']
+        self.file_ref = product_dict['url']
         self.save()
 
 
@@ -1075,7 +1080,10 @@ class Instrument(models.Model):
     type_of = models.CharField(
         max_length=MAX_CHAR_FIELD, choices=INSTRUMENT_TYPES, null=True)
     vid = models.FloatField(default=1.0)
-    starbase_label = models.CharField(max_length=MAX_CHAR_FIELD)
+    file_ref = models.CharField(max_length=MAX_CHAR_FIELD)
+
+    inv = []
+    ih = []
 
     # Attributes used to manage Instrument Host object
     #objects = InstrumentManager()
@@ -1087,7 +1095,7 @@ class Instrument(models.Model):
     def update_version(self, product_dict):
         self.vid = product_dict['vid']
         self.lid = product_dict['lid']
-        self.starbase_label = product_dict['url']
+        self.file_ref = product_dict['url']
         self.save()
 
     def fill_label(self, bundle):
@@ -1197,7 +1205,7 @@ class TargetManager(models.Manager):
     def update_version(self, product_dict):
         self.vid = product_dict['vid']
         self.lid = product_dict['lid']
-        self.starbase_label = product_dict['url']
+        self.file_ref = product_dict['url']
         self.save()
 
 
@@ -1245,7 +1253,7 @@ class Target(models.Model):
     name = models.CharField(max_length=MAX_CHAR_FIELD, null=True)
     type_of = models.CharField(max_length=MAX_CHAR_FIELD, choices=TARGET_TYPES, null=True)
     vid = models.FloatField(default=1.0)
-    starbase_label = models.CharField(max_length=MAX_CHAR_FIELD)
+    file_ref = models.CharField(max_length=MAX_CHAR_FIELD)
 
     # Attributes used to manage Instrument Host object
     #objects = TargetManager()
@@ -1257,7 +1265,7 @@ class Target(models.Model):
     def update_version(self, product_dict):
         self.vid = product_dict['vid']
         self.lid = product_dict['lid']
-        self.starbase_label = product_dict['url']
+        self.file_ref = product_dict['url']
         self.save()
 
     def fill_label(self, bundle):
@@ -1349,7 +1357,7 @@ class Instrument_HostManager(models.Manager):
     def update_version(self, product_dict):
         self.vid = product_dict['vid']
         self.lid = product_dict['lid']
-        self.starbase_label = product_dict['url']
+        self.file_ref = product_dict['url']
         self.save()
 
 
@@ -1369,6 +1377,8 @@ class Instrument_Host(models.Model):
     instruments = models.ManyToManyField(Instrument)
     targets = models.ManyToManyField(Target)
 
+    inv = []
+
     # Attributes used for crawler
     # null=True's added 11/2022
 
@@ -1377,7 +1387,7 @@ class Instrument_Host(models.Model):
     type_of = models.CharField(
         max_length=MAX_CHAR_FIELD, choices=INSTRUMENT_HOST_TYPES, null=True)
     vid = models.FloatField(default=1.0)
-    starbase_label = models.CharField(max_length=MAX_CHAR_FIELD)
+    file_ref = models.CharField(max_length=MAX_CHAR_FIELD)
 
     # Attributes used to manage Instrument Host object
     #objects = Instrument_HostManager()
@@ -1390,7 +1400,7 @@ class Instrument_Host(models.Model):
     def update_version(self, product_dict):
         self.vid = product_dict['vid']
         self.lid = product_dict['lid']
-        self.starbase_label = product_dict['url']
+        self.file_ref = product_dict['url']
         self.save()
 
     def fill_label(self, bundle):
@@ -1482,6 +1492,8 @@ class Facility(models.Model):
     # Relational attribute
     instruments = models.ManyToManyField(Instrument)
 
+    inv = []
+
     # Characteristic attributes
     # null=True's added 11/2022
 
@@ -1492,7 +1504,7 @@ class Facility(models.Model):
     version = models.FloatField(default=1.0)
 
     vid = models.FloatField(default=1.0)
-    starbase_label = models.CharField(max_length=MAX_CHAR_FIELD)
+    file_ref = models.CharField(max_length=MAX_CHAR_FIELD)
 
     # Accessors
     def name_lid_case(self):
@@ -1508,7 +1520,7 @@ class Facility(models.Model):
     def update_version(self, product_dict):
         self.vid = product_dict['vid']
         self.lid = product_dict['lid']
-        self.starbase_label = product_dict['url']
+        self.file_ref = product_dict['url']
         self.save()
 
     def fill_label(self, bundle):
@@ -1619,7 +1631,7 @@ class TelescopeManager(models.Manager):
     def update_version(self, product_dict):
         self.vid = product_dict['vid']
         self.lid = product_dict['lid']
-        self.starbase_label = product_dict['url']
+        self.file_ref = product_dict['url']
         self.save()
 
 
@@ -1635,7 +1647,10 @@ class Telescope(models.Model):
     lid = models.CharField(max_length=MAX_LID_FIELD)
     name = models.CharField(max_length=MAX_CHAR_FIELD, null=True)
     vid = models.FloatField(default=1.0)
-    starbase_label = models.CharField(max_length=MAX_CHAR_FIELD)
+    file_ref = models.CharField(max_length=MAX_CHAR_FIELD)
+
+    inv = []
+    fac = []
 
     # Attributes used to manage Instrument Host object
     #objects = Instrument_HostManager()
@@ -1648,7 +1663,7 @@ class Telescope(models.Model):
     def update_version(self, product_dict):
         self.vid = product_dict['vid']
         self.lid = product_dict['lid']
-        self.starbase_label = product_dict['url']
+        self.file_ref = product_dict['url']
         self.save()
 
     def fill_label(self, bundle):
@@ -1724,18 +1739,14 @@ class Bundle(models.Model):
     )
 
     VERSION_CHOICES = (
+        ('1J00', '1J00'),
+        ('1I00', '1I00'),
+        ('1H00', '1H00'),
         ('1G00', '1G00'),
         ('1F00', '1F00'),
         ('1E00', '1E00'),
         ('1D00', '1D00'),
         ('1C00', '1C00'),
-        ('1B10', '1B10'),
-        ('1B00', '1B00'),
-        ('1A10', '1A10'),
-        ('1A00', '1A00'),
-        ('1900', '1900'),
-        ('1800', '1800'),
-        ('1700', '1700'),
     )
 
     bundle_type = models.CharField(
@@ -2772,47 +2783,69 @@ class Data(models.Model):
         verbose_name_plural = 'Data'
 
     def __str__(self):
-        return 'Data associated'  # Better this once we work on data more
+        return self.name  # Better this once we work on data more
 
     # get_directory_name returns the name of the directory for this data object.
 
-    def get_directory_name(self):
-        # Edit name for directory
-        # replace all spaces with underscores
-        name = replace_all(self.name.lower(), ' ', '_')
-        return 'data_{}_{}'.format(self.processing_level.lower(), name)
+    # def get_directory_name(self):
+    #     # Edit name for directory
+    #     # replace all spaces with underscores
+    #     name = replace_all(self.name.lower(), ' ', '_')
+    #     return 'data_{}_{}'.format(self.processing_level.lower(), name)
 
     # build_directory builds a directory of the form data_<processing_level>.
     # Function make_directory(path) can be found in chocolate.py.  It checks the existence
     # of a directory before creating the directory.
 
     def build_directory(self):
+        data_directory = os.path.join(self.bundle.directory(),'data_{}'.format(self.processing_level.lower()))
+        make_directory(data_directory)
 
-        # Add check to see if data directory exists
-        data_directory = os.path.join(
-            self.bundle.directory(), self.get_directory_name())
-
-        if not os.path.exists(data_directory):
-            print('Creating directory')
-            make_directory(data_directory)
-            return True
-        else:
-            print('Directory already created')
-            return False
-
-    def build_product_collection(self):
-        print("Building product collection label - base case")
-        p = Product_Collection.objects.get(
-            bundle=self.bundle, collection='Data')
-        p.build_base_case_data(self)
+    # def build_product_collection(self):
+    #     print("Building product collection label - base case")
+    #     p = Product_Collection.objects.get(
+    #         bundle=self.bundle, collection='Data')
+    #     p.build_base_case_data(self)
 
     # directory returns the file path associated with the given model.
 
     def directory(self):
+        data_collection_name = 'data_{}'.format(self.processing_level.lower())
         data_directory = os.path.join(
             self.bundle.directory(), self.get_directory_name())
         return data_directory
 
+@python_2_unicode_compatible
+class Data_Object(models.Model):
+    DATA_TYPES = (
+        ('Table', 'Table'),
+        ('Array', 'Array'),
+        ('Table Binary','Table Binary'),
+        ('Table Character','Table Character'),
+        ('Table Delimited','Table Delimited'),
+    )
+    
+    name = models.CharField(max_length=251)
+    data_type = models.CharField(max_length=256,choices=DATA_TYPES, default='Table Delimited',)
+    data = models.ForeignKey(Data, on_delete=models.CASCADE, null=True,)
+    collections = models.ForeignKey(Collections, on_delete=models.CASCADE, null=True,)
+
+    class Meta:
+        verbose_name_plural = 'Data Object'
+
+    def build_data_directory(self):
+        data_directory = os.path.join(self.bundle.directory(), self.name)
+        make_directory(data_directory)
+
+    def label(self):
+        return os.path.join(self.data.bundle.directory(), self.name)
+
+    def build_base_case(self):
+        pass
+        
+
+    def __str__(self):
+        return 'Data Prep'
 
 """
 Table and Field Objects
@@ -2827,7 +2860,6 @@ Table and Field Objects
 
 @python_2_unicode_compatible
 class Table_Delimited(models.Model):
-
     DELIMITER_CHOICES = (
         ('Comma', 'Comma'),
         ('Horizontal Tab', 'Horizontal Tab'),
@@ -2836,15 +2868,104 @@ class Table_Delimited(models.Model):
     )
 
     name = models.CharField(max_length=256, blank=True)
-    offset = models.IntegerField(default=-1)
-    object_length = models.IntegerField(default=-1)
+    offset = models.IntegerField(default=1)
+    object_length = models.IntegerField(default=1)
     description = models.CharField(max_length=5000, default="unset")
-    records = models.IntegerField(default=-1)
-    field_delimiter = models.CharField(
-        max_length=256, choices=DELIMITER_CHOICES, default="Comma", blank=True)
-    fields = models.IntegerField(default=-1)
+    records = models.IntegerField(default=1)
+    field_delimiter = models.CharField(max_length=256, choices=DELIMITER_CHOICES, default="Comma", blank=True)
+    fields = models.IntegerField(default=1)
     data = models.ForeignKey(Data, on_delete=models.CASCADE, null=True,)
     bundle = models.ForeignKey(Bundle, on_delete=models.CASCADE, null=True)
+
+    def name_label_case(self):
+        """
+            This could be improved to ensure disallowed characters for a file name are not contained
+            in name.
+        """
+        name_edit = self.data.name.lower()
+        name_edit = replace_all(name_edit, ' ', '_')
+        name_edit = '{}.xml'.format(name_edit)
+        return name_edit
+
+    def label(self):
+        """
+            label returns the physical label location in ELSAs archive
+        """
+        return os.path.join(self.directory(), self.name_label_case())
+
+        # directory returns the file path associated with the given model.
+    def directory(self):
+        data_collection_name = 'data_{}'.format(self.data.processing_level.lower())
+        data_directory = os.path.join(self.data.bundle.directory(), data_collection_name)
+        return data_directory  
+
+    def build_data_file(self):
+        # Locate base case Product_Bundle template found in templates/pds4_labels/base_case/product_bundle
+        source_file = os.path.join(settings.TEMPLATE_DIR, 'pds4_labels')
+        source_file = os.path.join(source_file, 'base_templates')
+        
+        source_file = os.path.join(source_file, 'data_table_delimited.xml')
+        out_file = os.path.join(self.directory(), self.data.name + '.xml')
+
+        #set selected version
+        update = Version()
+        bundle = Bundle()
+        print (source_file + "<<<<<<<<")
+
+        update.version_update_old(self.data.bundle.version, source_file,out_file)
+        
+    def fill_base_case(self, root):
+
+        Table_Delimited = root
+
+        # Fill in Identification_Area
+        print("id area")
+        Identification_Area = Table_Delimited.find('{}Identification_Area'.format(NAMESPACE))
+
+        # lid
+        logical_identifier = Identification_Area.find('{}logical_identifier'.format(NAMESPACE))
+        logical_identifier.text = 'urn:{0}:{1}:{2}'.format(self.data.bundle.user.userprofile.agency, self.data.bundle.name_lid_case(), self.data.name) # where agency is something like nasa:pds
+
+        print("version")
+        version_id = Identification_Area.find('{}version_id'.format(NAMESPACE))
+        version_id.text = '1.0'  # Can make this better
+
+        print("title")
+        title = Identification_Area.find('{}title'.format(NAMESPACE))
+        title.text = self.name
+
+        print("info model")
+        information_model_version = Identification_Area.find('information_model_version')
+        #information_model_version.text = self.bundle.version.with_dots()
+
+        f = Table_Delimited.find('{}File_Area_Observational'.format(NAMESPACE))
+        td = f.find('{}Table_Delimited'.format(NAMESPACE))
+        
+        if self.name:
+            name = td.find('{}name'.format(NAMESPACE))
+            name.text = self.name
+
+        if self.offset:
+            offset = td.find('{}offset'.format(NAMESPACE))
+            offset.text = str(self.offset)
+        
+        if self.object_length:
+            object_length = td.find('{}object_length'.format(NAMESPACE))
+            object_length.text = str(self.object_length)
+
+        if self.description:
+            description = td.find('{}description'.format(NAMESPACE))
+            description.text = self.description
+
+        if self.records:
+            records = td.find('{}records'.format(NAMESPACE))
+            records.text = str(self.records)
+        
+        if self.field_delimiter:
+            field_delimiter = td.find('{}field_delimiter'.format(NAMESPACE))
+            field_delimiter.text = self.field_delimiter
+        
+        return root
 
     def __str__(self):
         return smart_str(self.id)
@@ -2853,11 +2974,85 @@ class Table_Delimited(models.Model):
 @python_2_unicode_compatible
 class Table_Binary(models.Model):
     name = models.CharField(max_length=256, blank=True)
-    offset = models.IntegerField(default=-1)
-    records = models.IntegerField(default=-1)
-    fields = models.IntegerField(default=-1)
+    offset = models.IntegerField(default=1)
+    records = models.IntegerField(default=1)
+    fields = models.IntegerField(default=1)
     data = models.ForeignKey(Data, on_delete=models.CASCADE, null=True,)
     bundle = models.ForeignKey(Bundle, on_delete=models.CASCADE, null=True)
+
+    def name_label_case(self):
+        name_edit = self.data.name.lower()
+        name_edit = replace_all(name_edit, ' ', '_')
+        name_edit = '{}.xml'.format(name_edit)
+        return name_edit
+
+    def label(self):
+        return os.path.join(self.directory(), self.name_label_case())
+
+    def directory(self):
+        data_collection_name = 'data_{}'.format(self.data.processing_level.lower())
+        data_directory = os.path.join(self.data.bundle.directory(), data_collection_name)
+        return data_directory  
+
+    def build_data_file(self):
+        # Locate base case Product_Bundle template found in templates/pds4_labels/base_case/product_bundle
+        source_file = os.path.join(settings.TEMPLATE_DIR, 'pds4_labels')
+        source_file = os.path.join(source_file, 'base_templates')
+        
+        source_file = os.path.join(source_file, 'table_binary.xml')
+        out_file = os.path.join(self.directory(), self.data.name + '.xml')
+
+        #set selected version
+        update = Version()
+        bundle = Bundle()
+        print (source_file + "<<<<<<<<")
+
+        update.version_update_old(self.data.bundle.version, source_file,out_file)
+        
+    def fill_base_case(self, root):
+
+        Table_Binary = root
+
+        # Fill in Identification_Area
+        print("id area")
+        Identification_Area = Table_Binary.find('{}local_identifier'.format(NAMESPACE))
+
+        # lid
+        logical_identifier = Identification_Area.find('{}logical_identifier'.format(NAMESPACE))
+        logical_identifier.text = 'urn:{0}:{1}:{2}'.format(self.data.bundle.user.userprofile.agency, self.data.bundle.name_lid_case(), self.data.name) # where agency is something like nasa:pds
+
+        print("version")
+        version_id = Identification_Area.find('{}version_id'.format(NAMESPACE))
+        version_id.text = '1.0'  # Can make this better
+
+        print("title")
+        title = Identification_Area.find('{}title'.format(NAMESPACE))
+        title.text = self.name
+
+        print("info model")
+        information_model_version = Identification_Area.find('information_model_version')
+        #information_model_version.text = self.bundle.version.with_dots()
+
+        f = Table_Binary.find('{}File_Area_Observational'.format(NAMESPACE))
+        tb = f.find('{}Table_Binary'.format(NAMESPACE))
+        
+        if self.name:
+            name = tb.find('{}name'.format(NAMESPACE))
+            name.text = self.name
+
+        if self.offset:
+            offset = tb.find('{}offset'.format(NAMESPACE))
+            offset.text = str(self.offset)
+
+        if self.records:
+            records = tb.find('{}records'.format(NAMESPACE))
+            records.text = str(self.records)
+        
+        if self.fields:
+            fields = tb.find('{}fields'.format(NAMESPACE))
+            fieldss.text = str(self.fields)
+        
+        return root
 
     def __str__(self):
         return smart_str(self.id)

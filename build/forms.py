@@ -240,11 +240,27 @@ class DataEnum(forms.ModelForm):
 
 
 class DataForm(forms.ModelForm):
+    name = forms.CharField(required=True)
     class Meta(object):
         model = Data
         exclude = ('bundle',)
         #exclude = ('bundle','data_enum',)
 
+DATA_TYPES = (
+    ('Table', 'Table'),
+    ('Array', 'Array'),
+    ('Table Binary','Table Binary'),
+    ('Table Character','Table Character'),
+    ('Table Delimited','Table Delimited'),
+)
+
+class DataObjectForm(forms.ModelForm):
+    name = forms.CharField(required=True)
+    data_type = forms.ChoiceField(required=True, choices=DATA_TYPES)
+    class Meta(object):
+        model = Data_Object
+        exclude = ('bundle', 'collections')
+        #exclude = ('bundle','data_enum',)
 
 """
     Facility
@@ -310,6 +326,7 @@ class InstrumentHostForm(forms.Form):
     def __init__(self, *args, **kwargs):
         self.pk_inv = kwargs.pop('pk_inv')
         super(InstrumentHostForm, self).__init__(*args, **kwargs)
+        print(Instrument_Host.objects.filter(investigations=self.pk_inv))
         self.fields['instrument_host'] = forms.ModelChoiceField(
             queryset=Instrument_Host.objects.filter(investigations=self.pk_inv), required=True)
 
@@ -325,12 +342,20 @@ class TargetForm(forms.Form):
 
     target = forms.ModelChoiceField(
         queryset=Target.objects.all(), required=True)
+    # target = forms.CharField(max_length=100, label='Search')
 
     def __init__(self, *args, **kwargs):
         self.pk_ins = kwargs.pop('pk_ins')
         super(TargetForm, self).__init__(*args, **kwargs)
         self.fields['target'] = forms.ModelChoiceField(
-            queryset=Target.objects.filter(instrument_host=self.pk_ins), required=True)
+            queryset=Target.objects.filter(investigation=self.pk_ins), required=True)
+        
+class TargetFormAll(forms.Form):
+
+    target = forms.ModelChoiceField(
+        queryset=Target.objects.all(), required=True)
+    # target = forms.CharField(max_length=100, label='Search')
+
 
 
 """
@@ -507,19 +532,19 @@ class Table_Delimited_Form(forms.Form):
 class Table_Delimited_Form(forms.ModelForm):
     class Meta(object):
         model = Table_Delimited
-        exclude = ('bundle', 'name',)
+        exclude = ('bundle',)
 
 
 class Table_Binary_Form(forms.ModelForm):
     class Meta(object):
         model = Table_Binary
-        exclude = ('bundle', 'name',)
+        exclude = ('bundle',)
 
 
 class Table_Fixed_Width_Form(forms.ModelForm):
     class Meta(object):
         model = Table_Fixed_Width
-        exclude = ('bundle', 'name',)
+        exclude = ('bundle',)
 
 
 class Field_Delimited_Form(forms.ModelForm):
