@@ -787,7 +787,7 @@ class InvestigationManager(models.Manager):
     def update_version(self, product_dict):
         self.vid = product_dict['vid']
         self.lid = product_dict['lid']
-        self.starbase_label = product_dict['url']
+        self.file_ref = product_dict['url']
         self.save()
 
 
@@ -808,7 +808,7 @@ class Investigation(models.Model):
     lid = models.CharField(max_length=MAX_LID_FIELD)
     vid = models.FloatField(default=1.0)
     internal_references = []
-    starbase_label = models.CharField(max_length=MAX_CHAR_FIELD)
+    file_ref = models.CharField(max_length=MAX_CHAR_FIELD)
 
     # Relational Attributes
     # (added 11/2022 by zena)
@@ -824,14 +824,16 @@ class Investigation(models.Model):
     def update_version(self, product_dict):
         self.vid = product_dict['vid']
         self.lid = product_dict['lid']
-        self.starbase_label = product_dict['url']
+        self.file_ref = product_dict['url']
         self.save()
 
     def __str__(self):
         return self.name
 
     def fill_label(self, bundle):
+        # Investigation = root
 
+        # Below is cursed do not touch - Said
         # Get all xml labels in bundle directory
         xml_path_list = get_xml_path(bundle.directory())
 
@@ -991,7 +993,7 @@ class InstrumentManager(models.Manager):
     def update_version(self, product_dict):
         self.vid = product_dict['vid']
         self.lid = product_dict['lid']
-        self.starbase_label = product_dict['url']
+        self.file_ref = product_dict['url']
         self.save()
 
 
@@ -1075,7 +1077,10 @@ class Instrument(models.Model):
     type_of = models.CharField(
         max_length=MAX_CHAR_FIELD, choices=INSTRUMENT_TYPES, null=True)
     vid = models.FloatField(default=1.0)
-    starbase_label = models.CharField(max_length=MAX_CHAR_FIELD)
+    file_ref = models.CharField(max_length=MAX_CHAR_FIELD)
+
+    inv = []
+    ih = []
 
     # Attributes used to manage Instrument Host object
     #objects = InstrumentManager()
@@ -1087,7 +1092,7 @@ class Instrument(models.Model):
     def update_version(self, product_dict):
         self.vid = product_dict['vid']
         self.lid = product_dict['lid']
-        self.starbase_label = product_dict['url']
+        self.file_ref = product_dict['url']
         self.save()
 
     def fill_label(self, bundle):
@@ -1197,7 +1202,7 @@ class TargetManager(models.Manager):
     def update_version(self, product_dict):
         self.vid = product_dict['vid']
         self.lid = product_dict['lid']
-        self.starbase_label = product_dict['url']
+        self.file_ref = product_dict['url']
         self.save()
 
 
@@ -1245,7 +1250,7 @@ class Target(models.Model):
     name = models.CharField(max_length=MAX_CHAR_FIELD, null=True)
     type_of = models.CharField(max_length=MAX_CHAR_FIELD, choices=TARGET_TYPES, null=True)
     vid = models.FloatField(default=1.0)
-    starbase_label = models.CharField(max_length=MAX_CHAR_FIELD)
+    file_ref = models.CharField(max_length=MAX_CHAR_FIELD)
 
     # Attributes used to manage Instrument Host object
     #objects = TargetManager()
@@ -1257,7 +1262,7 @@ class Target(models.Model):
     def update_version(self, product_dict):
         self.vid = product_dict['vid']
         self.lid = product_dict['lid']
-        self.starbase_label = product_dict['url']
+        self.file_ref = product_dict['url']
         self.save()
 
     def fill_label(self, bundle):
@@ -1349,7 +1354,7 @@ class Instrument_HostManager(models.Manager):
     def update_version(self, product_dict):
         self.vid = product_dict['vid']
         self.lid = product_dict['lid']
-        self.starbase_label = product_dict['url']
+        self.file_ref = product_dict['url']
         self.save()
 
 
@@ -1369,6 +1374,8 @@ class Instrument_Host(models.Model):
     instruments = models.ManyToManyField(Instrument)
     targets = models.ManyToManyField(Target)
 
+    inv = []
+
     # Attributes used for crawler
     # null=True's added 11/2022
 
@@ -1377,7 +1384,7 @@ class Instrument_Host(models.Model):
     type_of = models.CharField(
         max_length=MAX_CHAR_FIELD, choices=INSTRUMENT_HOST_TYPES, null=True)
     vid = models.FloatField(default=1.0)
-    starbase_label = models.CharField(max_length=MAX_CHAR_FIELD)
+    file_ref = models.CharField(max_length=MAX_CHAR_FIELD)
 
     # Attributes used to manage Instrument Host object
     #objects = Instrument_HostManager()
@@ -1390,7 +1397,7 @@ class Instrument_Host(models.Model):
     def update_version(self, product_dict):
         self.vid = product_dict['vid']
         self.lid = product_dict['lid']
-        self.starbase_label = product_dict['url']
+        self.file_ref = product_dict['url']
         self.save()
 
     def fill_label(self, bundle):
@@ -1482,6 +1489,8 @@ class Facility(models.Model):
     # Relational attribute
     instruments = models.ManyToManyField(Instrument)
 
+    inv = []
+
     # Characteristic attributes
     # null=True's added 11/2022
 
@@ -1492,7 +1501,7 @@ class Facility(models.Model):
     version = models.FloatField(default=1.0)
 
     vid = models.FloatField(default=1.0)
-    starbase_label = models.CharField(max_length=MAX_CHAR_FIELD)
+    file_ref = models.CharField(max_length=MAX_CHAR_FIELD)
 
     # Accessors
     def name_lid_case(self):
@@ -1508,7 +1517,7 @@ class Facility(models.Model):
     def update_version(self, product_dict):
         self.vid = product_dict['vid']
         self.lid = product_dict['lid']
-        self.starbase_label = product_dict['url']
+        self.file_ref = product_dict['url']
         self.save()
 
     def fill_label(self, bundle):
@@ -1619,7 +1628,7 @@ class TelescopeManager(models.Manager):
     def update_version(self, product_dict):
         self.vid = product_dict['vid']
         self.lid = product_dict['lid']
-        self.starbase_label = product_dict['url']
+        self.file_ref = product_dict['url']
         self.save()
 
 
@@ -1635,7 +1644,10 @@ class Telescope(models.Model):
     lid = models.CharField(max_length=MAX_LID_FIELD)
     name = models.CharField(max_length=MAX_CHAR_FIELD, null=True)
     vid = models.FloatField(default=1.0)
-    starbase_label = models.CharField(max_length=MAX_CHAR_FIELD)
+    file_ref = models.CharField(max_length=MAX_CHAR_FIELD)
+
+    inv = []
+    fac = []
 
     # Attributes used to manage Instrument Host object
     #objects = Instrument_HostManager()
@@ -1648,7 +1660,7 @@ class Telescope(models.Model):
     def update_version(self, product_dict):
         self.vid = product_dict['vid']
         self.lid = product_dict['lid']
-        self.starbase_label = product_dict['url']
+        self.file_ref = product_dict['url']
         self.save()
 
     def fill_label(self, bundle):
