@@ -14,7 +14,7 @@ Data
 {% block about_header_block %}
 {% endblock %}
 {% block standards_reference_block %}
-Each collection of data contains a Product_Observational label. The Product_Observational is broken into 5 pieces. The first 4 are required and the 5th one is optional:</br>
+<!-- Each collection of data contains a Product_Observational label. The Product_Observational is broken into 5 pieces. The first 4 are required and the 5th one is optional:</br> -->
 </br>1. Identification Area: uniquely identifies this product from all other products
 </br>2. Observation Area: describes the observation and subsequent processing at a high level
 </br>3. Reference List: cross references internal products like documents or calibration observations
@@ -114,7 +114,7 @@ Each collection of data contains a Product_Observational label. The Product_Obse
 <!--Row-->
 <div class="row">
    <div class="col-md-12">
-      <p class="card-header stylish-color white-text text-center z-depth-2">Observational Products</p>
+      <p class="card-header stylish-color white-text text-center z-depth-2"> Tables </p>
       <br/>
    </div>
 </div>
@@ -126,9 +126,9 @@ Each collection of data contains a Product_Observational label. The Product_Obse
       <!--Column-->
       <div class="col-md-12">
          <p class="card-header black-text text-left z-depth-2">
-            Product Observational description here
+            Create Table
             </br>
-            <button class="btn btn-teal" data-toggle="collapse" href="#displayProductObservational" role="button"> + Add Product Observational</button>
+            <button class="btn btn-teal" data-toggle="collapse" href="#displayProductObservational" role="button"> + Add Table</button>
          </p>
       </div>
       <!--/.Column-->
@@ -139,7 +139,7 @@ Each collection of data contains a Product_Observational label. The Product_Obse
             <form id="form_ProductObservational" method="post" action="{% url 'build:data' bundle.pk data.pk %}">
                {% csrf_token %}
                <div id="form_data">
-                  {{ form_product_observational.as_p }}
+                  {{ form_data_object.as_p }}
                </div>
                <input class="btn btn-teal" type="submit" value="Submit"/>
             </form>
@@ -154,7 +154,7 @@ Each collection of data contains a Product_Observational label. The Product_Obse
       <!--Column-->
 	<div class="col-md-12">
       <p class="card-header  bg-info white-text text-center z-depth-2" >
-         <strong>Veiw {{ data.name }} Observational Products  </strong>
+         <strong>View {{ data.name }} Tables  </strong>
       </p>
 	</div>
       <!--/.Column-->
@@ -163,14 +163,12 @@ Each collection of data contains a Product_Observational label. The Product_Obse
    <hr>
    <!--Row-->
    <div class="row" >
-      {% for product_observational in product_observational_set %} 
+      {% for data_object in data_object_set %} 
       <!--Column-->
       <div class="col-sm-6 col-md-3">
-         {% if product_observational.type_of == 'Table' %}
+         {% if data_object.data_type == 'Table' %}
+         <!-- <a href="{% url 'build:table_creation' bundle.pk data.pk %}"> -->
          <a href="{% url 'main:construction' %}">
-         {% elif product_observational.type_of == 'Array' %}
-         <a href="{% url 'build:array' bundle.pk data.pk product_observational.pk %}">
-         {% endif %}
             <!--Card-->
             <div class="card">
                <!--Card image-->
@@ -178,16 +176,89 @@ Each collection of data contains a Product_Observational label. The Product_Obse
                <!--Card content-->
                <div class=" card-body z-depth-2" >
                   <!--Title-->
-                  <h4 class="card-title">{{ product_observational.title }}</h4>
+                  <h4 class="card-title">{{ data_object.name }}</h4>
                   <!--Text-->
-                  <p class="card-text">{{ product_observational.domain }}</p>
-                  <p class="card-text">Processing Level: {{ product_observational.data.processing_level }}</p>
-                  <p class="card-text">Structure: {{ product_observational.type_of }}</p>
+                  <p class="card-text">Processing Level: {{ data_object.data.processing_level }}</p>
+                  <p class="card-text">Structure: {{ data_object.data_type }}</p>
                </div>
                <!--/.Card content-->
             </div>
             <!--/.Card-->
          </a>
+         {% elif data_object.data_type == 'Table Binary' %}
+         <a href="{% url 'build:table_creation' bundle.pk data.pk %}">
+         <!-- <a href="{% url 'main:construction' %}"> -->
+            <!--Card-->
+            <div class="card">
+               <!--Card image-->
+               <!--img class="img-fluid" src="{% static 'images/derived.png' %}" alt="Data Image"-->
+               <!--Card content-->
+               <div class=" card-body z-depth-2" >
+                  <!--Title-->
+                  <h4 class="card-title">{{ data_object.name }}</h4>
+                  <!--Text-->
+                  <p class="card-text">Processing Level: {{ data_object.data.processing_level }}</p>
+                  <p class="card-text">Structure: {{ data_object.data_type }}</p>
+               </div>
+               <!--/.Card content-->
+            </div>
+            <!--/.Card-->
+         </a>
+         {% elif data_object.data_type == 'Table Delimited' %}
+         <a href="{% url 'build:table_creation' bundle.pk data.pk %}">
+            <!--Card-->
+            <div class="card">
+               <!--Card image-->
+               <!--img class="img-fluid" src="{% static 'images/derived.png' %}" alt="Data Image"-->
+               <!--Card content-->
+               <div class=" card-body z-depth-2" >
+                  <h4 class="card-title">{{ data_object.name }}</h4>
+                  <!--Text-->
+                  <p class="card-text">Processing Level: {{ data_object.data.processing_level }}</p>
+                  <p class="card-text">Structure: {{ data_object.data_type }}</p>
+               </div>
+               <!--/.Card content-->
+            </div>
+            <!--/.Card-->
+         </a>
+         {% elif data_object.data_type == 'Table Character' %}
+         <!-- <a href="{% url 'build:table_creation' bundle.pk data.pk %}"> -->
+         <a href="{% url 'main:construction' %}">
+            <!--Card-->
+            <div class="card">
+               <!--Card image-->
+               <!--img class="img-fluid" src="{% static 'images/derived.png' %}" alt="Data Image"-->
+               <!--Card content-->
+               <div class=" card-body z-depth-2" >
+                  <h4 class="card-title">{{ data_object.name }}</h4>
+                  <!--Text-->
+                  <p class="card-text">Processing Level: {{ data_object.data.processing_level }}</p>
+                  <p class="card-text">Structure: {{ data_object.data_type }}</p>
+               </div>
+               <!--/.Card content-->
+            </div>
+            <!--/.Card-->
+         </a>
+         {% elif data_object.data_type == 'Array' %}
+         <!-- <a href="{% url 'build:array' bundle.pk data.pk product_observational.pk %}"> -->
+         <a href="{% url 'main:construction' %}">
+            <!--Card-->
+            <div class="card">
+               <!--Card image-->
+               <!--img class="img-fluid" src="{% static 'images/derived.png' %}" alt="Data Image"-->
+               <!--Card content-->
+               <div class=" card-body z-depth-2" >
+                  <!--Title-->
+                  <h4 class="card-title">{{ data_object.name }}</h4>
+                  <!--Text-->
+                  <p class="card-text">Processing Level: {{ data_object.data.processing_level }}</p>
+                  <p class="card-text">Structure: {{ data_object.data_type }}</p>
+               </div>
+               <!--/.Card content-->
+            </div>
+            <!--/.Card-->
+         </a>
+         {% endif %}
       </div>
       <!--/.Column-->
       {% endfor %}
