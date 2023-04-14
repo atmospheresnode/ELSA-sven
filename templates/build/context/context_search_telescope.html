@@ -32,7 +32,7 @@ Add Context: Telescope
 <div class="row pt-2">
     <!--Column-->
     <div class="col-md-12">
-        <form class="card-header black-text text-left z-depth-2" id="query01" method="post" action="{% url 'build:context_search_telescope' bundle.pk  %}">
+        <form class="card-header black-text text-left z-depth-2" id="query01" method="post" action="{% url 'build:context_search_telescope' bundle.pk investigation.pk facility.pk %}">
 	<p>If you selected a facility that is an observatory you will need to select an associated telescope from the list associated with that observatory.
 • If you selected the ‘No Host’ option above you may select a non-affiliated telescope from the list.
 • If the telescope you need does not exist in the pull-down menu, you will need to provide information to ATM to create a new context product for you to use.</p>
@@ -73,7 +73,7 @@ Add Context: Telescope
 	<ul>
         <div class="button">
             <!--Link-->
-            <a href="#"> 
+            <a href="{% url 'build:context_search_target_and_instrument' bundle.pk investigation.pk facility.pk %}"> 
                 <!--Card content-->
                 <div class="card-body">
                     <!--Title-->

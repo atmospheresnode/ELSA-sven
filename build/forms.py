@@ -326,6 +326,7 @@ class InstrumentHostForm(forms.Form):
     def __init__(self, *args, **kwargs):
         self.pk_inv = kwargs.pop('pk_inv')
         super(InstrumentHostForm, self).__init__(*args, **kwargs)
+        print(Instrument_Host.objects.filter(investigations=self.pk_inv))
         self.fields['instrument_host'] = forms.ModelChoiceField(
             queryset=Instrument_Host.objects.filter(investigations=self.pk_inv), required=True)
 
@@ -341,12 +342,20 @@ class TargetForm(forms.Form):
 
     target = forms.ModelChoiceField(
         queryset=Target.objects.all(), required=True)
+    # target = forms.CharField(max_length=100, label='Search')
 
     def __init__(self, *args, **kwargs):
         self.pk_ins = kwargs.pop('pk_ins')
         super(TargetForm, self).__init__(*args, **kwargs)
         self.fields['target'] = forms.ModelChoiceField(
-            queryset=Target.objects.filter(instrument_host=self.pk_ins), required=True)
+            queryset=Target.objects.filter(investigation=self.pk_ins), required=True)
+        
+class TargetFormAll(forms.Form):
+
+    target = forms.ModelChoiceField(
+        queryset=Target.objects.all(), required=True)
+    # target = forms.CharField(max_length=100, label='Search')
+
 
 
 """
