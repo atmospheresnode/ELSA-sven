@@ -240,11 +240,27 @@ class DataEnum(forms.ModelForm):
 
 
 class DataForm(forms.ModelForm):
+    name = forms.CharField(required=True)
     class Meta(object):
         model = Data
         exclude = ('bundle',)
         #exclude = ('bundle','data_enum',)
 
+DATA_TYPES = (
+    ('Table', 'Table'),
+    ('Array', 'Array'),
+    ('Table Binary','Table Binary'),
+    ('Table Character','Table Character'),
+    ('Table Delimited','Table Delimited'),
+)
+
+class DataObjectForm(forms.ModelForm):
+    name = forms.CharField(required=True)
+    data_type = forms.ChoiceField(required=True, choices=DATA_TYPES)
+    class Meta(object):
+        model = Data_Object
+        exclude = ('bundle', 'collections')
+        #exclude = ('bundle','data_enum',)
 
 """
     Facility
@@ -507,19 +523,19 @@ class Table_Delimited_Form(forms.Form):
 class Table_Delimited_Form(forms.ModelForm):
     class Meta(object):
         model = Table_Delimited
-        exclude = ('bundle', 'name',)
+        exclude = ('bundle',)
 
 
 class Table_Binary_Form(forms.ModelForm):
     class Meta(object):
         model = Table_Binary
-        exclude = ('bundle', 'name',)
+        exclude = ('bundle',)
 
 
 class Table_Fixed_Width_Form(forms.ModelForm):
     class Meta(object):
         model = Table_Fixed_Width
-        exclude = ('bundle', 'name',)
+        exclude = ('bundle',)
 
 
 class Field_Delimited_Form(forms.ModelForm):
