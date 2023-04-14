@@ -28,6 +28,7 @@ from django.core.mail import EmailMessage
 from django.shortcuts import render
 from django.template.loader import get_template
 from .models import Joke
+from .forms import *
 # from .forms import ContactForm, UserContactForm, UploadedDocumentForm # I'm not sure uploaded document form should be here (k).
 import random
 import os

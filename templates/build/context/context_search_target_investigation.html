@@ -1,0 +1,113 @@
+{% extends 'main/base-k.html' %}
+{% load staticfiles %}
+
+
+
+
+{% block title_block %}
+Add Context: Target
+{% endblock %}
+
+
+
+
+{% block main_header_block %}
+Add Context: Target
+{% endblock %}
+
+
+
+{% block body_block %}
+<!--First row-->
+<div class="row pt-2">
+    <!--Column-->
+    <div class="col-md-12">
+        <h4 class="card-header stylish-color white-text text-center z-depth-2">Select your target</h4>
+	</br>
+    </div>
+    <!--/.Column-->
+</div>
+<!--First row-->
+<!--Second row-->
+<div class="row pt-2">
+    <!--Column-->
+    <div class="col-md-12">
+        <form class="card-header black-text text-left z-depth-2"id="query01" method="post" action="{% url 'build:context_search_target_investigation' bundle.pk investigation.pk %}">
+	    <p>Targets are often provided by the combinations of context above, and a pull-down menu of available targets may be provided especially if you’ve selected Mission context products. 
+• If you have more general purpose observing systems or non-affiliated instruments you may need to select a target from the entire list of available targets. </p>
+            {% csrf_token %}
+            {{ form_target }}
+            {{ form.errors }}
+            {{ form.non_field_errors }}
+            
+            <input type="submit" class="btn btn-default" value="Submit"/>
+            
+        </form>  
+	</br>     
+    </div>
+    <!--/.Column-->
+</div>
+<!--/.Row-->
+<!--Row-->
+
+        {% if target %}
+    <!--Column-->
+    
+    <div class="row pt-2">
+        <!--Column-->
+        <div class="col-md-12">
+            <h4 class="card-header stylish-color white-text text-center z-depth-2">Recently Added Target</h4>
+        </br>
+            <div class="card-header black-text text-left z-depth-2">
+            <p>Select a target below associated with your bundle to add instruments to your bundle.</br></p>
+        </div>
+        </div>
+        <!--/.Column-->
+    </div>
+
+</br>
+    <div class="card-header black-text text-left z-depth-2">
+    <div class="row">
+        <!--Card-->
+        <div class="col-sm-6 col-md-3">
+        <ul>
+            <div class="button">
+                <!--Link-->
+                    <!--Card content-->
+                    <div class="card-body">
+                        <!--Title-->
+                        <li><h4 class="card-title">{{ target.name }}</h4></li>
+                        <!--/.Title-->
+                        <!--Text-->
+                        <p class="card-text">{{ target.lid }} <br/><br/></p>
+                        <!--/.Text-->
+                    </div>
+                    <!--/.Card content-->
+                    <!--Image-->
+    
+            </div>            <!--/.Link-->
+        </div>
+        <!--/.Card-->
+     
+    </div>
+    </div>
+
+        {% endif %}
+<!--/.Row-->
+<!--Row-->
+<div class="row pt-2">
+    <div class="col-md-12 text-right ">
+            <a href="{% url 'build:context_search' bundle.pk %}">
+            <input type="submit" class="btn btn-default" value="Go Back to Context Search"/>
+    </div>
+    <!--/.Column-->
+</div>
+<!--/.Row-->
+
+{% endblock %}
+
+
+
+{% block footie_block %}    
+{% endblock %}
+
