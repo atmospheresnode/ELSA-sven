@@ -43,6 +43,10 @@ urlpatterns = [
     #url(r'^build_a_bundle/(?P<pk_bundle>\d+)/contextquery/exist/', include('crawl_starbase.urls')),
 ]
 
+urlpatterns += [
+    url('captcha/', include('captcha.urls')),
+    url(r'^select2/', include('django_select2.urls')),
+]
 
 
 urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_DIR)

@@ -1189,7 +1189,11 @@ def context_search(request, pk_bundle):
             'instrument_list': bundle.instruments.all(),
             'target_list': bundle.targets.all(),
             'facility_list': bundle.facilities.all(),
+            'telescope_list': bundle.telescopes.all(),
         }
+
+        for ih in bundle.instrument_hosts.all():
+            print(ih.inv)
 
         return render(request, 'build/context/context_search.html', context_dict)
 
@@ -1226,11 +1230,14 @@ def context_search_investigation(request, pk_bundle):
         # so we can notify the user it has been added
         if request.method == 'POST':
             if form_investigation.is_valid():
-                print(Investigation.objects.all())
-                i = Investigation.objects.get(
-                    name=form_investigation.cleaned_data['investigation'])
+                print(form_investigation.cleaned_data['investigation'].file_ref)
+                print(Investigation.objects.filter(file_ref=form_investigation.cleaned_data['investigation'].file_ref).first().file_ref)
+                i = Investigation.objects.filter(file_ref=form_investigation.cleaned_data['investigation'].file_ref).first()
+                # i = Investigation.objects.get(
+                #     file_ref=form_investigation.cleaned_data['investigation'].file_ref)
                 context_dict['investigation'] = i
                 bundle.investigations.add(i)
+                print(i)
                 '''
                 fil = open('/home/tpagan/older ELSAs/elsa_kays_current/ELSA-online-master/archive/tpagan/jacobtest_bundle/document/collection_document.xml','r')
 
@@ -1241,6 +1248,7 @@ def context_search_investigation(request, pk_bundle):
                 print fileText
                 '''
                 i.fill_label(bundle)
+            return render(request, 'build/context/context_search_investigation.html', context_dict)
 
         return render(request, 'build/context/context_search_investigation.html', context_dict)
 
@@ -1250,7 +1258,7 @@ def context_search_investigation(request, pk_bundle):
         return redirect('main:restricted_access')
 
 
-def context_search_instrument_host(request, pk_bundle, pk_investigation):
+def context_search_instrument_host_and_facility(request, pk_bundle, pk_investigation):
     print('\n\n')
     print('-------------------------------------------------------------------------')
     print('\n\n-------------- Add Context: Instrument Host with ELSA ---------------')
@@ -1267,6 +1275,8 @@ def context_search_instrument_host(request, pk_bundle, pk_investigation):
         # Get form for observing system component
         form_instrument_host = InstrumentHostForm(
             request.POST or None, pk_inv=pk_investigation)
+        
+        form_facility = FacilityForm(request.POST or None)
 
         # Context Dictionary
         context_dict = {
@@ -1274,27 +1284,41 @@ def context_search_instrument_host(request, pk_bundle, pk_investigation):
             'investigation': investigation,
             'form_instrument_host': form_instrument_host,
             'bundle_instrument_host_set': bundle.instrument_hosts.all(),  # We could add filters
+            'form_facility': form_facility,
+            'bundle_facility_set': bundle.facilities.all(),
         }
 
         # If the user just added an instrument host, add it to the context dictionary
         # so we can notify the user it has been added
         if request.method == 'POST':
             if form_instrument_host.is_valid():
-                i = Instrument_Host.objects.get(
-                    name=form_instrument_host.cleaned_data['instrument_host'])
+                i = Instrument_Host.objects.filter(
+                    file_ref=form_instrument_host.cleaned_data['instrument_host'].file_ref).first()
                 context_dict['instrument_host'] = i
                 bundle.instrument_hosts.add(i)
+
+                i.inv.append(investigation)
+
+                i.fill_label(bundle)
+            if form_facility.is_valid():
+                i = Facility.objects.filter(
+                    name=form_facility.cleaned_data['facility']).first()
+                context_dict['facility'] = i
+
+                bundle.facilities.add(i)
+
+                i.inv.append(investigation)
+
                 i.fill_label(bundle)
 
-        return render(request, 'build/context/context_search_instrument_host.html', context_dict)
+        return render(request, 'build/context/context_search_instrument_host_and_facility.html', context_dict)
 
     # Secure: Current user is not the user associated with the bundle, so...
     else:
         print('unauthorized user attempting to access a restricted area.')
         return redirect('main:restricted_access')
 
-
-def context_search_target(request, pk_bundle, pk_investigation, pk_instrument_host):
+def context_search_target(request, pk_bundle):
     print('\n\n')
     print('-------------------------------------------------------------------------')
     print('\n\n------------------- Add Context: Targets with ELSA ------------------')
@@ -1302,22 +1326,20 @@ def context_search_target(request, pk_bundle, pk_investigation, pk_instrument_ho
 
     # Get bundle and collections
     bundle = Bundle.objects.get(pk=pk_bundle)
-    investigation = Investigation.objects.get(pk=pk_investigation)
-    instrument_host = Instrument_Host.objects.get(pk=pk_instrument_host)
+
+    # instrument_host = Instrument_Host.objects.get(pk=pk_instrument_host)
 
     # Secure ELSA by seeing if the user logged in is the same user associated with the Bundle
     if request.user == bundle.user:
         print('authorized user: {}'.format(request.user))
 
         # Get form for observing system component
-        form_target = TargetForm(request.POST or None,
-                                 pk_ins=pk_instrument_host)
+        form_target = TargetFormAll(request.POST or None)
 
         # Context Dictionary
         context_dict = {
             'bundle': bundle,
-            'investigation': investigation,
-            'instrument_host': instrument_host,
+            # 'instrument_host': instrument_host,
             'form_target': form_target,
             'bundle_target_set': bundle.targets.all(),  # We could add filters
         }
@@ -1326,12 +1348,63 @@ def context_search_target(request, pk_bundle, pk_investigation, pk_instrument_ho
         # so we can notify the user it has been added
         if request.method == 'POST':
             if form_target.is_valid():
-                i = Target.objects.get(name=form_target.cleaned_data['target'])
+                i = Target.objects.filter(file_ref=form_target.cleaned_data['target'].file_ref).first()
                 context_dict['target'] = i
                 bundle.targets.add(i)
+
+                # i.investigations.add(investigation)
+
                 i.fill_label(bundle)
 
         return render(request, 'build/context/context_search_target.html', context_dict)
+
+    # Secure: Current user is not the user associated with the bundle, so...
+    else:
+        print('unauthorized user attempting to access a restricted area.')
+        return redirect('main:restricted_access')
+
+def context_search_target_inv(request, pk_bundle, pk_investigation):
+    print('\n\n')
+    print('-------------------------------------------------------------------------')
+    print('\n\n------------------- Add Context: Targets with ELSA ------------------')
+    print('------------------------------ DEBUGGER ---------------------------------')
+
+    # Get bundle and collections
+    bundle = Bundle.objects.get(pk=pk_bundle)
+
+    investigation = Investigation.objects.get(pk=pk_investigation)
+
+    # instrument_host = Instrument_Host.objects.get(pk=pk_instrument_host)
+
+    # Secure ELSA by seeing if the user logged in is the same user associated with the Bundle
+    if request.user == bundle.user:
+        print('authorized user: {}'.format(request.user))
+
+        # Get form for observing system component
+        form_target = TargetForm(request.POST or None, pk_ins=pk_investigation)
+
+        # Context Dictionary
+        context_dict = {
+            'bundle': bundle,
+            'investigation': investigation,
+            # 'instrument_host': instrument_host,
+            'form_target': form_target,
+            'bundle_target_set': bundle.targets.all(),  # We could add filters
+        }
+
+        # If the user just added an instrument host, add it to the context dictionary
+        # so we can notify the user it has been added
+        if request.method == 'POST':
+            if form_target.is_valid():
+                i = Target.objects.filter(file_ref=form_target.cleaned_data['target'].file_ref).first()
+                context_dict['target'] = i
+                bundle.targets.add(i)
+
+                # i.investigations.add(investigation)
+
+                i.fill_label(bundle)
+
+        return render(request, 'build/context/context_search_target_investigation.html', context_dict)
 
     # Secure: Current user is not the user associated with the bundle, so...
     else:
@@ -1349,6 +1422,7 @@ def context_search_instrument(request, pk_bundle, pk_investigation, pk_instrumen
     bundle = Bundle.objects.get(pk=pk_bundle)
     investigation = Investigation.objects.get(pk=pk_investigation)
     instrument_host = Instrument_Host.objects.get(pk=pk_instrument_host)
+    # target = Target.objects.get(pk=pk_target)
 
     # Secure ELSA by seeing if the user logged in is the same user associated with the Bundle
     if request.user == bundle.user:
@@ -1371,10 +1445,14 @@ def context_search_instrument(request, pk_bundle, pk_investigation, pk_instrumen
         # so we can notify the user it has been added
         if request.method == 'POST':
             if form_instrument.is_valid():
-                i = Instrument.objects.get(
-                    name=form_instrument.cleaned_data['instrument'])
+                i = Instrument.objects.filter(
+                    file_ref=form_instrument.cleaned_data['instrument'].file_ref).first()
                 context_dict['instrument'] = i
                 bundle.instruments.add(i)
+
+                i.inv.append(investigation)
+                i.ih.append(instrument_host)
+
                 i.fill_label(bundle)
 
         return render(request, 'build/context/context_search_instrument.html', context_dict)
@@ -1412,11 +1490,16 @@ def context_search_facility(request, pk_bundle):
         # so we can notify the user it has been added
         if request.method == 'POST':
             if form_facility.is_valid():
-                i = Facility.objects.get(
-                    name=form_facility.cleaned_data['facility'])
+                i = Facility.objects.filter(
+                    name=form_facility.cleaned_data['facility'].file_ref).first()
                 context_dict['facility'] = i
 
                 bundle.facilities.add(i)
+
+                # i.inv.append(Investigation)
+
+                # i.investigations.add(investigation)
+
                 i.fill_label(bundle)
 
         return render(request, 'build/context/context_search_facility.html', context_dict)
@@ -1427,7 +1510,7 @@ def context_search_facility(request, pk_bundle):
         return redirect('main:restricted_access')
 
 
-def context_search_facility_instrument(request, pk_bundle, pk_facility):
+def context_search_facility_instrument(request, pk_bundle, pk_investigation, pk_facility):
     print('\n\n')
     print('-------------------------------------------------------------------------')
     print('\n\n--------------- Add Context: Instruments with ELSA ------------------')
@@ -1436,6 +1519,7 @@ def context_search_facility_instrument(request, pk_bundle, pk_facility):
     # Get bundle and collections
     bundle = Bundle.objects.get(pk=pk_bundle)
     facility = Facility.objects.get(pk=pk_facility)
+    investigation = Investigation.objects.get(pk=pk_investigation)
 
     # Secure ELSA by seeing if the user logged in is the same user associated with the Bundle
     if request.user == bundle.user:
@@ -1449,6 +1533,7 @@ def context_search_facility_instrument(request, pk_bundle, pk_facility):
         context_dict = {
             'bundle': bundle,
             'facility': facility,
+            'investigation': investigation,
             'form_instrument': form_instrument,
             'bundle_instrument_set': bundle.instruments.all(),  # We could add filters
         }
@@ -1457,10 +1542,14 @@ def context_search_facility_instrument(request, pk_bundle, pk_facility):
         # so we can notify the user it has been added
         if request.method == 'POST':
             if form_instrument.is_valid():
-                i = Instrument.objects.get(
-                    name=form_instrument.cleaned_data['instrument'])
+                i = Instrument.objects.filter(
+                    file_ref=form_instrument.cleaned_data['instrument'].file_ref).first()
                 context_dict['instrument'] = i
                 bundle.instruments.add(i)
+
+                # i.investigations.add(investigation)
+                i.inv.append(investigation)
+
                 i.fill_label(bundle)
 
         return render(request, 'build/context/context_search_facility_instrument.html', context_dict)
@@ -1471,7 +1560,7 @@ def context_search_facility_instrument(request, pk_bundle, pk_facility):
         return redirect('main:restricted_access')
 
 
-def context_search_telescope(request, pk_bundle):
+def context_search_telescope(request, pk_bundle, pk_investigation, pk_facility):
     print('\n\n')
     print('-------------------------------------------------------------------------')
     print('\n\n--------------- Add Context: Telescope with ELSA ----------------')
@@ -1479,6 +1568,8 @@ def context_search_telescope(request, pk_bundle):
 
     # Get bundle and collections
     bundle = Bundle.objects.get(pk=pk_bundle)
+    investigation = Investigation.objects.get(pk=pk_investigation)
+    facility = Facility.objects.get(pk=pk_facility)
 
     # Secure ELSA by seeing if the user logged in is the same user associated with the Bundle
     if request.user == bundle.user:
@@ -1490,6 +1581,8 @@ def context_search_telescope(request, pk_bundle):
         # Context Dictionary
         context_dict = {
             'bundle': bundle,
+            'investigation': investigation,
+            'facility': facility,
             'form_telescope': form_telescope,
             'bundle_telescope_set': bundle.telescopes.all(),
         }
@@ -1498,10 +1591,17 @@ def context_search_telescope(request, pk_bundle):
         # so we can notify the user it has been added
         if request.method == 'POST':
             if form_telescope.is_valid():
-                i = Telescope.objects.get(
-                    name=form_telescope.cleaned_data['telescope'])
+                i = Telescope.objects.filter(
+                    file_ref=form_telescope.cleaned_data['telescope'].file_ref).first()
                 context_dict['telescope'] = i
                 bundle.telescopes.add(i)
+
+                # i.investigations.add(investigation)
+                i.inv.append(investigation)
+                i.fac.append(facility)
+
+                # Fill label seems wrong - Said
+                # i.fill_label(bundle)
 
         return render(request, 'build/context/context_search_telescope.html', context_dict)
 
@@ -1509,6 +1609,67 @@ def context_search_telescope(request, pk_bundle):
     else:
         print('unauthorized user attempting to access a restricted area.')
         return redirect('main:restricted_access')
+
+def context_search_target_and_instrument(request, pk_bundle, pk_investigation, pk_facility):
+    print('\n\n')
+    print('-------------------------------------------------------------------------')
+    print('\n\n-------------- Add Context: Instrument Host with ELSA ---------------')
+    print('------------------------------ DEBUGGER ---------------------------------')
+
+    # Get bundle and collections
+    bundle = Bundle.objects.get(pk=pk_bundle)
+    investigation = Investigation.objects.get(pk=pk_investigation)
+    facility = Facility.objects.get(pk=pk_facility)
+
+    # Secure ELSA by seeing if the user logged in is the same user associated with the Bundle
+    if request.user == bundle.user:
+        print('authorized user: {}'.format(request.user))
+
+        # Get form for observing system component
+        form_target = TargetForm(
+            request.POST or None, pk_ins=pk_investigation)
+        
+        form_instrument = FacilityInstrumentForm(
+            request.POST or None, pk_fac=pk_facility)
+
+        # Context Dictionary
+        context_dict = {
+            'bundle': bundle,
+            'investigation': investigation,
+            'facility': facility,
+            'form_target': form_target,
+            'bundle_target_set': bundle.targets.all(),  # We could add filters
+            'form_instrument': form_instrument,
+            'bundle_instrument_set': bundle.instruments.all(),
+        }
+
+        # If the user just added an instrument host, add it to the context dictionary
+        # so we can notify the user it has been added
+        if request.method == 'POST':
+            if form_target.is_valid():
+                # target = request.POST.get('target')
+                # print(target)
+                # products = Target.objects.filter(name__icontains=target)
+
+                # print(products)
+                # filter important, will break all pages if touched - Said
+                i = Target.objects.filter(file_ref=form_target.cleaned_data['target'].file_ref).first()
+                context_dict['target'] = i
+                bundle.targets.add(i)
+
+                i.fill_label(bundle)
+            if form_instrument.is_valid():
+                i = Instrument.objects.filter(
+                    file_ref=form_instrument.cleaned_data['instrument'].file_ref).first()
+                context_dict['instrument'] = i
+                bundle.instruments.add(i)
+
+                # i.investigations.add(investigation)
+                i.inv.append(investigation)
+                
+                i.fill_label(bundle)
+
+        return render(request, 'build/context/context_search_target_and_instrument.html', context_dict)
 
 
 @login_required

@@ -24,7 +24,7 @@
     <!--<link href="{% static 'css/elsa-todo.css' %}" rel="stylesheet">-->
 </head>
 
-<body>
+<body class="d-flex flex-column">
 
     <!-- Start your project here-->
     <header>
@@ -55,7 +55,7 @@
                     </li>
 
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'main:construction' %}"><i class="fa fa-envelope"></i> Contact</a>
+                        <a class="nav-link" href="{% url 'main:contact' %}"><i class="fa fa-envelope"></i> Contact</a>
                     </li>
 
                     <!-- Dropdown -->
@@ -164,7 +164,7 @@
 
 
     <!--Footer-->
-    <footer class="page-footer elegant-color center-on-small-only"> <!-- fixed-bottom class-->
+    <footer class="page-footer elegant-color center-on-small-only "> <!-- fixed-bottom class-->
 
         <!--Footer Links-->
         <div class="container">

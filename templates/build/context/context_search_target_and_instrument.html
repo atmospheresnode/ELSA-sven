@@ -1,0 +1,212 @@
+{% extends 'main/base-k.html' %}
+{% load staticfiles %}
+
+
+
+
+{% block title_block %}
+Add Context: Target or Instrument
+{% endblock %}
+
+
+
+
+{% block main_header_block %}
+Add Context: Target or Instrument
+
+{% endblock %}
+
+
+
+{% block body_block %}
+<div class="row pt-2">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header black-text text-left z-depth-2">
+                <p>target. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational.</p>
+                <h2 class="mb-0">
+                    <button style="float:left" class="btn btn-teal" type="button"  data-toggle="collapse" data-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+                        Add Target +
+                    </button>
+                </h2>
+                <h2 class="mb-0">
+                    <button style="float:right" class="btn btn-teal" type="button" data-toggle="collapse" data-target="#collapseTwo" aria-expanded="true" aria-controls="collapseTwo">
+                        Add Instrument +
+                    </button>
+                </h2>
+            </div>
+        </div>
+    </div>
+</div>
+<br>
+<div class="accordion" id="formAccordion">
+    <div class="accordion-item">
+        <div id="collapseOne" class="collapse" data-parent="#formAccordion" aria-labelledby="headingOne">
+            <!--First row-->
+            <div id="displayInstrumentHost">
+                <div class="row pt-2">
+                    <!--Column-->
+                    <div class="col-md-12">
+                        <h4 class="card-header stylish-color white-text text-center z-depth-2">Select your target</h4>
+                    </div>
+                </div>
+                <!--/.Column-->
+            </div>
+            <!--First row-->
+            <!--Second row-->
+            <div class="row pt-2">
+                <!--Column-->
+                <div class="col-md-12">
+                    <form class="card-header black-text text-left z-depth-2" id="query01" method="post" action="{% url 'build:context_search_target_and_instrument' bundle.pk investigation.pk facility.pk %}">
+                        <p>From the drop-down menu, select which type of host you plan to use. The initial selection will be <strong>instrument host</strong>(for mobile hosts) or <strong>facility</strong>(for stationary hosts). After selecting one of these two options you will be given a pull-down menu for the appropriate set. Instrument hosts include mobile platforms like spacecraft, rovers, landers, etc. whereas facilities include laboratories and observatories. If you plan to use telescopes and/or instruments not associated with a host, select the No Host option.</p>
+                        
+                        {% csrf_token %}
+                        {{ form_target }}
+                        
+                        {{ form.errors }}
+                        {{ form.non_field_errors }}
+                        
+                        <input type="submit" class="btn btn-default" value="Submit"/>
+                        
+                    </form> 
+                </div>      
+            </div>
+            <!--/.Column-->
+        </div>
+    </div>
+    <div class="accordion-item">
+        <div id="collapseTwo" class="collapse" data-parent="#formAccordion" aria-labelledby="headingTwo">
+            <!--First row-->
+            <div id="displayFacility">
+                <div class="row pt-2">
+                    <!--Column-->
+                    <div class="col-md-12">
+                        <h4 class="card-header stylish-color white-text text-center z-depth-2">Select your instrument</h4>
+                    </div>
+                </div>
+                <!--/.Column-->
+            </div>
+            <!--First row-->
+            <!--Second row-->
+            <div class="row pt-2">
+                <!--Column-->
+                <div class="col-md-12">
+                    <form class="card-header black-text text-left z-depth-2" id="query01" method="post" action="{% url 'build:context_search_target_and_instrument' bundle.pk investigation.pk facility.pk %}">
+                        <p> Facilities are stationary hosts such as laboratories or observatories, and will contain references for lab instruments and/or telescopes with instruments. Please select your facility</p>
+                        {% csrf_token %}
+                        {{ form_instrument }}
+                        {{ form.errors }}
+                        {{ form.non_field_errors }}
+                        
+                        <input type="submit" class="btn btn-default" value="Submit"/>
+                        
+                    </form> 
+                </div>      
+            </div>
+            <!--/.Column-->
+        </div>
+    </div>
+</div>
+
+{% if target %}
+<div class="row pt-2">
+    <!--Column-->
+    <div class="col-md-12">
+        <h4 class="card-header stylish-color white-text text-center z-depth-2">Recently Added Instrument Host</h4>
+    </br>
+    <p class="card-header black-text text-left z-depth-2">Select an investigation below associated with your bundle to add instrument hosts from that investigation to your bundle. Resume the bundle building process by adding instrument hosts, instruments, and targets to ensure a most complete PDS4 bundle.</br>
+    </p>
+</div>
+<!--/.Column-->
+</div>
+<hr>
+<div class="card-header black-text text-left z-depth-2">
+<div class="row">
+    <!--Card-->
+    <div class="col-sm-6 col-md-3">
+        <ul>
+            <div class="button">
+                <!--Link-->
+                <!-- change the href -->
+                <a href="#">
+                    <!--Card content-->
+                    <div class="card-body">
+                        <!--Title-->
+                        <li> <h4 class="card-title">{{ target.name }}</h4></li>
+                        <!--/.Title-->
+                        <!--Text-->
+                        <p class="card-text">{{ target.lid }} <br/><br/></p>
+                        <!--/.Text-->
+                    </div>
+                    <!--/.Card content-->
+                    <!--Image-->
+                </a>
+                <!--/.Link-->
+            </div>
+        </ul>
+    </div>
+    <!--/.Card-->
+</div>
+</div>
+{% endif %}
+
+{% if instrument %}
+<div class="row pt-2">
+    <!--Column-->
+    <div class="col-md-12">
+        <h4 class="card-header stylish-color white-text text-center z-depth-2">Recently Added Facility</h4>
+    </br>
+    <p class="card-header black-text text-left z-depth-2">Select an investigation below associated with your bundle to add instrument hosts from that investigation to your bundle. Resume the bundle building process by adding instrument hosts, instruments, and targets to ensure a most complete PDS4 bundle.</br>
+    </p>
+</div>
+<!--/.Column-->
+</div>
+<hr>
+<div class="card-header black-text text-left z-depth-2">
+<div class="row">
+    <!--Card-->
+    <div class="col-sm-6 col-md-3">
+        <ul>
+            <div class="button">
+                <!--Link-->
+                <!-- change the href -->
+                <a href="{% url 'build:context_search_target_investigation' bundle.pk investigation.pk %}">
+                    <!--Card content-->
+                    <div class="card-body">
+                        <!--Title-->
+                        <li> <h4 class="card-title">{{ instrument.name }}</h4></li>
+                        <!--/.Title-->
+                        <!--Text-->
+                        <p class="card-text">{{ instrument.lid }} <br/><br/></p>
+                        <!--/.Text-->
+                    </div>
+                    <!--/.Card content-->
+                    <!--Image-->
+                </a>
+                <!--/.Link-->
+            </div>
+        </ul>
+    </div>
+    <!--/.Card-->
+</div>
+</div>
+{% endif %}
+
+<div class="row pt-2">
+    <div class="col-md-12 text-right ">
+        <a href="{% url 'build:context_search' bundle.pk %}">
+            <input type="submit" class="btn btn-default" value="Go Back to Context Search"/>
+        </a>
+    </div>
+    <!--/.Column-->
+</div>
+
+
+
+{% endblock %}
+
+
+
+{% block footie_block %}    
+{% endblock %}
+
