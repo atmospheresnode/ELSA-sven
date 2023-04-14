@@ -1305,9 +1305,15 @@ def context_search_instrument_host_and_facility(request, pk_bundle, pk_investiga
                 i = Facility.objects.filter(
                     name=form_facility.cleaned_data['facility']).first()
                 context_dict['facility'] = i
+<<<<<<< HEAD
 
                 bundle.facilities.add(i)
 
+=======
+
+                bundle.facilities.add(i)
+
+>>>>>>> 70bbd5d153d19cad4c6ef46bb5056d18775f75d4
                 i.inv.append(investigation)
 
                 i.fill_label(bundle)
@@ -1329,6 +1335,7 @@ def context_search_target(request, pk_bundle):
     bundle = Bundle.objects.get(pk=pk_bundle)
 
     # instrument_host = Instrument_Host.objects.get(pk=pk_instrument_host)
+<<<<<<< HEAD
 
     # Secure ELSA by seeing if the user logged in is the same user associated with the Bundle
     if request.user == bundle.user:
@@ -1364,6 +1371,43 @@ def context_search_target(request, pk_bundle):
         print('unauthorized user attempting to access a restricted area.')
         return redirect('main:restricted_access')
 
+=======
+
+    # Secure ELSA by seeing if the user logged in is the same user associated with the Bundle
+    if request.user == bundle.user:
+        print('authorized user: {}'.format(request.user))
+
+        # Get form for observing system component
+        form_target = TargetFormAll(request.POST or None)
+
+        # Context Dictionary
+        context_dict = {
+            'bundle': bundle,
+            # 'instrument_host': instrument_host,
+            'form_target': form_target,
+            'bundle_target_set': bundle.targets.all(),  # We could add filters
+        }
+
+        # If the user just added an instrument host, add it to the context dictionary
+        # so we can notify the user it has been added
+        if request.method == 'POST':
+            if form_target.is_valid():
+                i = Target.objects.filter(file_ref=form_target.cleaned_data['target'].file_ref).first()
+                context_dict['target'] = i
+                bundle.targets.add(i)
+
+                # i.investigations.add(investigation)
+
+                i.fill_label(bundle)
+
+        return render(request, 'build/context/context_search_target.html', context_dict)
+
+    # Secure: Current user is not the user associated with the bundle, so...
+    else:
+        print('unauthorized user attempting to access a restricted area.')
+        return redirect('main:restricted_access')
+
+>>>>>>> 70bbd5d153d19cad4c6ef46bb5056d18775f75d4
 def context_search_target_inv(request, pk_bundle, pk_investigation):
     print('\n\n')
     print('-------------------------------------------------------------------------')
