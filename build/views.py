@@ -614,8 +614,8 @@ def bundle(request, pk_bundle):
             'form_product_collection': form_product_collection,
             'form_additional_collections': form_additional_collections,
             'additional_collections_count': len(additional_collections_set),
-            'instruments': bundle.instruments.all(),
-            'targets': bundle.targets.all(),
+            # 'instruments': bundle.instruments.all(),
+            # 'targets': bundle.targets.all(),
             'product_observational_set':product_observational_set,
             'documents':Product_Document.objects.filter(bundle=bundle),
             'additional_collections_set': additional_collections_set,
@@ -668,10 +668,10 @@ def bundle(request, pk_bundle):
             context_dict['alias_set_count'] =  len(alias_set)
 
             # #fixes the refresh duplication issue - deric
-            # return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
+            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
 
             #fixes the refresh duplication issue, use this one for offline testing - deric
-            return HttpResponseRedirect('/build/' + pk_bundle + '/')
+            # return HttpResponseRedirect('/build/' + pk_bundle + '/')
 
         # After ELSAs friend hits submit, if the forms are completed correctly, we should enter
         # this conditional.
@@ -718,10 +718,10 @@ def bundle(request, pk_bundle):
             context_dict['form_citation_information'] = form_citation_information
 
             # #fixes the refresh duplication issue - deric
-            # return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
+            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
 
             #fixes the refresh duplication issue, use this one for offline testing - deric
-            return HttpResponseRedirect('/build/' + pk_bundle + '/')
+            # return HttpResponseRedirect('/build/' + pk_bundle + '/')
 
         additional_collections_list = []
         if form_additional_collections.is_valid():
@@ -774,10 +774,10 @@ def bundle(request, pk_bundle):
             context_dict['additional_collections_count'] =  len(additional_collections_set)
 
             # #fixes the refresh duplication issue - deric
-            # return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
+            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
 
             #fixes the refresh duplication issue, use this one for offline testing - deric
-            return HttpResponseRedirect('/build/' + pk_bundle + '/')
+            # return HttpResponseRedirect('/build/' + pk_bundle + '/')
                     
         # After ELSAs friend hits submit, if the forms are completed correctly, we should enter
         # this conditional.  We must do [] things: 1. Create the Document model object, 2. Add a Product_Document label to the Document Collection, 3. Add the Document as an Internal_Reference to the proper labels (like Product_Bundle and Product_Collection).
@@ -841,10 +841,10 @@ def bundle(request, pk_bundle):
             context_dict['documents'] = Product_Document.objects.filter(bundle=bundle)
 
             # #fixes the refresh duplication issue - deric
-            # return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
+            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
 
             #fixes the refresh duplication issue, use this one for offline testing - deric
-            return HttpResponseRedirect('/build/' + pk_bundle + '/')
+            # return HttpResponseRedirect('/build/' + pk_bundle + '/')
 
         if form_data.is_valid():
             print('\n\n---------------------- DATA INFO -------------------------------')
@@ -1193,9 +1193,6 @@ def context_search(request, pk_bundle):
             'telescope_list': bundle.telescopes.all(),
         }
 
-        for ih in bundle.instrument_hosts.all():
-            print(ih.inv)
-
         return render(request, 'build/context/context_search.html', context_dict)
 
     # Secure: Current user is not the user associated with the bundle, so...
@@ -1298,23 +1295,19 @@ def context_search_instrument_host_and_facility(request, pk_bundle, pk_investiga
                 context_dict['instrument_host'] = i
                 bundle.instrument_hosts.add(i)
 
-                i.inv.append(investigation)
+                i.investigations.add(investigation)
+                i.save()
 
                 i.fill_label(bundle)
             if form_facility.is_valid():
                 i = Facility.objects.filter(
                     name=form_facility.cleaned_data['facility']).first()
                 context_dict['facility'] = i
-<<<<<<< HEAD
 
                 bundle.facilities.add(i)
 
-=======
-
-                bundle.facilities.add(i)
-
->>>>>>> 70bbd5d153d19cad4c6ef46bb5056d18775f75d4
-                i.inv.append(investigation)
+                i.investigations.add(investigation)
+                i.save()
 
                 i.fill_label(bundle)
 
@@ -1335,7 +1328,6 @@ def context_search_target(request, pk_bundle):
     bundle = Bundle.objects.get(pk=pk_bundle)
 
     # instrument_host = Instrument_Host.objects.get(pk=pk_instrument_host)
-<<<<<<< HEAD
 
     # Secure ELSA by seeing if the user logged in is the same user associated with the Bundle
     if request.user == bundle.user:
@@ -1371,43 +1363,6 @@ def context_search_target(request, pk_bundle):
         print('unauthorized user attempting to access a restricted area.')
         return redirect('main:restricted_access')
 
-=======
-
-    # Secure ELSA by seeing if the user logged in is the same user associated with the Bundle
-    if request.user == bundle.user:
-        print('authorized user: {}'.format(request.user))
-
-        # Get form for observing system component
-        form_target = TargetFormAll(request.POST or None)
-
-        # Context Dictionary
-        context_dict = {
-            'bundle': bundle,
-            # 'instrument_host': instrument_host,
-            'form_target': form_target,
-            'bundle_target_set': bundle.targets.all(),  # We could add filters
-        }
-
-        # If the user just added an instrument host, add it to the context dictionary
-        # so we can notify the user it has been added
-        if request.method == 'POST':
-            if form_target.is_valid():
-                i = Target.objects.filter(file_ref=form_target.cleaned_data['target'].file_ref).first()
-                context_dict['target'] = i
-                bundle.targets.add(i)
-
-                # i.investigations.add(investigation)
-
-                i.fill_label(bundle)
-
-        return render(request, 'build/context/context_search_target.html', context_dict)
-
-    # Secure: Current user is not the user associated with the bundle, so...
-    else:
-        print('unauthorized user attempting to access a restricted area.')
-        return redirect('main:restricted_access')
-
->>>>>>> 70bbd5d153d19cad4c6ef46bb5056d18775f75d4
 def context_search_target_inv(request, pk_bundle, pk_investigation):
     print('\n\n')
     print('-------------------------------------------------------------------------')
@@ -1495,8 +1450,9 @@ def context_search_instrument(request, pk_bundle, pk_investigation, pk_instrumen
                 context_dict['instrument'] = i
                 bundle.instruments.add(i)
 
-                i.inv.append(investigation)
-                i.ih.append(instrument_host)
+                i.investigations.add(investigation)
+                i.instrument_hosts.add(instrument_host)
+                i.save()
 
                 i.fill_label(bundle)
 
@@ -1592,8 +1548,8 @@ def context_search_facility_instrument(request, pk_bundle, pk_investigation, pk_
                 context_dict['instrument'] = i
                 bundle.instruments.add(i)
 
-                # i.investigations.add(investigation)
-                i.inv.append(investigation)
+                i.investigations.add(investigation)
+                i.save()
 
                 i.fill_label(bundle)
 
@@ -1642,8 +1598,9 @@ def context_search_telescope(request, pk_bundle, pk_investigation, pk_facility):
                 bundle.telescopes.add(i)
 
                 # i.investigations.add(investigation)
-                i.inv.append(investigation)
-                i.fac.append(facility)
+                i.investigations.add(investigation)
+                i.facilities.add(facility)
+                i.save()
 
                 # Fill label seems wrong - Said
                 # i.fill_label(bundle)
@@ -1709,8 +1666,8 @@ def context_search_target_and_instrument(request, pk_bundle, pk_investigation, p
                 context_dict['instrument'] = i
                 bundle.instruments.add(i)
 
-                # i.investigations.add(investigation)
-                i.inv.append(investigation)
+                i.investigations.add(investigation)
+                i.save()
                 
                 i.fill_label(bundle)
 

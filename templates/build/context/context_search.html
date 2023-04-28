@@ -138,7 +138,7 @@ role="button">View Facilities</a>
                     <!--Link-->
                     <!-- change the href -->
                     <a
-                    href="{% url 'build:context_search_facility_instrument' bundle.pk facility.inv.0.pk facility.pk %}">
+                    href="{% url 'build:context_search_facility_instrument' bundle.pk facility.investigations.first.pk facility.pk %}">
                     <!--Card content-->
                     <div class="card-body">
                         <!--Title-->
@@ -160,7 +160,7 @@ role="button">View Facilities</a>
                 <!--Link-->
                 <!-- change the href -->
                 <a
-                href="{% url 'build:context_search_telescope' bundle.pk facility.inv.0.pk facility.pk %}">
+                href="{% url 'build:context_search_telescope' bundle.pk facility.investigations.first.pk facility.pk %}">
                 <!--Card content-->
                 <div class="card-body">
                     <!--Title-->
@@ -217,7 +217,7 @@ role="button">View Facilities</a>
                 <div class="button">
                     <!-- Link -->
                     <!-- CHANGE THIS HTML HREF everywhere -->
-                    <a href="{% url 'build:context_search_instrument' bundle.pk ih.inv.0.pk ih.pk %}">
+                    <a href="{% url 'build:context_search_instrument' bundle.pk ih.investigations.first.pk ih.pk %}">
                         <!--Card content-->
                         <div class="card-body">
                             <!--Title-->
@@ -272,7 +272,7 @@ role="button">View Instruments</a>
                 <div class="button">
                     <!-- Link -->
                     <!-- CHANGE THIS HTML HREF everywhere -->
-                    <a href="{% url 'build:context_search_target_investigation' bundle.pk ins.inv.0.pk %}">
+                    <a href="{% url 'build:context_search_target_investigation' bundle.pk ins.investigations.first.pk %}">
                         <!--Card content-->
                         <div class="card-body">
                             <!--Title-->
@@ -325,7 +325,7 @@ role="button">View Telescopes</a>
                 <div class="button">
                     <!-- Link -->
                     <!-- CHANGE THIS HTML HREF everywhere -->
-                    <a href="{% url 'build:context_search_telescope' bundle.pk tel.inv.0.pk tel.fac.0.pk %}">
+                    <a href="{% url 'build:context_search_target_and_instrument' bundle.pk tel.investigations.first.pk tel.facilities.first.pk %}">
                         <!--Card content-->
                         <div class="card-body">
                             <!--Title-->
@@ -410,12 +410,16 @@ role="button">View Targets</a>
 <!--/.Card-->
 </div>
 
-    <div 
+    <div >
        <p class="text-left">
- Use this to go back to previous page: 
-              <button class="btn btn-teal" data-toggle= "collapse" href="{% url 'build:bundle' bundle.pk %}" role="button" >Go back to Build Page  </button>
+ Use this to go back to previous page:
+            <a href="{% url 'build:bundle' bundle.pk %}">
+                <input type="submit" class="btn btn-teal" value="Go Back to Build Page"/>
+            </a>
+              <!-- <button class="btn btn-teal" data-toggle= "collapse" href="{% url 'build:bundle' bundle.pk %}" role="button" >Go back to Build Page  </button> -->
        </p>
      
        </div> 
 <!--/.Third row-->
 {% endblock %}
+

@@ -1,7 +1,7 @@
 from builtins import object
 from django import forms
 from .models import UploadedDocument
-from captcha.fields import CaptchaField
+# from captcha.fields import CaptchaField
 
 class ContactForm(forms.Form):
 
@@ -9,12 +9,12 @@ class ContactForm(forms.Form):
     email = forms.CharField()
     agency = forms.CharField()
     message = forms.CharField(widget=forms.Textarea)
-    captcha = CaptchaField()
+    # captcha = CaptchaField()
 
 
 class UserContactForm(forms.Form):
     message = forms.CharField(widget=forms.Textarea)
-    captcha = CaptchaField()
+    # captcha = CaptchaField()
 
 
 class UploadedDocumentForm(forms.ModelForm):

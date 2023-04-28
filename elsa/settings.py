@@ -83,7 +83,7 @@ SECRET_KEY = secret_key()
 
 #     SECURITY WARNING: don't run with debug turned on in production!
 #                   use live debug for quick checks in production.
-DEBUG = True
+DEBUG = False
 
 
 
@@ -138,8 +138,8 @@ INSTALLED_APPS = [
     'main',
     'review',
     'tutorial',
-    'captcha',
-    'requests'
+    # 'captcha',
+    # 'requests'
 ]
 
 MIDDLEWARE = [
@@ -179,7 +179,7 @@ WSGI_APPLICATION = 'elsa.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'test_elsa_offline_context', #Change this to whatever database is required
+        'NAME': 'test_elsa_newdb', #Change this to whatever database is required
         'HOST': '/var/lib/mysql/mysql.sock',
         
 
