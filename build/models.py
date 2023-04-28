@@ -824,6 +824,9 @@ class Investigation(models.Model):
     # Attributes used to manage Investigation object
     #objects = InvestigationManager()
 
+    class Meta:
+        ordering = ('name',)
+
     def update_version(self, product_dict):
         self.vid = product_dict['vid']
         self.lid = product_dict['lid']
@@ -1071,6 +1074,7 @@ class Instrument(models.Model):
     ]
     # Relational Attributes
     instrument_hosts = models.ManyToManyField("Instrument_Host")
+    investigations = models.ManyToManyField(Investigation)
 
     # Attributes used for crawler
     # null=true's added 11/2022 
@@ -1082,8 +1086,8 @@ class Instrument(models.Model):
     vid = models.FloatField(default=1.0)
     file_ref = models.CharField(max_length=MAX_CHAR_FIELD)
 
-    inv = []
-    ih = []
+    # inv = []
+    # ih = []
 
     # Attributes used to manage Instrument Host object
     #objects = InstrumentManager()
@@ -1377,7 +1381,7 @@ class Instrument_Host(models.Model):
     instruments = models.ManyToManyField(Instrument)
     targets = models.ManyToManyField(Target)
 
-    inv = []
+    # inv = models.ManyToManyField(Investigation)
 
     # Attributes used for crawler
     # null=True's added 11/2022
@@ -1492,7 +1496,7 @@ class Facility(models.Model):
     # Relational attribute
     instruments = models.ManyToManyField(Instrument)
 
-    inv = []
+    investigations = models.ManyToManyField(Investigation)
 
     # Characteristic attributes
     # null=True's added 11/2022
@@ -1640,6 +1644,7 @@ class Telescope(models.Model):
 
     # Relational Attributes
     facilities = models.ManyToManyField(Facility)
+    investigations = models.ManyToManyField(Investigation)
 
     # Attributes used for crawler
     # null=True's added 11/2022
@@ -1648,9 +1653,6 @@ class Telescope(models.Model):
     name = models.CharField(max_length=MAX_CHAR_FIELD, null=True)
     vid = models.FloatField(default=1.0)
     file_ref = models.CharField(max_length=MAX_CHAR_FIELD)
-
-    inv = []
-    fac = []
 
     # Attributes used to manage Instrument Host object
     #objects = Instrument_HostManager()
