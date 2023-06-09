@@ -1255,7 +1255,6 @@ def context_search_investigation(request, pk_bundle):
         print('unauthorized user attempting to access a restricted area.')
         return redirect('main:restricted_access')
 
-
 def context_search_instrument_host_and_facility(request, pk_bundle, pk_investigation):
     print('\n\n')
     print('-------------------------------------------------------------------------')
@@ -2462,18 +2461,18 @@ def index(request, path):
     def index_maker():
         def _index(inpath):
             contents = os.listdir(inpath)
-            contents.reverse()
             for mfile in contents:
                 t = os.path.join(inpath, mfile)
+                if os.path.isfile(t):
+                    link_target = os.path.relpath(t, start=os.path.join(
+                        _get_abs_virtual_root(), 'archive/'))
+                    yield loader.render_to_string('build/directory/list_file.html', {'file': mfile, 'link': link_target})
                 if os.path.isdir(t):
                     link_target = os.path.relpath(t, start=os.path.join(
                         _get_abs_virtual_root(), 'archive/'))
                     yield loader.render_to_string('build/directory/list_folder.html', {'file': mfile, 'subfiles': _index(os.path.join(inpath, t)), 'link': link_target})
                     continue
-                if os.path.isfile(t):
-                    link_target = os.path.relpath(t, start=os.path.join(
-                        _get_abs_virtual_root(), 'archive/'))
-                    yield loader.render_to_string('build/directory/list_file.html', {'file': mfile, 'link': link_target})
+                
 
         return _index(eventual_path)
 
