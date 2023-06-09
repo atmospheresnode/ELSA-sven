@@ -106,7 +106,7 @@ def contact(request):
         #else:
             #logger.error('{}: contact_form is not valid.'.format(datetime.now()))
 
-    return render(request, 'main/contact.html', context_dict)
+    return render(request, 'main/construction.html', context_dict)
 
 # restricted_access is the page that displays if a user is travelling to an area they have no business being in.
 @login_required
