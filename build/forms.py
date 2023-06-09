@@ -238,28 +238,11 @@ class DataEnum(forms.ModelForm):
     Data
 """
 
-
 class DataForm(forms.ModelForm):
     name = forms.CharField(required=True)
     class Meta(object):
         model = Data
-        exclude = ('bundle',)
-        #exclude = ('bundle','data_enum',)
-
-DATA_TYPES = (
-    ('Table', 'Table'),
-    ('Array', 'Array'),
-    ('Table Binary','Table Binary'),
-    ('Table Character','Table Character'),
-    ('Table Delimited','Table Delimited'),
-)
-
-class DataObjectForm(forms.ModelForm):
-    name = forms.CharField(required=True)
-    data_type = forms.ChoiceField(required=True, choices=DATA_TYPES)
-    class Meta(object):
-        model = Data_Object
-        exclude = ('bundle', 'collections')
+        exclude = ('bundle','collection')
         #exclude = ('bundle','data_enum',)
 
 """

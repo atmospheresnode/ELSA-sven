@@ -2776,10 +2776,18 @@ class Data(models.Model):
         ('Raw', 'Raw'),
         ('Reduced', 'Reduced'),
     )
+    
+    DATA_TYPES = (
+        ('Array', 'Array'),
+        ('Table Binary','Table Binary'),
+        ('Table Character','Table Character'),
+        ('Table Delimited','Table Delimited'),
+    )
+
     bundle = models.ForeignKey(Bundle, on_delete=models.CASCADE)
     name = models.CharField(max_length=MAX_CHAR_FIELD)
-    processing_level = models.CharField(
-        max_length=30, choices=PROCESSING_LEVEL_CHOICES, default='Raw',)
+    processing_level = models.CharField(max_length=30, choices=PROCESSING_LEVEL_CHOICES, default='Raw')
+    data_type = models.CharField(max_length=256,choices=DATA_TYPES, default = '')
 
     class Meta(object):
         verbose_name_plural = 'Data'
@@ -2788,7 +2796,6 @@ class Data(models.Model):
         return self.name  # Better this once we work on data more
 
     # get_directory_name returns the name of the directory for this data object.
-
     # def get_directory_name(self):
     #     # Edit name for directory
     #     # replace all spaces with underscores
@@ -2800,54 +2807,16 @@ class Data(models.Model):
     # of a directory before creating the directory.
 
     def build_directory(self):
-        data_directory = os.path.join(self.bundle.directory(),'data_{}'.format(self.processing_level.lower()))
-        make_directory(data_directory)
-
-    # def build_product_collection(self):
-    #     print("Building product collection label - base case")
-    #     p = Product_Collection.objects.get(
-    #         bundle=self.bundle, collection='Data')
-    #     p.build_base_case_data(self)
-
-    # directory returns the file path associated with the given model.
-
-    def directory(self):
-        data_collection_name = 'data_{}'.format(self.processing_level.lower())
-        data_directory = os.path.join(
-            self.bundle.directory(), self.get_directory_name())
-        return data_directory
-
-@python_2_unicode_compatible
-class Data_Object(models.Model):
-    DATA_TYPES = (
-        ('Table', 'Table'),
-        ('Array', 'Array'),
-        ('Table Binary','Table Binary'),
-        ('Table Character','Table Character'),
-        ('Table Delimited','Table Delimited'),
-    )
-    
-    name = models.CharField(max_length=251)
-    data_type = models.CharField(max_length=256,choices=DATA_TYPES, default='Table Delimited',)
-    data = models.ForeignKey(Data, on_delete=models.CASCADE, null=True,)
-    collections = models.ForeignKey(Collections, on_delete=models.CASCADE, null=True,)
-
-    class Meta:
-        verbose_name_plural = 'Data Object'
-
-    def build_data_directory(self):
         data_directory = os.path.join(self.bundle.directory(), self.name)
         make_directory(data_directory)
 
     def label(self):
-        return os.path.join(self.data.bundle.directory(), self.name)
+        return os.path.join(self.bundle.directory(), self.name)
 
     def build_base_case(self):
         pass
-        
 
-    def __str__(self):
-        return 'Data Prep'
+
 
 """
 Table and Field Objects
@@ -2877,6 +2846,7 @@ class Table_Delimited(models.Model):
     field_delimiter = models.CharField(max_length=256, choices=DELIMITER_CHOICES, default="Comma", blank=True)
     fields = models.IntegerField(default=1)
     data = models.ForeignKey(Data, on_delete=models.CASCADE, null=True,)
+    collection = models.ForeignKey(AdditionalCollections, on_delete = models.CASCADE, default='',)
     bundle = models.ForeignKey(Bundle, on_delete=models.CASCADE, null=True)
 
     def name_label_case(self):
@@ -2897,7 +2867,7 @@ class Table_Delimited(models.Model):
 
         # directory returns the file path associated with the given model.
     def directory(self):
-        data_collection_name = 'data_{}'.format(self.data.processing_level.lower())
+        data_collection_name = self.collection.collection_name.lower()
         data_directory = os.path.join(self.data.bundle.directory(), data_collection_name)
         return data_directory  
 
@@ -2907,7 +2877,10 @@ class Table_Delimited(models.Model):
         source_file = os.path.join(source_file, 'base_templates')
         
         source_file = os.path.join(source_file, 'data_table_delimited.xml')
-        out_file = os.path.join(self.directory(), self.data.name + '.xml')
+
+        ret_name = self.data.name.lower()
+        ret_name = replace_all(ret_name, ' ', '_')
+        out_file = os.path.join(self.directory(), ret_name + '.xml')
 
         #set selected version
         update = Version()
@@ -2926,7 +2899,7 @@ class Table_Delimited(models.Model):
 
         # lid
         logical_identifier = Identification_Area.find('{}logical_identifier'.format(NAMESPACE))
-        logical_identifier.text = 'urn:{0}:{1}:{2}'.format(self.data.bundle.user.userprofile.agency, self.data.bundle.name_lid_case(), self.data.name) # where agency is something like nasa:pds
+        logical_identifier.text = 'urn:{0}:{1}:{2}'.format(self.data.bundle.user.userprofile.agency, self.data.bundle.name_lid_case(), self.name) # where agency is something like nasa:pds
 
         print("version")
         version_id = Identification_Area.find('{}version_id'.format(NAMESPACE))
@@ -2980,7 +2953,8 @@ class Table_Binary(models.Model):
     records = models.IntegerField(default=1)
     fields = models.IntegerField(default=1)
     data = models.ForeignKey(Data, on_delete=models.CASCADE, null=True,)
-    bundle = models.ForeignKey(Bundle, on_delete=models.CASCADE, null=True)
+    collection = models.ForeignKey(AdditionalCollections, on_delete = models.CASCADE, default='',)
+    bundle = models.ForeignKey(Bundle, on_delete=models.CASCADE, null=True,)
 
     def name_label_case(self):
         name_edit = self.data.name.lower()
@@ -2992,7 +2966,7 @@ class Table_Binary(models.Model):
         return os.path.join(self.directory(), self.name_label_case())
 
     def directory(self):
-        data_collection_name = 'data_{}'.format(self.data.processing_level.lower())
+        data_collection_name = self.collection.collection_name.lower()
         data_directory = os.path.join(self.data.bundle.directory(), data_collection_name)
         return data_directory  
 
@@ -3000,24 +2974,25 @@ class Table_Binary(models.Model):
         # Locate base case Product_Bundle template found in templates/pds4_labels/base_case/product_bundle
         source_file = os.path.join(settings.TEMPLATE_DIR, 'pds4_labels')
         source_file = os.path.join(source_file, 'base_templates')
-        
         source_file = os.path.join(source_file, 'table_binary.xml')
-        out_file = os.path.join(self.directory(), self.data.name + '.xml')
+
+        ret_name = self.data.name.lower()
+        ret_name = replace_all(ret_name, ' ', '_')
+        out_file = os.path.join(self.directory(), ret_name + '.xml')
 
         #set selected version
         update = Version()
         bundle = Bundle()
-        print (source_file + "<<<<<<<<")
 
         update.version_update_old(self.data.bundle.version, source_file,out_file)
         
     def fill_base_case(self, root):
-
+            
         Table_Binary = root
-
+        
         # Fill in Identification_Area
         print("id area")
-        Identification_Area = Table_Binary.find('{}local_identifier'.format(NAMESPACE))
+        Identification_Area = Table_Binary.find('{}Identification_Area'.format(NAMESPACE))
 
         # lid
         logical_identifier = Identification_Area.find('{}logical_identifier'.format(NAMESPACE))
@@ -3037,7 +3012,7 @@ class Table_Binary(models.Model):
 
         f = Table_Binary.find('{}File_Area_Observational'.format(NAMESPACE))
         tb = f.find('{}Table_Binary'.format(NAMESPACE))
-        
+        rb = tb.find('{}Record_Binary'.format(NAMESPACE))
         if self.name:
             name = tb.find('{}name'.format(NAMESPACE))
             name.text = self.name
@@ -3051,8 +3026,8 @@ class Table_Binary(models.Model):
             records.text = str(self.records)
         
         if self.fields:
-            fields = tb.find('{}fields'.format(NAMESPACE))
-            fieldss.text = str(self.fields)
+            fields = rb.find('{}fields'.format(NAMESPACE))
+            fields.text = str(self.fields)
         
         return root
 
@@ -3062,21 +3037,105 @@ class Table_Binary(models.Model):
 
 @python_2_unicode_compatible
 class Table_Fixed_Width(models.Model):
-
     RECORD_CHOICES = (
         ('Sample Choice', 'Sample Choice'),
     )
-
+    
     name = models.CharField(max_length=256, blank=True)
-    offset = models.IntegerField(default=-1)
-    object_length = models.IntegerField(default=-1)
+    offset = models.IntegerField(default=1)
+    object_length = models.IntegerField(default=1)
     description = models.CharField(max_length=5000, default="unset")
-    records = models.IntegerField(default=-1)
-    record_delimiter = models.CharField(
-        max_length=256, choices=RECORD_CHOICES, default="Sample Choice", blank=True)
-    fields = models.IntegerField(default=-1)
+    records = models.IntegerField(default=1)
+    fields = models.IntegerField(default=1)
     data = models.ForeignKey(Data, on_delete=models.CASCADE, null=True,)
+    collection = models.ForeignKey(AdditionalCollections, on_delete = models.CASCADE, default='',)
     bundle = models.ForeignKey(Bundle, on_delete=models.CASCADE, null=True)
+
+    def name_label_case(self):
+        name_edit = self.data.name.lower()
+        name_edit = replace_all(name_edit, ' ', '_')
+        name_edit = '{}.xml'.format(name_edit)
+        return name_edit
+
+    def label(self):
+        return os.path.join(self.directory(), self.name_label_case())
+
+    def directory(self):
+        data_collection_name = self.collection.collection_name.lower()
+        data_directory = os.path.join(self.data.bundle.directory(), data_collection_name)
+        return data_directory  
+
+    def build_data_file(self):
+        # Locate base case Product_Bundle template found in templates/pds4_labels/base_case/product_bundle
+        source_file = os.path.join(settings.TEMPLATE_DIR, 'pds4_labels')
+        source_file = os.path.join(source_file, 'base_templates')
+        source_file = os.path.join(source_file, 'data_table_character.xml')
+
+        ret_name = self.data.name.lower()
+        ret_name = replace_all(ret_name, ' ', '_')
+        out_file = os.path.join(self.directory(), ret_name + '.xml')
+        out_file = os.path.join(self.directory(), self.data.name + '.xml')
+
+        #set selected version
+        update = Version()
+        bundle = Bundle()
+        print (source_file + "<<<<<<<<")
+
+        update.version_update_old(self.data.bundle.version, source_file,out_file)
+        
+    def fill_base_case(self, root):
+
+        Table_Character = root
+
+        # Fill in Identification_Area
+        print("id area")
+        Identification_Area = Table_Character.find('{}Identification_Area'.format(NAMESPACE))
+
+        # lid
+        logical_identifier = Identification_Area.find('{}logical_identifier'.format(NAMESPACE))
+        logical_identifier.text = 'urn:{0}:{1}:{2}'.format(self.data.bundle.user.userprofile.agency, self.data.bundle.name_lid_case(), self.data.name) # where agency is something like nasa:pds
+
+        print("version")
+        version_id = Identification_Area.find('{}version_id'.format(NAMESPACE))
+        version_id.text = '1.0'  # Can make this better
+
+        print("title")
+        title = Identification_Area.find('{}title'.format(NAMESPACE))
+        title.text = self.name
+
+        print("info model")
+        information_model_version = Identification_Area.find('information_model_version')
+        #information_model_version.text = self.bundle.version.with_dots()
+
+        f = Table_Character.find('{}File_Area_Observational'.format(NAMESPACE))
+        tc = f.find('{}Table_Character'.format(NAMESPACE))
+        rc = tc.find('{}Record_Character'.format(NAMESPACE))
+
+        if self.name:
+            name = tc.find('{}name'.format(NAMESPACE))
+            name.text = self.name
+
+        if self.offset:
+            offset = tc.find('{}offset'.format(NAMESPACE))
+            offset.text = str(self.offset)
+
+        if self.object_length:
+            object_length = tc.find('{}object_length'.format(NAMESPACE))
+            object_length.text = str(self.object_length)
+        
+        if self.description:
+            description = tc.find('{}description'.format(NAMESPACE))
+            description.text = str(self.description)
+        
+        if self.records:
+            records = tc.find('{}records'.format(NAMESPACE))
+            records.text = str(self.records)
+        
+        if self.fields:
+            fields = rc.find('{}fields'.format(NAMESPACE))
+            fields.text = str(self.fields)
+        
+        return root
 
     def __str__(self):
         return smart_str(self.id)
