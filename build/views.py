@@ -1255,7 +1255,6 @@ def context_search_investigation(request, pk_bundle):
         print('unauthorized user attempting to access a restricted area.')
         return redirect('main:restricted_access')
 
-
 def context_search_instrument_host_and_facility(request, pk_bundle, pk_investigation):
     print('\n\n')
     print('-------------------------------------------------------------------------')
@@ -1702,20 +1701,19 @@ def data(request, pk_bundle, pk_data):
         # Get display dictionary to show what it says to the user
         try:
             print('Trying display get')
-            #display_dictionary = DisplayDictionary.objects.get(data=data)
+            # display_dictionary = DisplayDictionary.objects.get(data=data)
         except DisplayDictionary.DoesNotExist:
             print('Displaying get did not work')
             display_dictionary = None
 
         # Get related Product Observationals
-        #product_observational_set = Product_Observational.objects.filter(data=data)
-        data_object_set = Data_Object.objects.filter(data=data)
+        # product_observational_set = Product_Observational.objects.filter(data=data)
+        # data_object_set = Data_Object.objects.filter(data=data)
 
         # Get forms
         form_dictionary = DictionaryForm(request.POST or None)
         #form_display_dictionary = DisplayDictionaryForm(request.POST or None)
         #form_product_observational = ProductObservationalForm(request.POST or None)
-        form_data_object = DataObjectForm(request.POST or None)
 
         # After ELSA's friend hits submit, if the form is completed correctly, we should
         # satisfy this conditional
@@ -1779,41 +1777,41 @@ def data(request, pk_bundle, pk_data):
         #     ## Get Root: 
         #     #product_observational.fill_base_case()
 
-        if form_data_object.is_valid():
-            # Make Product Observational
-            data_object = form_data_object.save(commit=False)
-            data_object.bundle = bundle
-            data_object.data = data
-            data_object.save()
-            print('data_object object: {}'.format(data_object))
+        # if form_data_object.is_valid():
+        #     # Make Product Observational
+        #     data_object = form_data_object.save(commit=False)
+        #     data_object.bundle = bundle
+        #     data_object.data = data
+        #     data_object.save()
+        #     print('data_object object: {}'.format(data_object))
 
-            # Make data directory
-            print('Checking to see if data directory needs to be made')
-            new_directory = data.build_directory()
+        #     # Make data directory
+        #     print('Checking to see if data directory needs to be made')
+        #     new_directory = data.build_directory()
 
-            # If it's a new directory, we need a product_collection to describe the
-            # collection. *** Currently: Just does base case. Fix in data model.
-            if new_directory:
-                data.build_product_collection()
+        #     # If it's a new directory, we need a product_collection to describe the
+        #     # collection. *** Currently: Just does base case. Fix in data model.
+        #     if new_directory:
+        #         data.build_product_collection()
 
-            # Regardless if it's a new directory or not, we create the product_observational
-            # to describe the current observations in the product
-            #product_observational.build_base_case()
-            ## Get Root: 
-            #product_observational.fill_base_case()
+        #     # Regardless if it's a new directory or not, we create the product_observational
+        #     # to describe the current observations in the product
+        #     #product_observational.build_base_case()
+        #     ## Get Root: 
+        #     #product_observational.fill_base_case()
             
         # Context Dictionary
         context_dict = {
             'bundle':bundle,
             'form_dictionary':form_dictionary,
-            #'form_product_observational':form_product_observational,
             'data': data,
             #'display_dictionary':display_dictionary,
             #'product_observational_set':product_observational_set,
-            'form_data_object': form_data_object,
-            'data_object_set': data_object_set,
+            #'form_data_object': form_data_object,
+            #'data_object_set': data_object_set,
+            #'form_product_observational':form_product_observational,
         }
-      
+
         return render(request, 'build/data/data.html', context_dict)
 
     # Secure: Current user is not the user associated with the bundle, so...
@@ -2214,28 +2212,30 @@ def product_observational(request, pk_bundle, pk_product_observational):
         return redirect('main:restricted_access')
 
 
-def Table_Creation(request, data_object, pk_bundle):
+ddef Table_Creation(request, pk_bundle, pk_data):
     bundle = Bundle.objects.get(pk=pk_bundle)
-    data_object = Data_Object.objects.update_or_create(pk=pk_bundle)
-    data_form = Table_Delimited_Form(request.POST or None)
+    data = Data.objects.get(pk=pk_data)
 
     if request.user == bundle.user:
-        if data_object[0].data_type == 'Table Delimited':
+        if data.data_type == 'Table Delimited':
             print("delim form chosen")
             data_form = Table_Delimited_Form(request.POST or None)
-        elif data_object[0].data_type == 'Table Binary':
+
+        elif data.data_type == 'Table Binary':
             print("binary form chosen")
             data_form = Table_Binary_Form(request.POST or None)
-        elif data_object[0].data_type == 'Table Character':
+
+        elif data.data_type == 'Table Character':
             print("character form chosen")
-            data_form = Table_Character_Form(request.POST or None)
-        elif data_object[0].data_type == 'Array':
+            data_form = Table_Fixed_Width_Form(request.POST or None)
+
+        elif data.data_type == 'Array':
             data_form = ArrayForm(request.POST or None)
 
         context_dict = {
-            'bundle':bundle,
-            'data_object':data_object[0],
-            'data_form':data_form,
+            'bundle': bundle,
+            'data': data,
+            'data_form': data_form,
         }
 
         if data_form.is_valid():
@@ -2461,18 +2461,18 @@ def index(request, path):
     def index_maker():
         def _index(inpath):
             contents = os.listdir(inpath)
-            contents.reverse()
             for mfile in contents:
                 t = os.path.join(inpath, mfile)
+                if os.path.isfile(t):
+                    link_target = os.path.relpath(t, start=os.path.join(
+                        _get_abs_virtual_root(), 'archive/'))
+                    yield loader.render_to_string('build/directory/list_file.html', {'file': mfile, 'link': link_target})
                 if os.path.isdir(t):
                     link_target = os.path.relpath(t, start=os.path.join(
                         _get_abs_virtual_root(), 'archive/'))
                     yield loader.render_to_string('build/directory/list_folder.html', {'file': mfile, 'subfiles': _index(os.path.join(inpath, t)), 'link': link_target})
                     continue
-                if os.path.isfile(t):
-                    link_target = os.path.relpath(t, start=os.path.join(
-                        _get_abs_virtual_root(), 'archive/'))
-                    yield loader.render_to_string('build/directory/list_file.html', {'file': mfile, 'link': link_target})
+                
 
         return _index(eventual_path)
 

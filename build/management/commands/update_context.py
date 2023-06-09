@@ -279,7 +279,10 @@ class Context_Product:
                     if [self.lid, ref_lid['id']] not in reference_pairs:
                         reference_pairs.append([self.lid, ref_lid['id']])
                 else:
-                    ref_obj=ref_model.objects.filter(lid=ref_lid)
+                    #Add logic for old lids __phx
+                    
+
+                    ref_obj=ref_model.objects.filter(lid=ref_lid)         
 
                     if ref_lid not in id_list:
                         id_list.append(ref_lid)
