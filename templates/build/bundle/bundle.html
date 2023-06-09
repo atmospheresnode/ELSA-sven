@@ -6,30 +6,27 @@ Bundle
 {% endblock %}
 
 {% block main_header_block %}
-<!--Grid row-->
 </br>
 <div class="row">
-   <!--Grid column-->
    <div>
       Bundle View: <p>{{ bundle.name }}</p>
    </div>
-
    <hr>
-   <!--Grid column-->
 </div>
-<!--/.Row-->
 {% endblock %}
 
 {% block about_header_block %}
-<!--Row-->
+
 <div class="row center">
-   <!--Column-->
    </br>
-   <!--Help Button-->
+
+   <!-- Help Button -->
    <div class="col-md-2">
       <button class="btn btn-teal" data-toggle="collapse" href="#content" role="button"> What is a bundle? </button>
    </div>
 
+   <!-- Delete Button -->
+   <!-- See if we can make this into a pop-up modal instead of having a separate delete pages -->
    <div class="col-md-3">
       <a href="{% url 'build:bundle_delete' bundle.pk %}">
          <button role="button" class="btn btn-red"> Delete {{ bundle }} Bundle </button>
@@ -37,18 +34,20 @@ Bundle
    </div>
 
 
-
+   <!-- View XML Files Button -->
    <div class="col-md-3">
       <a href="{% url 'build:directory_view' bundle.relative_dir %}">
          <button role="button" class="btn btn-blue"> View {{ bundle }} Directory </button>
       </a>
    </div>
 
+   <!-- Download Button -->
    <div class="col-md-4">
       <a href="{% url 'build:bundle_download' bundle.pk %}   ">
          <button role="button" width="500 px" class="btn btn-cyan" data-toggle="tiptool" data-placement="right"
-            title="Click this button to download a zip file of the current bundle template package as it currently is. The resulting package will contain all label templates you've included in your bundle and may or may not be complete depending on how much tailoring you've done throughout the system.">Download
-            {{ bundle }} Bundle Template Package </button>
+            title="Click this button to download a zip file of the current bundle template package as it currently is. The resulting package will contain all label templates you've included in your bundle and may or may not be complete depending on how much tailoring you've done throughout the system.">
+            Download {{ bundle }} Bundle Template Package 
+         </button>
       </a>
    </div>
 
@@ -63,7 +62,8 @@ Bundle
             distinct with unique identifiers within the overall holdings of PDS, and (2) each bundle must be approved by
             a PDS peer review.
             </br>
-            <strong>Archive structure:</strong> </br>
+            <strong>Archive structure:</strong>
+            </br>
             Members of a bundle are listed in a Product_Bundle, an XML file which serves as a label and collection
             listing. Product_Bundle is described and uniquely identified using the Product_Bundle class definition.
             </br>
@@ -266,7 +266,7 @@ Bundle
       <!--Grid column-->
       <div class="col-md-12">
          <p class="card-header black-text text-left z-depth-2">
-            The <strong>INVESTIGATION AREA </strong> provides references for your bundle including alternative names for
+            The <strong> INVESTIGATION AREA </strong> provides references for your bundle including alternative names for
             your dataset <strong>(Alias)</strong>, citation information for giving credit to those working on your data
             <strong>(Citation Information)</strong>, and updates to the editing of the bundle <strong>(Modification History)</strong>.
          </p>
@@ -716,11 +716,11 @@ Bundle
             <!--/.Column-->
 
             </br>
-            <div class=" col-md-12 rgba-indigo">
+            <div class="col-md-12">
                <hr>
                   <div id="data_collection_detail">
                      <div class="row">
-                        <div class="col-sm-6 col-md-3">
+                        <div class="rgba-indigo">
                            <div id="displayData" class="collapse col-md-12 rgba-indigo">
                               </br>
                               <div class="rgba-indigo">
@@ -748,11 +748,11 @@ Bundle
                {% if data_set %}
                <div class="row" id="data_collections_detail">
                   {% for data in data_set %}
-                  <div class="col-sm-6 col-md-3">
+                  <div class="col-md-4 col-md-3">
                      <!--Card-->
                      <div class="button">
                         <!--Link-->
-                        <a href="{% url 'build:data' bundle.pk data.pk %}">
+                        <a href="{% url 'build:table_creation' bundle.pk data.pk %}">
                            <!--Card content-->
                            <div class="card-body z-depth-2">
                               <!--Title-->

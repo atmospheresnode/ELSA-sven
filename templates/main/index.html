@@ -1,132 +1,118 @@
 {% extends 'main/base-k.html' %}
 {% load staticfiles %}
 
-{% block main_header_block%}
-Welcome to <span class="text-muted">ELSA</span>.<hr/>
+{% block main_header_block %}
+<br/>
+Welcome to <span class="text-muted">ELSA</span>.
+<hr/>
 {% endblock %}
 
 {% block body_block %}
+    <!-- About Page -->
     {% if user.is_authenticated %}
-        <!--Row-->
+        <!--  What Card -->
         <div class="row pt-2">
-            <!--Column-->
             <div class="col-md-12">    
-                <!--Panel-->
                 <div class="card">
-                    <!--Header-->
-                    <h3 class="card-header elegant-color white-text text-center z-depth-2">
-                    What does ELSA do?
-                    </h3>
-                    <!--/.Header-->
-                    <!--Body-->
+                    <h3 class="card-header elegant-color white-text text-center z-depth-2"> What does ELSA do? </h3>
                     <div class="card-body">
                         <br/>
-                        <h4 class="card-title">Take a walk with ELSA, {{ user.first_name }}.</h4>
-                        <p class="card-text">ELSA is a user-centered application that aids in the creation of PDS4 compliant labels for
-    your data bundles.  Since ELSA is a user-centered application, we'll first go to your profile page. Your profile page will be the
-    hub for all your created bundles. Click the button to begin the bundle creation process. There is additional help texts found by hovering the cursor over buttons that will give a clearer description of the purpose of that section.</p>
-                        <center><a class="btn btn-default" href="{{ user.userprofile.get_absolute_url }}">@{{ user }}</a></center>
+                        <h4 class="card-title"> Take a walk with ELSA, {{ user.first_name }}. </h4>
+                        <p class="card-text"> 
+                            ELSA is a user-centered application that aids in the creation of PDS4 compliant labels for your data bundles. 
+                            Since ELSA is a user-centered application, we'll first go to your profile page. Your profile page will be the hub for all your created bundles. 
+                            Click the button to begin the bundle creation process. 
+                            There is additional help texts found by hovering the cursor over buttons that will give a clearer description of the purpose of that section.
+                        </p>
+                        <center>
+                            <a class="btn btn-default" href="{{ user.userprofile.get_absolute_url }}"> @{{ user }} </a>
+                        </center>
                     </div>
-                    <!--/.Body-->
                 </div>
-                <!--/.Panel-->
             </div>
-            <!--/.Column-->
         </div>
-        <!--/.Row-->
+
         <hr/>
-        <!--Row -->
+
+        <!-- Who Card -->
         <div class="row pt-2">
-            <!--Column-->
             <div class="col-md-12">    
-                <!--Panel-->
                 <div class="card">
-                    <!--Header-->
-                    <h3 class="card-header elegant-color white-text text-center z-depth-2">
-                    Who is ELSA for?
-                    </h3>
-                    <!--/.Header-->
-                    <!--Body-->
+                    <h3 class="card-header elegant-color white-text text-center z-depth-2"> Who is ELSA for? </h3>
                     <div class="card-body">
                         <br/>
-                        <h4 class="card-title">Are you part of the PDS4 community?</h4>
-                        <p class="card-text">ELSA was created to help lessen the learning curve involved for new PDS4 users.  Check out the Planetary Data System's page to learn more about data archiving and distribution.</p>
-                        <center><a class="btn btn-default" href="https://pds.jpl.nasa.gov/">@PDS</a><a class="btn btn-default" href="http://atmos.nmsu.edu/">@ATM</a></center>
+                        <h4 class="card-title"> Are you part of the PDS4 community? </h4>
+                        <p class="card-text"> ELSA was created to help lessen the learning curve involved for new PDS4 users.
+                             Check out the Planetary Data System's page to learn more about data archiving and distribution.
+                        </p>
+                        <center>
+                            <a class="btn btn-default" href="https://pds.jpl.nasa.gov/"> @PDS </a> 
+                            <a class="btn btn-default" href="http://atmos.nmsu.edu/"> @ATM </a>
+                        </center>
                     </div>
-                    <!--/.Body-->
                 </div>
-                <!--/.Panel-->
             </div>
-            <!--/.Column-->
         </div>
-        <!--/.Row-->
+
         <hr/>
-        <!--Row -->
+
+        <!-- Why Card -->
         <div class="row pt-2">
-            <!--Column-->
             <div class="col-md-12">    
-                <!--Panel-->
                 <div class="card">
-                    <!--Header-->
-                    <h3 class="card-header elegant-color white-text text-center z-depth-2">
-                    Why ELSA?
-                    </h3>
-                    <!--/.Header-->
-                    <!--Body-->
+                    <h3 class="card-header elegant-color white-text text-center z-depth-2"> Why ELSA? </h3>
                     <div class="card-body">
                         <br/>
                         <h4 class="card-title">Well, ELSA is great!</h4>
-                        <p class="card-text">...At least we think so! ELSA is an educational tool.  ELSA is currently in development but is making pretty good progress.  You can read more about ELSA below.</p>
-                        <center><a class="btn btn-default" href="{% url 'main:about' %}">@ABOUT.</a></center>
+                        <p class="card-text">.
+                            .. At least we think so! ELSA is an educational tool. 
+                            ELSA is currently in development but is making pretty good progress. 
+                            You can read more about ELSA below. 
+                        </p>
+                        <center>
+                            <a class="btn btn-default" href="{% url 'main:about' %}"> @ABOUT </a>
+                        </center>
                     </div>
-                    <!--/.Body-->
                 </div>
-                <!--/.Panel-->
             </div>
-            <!--/.Column-->
         </div>
-        <!--/.Row-->
+
         <hr/>
-
-
-        
+    <!-- Login Page -->
     {% else %}
-        <!--Row-->
+        <!-- Flavor Text -->
         <div class="row pt-2">
-            <!--Column-->
             <div class="col-md-12">
-                <p>The Educational Labeling System @Atmospheres (ELSA) is a tool designed to help streamline the creation of PDS4 compliant labels.  Here at Atmos we believe in taking a top-down approach when it comes to your data.  ELSA begins with the unique name of your bundle, trickles down through your collections, and ends with the details of your data to provide you with PDS4 labels.</p>
-           </div>
-           <!--/.Column-->
-       </div>
-       <!--/.Row-->
-       <hr/>
-       <!--Row-->
-       <div class="row pt-2">
-           <!--Column-->
-           <div class="col-md-7 push-md-5">
-              <p class="lead"> 
-                  <a href="{% url 'friends:register' %}">
-                      <center><button class="btn btn-default">
-                     Sign Up Here
-                      </button></center>
-                  </a>
-                  <br/>
-                  <form id="login_form" method="post" action="{% url 'friends:login' %}">
-                      {% csrf_token %}
-                      Username:  <input type="text" name="username" value="" size="50" /><br />
-                      Password:  <input type="password" name="password" value="" size="50"/><br />
-                  <center><input class="btn btn-default" type="submit" value="login" /><a class="btn btn-default" href="{% url 'friends:password_reset' %}">Forgot Password?.</a></center>
-                  
-                  </form>
-              </p>
-          </div>
-          <!--/.Column-->
-      </div>
-      <!--/.Row-->
+                <p> The Educational Labeling System @Atmospheres (ELSA) is a tool designed to help streamline the creation of PDS4 compliant labels. 
+                    Here at Atmos, we believe in taking a top-down approach when it comes to your data. 
+                    ELSA begins with the unique name of your bundle, trickles down through your collections, and ends with the details of your data to provide you with PDS4 labels.
+                </p>
+            </div>
+        </div>
+
+        <hr/>
+       
+        <!-- Login Form -->
+        <div class="row pt-2">
+            <div class="col-md-6 push-md-3">
+                <br/>
+                <p> 
+                    <form id="login_form" method="post" action="{% url 'friends:login' %}">
+                        {% csrf_token %}
+                        <strong>Username</strong><input type="text" name="username" value="" size="50"/> 
+                        <br/><br/>
+                        <strong>Password</strong><input type="password" name="password" value="" size="50"/> 
+                        <br/><br/>
+                        <center>
+                            <input class="btn btn-default" type="submit" value="login"/>
+                            <a class="btn btn-default" href="{% url 'friends:password_reset' %}"> Forgot Password? </a>
+                            <a href="{% url 'friends:register' %}"> 
+                                <button class="btn btn-default"> Sign Up Here </button>
+                            </a>
+                        </center>
+                    </form>
+                </p>
+            </div>
+        </div>
     {% endif %}
 {% endblock %}
-
-
-<!--SPOT FOR EXERCISE FOUND IN about_templates.txt-->
-
