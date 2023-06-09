@@ -1093,6 +1093,9 @@ class Instrument(models.Model):
     #objects = InstrumentManager()
 
     # Meta
+    class Meta:
+        ordering = ('name',)
+
     def __str__(self):
         return self.name
 
@@ -1263,6 +1266,9 @@ class Target(models.Model):
     #objects = TargetManager()
 
     # Meta
+    class Meta:
+        ordering = ('name',)
+
     def __str__(self):
         return self.name
 
@@ -1397,6 +1403,8 @@ class Instrument_Host(models.Model):
     #objects = Instrument_HostManager()
 
     # Meta
+    class Meta:
+        ordering = ('name',)
 
     def __str__(self):
         return self.name
@@ -1518,6 +1526,10 @@ class Facility(models.Model):
         name_edit = replace_all(name_edit, ' ', '_')
 
     # Meta
+    class Meta:
+        ordering = ('name',)
+
+
     def __str__(self):
         return self.name
 
@@ -1658,6 +1670,8 @@ class Telescope(models.Model):
     #objects = Instrument_HostManager()
 
     # Meta
+    class Meta:
+        ordering = ('name',)
 
     def __str__(self):
         return self.name
