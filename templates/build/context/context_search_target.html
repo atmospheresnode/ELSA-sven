@@ -33,8 +33,7 @@ Add Context: Target
     <!--Column-->
     <div class="col-md-12">
         <form class="card-header black-text text-left z-depth-2"id="query01" method="post" action="{% url 'build:context_search_target' bundle.pk %}">
-	    <p>Targets are often provided by the combinations of context above, and a pull-down menu of available targets may be provided especially if you’ve selected Mission context products. 
-• If you have more general purpose observing systems or non-affiliated instruments you may need to select a target from the entire list of available targets. </p>
+	    <p>Choose the target(s) you wish to add to your bundle. The list should be dependent on what targets were observed from the instrument you chose on the previous page.</p>
             {% csrf_token %}
             {{ form_target }}
             {{ form.errors }}
