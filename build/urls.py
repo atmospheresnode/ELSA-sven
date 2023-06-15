@@ -75,7 +75,7 @@ urlpatterns = [
 
 
     url(r'^(?P<pk_bundle>\d+)/data/table/(?P<pk_product_observational>\d+)/$', views.table_detail, name='table_detail'),
-    url(r'^(?P<pk_bundle>\d+)/(?P<data_object>\d+)/table_creation/$', views.Table_Creation, name='table_creation'),
+    url(r'^(?P<pk_bundle>\d+)/(?P<pk_data>\d+)/table_creation/$', views.Table_Creation, name='table_creation'),
     url(r'^(?P<pk_bundle>\d+)/(?P<table>[-/w]+)/field_creation/$', views.Field_Creation, name='field_creation'),
 
     # Dictionary
