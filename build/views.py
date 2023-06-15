@@ -2212,7 +2212,7 @@ def product_observational(request, pk_bundle, pk_product_observational):
         return redirect('main:restricted_access')
 
 
-ddef Table_Creation(request, pk_bundle, pk_data):
+def Table_Creation(request, pk_bundle, pk_data):
     bundle = Bundle.objects.get(pk=pk_bundle)
     data = Data.objects.get(pk=pk_data)
 
