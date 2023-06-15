@@ -719,59 +719,56 @@ Bundle
             <div class="col-md-12">
                <hr>
                   <div id="data_collection_detail">
-                     <div class="row">
-                        <div class="rgba-indigo">
-                           <div id="displayData" class="collapse col-md-12 rgba-indigo">
-                              </br>
-                              <div class="rgba-indigo">
-                                 <form id="form_data" method="post" action="{% url 'build:bundle' bundle.pk %}">
-                                    {% csrf_token %}
-                                    <div id="form_data"> {{ form_data.as_p }} </div>
-                                    <input class="btn btn-default" type="submit" value="Submit" />
-                                 </form>
-                              </div>
-                              </br>
+                     <div class="rgba-indigo">
+                        <div id="displayData" class="collapse col-md-12 rgba-indigo">
+                           </br>
+                           <div class="rgba-indigo">
+                              <form id="form_data" method="post" action="{% url 'build:bundle' bundle.pk %}">
+                                 {% csrf_token %}
+                                 <div id="form_data"> {{ form_data.as_p }} </div>
+                                 <input class="btn btn-default" type="submit" value="Submit" />
+                              </form>
                            </div>
-                     </div>
+                           </br>
+                        </div>
                   </div>
             </div>
          </div>
+
          <hr>
          
-         <div class="row">
-            <div class="col-md-12">
-               <p class="card-header bg-info text-white text-center z-depth-2">
-                  <strong>View {{ bundle.name }} Data Products </strong>
-               </p>
-               <br />
-               <!--Row-->
-               {% if data_set %}
-               <div class="row" id="data_collections_detail">
-                  {% for data in data_set %}
-                  <div class="col-md-4 col-md-3">
-                     <!--Card-->
-                     <div class="button">
-                        <!--Link-->
-                        <a href="{% url 'build:table_creation' bundle.pk data.pk %}">
-                           <!--Card content-->
-                           <div class="card-body z-depth-2">
-                              <!--Title-->
-                              <h4 class="card-title" data-toggle="tiptool" data-placement="right" title="This link will enable you to access and edit your newly created Data Collection set as well as edit the Display Dictionary section">
-                                 Data Raw {{ data.name }}
-                              </h4>
-                              <p class="card-text">This is your data now take care of it</p>
-                           </div>
-                        </a>
-                     </div>
+         <div class="col-md-12">
+            <p class="card-header bg-info text-white text-center z-depth-2">
+               <strong>View {{ bundle.name }} Data Products </strong>
+            </p>
+            <br/>
+            <!--Row-->
+            {% if data_set %}
+            <div class="row" id="data_collections_detail">
+               {% for data in data_set %}
+               <div class="col-md-4 col-md-3">
+                  <!--Card-->
+                  <div class="button">
+                     <!--Link-->
+                     <a href="{% url 'build:table_creation' bundle.pk data.pk %}">
+                        <!--Card content-->
+                        <div class="card-body z-depth-2">
+                           <!--Title-->
+                           <h4 class="card-title" data-toggle="tiptool" data-placement="right" title="This link will enable you to access and edit your newly created Data Collection set as well as edit the Display Dictionary section">
+                              Data Raw {{ data.name }}
+                           </h4>
+                           <p class="card-text">This is your data now take care of it</p>
+                        </div>
+                     </a>
                   </div>
-                  {% endfor %}
                </div>
-               {% else %}
-               <hr>
-               <div class="col-md-12" class="card-header black-text text-left z-depth-2"> No Data Products </div>
-               <hr>
-               {% endif %}
+               {% endfor %}
             </div>
+            {% else %}
+            <hr>
+            <div class="col-md-12" class="card-header black-text text-left z-depth-2"> No Data Products </div>
+            <hr>
+            {% endif %}
          </div>
 
 
