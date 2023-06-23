@@ -80,9 +80,11 @@ Add Context: Host Products
 </div>
 
 {% if instrument_host %}
+<h3>Note: {{ instrument_host }} added to {{ bundle }}:</h3>
 
 <!--/.Column-->
 <hr>
+{% for ih in bundle_instrument_host_set %}
 <div class="card-header black-text text-left z-depth-2">
 <div class="row">
     <!--Card-->
@@ -91,14 +93,14 @@ Add Context: Host Products
             <div class="button">
                 <!--Link-->
                 <!-- change the href -->
-                <a href="{% url 'build:context_search_instrument' bundle.pk investigation.pk instrument_host.pk %}">
+                <a href="{% url 'build:context_search_instrument' bundle.pk ih.investigations.first.pk ih.pk %}">
                     <!--Card content-->
                     <div class="card-body">
                         <!--Title-->
-                        <li> <h4 class="card-title">{{ instrument_host.name }}</h4></li>
+                        <li> <h4 class="card-title">{{ ih.name }}</h4></li>
                         <!--/.Title-->
                         <!--Text-->
-                        <p class="card-text">{{ instrument_host.lid }} <br/><br/></p>
+                        <p class="card-text">{{ ih.lid }} <br/><br/></p>
                         <!--/.Text-->
                     </div>
                     <!--/.Card content-->
@@ -111,12 +113,15 @@ Add Context: Host Products
     <!--/.Card-->
 </div>
 </div>
+{% endfor %}
 {% endif %}
 
 {% if facility %}
+<h3>Note: {{ facility }} added to {{ bundle }}:</h3>
 
 <!--/.Column-->
 <hr>
+{% for fac in bundle_facility_set %}
 <div class="card-header black-text text-left z-depth-2">
 <div class="row">
     <!--Card-->
@@ -126,14 +131,14 @@ Add Context: Host Products
             <div class="button">
                 <!--Link-->
                 <!-- change the href -->
-                <a href="{% url 'build:context_search_facility_instrument' bundle.pk investigation.pk facility.pk %}">
+                <a href="{% url 'build:context_search_facility_instrument' bundle.pk fac.investigations.first.pk fac.pk %}">
                     <!--Card content-->
                     <div class="card-body">
                         <!--Title-->
-                        <li> <h4 class="card-title">{{ facility.name }}</h4></li>
+                        <li> <h4 class="card-title">{{ fac.name }}</h4></li>
                         <!--/.Title-->
                         <!--Text-->
-                        <p class="card-text">{{ facility.lid }} <br/><br/></p>
+                        <p class="card-text">{{ fac.lid }} <br/><br/></p>
                         <!--/.Text-->
                     </div>
                     <!--/.Card content-->
@@ -145,14 +150,14 @@ Add Context: Host Products
             <div class="button">
                 <!--Link-->
                 <!-- change the href -->
-                <a href="{% url 'build:context_search_telescope' bundle.pk investigation.pk facility.pk %}">
+                <a href="{% url 'build:context_search_telescope' bundle.pk fac.investigations.first.pk fac.pk %}">
                     <!--Card content-->
                     <div class="card-body">
                         <!--Title-->
-                        <li> <h4 class="card-title">{{ facility.name }}</h4></li>
+                        <li> <h4 class="card-title">{{ fac.name }}</h4></li>
                         <!--/.Title-->
                         <!--Text-->
-                        <p class="card-text">{{ facility.lid }} <br/><br/></p>
+                        <p class="card-text">{{ fac.lid }} <br/><br/></p>
                         <!--/.Text-->
                     </div>
                     <!--/.Card content-->
@@ -166,6 +171,7 @@ Add Context: Host Products
     <!--/.Card-->
 </div>
 </div>
+{% endfor %}
 {% endif %}
 
 <div class="row pt-2">

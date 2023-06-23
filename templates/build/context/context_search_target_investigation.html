@@ -66,6 +66,8 @@ Add Context: Target
     </div>
 
 </br>
+<h3>Note: {{ target }} added to {{ bundle }}:</h3>
+{%for tar in bundle_target_set %}
     <div class="card-header black-text text-left z-depth-2">
     <div class="row">
         <!--Card-->
@@ -76,10 +78,10 @@ Add Context: Target
                     <!--Card content-->
                     <div class="card-body">
                         <!--Title-->
-                        <li><h4 class="card-title">{{ target.name }}</h4></li>
+                        <li><h4 class="card-title">{{ tar.name }}</h4></li>
                         <!--/.Title-->
                         <!--Text-->
-                        <p class="card-text">{{ target.lid }} <br/><br/></p>
+                        <p class="card-text">{{ tar.lid }} <br/><br/></p>
                         <!--/.Text-->
                     </div>
                     <!--/.Card content-->
@@ -91,7 +93,7 @@ Add Context: Target
      
     </div>
     </div>
-
+        {% endfor %}
         {% endif %}
 <!--/.Row-->
 <!--Row-->
