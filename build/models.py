@@ -135,8 +135,6 @@ class Version(models.Model):
             if number[i].isalpha() is False:
                 new_number = new_number + number[i] + "."
             else:
-                if number[i] == 'C':
-                    new_number = new_number + '12' + "."
                 if number[i] == 'D':
                     new_number = new_number + '13' + "."
                 if number[i] == 'E':
@@ -151,6 +149,8 @@ class Version(models.Model):
                     new_number = new_number + '18' + "."
                 if number[i] == 'J':
                     new_number = new_number + '19' + "."
+                if number[i] == 'K':
+                    new_number = new_number + '20' + "."
             i = i + 1
 
         '''
@@ -1784,6 +1784,7 @@ class Bundle(models.Model):
     )
 
     VERSION_CHOICES = (
+        ('1K00', '1K00'),
         ('1J00', '1J00'),
         ('1I00', '1I00'),
         ('1H00', '1H00'),
@@ -1791,7 +1792,6 @@ class Bundle(models.Model):
         ('1F00', '1F00'),
         ('1E00', '1E00'),
         ('1D00', '1D00'),
-        ('1C00', '1C00'),
     )
 
     bundle_type = models.CharField(
