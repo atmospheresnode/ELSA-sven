@@ -57,32 +57,34 @@ Add Context: Instrument
 <div class="row pt-2">
     <!--Column-->
     <div class="col-md-12">
-        {% if instrument %}
+        
         <div class="row pt-2">
             <!--Column-->
             <div class="col-md-12">
                 <h4 class="card-header stylish-color white-text text-center z-depth-2">Recently Added Instrument</h4>
             </br>
-            <p class="card-header black-text text-left z-depth-2">Select an investigation below associated with your bundle to add instrument hosts from that investigation to your bundle. Resume the bundle building process by adding instrument hosts, instruments, and targets to ensure a most complete PDS4 bundle.</br>
+            <!-- <p class="card-header black-text text-left z-depth-2">Select an investigation below associated with your bundle to add instrument hosts from that investigation to your bundle. Resume the bundle building process by adding instrument hosts, instruments, and targets to ensure a most complete PDS4 bundle.</br> -->
             </p>
             </div>
         </div>
         <br>
-
+        {% if instrument %}
+        <h3>Note: {{ instrument }} added to {{ bundle }}:</h3>
+        {% for ins in bundle_instrument_set%}
         <div class="card-header black-text text-left z-depth-2">
         <div class="row">
             <!--Card-->
             <div class="col-sm-6 col-md-3">
                 <div class="button">
                     <!--Link-->
-                    <a href="{% url 'build:context_search_target_investigation' bundle.pk investigation.pk %}">
+                    <a href="{% url 'build:context_search_target_investigation' bundle.pk ins.investigations.first.pk %}">
                         <!--Card content-->
                         <div class="card-body">
                             <!--Title-->
-                            <h4 class="card-title">{{ instrument.name }}</h4>
+                            <h4 class="card-title">{{ ins.name }}</h4>
                             <!--/.Title-->
                             <!--Text-->
-                            <p class="card-text">{{ instrument.lid }} <br/><br/><br/></p>
+                            <p class="card-text">{{ ins.lid }} <br/><br/><br/></p>
                             <!--/.Text-->
                         </div>
                         <!--/.Card content-->
@@ -95,7 +97,7 @@ Add Context: Instrument
             </br></br>
         </div>
         </div>
-
+        {% endfor %}
         {% endif %}
     </div>
     <!--/.Column-->

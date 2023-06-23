@@ -614,8 +614,11 @@ def bundle(request, pk_bundle):
             'form_product_collection': form_product_collection,
             'form_additional_collections': form_additional_collections,
             'additional_collections_count': len(additional_collections_set),
-            # 'instruments': bundle.instruments.all(),
-            # 'targets': bundle.targets.all(),
+            'investigations': bundle.investigations.all(),
+            'facilities': bundle.facilities.all(),
+            'telescopes': bundle.telescopes.all(),
+            'instruments': bundle.instruments.all(),
+            'targets': bundle.targets.all(),
             'product_observational_set':product_observational_set,
             'documents':Product_Document.objects.filter(bundle=bundle),
             'additional_collections_set': additional_collections_set,
@@ -2443,6 +2446,15 @@ def instruments(request):
     }
 
     return render(request, 'context/repository/instruments.html', context_dict)
+
+# delete functions for context products
+def delete_target(request, pk_bundle, pk_target):
+    bundle = Bundle.objects.get(pk=pk_bundle)
+    target = Target.objects.get(pk=pk_target)
+    target.remove_xml(bundle=bundle)
+    target.delete()
+
+    return redirect('../../bundle/')
 
 # Directory View Functions
 # utils functions

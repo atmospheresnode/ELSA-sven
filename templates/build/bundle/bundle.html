@@ -147,8 +147,52 @@ Bundle
             </br>
 
             <div class="row pt-2">
-               {% if instrument_list %}
-               {% for instrument in instrument_list %}
+               {% if investigations %}
+               {% for investigation in investigations %}
+               <!--Column-->
+               <div class="col-md-3">
+                  <!--Card-->
+                  <div class="card">
+                     <!--Card image-->
+                     <img class="img-fluid" src="{% static 'images/investigation.png' %}" alt="Investigation Image">
+                     <!--Card content-->
+                     <div class="card-body">
+                        <!--Title-->
+                        <h4 class="card-title">{{ investigation }}</h4>
+                        <!--Text-->
+                        <p class="card-text">{{ investigation.lid }}</p>
+                        <!--Buttons-->
+                        <a href="{% url 'main:construction' %}">
+                           <button type="button" class="btn btn-danger">Remove</button>
+                        </a>
+                     </div>
+                  </div>
+                  <!--/.Card-->
+               </div>
+               <!--/.Column-->
+               {% endfor %}
+               {% else %}
+               <!--Column-->
+               <div class="col-md-3">
+                  <!--Card-->
+                  <div class="card">
+                     <!--Card image-->
+                     <img class="img-fluid" src="{% static 'images/null.png' %}" alt="Investigation Image">
+                     <!--Card content-->
+                     <div class="card-body">
+                        <!--Title-->
+                        <h4 class="card-title"> Null </h4>
+                        <!--Text-->
+                        <p class="card-text"> No investigations are associated with {{ bundle }}. </p>
+                     </div>
+                  </div>
+                  <!--/.Card-->
+               </div>
+               <!--/.Column-->
+               {% endif %}
+
+               {% if instruments %}
+               {% for instrument in instruments %}
                <!--Column-->
                <div class="col-md-3">
                   <!--Card-->
@@ -191,8 +235,96 @@ Bundle
                <!--/.Column-->
                {% endif %}
 
-               {% if target_list %}
-               {% for target in target_list %}
+               {% if facilities %}
+               {% for facility in facilities %}
+               <!--Column-->
+               <div class="col-md-3">
+                  <!--Card-->
+                  <div class="card">
+                     <!--Card image-->
+                     <img class="img-fluid" src="{% static 'images/facility.png' %}" alt="Facility Image">
+                     <!--Card content-->
+                     <div class="card-body">
+                        <!--Title-->
+                        <h4 class="card-title">{{ facility }}</h4>
+                        <!--Text-->
+                        <p class="card-text">{{ facility.lid }}</p>
+                        <!--Buttons-->
+                        <a href="{% url 'main:construction' %}">
+                           <button type="button" class="btn btn-danger">Remove</button>
+                        </a>
+                     </div>
+                  </div>
+                  <!--/.Card-->
+               </div>
+               <!--/.Column-->
+               {% endfor %}
+               {% else %}
+               <!--Column-->
+               <div class="col-md-3">
+                  <!--Card-->
+                  <div class="card">
+                     <!--Card image-->
+                     <img class="img-fluid" src="{% static 'images/null.png' %}" alt="Facility Image">
+                     <!--Card content-->
+                     <div class="card-body">
+                        <!--Title-->
+                        <h4 class="card-title"> Null </h4>
+                        <!--Text-->
+                        <p class="card-text"> No facilities are associated with {{ bundle }}. </p>
+                     </div>
+                  </div>
+                  <!--/.Card-->
+               </div>
+               <!--/.Column-->
+               {% endif %}
+
+               {% if telescopes %}
+               {% for telescope in telescopes %}
+               <!--Column-->
+               <div class="col-md-3">
+                  <!--Card-->
+                  <div class="card">
+                     <!--Card image-->
+                     <img class="img-fluid" src="{% static 'images/telescope.png' %}" alt="Telescope Image">
+                     <!--Card content-->
+                     <div class="card-body">
+                        <!--Title-->
+                        <h4 class="card-title">{{ telescope }}</h4>
+                        <!--Text-->
+                        <p class="card-text">{{ telescope.lid }}</p>
+                        <!--Buttons-->
+                        <a href="{% url 'main:construction' %}">
+                           <button type="button" class="btn btn-danger">Remove</button>
+                        </a>
+                     </div>
+                  </div>
+                  <!--/.Card-->
+               </div>
+               <!--/.Column-->
+               {% endfor %}
+               {% else %}
+               <!--Column-->
+               <div class="col-md-3">
+                  <!--Card-->
+                  <div class="card">
+                     <!--Card image-->
+                     <img class="img-fluid" src="{% static 'images/null.png' %}" alt="Tepelesco Image">
+                     <!--Card content-->
+                     <div class="card-body">
+                        <!--Title-->
+                        <h4 class="card-title"> Null </h4>
+                        <!--Text-->
+                        <p class="card-text"> No telescopes are associated with {{ bundle }}. </p>
+                     </div>
+                  </div>
+                  <!--/.Card-->
+               </div>
+               <!--/.Column-->
+               {% endif %}
+
+               {% if targets %}
+               {% for target in targets %}
                <!--Column-->
                <div class="col-md-3">
                   <!--Card-->
@@ -209,6 +341,9 @@ Bundle
                         <a href="{% url 'main:construction' %}">
                            <button type="button" class="btn btn-danger">Remove</button>
                         </a>
+                        <!-- <a href="{% url 'build:delete_target' bundle.pk target.pk %}">
+                           <button type="button" class="btn btn-danger">Remove</button>
+                        </a> -->
                      </div>
                   </div>
                   <!--/.Card-->
