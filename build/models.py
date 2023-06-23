@@ -1325,6 +1325,35 @@ class Target(models.Model):
             label.write(label_tree.decode())
             label.close()
 
+    def remove_xml(self, bundle):
+        # Get all xml labels in directory
+        xml_path_list = get_xml_path(bundle.directory())
+
+        # Traverse labels
+        for xml_path in xml_path_list:
+
+            # Create Parser
+            parser = etree.XMLParser(
+                remove_blank_text=True, remove_comments=True)
+            tree = etree.parse(xml_path, parser)
+            label = open(xml_path, 'w')
+
+            # Do what needs to be done
+            root = tree.getroot()
+            
+            # for child in root:
+            #     print(child.name)
+            #     if child.name == "Target_Identification":
+            #         root.remove(child)
+
+            # When the time comes, add in if tag.localname is 'Product_Document' and if tag.localname is 'Product_Collection' and use the same function to call for those.
+
+            # Properly close file
+            label_tree = etree.tostring(
+                root, pretty_print=True, encoding='UTF-8', xml_declaration=True)
+            label.write(label_tree.decode())
+            label.close()
+
 
 """
 14.4  Instrument_Host

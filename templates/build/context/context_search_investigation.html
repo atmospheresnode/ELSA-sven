@@ -62,6 +62,10 @@ Add Context: Investigation
 <hr>
 
 {% if investigation %}
+<h3>Note: {{ investigation }} added to {{ bundle }}:</h3>
+
+
+{% for inv in bundle_investigation_set %}
 <div class="card-header black-text text-left z-depth-2">
 <div class="row">
     <!--Card-->
@@ -69,14 +73,14 @@ Add Context: Investigation
         <ul>
             <div class="button">
                 <!--Link-->
-                <a href="{% url 'build:context_search_instrument_host_and_facility' bundle.pk investigation.pk %}">
+                <a href="{% url 'build:context_search_instrument_host_and_facility' bundle.pk inv.pk %}">
                     <!--Card content-->
                     <div class="card-body">
                         <!--Title-->
-                        <li> <h4 class="card-title">{{ investigation.name }}</h4></li>
+                        <li> <h4 class="card-title">{{ inv.name }}</h4></li>
                         <!--/.Title-->
                         <!--Text-->
-                        <p class="card-text">{{ investigation.lid }} <br/><br/></p>
+                        <p class="card-text">{{ inv.lid }} <br/><br/></p>
                         <!--/.Text-->
                     </div>
                     <!--/.Card content-->
@@ -89,6 +93,7 @@ Add Context: Investigation
     <!--/.Card-->
 </div>
 </div>
+{% endfor %}
 {% endif %}
 
     <!--/.Row-->

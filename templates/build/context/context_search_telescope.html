@@ -73,7 +73,7 @@ Add Context: Telescope
 	<ul>
         <div class="button">
             <!--Link-->
-            <a href="{% url 'build:context_search_target_and_instrument' bundle.pk investigation.pk facility.pk %}"> 
+            <a href="{% url 'build:context_search_target_and_instrument' bundle.pk tel.investigations.first.pk tel.facilities.first.pk %}"> 
                 <!--Card content-->
                 <div class="card-body">
                     <!--Title-->

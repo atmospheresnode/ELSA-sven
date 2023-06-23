@@ -69,6 +69,7 @@ class Command(BaseCommand):
                 
                 else: #product is already in the database, but we'll still update the internal references
                     product = test_id.model_name.objects.filter(lid=i)[0]
+                    product.name = test_id.context_info['title'][0]
                     test_id.save_references(product)
             
             print(str(count)+' new products added to database.\n Updating internal references...')
@@ -156,11 +157,11 @@ class Context_Product:
          observing_system_components, investigations, and targets is outside of properties section
          '''
 
-        big_keyword_dict={'target':{'lid':[''], 'pds:Target.pds:name':[''], 'pds:Target.pds:type':[''], 'vid':[''], 'ops:Label_File_Info.ops:file_ref':[''] } ,
-                          'investigation':{'lid':[''], 'pds:Investigation.pds:name':[''], 'pds:Investigation.pds:type':[''], 'vid':[''], 'ops:Label_File_Info.ops:file_ref':[''], 'observing_system_components':[''], 'targets':[''] }, 
-                          'instrument':{'lid':[''], 'pds:Instrument.pds:name':[''], 'pds:Instrument.pds:type':[''], 'vid':[''], 'ops:Label_File_Info.ops:file_ref':[''], 'ref_lid_instrument_host':[''] },
-                          'instrument_host': {'lid':[''], 'pds:Instrument_Host.pds:name':[''], 'pds:Instrument_Host.pds:type':[''], 'vid':[''], 'ops:Label_File_Info.ops:file_ref':[''], 'investigations':[''], 'targets':[''], 'ref_lid_instrument':[''] },
-                          'facility':{'lid':[''], 'pds:Facility.pds:name':[''], 'pds:Facility.pds:type':[''], 'vid':[''], 'ops:Label_File_Info.ops:file_ref':[''], 'ref_lid_instrument':[''] }, 
+        big_keyword_dict={'target':{'lid':[''], 'title':[''], 'pds:Target.pds:type':[''], 'vid':[''], 'ops:Label_File_Info.ops:file_ref':[''] } ,
+                          'investigation':{'lid':[''], 'title':[''], 'pds:Investigation.pds:type':[''], 'vid':[''], 'ops:Label_File_Info.ops:file_ref':[''], 'observing_system_components':[''], 'targets':[''] }, 
+                          'instrument':{'lid':[''], 'title':[''], 'pds:Instrument.pds:type':[''], 'vid':[''], 'ops:Label_File_Info.ops:file_ref':[''], 'ref_lid_instrument_host':[''] },
+                          'instrument_host': {'lid':[''], 'title':[''], 'pds:Instrument_Host.pds:type':[''], 'vid':[''], 'ops:Label_File_Info.ops:file_ref':[''], 'investigations':[''], 'targets':[''], 'ref_lid_instrument':[''] },
+                          'facility':{'lid':[''], 'title':[''], 'pds:Facility.pds:type':[''], 'vid':[''], 'ops:Label_File_Info.ops:file_ref':[''], 'ref_lid_instrument':[''] }, 
                           'telescope':{'lid':[''], 'title':[''], 'vid':[''], 'ops:Label_File_Info.ops:file_ref':[''], 'ref_lid_instrument':['']}
                            }
         
@@ -205,7 +206,7 @@ class Context_Product:
         else:
             try:
                 new_product=self.model_name(lid=self.context_info['lid'][0], 
-                    name=self.context_info['pds:{}.pds:name'.format(self.type.title())][0], 
+                    name=self.context_info['title'][0], 
                     type_of=self.context_info['pds:{}.pds:type'.format(self.type.title())][0], 
                     vid=self.context_info['vid'][0],
                     file_ref=self.context_info['ops:Label_File_Info.ops:file_ref'][0]
