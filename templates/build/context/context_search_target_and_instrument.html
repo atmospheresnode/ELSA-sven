@@ -23,7 +23,7 @@ Add Context: Target or Instrument
     <div class="col-md-12">
         <div class="card">
             <div class="card-header black-text text-left z-depth-2">
-                <p>target. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational. Educational.</p>
+                <p>After adding a Telescope context product, you are able to either select a Target or Instrument product. Selecting a Target product would be the final step if you have no Instrument product to add. Selecting an Instrument product, has more products to be added afterwards.</p>
                 <h2 class="mb-0">
                     <button style="float:left" class="btn btn-teal" type="button"  data-toggle="collapse" data-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
                         Add Target +
@@ -58,7 +58,8 @@ Add Context: Target or Instrument
                 <!--Column-->
                 <div class="col-md-12">
                     <form class="card-header black-text text-left z-depth-2" id="query01" method="post" action="{% url 'build:context_search_target_and_instrument' bundle.pk investigation.pk facility.pk %}">
-                        <p>From the drop-down menu, select which type of host you plan to use. The initial selection will be <strong>instrument host</strong>(for mobile hosts) or <strong>facility</strong>(for stationary hosts). After selecting one of these two options you will be given a pull-down menu for the appropriate set. Instrument hosts include mobile platforms like spacecraft, rovers, landers, etc. whereas facilities include laboratories and observatories. If you plan to use telescopes and/or instruments not associated with a host, select the No Host option.</p>
+                        <p>Targets are often provided by the combinations of context above, and a pull-down menu of available targets may be provided especially if you’ve selected Mission context products. 
+                            • If you have more general purpose observing systems or non-affiliated instruments you may need to select a target from the entire list of available targets. </p>
                         
                         {% csrf_token %}
                         {{ form_target }}
@@ -92,7 +93,7 @@ Add Context: Target or Instrument
                 <!--Column-->
                 <div class="col-md-12">
                     <form class="card-header black-text text-left z-depth-2" id="query01" method="post" action="{% url 'build:context_search_target_and_instrument' bundle.pk investigation.pk facility.pk %}">
-                        <p> Facilities are stationary hosts such as laboratories or observatories, and will contain references for lab instruments and/or telescopes with instruments. Please select your facility</p>
+                        <p>Choose an associated instrument from the host product you just selected. Instruments are the pieces of equipment that actually collect the data, and it's important to include these in your observing systems.</p>
                         {% csrf_token %}
                         {{ form_instrument }}
                         {{ form.errors }}
@@ -112,14 +113,16 @@ Add Context: Target or Instrument
 <div class="row pt-2">
     <!--Column-->
     <div class="col-md-12">
-        <h4 class="card-header stylish-color white-text text-center z-depth-2">Recently Added Instrument Host</h4>
+        <h4 class="card-header stylish-color white-text text-center z-depth-2">Recently Added Target</h4>
     </br>
-    <p class="card-header black-text text-left z-depth-2">Select an investigation below associated with your bundle to add instrument hosts from that investigation to your bundle. Resume the bundle building process by adding instrument hosts, instruments, and targets to ensure a most complete PDS4 bundle.</br>
+    <!-- <p class="card-header black-text text-left z-depth-2">Select an investigation below associated with your bundle to add instrument hosts from that investigation to your bundle. Resume the bundle building process by adding instrument hosts, instruments, and targets to ensure a most complete PDS4 bundle.</br> -->
     </p>
 </div>
 <!--/.Column-->
 </div>
 <hr>
+<h3>Note: {{ target }} added to {{ bundle }}:</h3>
+{% for tar in bundle_target_set %}
 <div class="card-header black-text text-left z-depth-2">
 <div class="row">
     <!--Card-->
@@ -132,10 +135,10 @@ Add Context: Target or Instrument
                     <!--Card content-->
                     <div class="card-body">
                         <!--Title-->
-                        <li> <h4 class="card-title">{{ target.name }}</h4></li>
+                        <li> <h4 class="card-title">{{ tar.name }}</h4></li>
                         <!--/.Title-->
                         <!--Text-->
-                        <p class="card-text">{{ target.lid }} <br/><br/></p>
+                        <p class="card-text">{{ tar.lid }} <br/><br/></p>
                         <!--/.Text-->
                     </div>
                     <!--/.Card content-->
@@ -148,20 +151,23 @@ Add Context: Target or Instrument
     <!--/.Card-->
 </div>
 </div>
+{% endfor %}
 {% endif %}
 
 {% if instrument %}
 <div class="row pt-2">
     <!--Column-->
     <div class="col-md-12">
-        <h4 class="card-header stylish-color white-text text-center z-depth-2">Recently Added Facility</h4>
+        <h4 class="card-header stylish-color white-text text-center z-depth-2">Recently Added Instrument</h4>
     </br>
-    <p class="card-header black-text text-left z-depth-2">Select an investigation below associated with your bundle to add instrument hosts from that investigation to your bundle. Resume the bundle building process by adding instrument hosts, instruments, and targets to ensure a most complete PDS4 bundle.</br>
+    <!-- <p class="card-header black-text text-left z-depth-2">Select an investigation below associated with your bundle to add instrument hosts from that investigation to your bundle. Resume the bundle building process by adding instrument hosts, instruments, and targets to ensure a most complete PDS4 bundle.</br> -->
     </p>
 </div>
 <!--/.Column-->
 </div>
 <hr>
+<h3>Note: {{ instrument }} added to {{ bundle }}:</h3>
+{% for ins in bundle_instrument_set %}
 <div class="card-header black-text text-left z-depth-2">
 <div class="row">
     <!--Card-->
@@ -190,6 +196,7 @@ Add Context: Target or Instrument
     <!--/.Card-->
 </div>
 </div>
+{% endfor %}
 {% endif %}
 
 <div class="row pt-2">
