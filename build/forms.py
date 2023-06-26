@@ -517,17 +517,31 @@ class Table_Delimited_Form(forms.ModelForm):
         model = Table_Delimited
         exclude = ('bundle',)
 
+    def __init__(self, *args, **kwargs):
+        self.pk_ins = kwargs.pop('pk_ins')
+        super(Table_Delimited_Form, self).__init__(*args, **kwargs)
+        self.fields['data'] = forms.ModelChoiceField(queryset=Table_Delimited.objects.filer(bundle=self.pk_ins), required = True)
 
 class Table_Binary_Form(forms.ModelForm):
     class Meta(object):
         model = Table_Binary
         exclude = ('bundle',)
+    
+    def __init__(self, *args, **kwargs):
+        self.pk_ins = kwargs.pop('pk_ins')
+        super(Table_Binary_Form, self).__init__(*args, **kwargs)
+        self.fields['data'] = forms.ModelChoiceField(queryset=Table_Binary.objects.filer(bundle=self.pk_ins), required = True)
 
 
 class Table_Fixed_Width_Form(forms.ModelForm):
     class Meta(object):
         model = Table_Fixed_Width
         exclude = ('bundle',)
+    
+    def __init__(self, *args, **kwargs):
+        self.pk_ins = kwargs.pop('pk_ins')
+        super(Table_Fixed_Width_Form, self).__init__(*args, **kwargs)
+        self.fields['data'] = forms.ModelChoiceField(queryset=Table_Fixed_Width.objects.filer(bundle=self.pk_ins), required = True)
 
 
 class Field_Delimited_Form(forms.ModelForm):
