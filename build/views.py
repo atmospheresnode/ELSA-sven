@@ -2222,18 +2222,18 @@ def Table_Creation(request, pk_bundle, pk_data):
     if request.user == bundle.user:
         if data.data_type == 'Table Delimited':
             print("delim form chosen")
-            data_form = Table_Delimited_Form(request.POST or None)
+            data_form = Table_Delimited_Form(request.POST or None, pk_ins=pk_bundle)
 
         elif data.data_type == 'Table Binary':
             print("binary form chosen")
-            data_form = Table_Binary_Form(request.POST or None)
+            data_form = Table_Binary_Form(request.POST or None, pk_ins=pk_bundle)
 
         elif data.data_type == 'Table Character':
             print("character form chosen")
-            data_form = Table_Fixed_Width_Form(request.POST or None)
+            data_form = Table_Fixed_Width_Form(request.POST or None, pk_ins=pk_bundle)
 
         elif data.data_type == 'Array':
-            data_form = ArrayForm(request.POST or None)
+            data_form = ArrayForm(request.POST or None, pk_ins=pk_bundle)
 
         context_dict = {
             'bundle': bundle,
