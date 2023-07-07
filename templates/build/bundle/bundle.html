@@ -186,10 +186,13 @@
             {% endif %}
             <!--Column-->
 
+            {% if instruments %}
+            {% for instrument in instruments %}
+
       <!-- Instrument List Items -->
             <div class="col-md-3">
                <div class="card">
-                  <img class="img-fluid" src="{% static 'images/warp_zone.svg' %}" alt="Instrument Image">
+                  <img class="img-fluid" src="{% static 'images/instrument.png' %}" alt="Instrument Image">
                   <div class="card-body">
                      <h4 class="card-title">{{ instrument }}</h4>
                      <p class="card-text">{{ instrument.lid }}</p>
@@ -287,7 +290,7 @@
                <!--Card-->
                <div class="card">
                   <!--Card image-->
-                  <img class="img-fluid" src="{% static 'images/null.png' %}" alt="Tepelesco Image">
+                  <img class="img-fluid" src="{% static 'images/null.png' %}" alt="Telescope Image">
                   <!--Card content-->
                   <div class="card-body">
                      <!--Title-->
@@ -306,7 +309,7 @@
             <!--Column-->
             <div class="col-md-3">
                <div class="card">
-                  <img class="img-fluid" src="{% static 'images/target.jpg' %}" alt="Target Image">
+                  <img class="img-fluid" src="{% static 'images/target.png' %}" alt="Target Image">
                   <div class="card-body">
                      <h4 class="card-title">{{ target }}</h4>
                      <p class="card-text">{{ target.lid }}</p>
