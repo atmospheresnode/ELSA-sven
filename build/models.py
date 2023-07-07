@@ -2063,6 +2063,7 @@ class AdditionalCollections(models.Model):
         return self.collections_list
 
     def append_list(self):
+        self.collection_name = self.collection_name.lower().replace(' ', '_')
         collection = [self.collection_name, self.collection_type]
         if collection not in self.collections_list:
             self.collections_list.append(collection)
@@ -2888,7 +2889,7 @@ class Table_Delimited(models.Model):
     records = models.IntegerField(default=1)
     field_delimiter = models.CharField(max_length=256, choices=DELIMITER_CHOICES, default="Comma", blank=True)
     fields = models.IntegerField(default=1)
-    data = models.ForeignKey(Data, on_delete=models.CASCADE, null=True,)
+    data = models.ForeignKey(Data, on_delete=models.CASCADE, null=True)
     collection = models.ForeignKey(AdditionalCollections, on_delete = models.CASCADE, default='',)
     bundle = models.ForeignKey(Bundle, on_delete=models.CASCADE, null=True)
 
@@ -2995,7 +2996,7 @@ class Table_Binary(models.Model):
     offset = models.IntegerField(default=1)
     records = models.IntegerField(default=1)
     fields = models.IntegerField(default=1)
-    data = models.ForeignKey(Data, on_delete=models.CASCADE, null=True,)
+    data = models.ForeignKey(Data, on_delete=models.CASCADE, null=True)
     collection = models.ForeignKey(AdditionalCollections, on_delete = models.CASCADE, default='',)
     bundle = models.ForeignKey(Bundle, on_delete=models.CASCADE, null=True,)
 
@@ -3090,7 +3091,7 @@ class Table_Fixed_Width(models.Model):
     description = models.CharField(max_length=5000, default="unset")
     records = models.IntegerField(default=1)
     fields = models.IntegerField(default=1)
-    data = models.ForeignKey(Data, on_delete=models.CASCADE, null=True,)
+    data = models.ForeignKey(Data, on_delete=models.CASCADE, null=True)
     collection = models.ForeignKey(AdditionalCollections, on_delete = models.CASCADE, default='',)
     bundle = models.ForeignKey(Bundle, on_delete=models.CASCADE, null=True)
 
@@ -3708,7 +3709,7 @@ class Product_Document(models.Model):
         #     acknowledgement_text.text = self.acknowledgement_text
         if self.copyright:
             copyright = Document.find('{}copyright'.format(NAMESPACE))
-            copyright.text = self.author_list
+            copyright.text = self.copyright
         if self.publication_date:  # this should always be true
             publication_date = Document.find(
                 '{}publication_date'.format(NAMESPACE))

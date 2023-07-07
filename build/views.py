@@ -726,6 +726,53 @@ def bundle(request, pk_bundle):
             #fixes the refresh duplication issue, use this one for offline testing - deric
             # return HttpResponseRedirect('/build/' + pk_bundle + '/')
 
+        if form_modification_history.is_valid():
+            print('form_modification_history is valid')
+            # Create modification_history model object
+            modification_history = form_modification_history.save(commit=False)
+            modification_history.bundle = bundle
+            modification_history.save()
+            print(' Modification History  model object: {}'.format(
+                modification_history))
+
+            # Find appropriate label(s).  modification_history gets added to all Product_Bundle and
+            # Product_Collection labels in a Bundle.  The Data collection is excluded since it is
+            # handled different from the other collections.
+            all_labels = []
+            product_bundle = Product_Bundle.objects.get(bundle=bundle)
+            product_collections_list = Product_Collection.objects.filter(
+                bundle=bundle).exclude(collection='Data')
+            # Append because a single item
+            all_labels.append(product_bundle)
+            # Extend because a list
+            all_labels.extend(product_collections_list)
+
+            for label in all_labels:
+
+                # Open appropriate label(s).
+                print('- Label: {}'.format(label))
+                print(' ... Opening Label ... ')
+                label_list = open_label_with_tree(label.label())
+                label_root = label_list[1]
+
+                # Build  Modification History
+                print(' ... Building Label ... ')
+                label_root = modification_history.build_modification_history(
+                    label_root)
+
+                # Close appropriate label(s)
+                print(' ... Closing Label ... ')
+                close_label(label.label(), label_root)
+
+                print(
+                    '------------- End Build  Modification History  -------------------')
+        # Update context_dict with the current  Modification History  models associated with the user's bundle
+                modification_history_set = Modification_History.objects.filter(bundle=bundle)
+                context_dict['modification_history_set'] = modification_history_set
+                context_dict['modification_history_set_count'] = len(modification_history_set)
+
+                return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')                
+
         additional_collections_list = []
         if form_additional_collections.is_valid():
             # collections = form_collections.save(commit=False)
@@ -2222,18 +2269,18 @@ def Table_Creation(request, pk_bundle, pk_data):
     if request.user == bundle.user:
         if data.data_type == 'Table Delimited':
             print("delim form chosen")
-            data_form = Table_Delimited_Form(request.POST or None, pk_ins=pk_bundle)
+            data_form = Table_Delimited_Form(request.POST or None, pk_ins=data.name, pk_bun=pk_bundle)
 
         elif data.data_type == 'Table Binary':
             print("binary form chosen")
-            data_form = Table_Binary_Form(request.POST or None, pk_ins=pk_bundle)
+            data_form = Table_Binary_Form(request.POST or None, pk_ins=data.name, pk_bun=pk_bundle)
 
         elif data.data_type == 'Table Character':
             print("character form chosen")
-            data_form = Table_Fixed_Width_Form(request.POST or None, pk_ins=pk_bundle)
+            data_form = Table_Fixed_Width_Form(request.POST or None, pk_ins=data.name, pk_bun=pk_bundle)
 
         elif data.data_type == 'Array':
-            data_form = ArrayForm(request.POST or None, pk_ins=pk_bundle)
+            data_form = ArrayForm(request.POST or None)
 
         context_dict = {
             'bundle': bundle,

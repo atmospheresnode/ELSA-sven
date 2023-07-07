@@ -513,35 +513,50 @@ class Table_Delimited_Form(forms.Form):
 
 
 class Table_Delimited_Form(forms.ModelForm):
+
+    # data = forms.ModelChoiceField(queryset=Data.objects.all(), required=False)
+
     class Meta(object):
         model = Table_Delimited
         exclude = ('bundle',)
 
     def __init__(self, *args, **kwargs):
         self.pk_ins = kwargs.pop('pk_ins')
+        self.pk_bun = kwargs.pop('pk_bun')
         super(Table_Delimited_Form, self).__init__(*args, **kwargs)
-        self.fields['data'] = forms.ModelChoiceField(queryset=Table_Delimited.objects.filer(bundle=self.pk_ins), required = True)
+        self.fields['data'] = forms.ModelChoiceField(queryset=Data.objects.filter(name=self.pk_ins), required = True)
+        self.fields['collection'] = forms.ModelChoiceField(queryset=AdditionalCollections.objects.filter(bundle=self.pk_bun), required = True)
 
 class Table_Binary_Form(forms.ModelForm):
+
+    # data = forms.ModelChoiceField(queryset=Data.objects.all(), required=False)
+
     class Meta(object):
         model = Table_Binary
         exclude = ('bundle',)
     
     def __init__(self, *args, **kwargs):
         self.pk_ins = kwargs.pop('pk_ins')
+        self.pk_bun = kwargs.pop('pk_bun')
         super(Table_Binary_Form, self).__init__(*args, **kwargs)
-        self.fields['data'] = forms.ModelChoiceField(queryset=Table_Binary.objects.filer(bundle=self.pk_ins), required = True)
+        self.fields['data'] = forms.ModelChoiceField(queryset=Data.objects.filter(name=self.pk_ins), required = True)
+        self.fields['collection'] = forms.ModelChoiceField(queryset=AdditionalCollections.objects.filter(bundle=self.pk_bun), required = True)
 
 
 class Table_Fixed_Width_Form(forms.ModelForm):
+
+    # data = forms.ModelChoiceField(queryset=Data.objects.all(), required=False)
+
     class Meta(object):
         model = Table_Fixed_Width
         exclude = ('bundle',)
     
     def __init__(self, *args, **kwargs):
         self.pk_ins = kwargs.pop('pk_ins')
+        self.pk_bun = kwargs.pop('pk_bun')
         super(Table_Fixed_Width_Form, self).__init__(*args, **kwargs)
-        self.fields['data'] = forms.ModelChoiceField(queryset=Table_Fixed_Width.objects.filer(bundle=self.pk_ins), required = True)
+        self.fields['data'] = forms.ModelChoiceField(queryset=Data.objects.filter(name=self.pk_ins), required = True)
+        self.fields['collection'] = forms.ModelChoiceField(queryset=AdditionalCollections.objects.filter(bundle=self.pk_bun), required = True)
 
 
 class Field_Delimited_Form(forms.ModelForm):
