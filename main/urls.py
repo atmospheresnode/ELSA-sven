@@ -21,6 +21,7 @@ urlpatterns = [
     re_path(r'^restricted_access/$', views.restricted_access, name='restricted_access'),
     re_path(r'^simple_upload/$', views.simple_upload, name='simple_upload'),
 
+
     # I use this for development (k).
     re_path(r'^success/$', views.success, name='success'),
 ]
