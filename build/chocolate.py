@@ -124,14 +124,56 @@ def open_label_with_tree(label_path):
 def close_label(label_path, label_root):
     label_object = open(label_path, "r")
     lines = label_object.readlines()
-    label_object.close
+    label_object.close()
     label_object = open(label_path, "w")
-    tree = etree.tostring(label_root, pretty_print=False, encoding="unicode", xml_declaration=False)
+    tree = etree.tostring(label_root, pretty_print=True, encoding="unicode", xml_declaration=False)
     label_object.write(lines[0]+lines[1]+tree)
     label_object.close() 
 
 
+def write_into_label(product, product_bundle, product_collections_list):
+    all_labels = []
+    # We need to check for Product_Collections associated with Data products now.
+            
+    all_labels.append(product_bundle)
+    all_labels.extend(product_collections_list)
+    
+    for label in all_labels:
+    # Open appropriate label(s).  
+        print('- Label: {}'.format(label))
+        print(' ... Opening Label ... ')
+        label_list = open_label_with_tree(label.label())
+        label_root = label_list[1]
+        # Build Alias
+        print(' ... Building Label ... ')
+        label_root = product.fill_label(label_root)
+        #alias.alias_list.append(label_root)
 
+        # Close appropriate label(s)
+        print(' ... Closing Label ... ')
+        close_label(label.label(), label_root)
+
+def remove_from_label(product, product_bundle, product_collections_list):
+    all_labels = []
+    # We need to check for Product_Collections associated with Data products now.
+            
+    all_labels.append(product_bundle)
+    all_labels.extend(product_collections_list)
+    
+    for label in all_labels:
+    # Open appropriate label(s).  
+        print('- Label: {}'.format(label))
+        print(' ... Opening Label ... ')
+        label_list = open_label_with_tree(label.label())
+        label_root = label_list[1]
+        # Build Alias
+        print(' ... removing component from Label ... ')
+        label_root = product.remove_xml(label_root)
+        #alias.alias_list.append(label_root)
+
+        # Close appropriate label(s)
+        print(' ... Closing Label ... ')
+        close_label(label.label(), label_root)
 
 
 #    Tests

@@ -5,7 +5,7 @@ from builtins import str
 from django.contrib.auth.models import User
 from django.db import models
 from django.urls import reverse
-from django.utils.encoding import python_2_unicode_compatible
+from six import python_2_unicode_compatible
 
 
 
@@ -26,7 +26,7 @@ class UserProfile(models.Model):
         ('jaxa:darts','JAXA'),
         # We could be super cool and add more agencies.
     )
-    user = models.OneToOneField(User)
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
     agency = models.CharField(max_length=10, choices=AGENCY_CHOICES, default='NASA')
     directory = models.CharField(max_length=1000)
     #picture = models.ImageField(upload_to='profile_images', blank=True)

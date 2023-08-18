@@ -10,7 +10,7 @@ from django.contrib.auth.models import User
 from django.db import models
 from django.urls import reverse
 from django.utils import timezone
-from django.utils.encoding import python_2_unicode_compatible
+from six import python_2_unicode_compatible
 
 # Third-party app imports
 
@@ -41,11 +41,11 @@ class Category(models.Model):
 
 @python_2_unicode_compatible
 class Post(models.Model):
-    author = models.ForeignKey(User)
+    author = models.ForeignKey(User, on_delete=models.CASCADE)
     title = models.CharField(max_length=22)
     overview = models.CharField(max_length=40)
     content = models.TextField()
-    category = models.ForeignKey(Category)
+    category = models.ForeignKey(Category, on_delete=models.CASCADE)
     date = models.DateTimeField(default=timezone.now)
 
 
@@ -60,10 +60,10 @@ class Post(models.Model):
 
 @python_2_unicode_compatible
 class Comment(models.Model):
-    author = models.ForeignKey(User)
+    author = models.ForeignKey(User, on_delete=models.CASCADE)
     content = models.TextField(max_length=5000)
     date = models.DateTimeField(default=timezone.now)
-    post = models.ForeignKey(Post)
+    post = models.ForeignKey(Post, on_delete=models.CASCADE)
 
     def __str__(self):
         shortened_content = self.content[:10]
