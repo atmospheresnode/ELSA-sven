@@ -124,7 +124,7 @@ def open_label_with_tree(label_path):
 def close_label(label_path, label_root):
     label_object = open(label_path, "r")
     lines = label_object.readlines()
-    label_object.close
+    label_object.close()
     label_object = open(label_path, "w")
     tree = etree.tostring(label_root, pretty_print=False, encoding="unicode", xml_declaration=False)
     label_object.write(lines[0]+lines[1]+tree)
