@@ -313,6 +313,7 @@
                   <div class="card-body">
                      <h4 class="card-title">{{ target }}</h4>
                      <p class="card-text">{{ target.lid }}</p>
+                     <!-- <a href="{% url 'build:delete_target' bundle.pk target.pk %}"> -->
                      <a href="{% url 'main:construction' %}">
                         <button type="button" class="btn btn-danger">Remove</button>
                      </a>

@@ -63,33 +63,38 @@ def alias(request, pk_bundle):  # DEPRECATED: to be replaced by edit alias
             alias.save()
             print('Alias model object: {}'.format(alias))
 
+            product_bundle = Product_Bundle.objects.get(bundle=bundle)
+            product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+
+            write_into_label(alias, product_bundle, product_collections_list)
+
             # Find appropriate label(s).
             # Alias gets added to all Product_Bundle & Product_Collection labels.
             # We first get all labels of these given types except those in the Data collection which
             # are handled different from the other collections.
-            all_labels = []
-            product_bundle = Product_Bundle.objects.get(bundle=bundle)
-            product_collections_list = Product_Collection.objects.filter(
-                bundle=bundle).exclude(collection='Data')
-            # We need to check for Product_Collections associated with Data products now.
+            # all_labels = []
+            # product_bundle = Product_Bundle.objects.get(bundle=bundle)
+            # product_collections_list = Product_Collection.objects.filter(
+            #     bundle=bundle).exclude(collection='Data')
+            # # We need to check for Product_Collections associated with Data products now.
 
-            all_labels.append(product_bundle)
-            all_labels.extend(product_collections_list)
+            # all_labels.append(product_bundle)
+            # all_labels.extend(product_collections_list)
 
-            for label in all_labels:
-                # Open appropriate label(s).
-                print('- Label: {}'.format(label))
-                print(' ... Opening Label ... ')
-                label_list = open_label_with_tree(label.label())
-                label_root = label_list
-                # Build Alias
-                print(' ... Building Label ... ')
-                label_root = alias.build_alias(label_root)
-                # alias.alias_list.append(label_root)
+            # for label in all_labels:
+            #     # Open appropriate label(s).
+            #     print('- Label: {}'.format(label))
+            #     print(' ... Opening Label ... ')
+            #     label_list = open_label_with_tree(label.label())
+            #     label_root = label_list
+            #     # Build Alias
+            #     print(' ... Building Label ... ')
+            #     label_root = alias.fill_label(label_root)
+            #     # alias.alias_list.append(label_root)
 
-                # Close appropriate label(s)
-                print(' ... Closing Label ... ')
-                close_label(label.label(), label_root)
+            #     # Close appropriate label(s)
+            #     print(' ... Closing Label ... ')
+            #     close_label(label.label(), label_root)
 
             # print alias.print_alias_list()
 
@@ -634,33 +639,38 @@ def bundle(request, pk_bundle):
             alias.save()
             print('Alias model object: {}'.format(alias))
 
+            product_bundle = Product_Bundle.objects.get(bundle=bundle)
+            product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+
+            write_into_label(alias, product_bundle, product_collections_list)
+
             # Find appropriate label(s).
             # Alias gets added to all Product_Bundle & Product_Collection labels.
             # We first get all labels of these given types except those in the Data collection which
             # are handled different from the other collections.
-            all_labels = []
-            product_bundle = Product_Bundle.objects.get(bundle=bundle)
-            product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
-            # We need to check for Product_Collections associated with Data products now.
+            # all_labels = []
+            # product_bundle = Product_Bundle.objects.get(bundle=bundle)
+            # product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+            # # We need to check for Product_Collections associated with Data products now.
                     
-            all_labels.append(product_bundle)
-            all_labels.extend(product_collections_list)
+            # all_labels.append(product_bundle)
+            # all_labels.extend(product_collections_list)
 
-            for label in all_labels:
-                # Open appropriate label(s).  
-                print('- Label: {}'.format(label))
-                print(' ... Opening Label ... ')
-                label_list = open_label_with_tree(label.label())
-                label_root = label_list[1]
-                # Build Alias
-                print(' ... Building Label ... ')
-                label_root = alias.build_alias(label_root)
-                #alias.alias_list.append(label_root)
+            # for label in all_labels:
+            #     # Open appropriate label(s).  
+            #     print('- Label: {}'.format(label))
+            #     print(' ... Opening Label ... ')
+            #     label_list = open_label_with_tree(label.label())
+            #     label_root = label_list[1]
+            #     # Build Alias
+            #     print(' ... Building Label ... ')
+            #     label_root = alias.fill_label(label_root)
+            #     #alias.alias_list.append(label_root)
 
 
-                # Close appropriate label(s)
-                print(' ... Closing Label ... ')
-                close_label(label.label(), label_root)
+            #     # Close appropriate label(s)
+            #     print(' ... Closing Label ... ')
+            #     close_label(label.label(), label_root)
 
             #print alias.print_alias_list()
 
@@ -687,32 +697,37 @@ def bundle(request, pk_bundle):
             citation_information.save()
             print('Citation Information model object: {}'.format(citation_information))
 
+            product_bundle = Product_Bundle.objects.get(bundle=bundle)
+            product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+
+            write_into_label(citation_information, product_bundle, product_collections_list)
+
             # Find appropriate label(s).  Citation_Information gets added to all Product_Bundle and 
             # Product_Collection labels in a Bundle.  The Data collection is excluded since it is 
             # handled different from the other collections.
-            all_labels = []
-            product_bundle = Product_Bundle.objects.get(bundle=bundle)
-            product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
-            all_labels.append(product_bundle)             # Append because a single item
-            all_labels.extend(product_collections_list)   # Extend because a list
+            # all_labels = []
+            # product_bundle = Product_Bundle.objects.get(bundle=bundle)
+            # product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+            # all_labels.append(product_bundle)             # Append because a single item
+            # all_labels.extend(product_collections_list)   # Extend because a list
 
-            for label in all_labels:
+            # for label in all_labels:
 
-                # Open appropriate label(s).  
-                print('- Label: {}'.format(label))
-                print(' ... Opening Label ... ')
-                label_list = open_label_with_tree(label.label())
-                label_root = label_list[1]
+            #     # Open appropriate label(s).  
+            #     print('- Label: {}'.format(label))
+            #     print(' ... Opening Label ... ')
+            #     label_list = open_label_with_tree(label.label())
+            #     label_root = label_list[1]
         
-                # Build Citation Information
-                print(' ... Building Label ... ')
-                label_root = citation_information.build_citation_information(label_root)
+            #     # Build Citation Information
+            #     print(' ... Building Label ... ')
+            #     label_root = citation_information.fill_label(label_root)
 
-                # Close appropriate label(s)
-                print(' ... Closing Label ... ')
-                close_label(label.label(), label_root)
+            #     # Close appropriate label(s)
+            #     print(' ... Closing Label ... ')
+            #     close_label(label.label(), label_root)
 
-                print('------------- End Build Citation Information -------------------')        
+            print('------------- End Build Citation Information -------------------')        
             # Update context_dict with the current Citation_Information models associated with the user's bundle
             citation_information_set = Citation_Information.objects.filter(bundle=bundle)
             context_dict['citation_information_set'] = citation_information_set
@@ -735,43 +750,48 @@ def bundle(request, pk_bundle):
             print(' Modification History  model object: {}'.format(
                 modification_history))
 
+            product_bundle = Product_Bundle.objects.get(bundle=bundle)
+            product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+
+            write_into_label(modification_history, product_bundle, product_collections_list)
+
             # Find appropriate label(s).  modification_history gets added to all Product_Bundle and
             # Product_Collection labels in a Bundle.  The Data collection is excluded since it is
             # handled different from the other collections.
-            all_labels = []
-            product_bundle = Product_Bundle.objects.get(bundle=bundle)
-            product_collections_list = Product_Collection.objects.filter(
-                bundle=bundle).exclude(collection='Data')
-            # Append because a single item
-            all_labels.append(product_bundle)
-            # Extend because a list
-            all_labels.extend(product_collections_list)
+            # all_labels = []
+            # product_bundle = Product_Bundle.objects.get(bundle=bundle)
+            # product_collections_list = Product_Collection.objects.filter(
+            #     bundle=bundle).exclude(collection='Data')
+            # # Append because a single item
+            # all_labels.append(product_bundle)
+            # # Extend because a list
+            # all_labels.extend(product_collections_list)
 
-            for label in all_labels:
+            # for label in all_labels:
 
-                # Open appropriate label(s).
-                print('- Label: {}'.format(label))
-                print(' ... Opening Label ... ')
-                label_list = open_label_with_tree(label.label())
-                label_root = label_list[1]
+            #     # Open appropriate label(s).
+            #     print('- Label: {}'.format(label))
+            #     print(' ... Opening Label ... ')
+            #     label_list = open_label_with_tree(label.label())
+            #     label_root = label_list[1]
 
-                # Build  Modification History
-                print(' ... Building Label ... ')
-                label_root = modification_history.build_modification_history(
-                    label_root)
+            #     # Build  Modification History
+            #     print(' ... Building Label ... ')
+            #     label_root = modification_history.fill_label(
+            #         label_root)
 
-                # Close appropriate label(s)
-                print(' ... Closing Label ... ')
-                close_label(label.label(), label_root)
+            #     # Close appropriate label(s)
+            #     print(' ... Closing Label ... ')
+            #     close_label(label.label(), label_root)
 
-                print(
+            print(
                     '------------- End Build  Modification History  -------------------')
         # Update context_dict with the current  Modification History  models associated with the user's bundle
-                modification_history_set = Modification_History.objects.filter(bundle=bundle)
-                context_dict['modification_history_set'] = modification_history_set
-                context_dict['modification_history_set_count'] = len(modification_history_set)
+            modification_history_set = Modification_History.objects.filter(bundle=bundle)
+            context_dict['modification_history_set'] = modification_history_set
+            context_dict['modification_history_set_count'] = len(modification_history_set)
 
-                return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')                
+            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')                
 
         additional_collections_list = []
         if form_additional_collections.is_valid():
@@ -1036,7 +1056,7 @@ def success_delete(request):
     return render(request, 'build/bundle/success_delete.html')
 
 
-def citation_information(request, pk_bundle, pk_citation_infromation):
+def citation_information(request, pk_bundle, pk_citation_information):
     print('\n\n')
     print('-------------------------------------------------------------------------')
     print('\n\n--------------- Add Citation_Information with ELSA -------------------')
@@ -1099,37 +1119,42 @@ def citation_information(request, pk_bundle, pk_citation_infromation):
             citation_information.save()
             print('Citation Information model object: {}'.format(
                 citation_information))
+            
+            product_bundle = Product_Bundle.objects.get(bundle=bundle)
+            product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+
+            write_into_label(citation_information, product_bundle, product_collections_list)
 
             # Find appropriate label(s).  Citation_Information gets added to all Product_Bundle and
             # Product_Collection labels in a Bundle.  The Data collection is excluded since it is
             # handled different from the other collections.
-            all_labels = []
-            product_bundle = Product_Bundle.objects.get(bundle=bundle)
-            product_collections_list = Product_Collection.objects.filter(
-                bundle=bundle).exclude(collection='Data')
-            # Append because a single item
-            all_labels.append(product_bundle)
-            # Extend because a list
-            all_labels.extend(product_collections_list)
+            # all_labels = []
+            # product_bundle = Product_Bundle.objects.get(bundle=bundle)
+            # product_collections_list = Product_Collection.objects.filter(
+            #     bundle=bundle).exclude(collection='Data')
+            # # Append because a single item
+            # all_labels.append(product_bundle)
+            # # Extend because a list
+            # all_labels.extend(product_collections_list)
 
-            for label in all_labels:
+            # for label in all_labels:
 
-                # Open appropriate label(s).
-                print('- Label: {}'.format(label))
-                print(' ... Opening Label ... ')
-                label_list = open_label_with_tree(label.label())
-                label_root = label_list
+            #     # Open appropriate label(s).
+            #     print('- Label: {}'.format(label))
+            #     print(' ... Opening Label ... ')
+            #     label_list = open_label_with_tree(label.label())
+            #     label_root = label_list
 
-                # Build Citation Information
-                print(' ... Building Label ... ')
-                label_root = citation_information.build_citation_information(
-                    label_root)
+            #     # Build Citation Information
+            #     print(' ... Building Label ... ')
+            #     label_root = citation_information.fill_label(
+            #         label_root)
 
-                # Close appropriate label(s)
-                print(' ... Closing Label ... ')
-                close_label(label.label(), label_root)
+            #     # Close appropriate label(s)
+            #     print(' ... Closing Label ... ')
+            #     close_label(label.label(), label_root)
 
-                print('------------- End Build Citation Information -------------------')
+            print('------------- End Build Citation Information -------------------')
         # Update context_dict with the current Citation_Information models associated with the user's bundle
         context_dict['citation_information_set'] = Citation_Information.objects.filter(
             bundle=bundle)
@@ -1176,36 +1201,41 @@ def modification_history(request, pk_bundle):
             print(' Modification History  model object: {}'.format(
                 modification_history))
 
+            product_bundle = Product_Bundle.objects.get(bundle=bundle)
+            product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+
+            write_into_label(modification_history, product_bundle, product_collections_list)
+
             # Find appropriate label(s).  modification_history gets added to all Product_Bundle and
             # Product_Collection labels in a Bundle.  The Data collection is excluded since it is
             # handled different from the other collections.
-            all_labels = []
-            product_bundle = Product_Bundle.objects.get(bundle=bundle)
-            product_collections_list = Product_Collection.objects.filter(
-                bundle=bundle).exclude(collection='Data')
-            # Append because a single item
-            all_labels.append(product_bundle)
-            # Extend because a list
-            all_labels.extend(product_collections_list)
+            # all_labels = []
+            # product_bundle = Product_Bundle.objects.get(bundle=bundle)
+            # product_collections_list = Product_Collection.objects.filter(
+            #     bundle=bundle).exclude(collection='Data')
+            # # Append because a single item
+            # all_labels.append(product_bundle)
+            # # Extend because a list
+            # all_labels.extend(product_collections_list)
 
-            for label in all_labels:
+            # for label in all_labels:
 
-                # Open appropriate label(s).
-                print('- Label: {}'.format(label))
-                print(' ... Opening Label ... ')
-                label_list = open_label_with_tree(label.label())
-                label_root = label_list
+            #     # Open appropriate label(s).
+            #     print('- Label: {}'.format(label))
+            #     print(' ... Opening Label ... ')
+            #     label_list = open_label_with_tree(label.label())
+            #     label_root = label_list
 
-                # Build  Modification History
-                print(' ... Building Label ... ')
-                label_root = modification_history.build_modification_history(
-                    label_root)
+            #     # Build  Modification History
+            #     print(' ... Building Label ... ')
+            #     label_root = modification_history.fill_label(
+            #         label_root)
 
-                # Close appropriate label(s)
-                print(' ... Closing Label ... ')
-                close_label(label.label(), label_root)
+            #     # Close appropriate label(s)
+            #     print(' ... Closing Label ... ')
+            #     close_label(label.label(), label_root)
 
-                print(
+            print(
                     '------------- End Build  Modification History  -------------------')
         # Update context_dict with the current  Modification History  models associated with the user's bundle
         context_dict['modification_history_set'] = Modification_History .objects.filter(
@@ -1286,16 +1316,13 @@ def context_search_investigation(request, pk_bundle):
                 context_dict['investigation'] = i
                 bundle.investigations.add(i)
                 print(i)
-                '''
-                fil = open('/home/tpagan/older ELSAs/elsa_kays_current/ELSA-online-master/archive/tpagan/jacobtest_bundle/document/collection_document.xml','r')
 
-                fileText = fil.read()
+                # Label Fix for context products - Said
+                product_bundle = Product_Bundle.objects.get(bundle=bundle)
+                product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
 
-                fil.close()
-        
-                print fileText
-                '''
-                i.fill_label(bundle)
+                write_into_label(i, product_bundle, product_collections_list)
+
             return render(request, 'build/context/context_search_investigation.html', context_dict)
 
         return render(request, 'build/context/context_search_investigation.html', context_dict)
@@ -1347,7 +1374,11 @@ def context_search_instrument_host_and_facility(request, pk_bundle, pk_investiga
                 i.investigations.add(investigation)
                 i.save()
 
-                i.fill_label(bundle)
+                # Label Fix for context products - Said
+                product_bundle = Product_Bundle.objects.get(bundle=bundle)
+                product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+
+                write_into_label(i, product_bundle, product_collections_list)
             if form_facility.is_valid():
                 i = Facility.objects.filter(
                     name=form_facility.cleaned_data['facility']).first()
@@ -1358,7 +1389,11 @@ def context_search_instrument_host_and_facility(request, pk_bundle, pk_investiga
                 i.investigations.add(investigation)
                 i.save()
 
-                i.fill_label(bundle)
+                # Label Fix for context products - Said
+                product_bundle = Product_Bundle.objects.get(bundle=bundle)
+                product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+
+                write_into_label(i, product_bundle, product_collections_list)
 
         return render(request, 'build/context/context_search_instrument_host_and_facility.html', context_dict)
 
@@ -1403,7 +1438,11 @@ def context_search_target(request, pk_bundle):
 
                 # i.investigations.add(investigation)
 
-                i.fill_label(bundle)
+                # Label Fix for context products - Said
+                product_bundle = Product_Bundle.objects.get(bundle=bundle)
+                product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+
+                write_into_label(i, product_bundle, product_collections_list)
 
         return render(request, 'build/context/context_search_target.html', context_dict)
 
@@ -1451,7 +1490,11 @@ def context_search_target_inv(request, pk_bundle, pk_investigation):
 
                 # i.investigations.add(investigation)
 
-                i.fill_label(bundle)
+                # Label Fix for context products - Said
+                product_bundle = Product_Bundle.objects.get(bundle=bundle)
+                product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+
+                write_into_label(i, product_bundle, product_collections_list)
 
         return render(request, 'build/context/context_search_target_investigation.html', context_dict)
 
@@ -1503,7 +1546,11 @@ def context_search_instrument(request, pk_bundle, pk_investigation, pk_instrumen
                 i.instrument_hosts.add(instrument_host)
                 i.save()
 
-                i.fill_label(bundle)
+                # Label Fix for context products - Said
+                product_bundle = Product_Bundle.objects.get(bundle=bundle)
+                product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+
+                write_into_label(i, product_bundle, product_collections_list)
 
         return render(request, 'build/context/context_search_instrument.html', context_dict)
 
@@ -1550,7 +1597,11 @@ def context_search_facility(request, pk_bundle):
 
                 # i.investigations.add(investigation)
 
-                i.fill_label(bundle)
+                # Label Fix for context products - Said
+                product_bundle = Product_Bundle.objects.get(bundle=bundle)
+                product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+
+                write_into_label(i, product_bundle, product_collections_list)
 
         return render(request, 'build/context/context_search_facility.html', context_dict)
 
@@ -1600,7 +1651,11 @@ def context_search_facility_instrument(request, pk_bundle, pk_investigation, pk_
                 i.investigations.add(investigation)
                 i.save()
 
-                i.fill_label(bundle)
+                # Label Fix for context products - Said
+                product_bundle = Product_Bundle.objects.get(bundle=bundle)
+                product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+
+                write_into_label(i, product_bundle, product_collections_list)
 
         return render(request, 'build/context/context_search_facility_instrument.html', context_dict)
 
@@ -1653,6 +1708,11 @@ def context_search_telescope(request, pk_bundle, pk_investigation, pk_facility):
 
                 # Fill label seems wrong - Said
                 # i.fill_label(bundle)
+                # Label Fix for context products - Said
+                product_bundle = Product_Bundle.objects.get(bundle=bundle)
+                product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+
+                write_into_label(i, product_bundle, product_collections_list)
 
         return render(request, 'build/context/context_search_telescope.html', context_dict)
 
@@ -1708,7 +1768,11 @@ def context_search_target_and_instrument(request, pk_bundle, pk_investigation, p
                 context_dict['target'] = i
                 bundle.targets.add(i)
 
-                i.fill_label(bundle)
+                # Label Fix for context products - Said
+                product_bundle = Product_Bundle.objects.get(bundle=bundle)
+                product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+
+                write_into_label(i, product_bundle, product_collections_list)
             if form_instrument.is_valid():
                 i = Instrument.objects.filter(
                     file_ref=form_instrument.cleaned_data['instrument'].file_ref).first()
@@ -1718,7 +1782,11 @@ def context_search_target_and_instrument(request, pk_bundle, pk_investigation, p
                 i.investigations.add(investigation)
                 i.save()
                 
-                i.fill_label(bundle)
+                # Label Fix for context products - Said
+                product_bundle = Product_Bundle.objects.get(bundle=bundle)
+                product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+
+                write_into_label(i, product_bundle, product_collections_list)
 
         return render(request, 'build/context/context_search_target_and_instrument.html', context_dict)
 
@@ -2499,10 +2567,16 @@ def instruments(request):
 def delete_target(request, pk_bundle, pk_target):
     bundle = Bundle.objects.get(pk=pk_bundle)
     target = Target.objects.get(pk=pk_target)
-    target.remove_xml(bundle=bundle)
+
+    product_bundle = Product_Bundle.objects.get(bundle=bundle)
+    product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+
+    remove_from_label(target, product_bundle, product_collections_list)
     target.delete()
 
-    return redirect('../../bundle/')
+    # I'm not convinced this does what I want it to do
+    render(request, 'build/bundle/success_delete.html')
+    # return redirect('../../bundle/')
 
 # Directory View Functions
 # utils functions

@@ -25,21 +25,21 @@ Including another URLconf
 
 """
 from django.conf import settings
-from django.conf.urls import url, include
+from django.conf.urls import re_path, include
 from django.conf.urls.static import static
 from django.contrib import admin
 from main import views
 from django.contrib.auth import views as auth_views
 
 urlpatterns = [
-    url(r'^admin/', admin.site.urls),
-    url(r'^', include('main.urls')),
-    url(r'^accounts/', include('friends.urls')),
-    url(r'^student_lair/', include('blog.urls')),
-    url(r'^build/', include('build.urls')),
-    url(r'^review/', include('review.urls')),
-    url(r'^tutorial/', include('tutorial.urls')),
-    url('^', include('django.contrib.auth.urls')),
+    re_path(r'^admin/', admin.site.urls),
+    re_path(r'^', include('main.urls')),
+    re_path(r'^accounts/', include('friends.urls')),
+    re_path(r'^student_lair/', include('blog.urls')),
+    re_path(r'build/', include('build.urls')),
+    re_path(r'^review/', include('review.urls')),
+    re_path(r'^tutorial/', include('tutorial.urls')),
+    re_path('^', include('django.contrib.auth.urls')),
     #url(r'^build_a_bundle/(?P<pk_bundle>\d+)/contextquery/exist/', include('crawl_starbase.urls')),
 ]
 

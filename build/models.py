@@ -12,9 +12,9 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.http import HttpResponseRedirect
-from django.shortcuts import render, redirect, render_to_response
+from django.shortcuts import render, redirect
 from django.urls import reverse
-from django.utils.encoding import python_2_unicode_compatible
+from six import python_2_unicode_compatible
 from django.utils.encoding import *
 from shutil import copyfile
 from .chocolate import *
@@ -836,67 +836,87 @@ class Investigation(models.Model):
     def __str__(self):
         return self.name
 
-    def fill_label(self, bundle):
-        # Investigation = root
+    def fill_label(self, label_root):
+        Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE))
+
+        Observing_System = Context_Area.find('{}Observing_System'.format(NAMESPACE))
+
+        # Add Facility to Observing System
+        Observing_System_Component = etree.SubElement(
+            Observing_System, 'Observing_System_Component')
+        name = etree.SubElement(Observing_System_Component, 'name')
+        name.text = self.name
+        facility_type = etree.SubElement(
+            Observing_System_Component, 'type')
+        facility_type.text = self.type_of
+        Internal_Reference = etree.SubElement(
+            Observing_System_Component, 'Internal_Reference')
+        lid_reference = etree.SubElement(
+            Internal_Reference, 'lid_reference')
+        lid_reference.text = self.lid
+        reference_type = etree.SubElement(
+            Internal_Reference, 'reference_type')
+        reference_type.text = 'is_investigation'
+
+        return label_root
 
         # Below is cursed do not touch - Said
         # Get all xml labels in bundle directory
-        xml_path_list = get_xml_path(bundle.directory())
+        # xml_path_list = get_xml_path(bundle.directory())
 
-        # Traverse labels
-        for xml_path in xml_path_list:
-            print(xml_path)
-            '''
-            fil = open('/home/tpagan/older ELSAs/elsa_kays_current/ELSA-online-master/archive/tpagan/testingxml_bundle/document/collection_document.xml','r')
+        # # Traverse labels
+        # for xml_path in xml_path_list:
 
-            fileText = fil.read()
+            # fil = open('/home/tpagan/older ELSAs/elsa_kays_current/ELSA-online-master/archive/tpagan/testingxml_bundle/document/collection_document.xml','r')
 
-            fil.close()
+            # fileText = fil.read()
+
+            # fil.close()
         
-            print fileText
-            '''
+            # print fileText
+
 
             # Create Parser
-            parser = etree.XMLParser(
-                remove_blank_text=True, remove_comments=True)
-            tree = etree.parse(xml_path, parser)
-            label = open(xml_path, 'w')
+            # parser = etree.XMLParser(
+            #     remove_blank_text=True, remove_comments=True)
+            # tree = etree.parse(xml_path, parser)
+            # label = open(xml_path, 'w')
 
-            # Do what needs to be done
-            root = tree.getroot()
-            root_tag = etree.QName(root)
+            # # Do what needs to be done
+            # root = tree.getroot()
+            # root_tag = etree.QName(root)
 
-            if root_tag.localname is 'Product_Bundle' or 'Product_Collection':
+            # if root_tag.localname is 'Product_Bundle' or 'Product_Collection':
 
-                # Locate Observing System
-                print(root)
-                Observing_System = root[1][2]
-                print("\n\n\n\nDEBUG")
-                print(root_tag.localname)
-                print(Observing_System)
+            #     # Locate Observing System
+            #     print(root)
+            #     Observing_System = root[1][2]
+            #     print("\n\n\n\nDEBUG")
+            #     print(root_tag.localname)
+            #     print(Observing_System)
 
-                # Add Facility to Observing System
-                Observing_System_Component = etree.SubElement(
-                    Observing_System, 'Observing_System_Component')
-                name = etree.SubElement(Observing_System_Component, 'name')
-                name.text = self.name
-                facility_type = etree.SubElement(
-                    Observing_System_Component, 'type')
-                facility_type.text = self.type_of
-                Internal_Reference = etree.SubElement(
-                    Observing_System_Component, 'Internal_Reference')
-                lid_reference = etree.SubElement(
-                    Internal_Reference, 'lid_reference')
-                lid_reference.text = self.lid
-                reference_type = etree.SubElement(
-                    Internal_Reference, 'reference_type')
-                reference_type.text = 'is_investigation'
+            #     # Add Facility to Observing System
+            #     Observing_System_Component = etree.SubElement(
+            #         Observing_System, 'Observing_System_Component')
+            #     name = etree.SubElement(Observing_System_Component, 'name')
+            #     name.text = self.name
+            #     facility_type = etree.SubElement(
+            #         Observing_System_Component, 'type')
+            #     facility_type.text = self.type_of
+            #     Internal_Reference = etree.SubElement(
+            #         Observing_System_Component, 'Internal_Reference')
+            #     lid_reference = etree.SubElement(
+            #         Internal_Reference, 'lid_reference')
+            #     lid_reference.text = self.lid
+            #     reference_type = etree.SubElement(
+            #         Internal_Reference, 'reference_type')
+            #     reference_type.text = 'is_investigation'
 
-            # Properly close file
-            label_tree = etree.tostring(
-                root, pretty_print=True, encoding='UTF-8', xml_declaration=True)
-            label.write(label_tree.decode())
-            label.close()
+            # # Properly close file
+            # label_tree = etree.tostring(
+            #     root, pretty_print=True, encoding='UTF-8', xml_declaration=True)
+            # label.write(label_tree.decode())
+            # label.close()
 
 
 """
@@ -1105,54 +1125,76 @@ class Instrument(models.Model):
         self.file_ref = product_dict['url']
         self.save()
 
-    def fill_label(self, bundle):
+    def fill_label(self, label_root):
+        Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE))
+
+        Observing_System = Context_Area.find('{}Observing_System'.format(NAMESPACE))
+
+        # Add Facility to Observing System
+        Observing_System_Component = etree.SubElement(
+            Observing_System, 'Observing_System_Component')
+        name = etree.SubElement(Observing_System_Component, 'name')
+        name.text = self.name.title()
+        facility_type = etree.SubElement(
+            Observing_System_Component, 'type')
+        facility_type.text = self.type_of
+        Internal_Reference = etree.SubElement(
+            Observing_System_Component, 'Internal_Reference')
+        lid_reference = etree.SubElement(
+            Internal_Reference, 'lid_reference')
+        lid_reference.text = self.lid
+        reference_type = etree.SubElement(
+            Internal_Reference, 'reference_type')
+        reference_type.text = 'is_instrument'
+
+        return label_root
 
         # Get all xml labels in directory
-        xml_path_list = get_xml_path(bundle.directory())
+        # xml_path_list = get_xml_path(bundle.directory())
 
-        # Traverse labels
-        for xml_path in xml_path_list:
+        # # Traverse labels
+        # for xml_path in xml_path_list:
 
-            # Create Parser
-            parser = etree.XMLParser(
-                remove_blank_text=True, remove_comments=True)
-            tree = etree.parse(xml_path, parser)
-            label = open(xml_path, 'w')
+        #     # Create Parser
+        #     parser = etree.XMLParser(
+        #         remove_blank_text=True, remove_comments=True)
+        #     tree = etree.parse(xml_path, parser)
+        #     label = open(xml_path, 'w')
 
-            # Do what needs to be done
-            root = tree.getroot()
-            root_tag = etree.QName(root)
+        #     # Do what needs to be done
+        #     root = tree.getroot()
+        #     root_tag = etree.QName(root)
 
-            if root_tag.localname is 'Product_Bundle' or 'Product_Collection':
-                # Locate Observing System
-                Observing_System = root[1][2]
+        #     if root_tag.localname is 'Product_Bundle' or 'Product_Collection':
+        #         # Locate Observing System
+        #         Observing_System = root[1][2]
 
-                # Add Instrument Host to Observing System
-                Observing_System_Component = etree.SubElement(
-                    Observing_System, 'Observing_System_Component')
-                name = etree.SubElement(Observing_System_Component, 'name')
-                name.text = self.name.title()
-                inst_type = etree.SubElement(
-                    Observing_System_Component, 'type')
-                inst_type.text = self.type_of
-                Internal_Reference = etree.SubElement(
-                    Observing_System_Component, 'Internal_Reference')
-                lid_reference = etree.SubElement(
-                    Internal_Reference, 'lid_reference')
-                lid_reference.text = self.lid
-                reference_type = etree.SubElement(
-                    Internal_Reference, 'reference_type')
-                reference_type.text = 'is_instrument'
+        #         # Add Instrument Host to Observing System
+        #         Observing_System_Component = etree.SubElement(
+        #             Observing_System, 'Observing_System_Component')
+        #         name = etree.SubElement(Observing_System_Component, 'name')
+        #         name.text = self.name.title()
+        #         inst_type = etree.SubElement(
+        #             Observing_System_Component, 'type')
+        #         inst_type.text = self.type_of
+        #         Internal_Reference = etree.SubElement(
+        #             Observing_System_Component, 'Internal_Reference')
+        #         lid_reference = etree.SubElement(
+        #             Internal_Reference, 'lid_reference')
+        #         lid_reference.text = self.lid
+        #         reference_type = etree.SubElement(
+        #             Internal_Reference, 'reference_type')
+        #         reference_type.text = 'is_instrument'
 
-            # When the time comes, add in if tag.localname is 'Product_Document' and if tag.localname is 'Product_Collection' and use the same function to call for those.
+        #     # When the time comes, add in if tag.localname is 'Product_Document' and if tag.localname is 'Product_Collection' and use the same function to call for those.
 
-            # Properly close file
-            # .decode() ensures that the label is written in the proper encoding from UTF-8 to unicode
-            # UTF-8 is the format that the xml files in UTF-8 which is bytes, and unicode ensures string
-            label_tree = etree.tostring(
-                root, pretty_print=True, encoding='UTF-8', xml_declaration=True)
-            label.write(label_tree.decode())
-            label.close()
+        #     # Properly close file
+        #     # .decode() ensures that the label is written in the proper encoding from UTF-8 to unicode
+        #     # UTF-8 is the format that the xml files in UTF-8 which is bytes, and unicode ensures string
+        #     label_tree = etree.tostring(
+        #         root, pretty_print=True, encoding='UTF-8', xml_declaration=True)
+        #     label.write(label_tree.decode())
+        #     label.close()
 
 
 """
@@ -1278,81 +1320,114 @@ class Target(models.Model):
         self.file_ref = product_dict['url']
         self.save()
 
-    def fill_label(self, bundle):
+    def fill_label(self, label_root):
+        Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE))
+
+        Observing_System = Context_Area.find('{}Observing_System'.format(NAMESPACE))
+
+        # Add Facility to Observing System
+        Observing_System_Component = etree.SubElement(
+            Observing_System, 'Observing_System_Component')
+        name = etree.SubElement(Observing_System_Component, 'name')
+        name.text = self.name.title()
+        facility_type = etree.SubElement(
+            Observing_System_Component, 'type')
+        facility_type.text = self.type_of
+        Internal_Reference = etree.SubElement(
+            Observing_System_Component, 'Internal_Reference')
+        lid_reference = etree.SubElement(
+            Internal_Reference, 'lid_reference')
+        lid_reference.text = self.lid
+        reference_type = etree.SubElement(
+            Internal_Reference, 'reference_type')
+        reference_type.text = 'is_target'
+
+        return label_root
 
         # Get all xml labels in directory
-        xml_path_list = get_xml_path(bundle.directory())
+        # xml_path_list = get_xml_path(bundle.directory())
 
-        # Traverse labels
-        for xml_path in xml_path_list:
+        # # Traverse labels
+        # for xml_path in xml_path_list:
 
-            # Create Parser
-            parser = etree.XMLParser(
-                remove_blank_text=True, remove_comments=True)
-            tree = etree.parse(xml_path, parser)
-            label = open(xml_path, 'w')
+        #     # Create Parser
+        #     parser = etree.XMLParser(
+        #         remove_blank_text=True, remove_comments=True)
+        #     tree = etree.parse(xml_path, parser)
+        #     label = open(xml_path, 'w')
 
-            # Do what needs to be done
-            root = tree.getroot()
-            root_tag = etree.QName(root)
+        #     # Do what needs to be done
+        #     root = tree.getroot()
+        #     root_tag = etree.QName(root)
 
-            # Are there specifics on Target?  This code was copy and pasted from adding an Instrument_Host to an Observing_System_Component.
-            if root_tag.localname is 'Product_Bundle' or 'Product_Collection':
-                # Locate Context_Area
-                Context_Area = root[1]
+        #     # Are there specifics on Target?  This code was copy and pasted from adding an Instrument_Host to an Observing_System_Component.
+        #     if root_tag.localname is 'Product_Bundle' or 'Product_Collection':
+        #         # Locate Context_Area
+        #         Context_Area = root[1]
 
-                # Add Target to Target Identification
-                Target_Identification = etree.SubElement(
-                    Context_Area, 'Target_Identification')
-                name = etree.SubElement(Target_Identification, 'name')
-                name.text = self.name.title()
-                targ_type = etree.SubElement(Target_Identification, 'type')
-                targ_type.text = self.type_of
-                Internal_Reference = etree.SubElement(
-                    Target_Identification, 'Internal_Reference')
-                lid_reference = etree.SubElement(
-                    Internal_Reference, 'lid_reference')
-                lid_reference.text = self.lid
-                reference_type = etree.SubElement(
-                    Internal_Reference, 'reference_type')
-                reference_type.text = 'is_target'
+        #         # Add Target to Target Identification
+        #         Target_Identification = etree.SubElement(
+        #             Context_Area, 'Target_Identification')
+        #         name = etree.SubElement(Target_Identification, 'name')
+        #         name.text = self.name.title()
+        #         targ_type = etree.SubElement(Target_Identification, 'type')
+        #         targ_type.text = self.type_of
+        #         Internal_Reference = etree.SubElement(
+        #             Target_Identification, 'Internal_Reference')
+        #         lid_reference = etree.SubElement(
+        #             Internal_Reference, 'lid_reference')
+        #         lid_reference.text = self.lid
+        #         reference_type = etree.SubElement(
+        #             Internal_Reference, 'reference_type')
+        #         reference_type.text = 'is_target'
 
-            # When the time comes, add in if tag.localname is 'Product_Document' and if tag.localname is 'Product_Collection' and use the same function to call for those.
+        #     # When the time comes, add in if tag.localname is 'Product_Document' and if tag.localname is 'Product_Collection' and use the same function to call for those.
 
-            # Properly close file
-            label_tree = etree.tostring(
-                root, pretty_print=True, encoding='UTF-8', xml_declaration=True)
-            label.write(label_tree.decode())
-            label.close()
+        #     # Properly close file
+        #     label_tree = etree.tostring(
+        #         root, pretty_print=True, encoding='UTF-8', xml_declaration=True)
+        #     label.write(label_tree.decode())
+        #     label.close()
 
-    def remove_xml(self, bundle):
+    def remove_xml(self, label_root):
+        Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE))
+
+        Observing_System = Context_Area.find('{}Observing_System'.format(NAMESPACE))
+
+        for component in Observing_System:
+            if(component.tag == "{http://pds.nasa.gov/pds4/pds/v1}Observing_System_Component"):
+                if(component[0].text == self.name.title()):
+                    component.getparent().remove(component)
+
+        return label_root
+
         # Get all xml labels in directory
-        xml_path_list = get_xml_path(bundle.directory())
+        # xml_path_list = get_xml_path(bundle.directory())
 
-        # Traverse labels
-        for xml_path in xml_path_list:
+        # # Traverse labels
+        # for xml_path in xml_path_list:
 
-            # Create Parser
-            parser = etree.XMLParser(
-                remove_blank_text=True, remove_comments=True)
-            tree = etree.parse(xml_path, parser)
-            label = open(xml_path, 'w')
+        #     # Create Parser
+        #     parser = etree.XMLParser(
+        #         remove_blank_text=True, remove_comments=True)
+        #     tree = etree.parse(xml_path, parser)
+        #     label = open(xml_path, 'w')
 
-            # Do what needs to be done
-            root = tree.getroot()
+        #     # Do what needs to be done
+        #     root = tree.getroot()
             
-            # for child in root:
-            #     print(child.name)
-            #     if child.name == "Target_Identification":
-            #         root.remove(child)
+        #     # for child in root:
+        #     #     print(child.name)
+        #     #     if child.name == "Target_Identification":
+        #     #         root.remove(child)
 
-            # When the time comes, add in if tag.localname is 'Product_Document' and if tag.localname is 'Product_Collection' and use the same function to call for those.
+        #     # When the time comes, add in if tag.localname is 'Product_Document' and if tag.localname is 'Product_Collection' and use the same function to call for those.
 
-            # Properly close file
-            label_tree = etree.tostring(
-                root, pretty_print=True, encoding='UTF-8', xml_declaration=True)
-            label.write(label_tree.decode())
-            label.close()
+        #     # Properly close file
+        #     label_tree = etree.tostring(
+        #         root, pretty_print=True, encoding='UTF-8', xml_declaration=True)
+        #     label.write(label_tree.decode())
+        #     label.close()
 
 
 """
@@ -1444,52 +1519,74 @@ class Instrument_Host(models.Model):
         self.file_ref = product_dict['url']
         self.save()
 
-    def fill_label(self, bundle):
+    def fill_label(self, label_root):
+        Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE))
 
-        # Get all xml labels in directory
-        xml_path_list = get_xml_path(bundle.directory())
+        Observing_System = Context_Area.find('{}Observing_System'.format(NAMESPACE))
 
-        # Traverse labels
-        for xml_path in xml_path_list:
+        # Add Facility to Observing System
+        Observing_System_Component = etree.SubElement(
+            Observing_System, 'Observing_System_Component')
+        name = etree.SubElement(Observing_System_Component, 'name')
+        name.text = self.name.title()
+        facility_type = etree.SubElement(
+            Observing_System_Component, 'type')
+        facility_type.text = self.type_of
+        Internal_Reference = etree.SubElement(
+            Observing_System_Component, 'Internal_Reference')
+        lid_reference = etree.SubElement(
+            Internal_Reference, 'lid_reference')
+        lid_reference.text = self.lid
+        reference_type = etree.SubElement(
+            Internal_Reference, 'reference_type')
+        reference_type.text = 'is_instrument_host'
 
-            # Create Parser
-            parser = etree.XMLParser(
-                remove_blank_text=True, remove_comments=True)
-            tree = etree.parse(xml_path, parser)
-            label = open(xml_path, 'w')
+        return label_root
 
-            # Do what needs to be done
-            root = tree.getroot()
-            root_tag = etree.QName(root)
+        # # Get all xml labels in directory
+        # xml_path_list = get_xml_path(bundle.directory())
 
-            if root_tag.localname is 'Product_Bundle' or 'Product_Collection':
-                # Locate Observing System
-                Observing_System = root[1][2]
+        # # Traverse labels
+        # for xml_path in xml_path_list:
 
-                # Add Instrument Host to Observing System
-                Observing_System_Component = etree.SubElement(
-                    Observing_System, 'Observing_System_Component')
-                name = etree.SubElement(Observing_System_Component, 'name')
-                name.text = self.name.title()
-                insthost_type = etree.SubElement(
-                    Observing_System_Component, 'type')
-                insthost_type.text = self.type_of
-                Internal_Reference = etree.SubElement(
-                    Observing_System_Component, 'Internal_Reference')
-                lid_reference = etree.SubElement(
-                    Internal_Reference, 'lid_reference')
-                lid_reference.text = self.lid
-                reference_type = etree.SubElement(
-                    Internal_Reference, 'reference_type')
-                reference_type.text = 'is_instrument_host'
+        #     # Create Parser
+        #     parser = etree.XMLParser(
+        #         remove_blank_text=True, remove_comments=True)
+        #     tree = etree.parse(xml_path, parser)
+        #     label = open(xml_path, 'w')
 
-            # When the time comes, add in if tag.localname is 'Product_Document' and if tag.localname is 'Product_Collection' and use the same function to call for those.
+        #     # Do what needs to be done
+        #     root = tree.getroot()
+        #     root_tag = etree.QName(root)
 
-            # Properly close file
-            label_tree = etree.tostring(
-                root, pretty_print=True, encoding='UTF-8', xml_declaration=True)
-            label.write(label_tree.decode())
-            label.close()
+        #     if root_tag.localname is 'Product_Bundle' or 'Product_Collection':
+        #         # Locate Observing System
+        #         Observing_System = root[1][2]
+
+        #         # Add Instrument Host to Observing System
+        #         Observing_System_Component = etree.SubElement(
+        #             Observing_System, 'Observing_System_Component')
+        #         name = etree.SubElement(Observing_System_Component, 'name')
+        #         name.text = self.name.title()
+        #         insthost_type = etree.SubElement(
+        #             Observing_System_Component, 'type')
+        #         insthost_type.text = self.type_of
+        #         Internal_Reference = etree.SubElement(
+        #             Observing_System_Component, 'Internal_Reference')
+        #         lid_reference = etree.SubElement(
+        #             Internal_Reference, 'lid_reference')
+        #         lid_reference.text = self.lid
+        #         reference_type = etree.SubElement(
+        #             Internal_Reference, 'reference_type')
+        #         reference_type.text = 'is_instrument_host'
+
+        #     # When the time comes, add in if tag.localname is 'Product_Document' and if tag.localname is 'Product_Collection' and use the same function to call for those.
+
+        #     # Properly close file
+        #     label_tree = etree.tostring(
+        #         root, pretty_print=True, encoding='UTF-8', xml_declaration=True)
+        #     label.write(label_tree.decode())
+        #     label.close()
 
 
 """
@@ -1568,60 +1665,82 @@ class Facility(models.Model):
         self.file_ref = product_dict['url']
         self.save()
 
-    def fill_label(self, bundle):
+    def fill_label(self, label_root):
+        Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE))
+
+        Observing_System = Context_Area.find('{}Observing_System'.format(NAMESPACE))
+
+        # Add Facility to Observing System
+        Observing_System_Component = etree.SubElement(
+            Observing_System, 'Observing_System_Component')
+        name = etree.SubElement(Observing_System_Component, 'name')
+        name.text = self.name
+        facility_type = etree.SubElement(
+            Observing_System_Component, 'type')
+        facility_type.text = self.type_of
+        Internal_Reference = etree.SubElement(
+            Observing_System_Component, 'Internal_Reference')
+        lid_reference = etree.SubElement(
+            Internal_Reference, 'lid_reference')
+        lid_reference.text = self.lid
+        reference_type = etree.SubElement(
+            Internal_Reference, 'reference_type')
+        reference_type.text = 'is_facility'
+
+        return label_root
 
         # Get all xml labels in bundle directory
-        xml_path_list = get_xml_path(bundle.directory())
+        # xml_path_list = get_xml_path(bundle.directory())
 
-        # Traverse labels
-        for xml_path in xml_path_list:
-            print(xml_path)
-            print(xml_path_list)
+        # # Traverse labels
+        # for xml_path in xml_path_list:
+        #     print(xml_path)
+        #     print(xml_path_list)
 
-            fil = open(xml_path, 'r')
+        #     fil = open(xml_path, 'r')
 
-            fileText = fil.read()
+        #     fileText = fil.read()
 
-            fil.close()
+        #     fil.close()
 
-            print(fileText)
+        #     print(fileText)
 
-            # Create Parser
-            parser = etree.XMLParser(
-                remove_blank_text=True, remove_comments=True)
-            tree = etree.parse(xml_path, parser)
-            label = open(xml_path, 'w')
+        #     # Create Parser
+        #     parser = etree.XMLParser(
+        #         remove_blank_text=True, remove_comments=True)
+        #     tree = etree.parse(xml_path, parser)
+        #     label = open(xml_path, 'w')
 
-            # Do what needs to be done
-            root = tree.getroot()
-            root_tag = etree.QName(root)
+        #     # Do what needs to be done
+        #     root = tree.getroot()
+        #     root_tag = etree.QName(root)
 
-            if root_tag.localname is 'Product_Bundle' or 'Product_Collection':
-                # Locate Observing System
-                Observing_System = root[1][2]
+        #     if root_tag.localname is 'Product_Bundle' or 'Product_Collection':
+        #         # Locate Observing System
+        #         Observing_System = root[1][2]
 
-                # Add Facility to Observing System
-                Observing_System_Component = etree.SubElement(
-                    Observing_System, 'Observing_System_Component')
-                name = etree.SubElement(Observing_System_Component, 'name')
-                name.text = self.name
-                facility_type = etree.SubElement(
-                    Observing_System_Component, 'type')
-                facility_type.text = self.type_of
-                Internal_Reference = etree.SubElement(
-                    Observing_System_Component, 'Internal_Reference')
-                lid_reference = etree.SubElement(
-                    Internal_Reference, 'lid_reference')
-                lid_reference.text = self.lid
-                reference_type = etree.SubElement(
-                    Internal_Reference, 'reference_type')
-                reference_type.text = 'is_facility'
+        #         # Add Facility to Observing System
+        #         Observing_System_Component = etree.SubElement(
+        #             Observing_System, 'Observing_System_Component')
+        #         name = etree.SubElement(Observing_System_Component, 'name')
+        #         name.text = self.name
+        #         facility_type = etree.SubElement(
+        #             Observing_System_Component, 'type')
+        #         facility_type.text = self.type_of
+        #         Internal_Reference = etree.SubElement(
+        #             Observing_System_Component, 'Internal_Reference')
+        #         lid_reference = etree.SubElement(
+        #             Internal_Reference, 'lid_reference')
+        #         lid_reference.text = self.lid
+        #         reference_type = etree.SubElement(
+        #             Internal_Reference, 'reference_type')
+        #         reference_type.text = 'is_facility'
 
-            # Properly close file
-            label_tree = etree.tostring(
-                root, pretty_print=True, encoding='UTF-8', xml_declaration=True)
-            label.write(label_tree.decode())
-            label.close()
+        #     # Properly close file
+        #     label_tree = etree.tostring(
+        #         root, pretty_print=True, encoding='UTF-8', xml_declaration=True)
+        #     label.write(label_tree.decode())
+        #     label.close()
 
 
 """
@@ -1711,51 +1830,73 @@ class Telescope(models.Model):
         self.file_ref = product_dict['url']
         self.save()
 
-    def fill_label(self, bundle):
+    def fill_label(self, label_root):
+        Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE))
+
+        Observing_System = Context_Area.find('{}Observing_System'.format(NAMESPACE))
+
+        # Add Facility to Observing System
+        Observing_System_Component = etree.SubElement(
+            Observing_System, 'Observing_System_Component')
+        name = etree.SubElement(Observing_System_Component, 'name')
+        name.text = self.name
+        facility_type = etree.SubElement(
+            Observing_System_Component, 'type')
+        facility_type.text = self.type_of
+        Internal_Reference = etree.SubElement(
+            Observing_System_Component, 'Internal_Reference')
+        lid_reference = etree.SubElement(
+            Internal_Reference, 'lid_reference')
+        lid_reference.text = self.lid
+        reference_type = etree.SubElement(
+            Internal_Reference, 'reference_type')
+        reference_type.text = 'is_telescope'
+
+        return label_root
 
         # Get all xml labels in bundle directory
-        xml_path_list = get_xml_path(bundle.directory())
+        # xml_path_list = get_xml_path(bundle.directory())
 
-        # Traverse labels
-        for xml_path in xml_path_list:
-            print(xml_path)
+        # # Traverse labels
+        # for xml_path in xml_path_list:
+        #     print(xml_path)
 
-            # Create Parser
-            parser = etree.XMLParser(
-                remove_blank_text=True, remove_comments=True)
-            tree = etree.parse(xml_path, parser)
-            label = open(xml_path, 'w')
+        #     # Create Parser
+        #     parser = etree.XMLParser(
+        #         remove_blank_text=True, remove_comments=True)
+        #     tree = etree.parse(xml_path, parser)
+        #     label = open(xml_path, 'w')
 
-            # Do what needs to be done
-            root = tree.getroot()
-            root_tag = etree.QName(root)
+        #     # Do what needs to be done
+        #     root = tree.getroot()
+        #     root_tag = etree.QName(root)
 
-            if root_tag.localname is 'Product_Bundle' or 'Product_Collection':
-                # Locate Observing System
-                Observing_System = root[1][2]
+        #     if root_tag.localname is 'Product_Bundle' or 'Product_Collection':
+        #         # Locate Observing System
+        #         Observing_System = root[1][2]
 
-                # Add Facility to Observing System
-                Observing_System_Component = etree.SubElement(
-                    Observing_System, 'Observing_System_Component')
-                name = etree.SubElement(Observing_System_Component, 'name')
-                name.text = self.name
-                facility_type = etree.SubElement(
-                    Observing_System_Component, 'type')
-                facility_type.text = self.type_of
-                Internal_Reference = etree.SubElement(
-                    Observing_System_Component, 'Internal_Reference')
-                lid_reference = etree.SubElement(
-                    Internal_Reference, 'lid_reference')
-                lid_reference.text = self.lid
-                reference_type = etree.SubElement(
-                    Internal_Reference, 'reference_type')
-                reference_type.text = 'is_facility'
+        #         # Add Facility to Observing System
+        #         Observing_System_Component = etree.SubElement(
+        #             Observing_System, 'Observing_System_Component')
+        #         name = etree.SubElement(Observing_System_Component, 'name')
+        #         name.text = self.name
+        #         facility_type = etree.SubElement(
+        #             Observing_System_Component, 'type')
+        #         facility_type.text = self.type_of
+        #         Internal_Reference = etree.SubElement(
+        #             Observing_System_Component, 'Internal_Reference')
+        #         lid_reference = etree.SubElement(
+        #             Internal_Reference, 'lid_reference')
+        #         lid_reference.text = self.lid
+        #         reference_type = etree.SubElement(
+        #             Internal_Reference, 'reference_type')
+        #         reference_type.text = 'is_facility'
 
-            # Properly close file
-            label_tree = etree.tostring(
-                root, pretty_print=True, encoding='UTF-8', xml_declaration=True)
-            label.write(label_tree.decode())
-            label.close()
+        #     # Properly close file
+        #     label_tree = etree.tostring(
+        #         root, pretty_print=True, encoding='UTF-8', xml_declaration=True)
+        #     label.write(label_tree.decode())
+        #     label.close()
 
 
 """
@@ -3808,7 +3949,7 @@ class Alias(models.Model):
         else:
             return self.comment
 
-    def build_alias(self, label_root):
+    def fill_label(self, label_root):
 
         # Find Identification_Area
         Identification_Area = label_root.find(
@@ -3934,7 +4075,7 @@ class Citation_Information(models.Model):
     publication_year = models.CharField(max_length=MAX_CHAR_FIELD)
 
     # Builders
-    def build_citation_information(self, label_root):
+    def fill_label(self, label_root):
 
         # Find Identification_Area
         Identification_Area = label_root.find(
@@ -3982,7 +4123,7 @@ class Modification_History(models.Model):
     modification_date = models.CharField(max_length=MAX_CHAR_FIELD)
 
     # Builders
-    def build_modification_history(self, label_root):
+    def fill_label(self, label_root):
 
         # Find Identification_Area
         Identification_Area = label_root.find(
