@@ -14,13 +14,13 @@ PDS data:
 
 
 Does the data provide clear and concise documentation adequate for its usage?
-{{ question1 }}
+{{ question1|safe }}
 
 Are you able to manipulate and plot the data, interpret columns into tables, and understand the context and relationships of the data products?
-{{ question2 }}
+{{ question2|safe }}
 
 Are there any concerns about the creation/generation, calibration, or general usability of the data?
-{{ question3 }}
+{{ question3|safe }}
 
 Any further comments to PDS Atmospheres Node about the data?
-{{ question4 }}
+{{ question4|safe }}
