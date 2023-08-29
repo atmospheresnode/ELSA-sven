@@ -1,7 +1,7 @@
 # Stdlib imports
 
 # Core Django imports
-from django.conf.urls import re_path
+from django.conf.urls import url
 
 # Third-party app imports
 
@@ -10,15 +10,15 @@ from . import views
 
 app_name='blog'
 urlpatterns = [
-    re_path(r'^$', views.index, name='index'),
-    re_path(r'^archive/', views.archive, name='archive'),
-    re_path(r'^post/(?P<pk_post>\d+)/$', views.detail, name='detail'),
-    re_path(r'^category/(?P<category_name_slug>[\w\-]+)/$', views.show_category, name='show_category'),
+    url(r'^$', views.index, name='index'),
+    url(r'^archive/', views.archive, name='archive'),
+    url(r'^post/(?P<pk_post>\d+)/$', views.detail, name='detail'),
+    url(r'^category/(?P<category_name_slug>[\w\-]+)/$', views.show_category, name='show_category'),
     #url(r'^category/(?P<category_name_slug>[\w\-]+)/add_page/$', views.add_page, name='add_page'),
-    re_path(r'^add_category/$', views.add_category, name='add_category'),
-    re_path(r'^add_post/$', views.add_post, name='add_post'),
-    re_path(r'tasks/$', views.tasks, name='tasks'),
-    re_path(r'the_study/$', views.the_study, name='the_study'),
+    url(r'^add_category/$', views.add_category, name='add_category'),
+    url(r'^add_post/$', views.add_post, name='add_post'),
+    url(r'tasks/$', views.tasks, name='tasks'),
+    url(r'the_study/$', views.the_study, name='the_study'),
 
     # ----------------
     #     The following url url messed with the setup of the ELSA archive directory, found in ELSA 

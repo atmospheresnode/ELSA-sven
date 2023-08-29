@@ -70,7 +70,7 @@ def index(request):
             body = content,
             from_email = context_dict['contact_email'],
             to = ['lneakras@nmsu.edu', 'lhuber@nmsu.edu'],
-            bcc = ['tpagan@nmsu.edu'],
+            bcc = ['tpagan@nmsu.edu', 'sajomont@nmsu.edu'],
             headers = {'Reply-To': context_dict['contact_email'] }
         )
         email.send()
