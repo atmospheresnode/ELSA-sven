@@ -2,6 +2,7 @@
 
 # Core Django imports
 from django.conf.urls import re_path, include
+from django.conf.urls import url
 
 # Third-party app imports
 
@@ -52,6 +53,10 @@ urlpatterns = [
     re_path(r'^(?P<pk_bundle>\d+)/contextsearch/target/$', views.context_search_target, name='context_search_target'),
 
     re_path(r'^(?P<pk_bundle>\d+)/context/(?P<pk_target>\d+)/delete_target/$', views.delete_target, name='delete_target'),
+    re_path(r'^(?P<pk_bundle>\d+)/context/(?P<pk_instrument>\d+)/delete_instrument/$', views.delete_instrument, name='delete_instrument'),
+    re_path(r'^(?P<pk_bundle>\d+)/context/(?P<pk_instrument_host>\d+)/delete_instrument_host/$', views.delete_instrument_host, name='delete_instrument_host'),
+    re_path(r'^(?P<pk_bundle>\d+)/context/(?P<pk_facility>\d+)/delete_facility/$', views.delete_facility, name='delete_facility'),
+    re_path(r'^(?P<pk_bundle>\d+)/context/(?P<pk_investigation>\d+)/delete_investigation/$', views.delete_investigation, name='delete_investigation'),
 
     re_path(r'^investigations/$', views.investigations, name='investigations'),
     re_path(r'^instruments/$', views.instruments, name='instruments'),
