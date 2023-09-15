@@ -75,10 +75,15 @@ def index(request):
             subject = "Derived Data Peer Review from {}".format(context_dict['contact_name']),
             body = content,
             from_email = context_dict['contact_email'],
+<<<<<<< HEAD
             to = ['sajomont@nmsu.edu'],
             bcc = [],
             # to = ['lneakras@nmsu.edu', 'lhuber@nmsu.edu'],
             # bcc = ['tpagan@nmsu.edu'],
+=======
+            to = ['lneakras@nmsu.edu', 'lhuber@nmsu.edu'],
+            bcc = ['tpagan@nmsu.edu', 'sajomont@nmsu.edu'],
+>>>>>>> 354da66dabb0d343209b2f8955f8c037c8aa7ddb
             headers = {'Reply-To': context_dict['contact_email'] }
         )
         email.send()
