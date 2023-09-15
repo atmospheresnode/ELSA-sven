@@ -22,6 +22,8 @@ from .forms import ReviewForm, UserInfoForm
 
 def index(request):
 
+    request.encoding = 'utf-8'
+
     # Forms
     review_form = ReviewForm(request.POST or None)
     user_info_form = UserInfoForm(request.POST or None)
@@ -40,18 +42,22 @@ def index(request):
         template = get_template('review/comment_template.txt')
 
         # if a user is logged in, we can simply grab their info for them
-        if request.user.is_authenticated():
-            context_dict['contact_name'] = '{0}, {1}'.format(request.user.last_name, request.user.first_name)
-            context_dict['contact_email'] = request.user.email
-            context_dict['agency'] = request.user.userprofile.agency
+        # if request.user.is_authenticated():
+        #     context_dict['contact_name'] = '{0}, {1}'.format(request.user.last_name, request.user.first_name)
+        #     context_dict['contact_email'] = request.user.email
+        #     context_dict['agency'] = request.user.userprofile.agency
 
-        # else a seperate form is displayed for them to fill in the information.
-        else:
+        # # else a seperate form is displayed for them to fill in the information.
+        # else:
 
 
-            context_dict['contact_name'] = '{0}'.format(review_form.cleaned_data['user_name'])
-            context_dict['contact_email'] = review_form.cleaned_data['user_email']
-            context_dict['agency'] = 'User was not logged in to retrieve extra information.'
+        #     context_dict['contact_name'] = '{0}'.format(review_form.cleaned_data['user_name'])
+        #     context_dict['contact_email'] = review_form.cleaned_data['user_email']
+        #     context_dict['agency'] = 'User was not logged in to retrieve extra information.'
+
+        context_dict['contact_name'] = '{0}'.format(review_form.cleaned_data['user_name'])
+        context_dict['contact_email'] = review_form.cleaned_data['user_email']
+        context_dict['agency'] = 'User was not logged in to retrieve extra information.'
 
         # Rest of the information not dependent upon user model is listed below
         context_dict['derived_data'] = review_form.cleaned_data['derived_data']
@@ -69,8 +75,10 @@ def index(request):
             subject = "Derived Data Peer Review from {}".format(context_dict['contact_name']),
             body = content,
             from_email = context_dict['contact_email'],
-            to = ['lneakras@nmsu.edu', 'lhuber@nmsu.edu'],
-            bcc = ['tpagan@nmsu.edu'],
+            to = ['sajomont@nmsu.edu'],
+            bcc = [],
+            # to = ['lneakras@nmsu.edu', 'lhuber@nmsu.edu'],
+            # bcc = ['tpagan@nmsu.edu'],
             headers = {'Reply-To': context_dict['contact_email'] }
         )
         email.send()

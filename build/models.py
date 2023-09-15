@@ -918,6 +918,18 @@ class Investigation(models.Model):
             # label.write(label_tree.decode())
             # label.close()
 
+    def remove_xml(self, label_root):
+        Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE))
+
+        Observing_System = Context_Area.find('{}Observing_System'.format(NAMESPACE))
+
+        for component in Observing_System:
+
+            if(component.tag == "{http://pds.nasa.gov/pds4/pds/v1}Observing_System_Component"):
+                if(component[0].text == self.name):
+                    component.getparent().remove(component)
+
+        return label_root
 
 """
 14.3  Instrument
@@ -1196,6 +1208,20 @@ class Instrument(models.Model):
         #     label.write(label_tree.decode())
         #     label.close()
 
+    def remove_xml(self, label_root):
+        Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE))
+
+        Observing_System = Context_Area.find('{}Observing_System'.format(NAMESPACE))
+
+        for component in Observing_System:
+
+            print(component.tag)
+            if(component.tag == "{http://pds.nasa.gov/pds4/pds/v1}Observing_System_Component"):
+                if(component[0].text.title() == self.name.title()):
+                    component.getparent().remove(component)
+
+        return label_root
+
 
 """
 14.8  Target
@@ -1327,7 +1353,7 @@ class Target(models.Model):
 
         # Add Facility to Observing System
         Observing_System_Component = etree.SubElement(
-            Observing_System, 'Observing_System_Component')
+            Observing_System, 'Target_Identification')
         name = etree.SubElement(Observing_System_Component, 'name')
         name.text = self.name.title()
         facility_type = etree.SubElement(
@@ -1395,39 +1421,14 @@ class Target(models.Model):
         Observing_System = Context_Area.find('{}Observing_System'.format(NAMESPACE))
 
         for component in Observing_System:
-            if(component.tag == "{http://pds.nasa.gov/pds4/pds/v1}Observing_System_Component"):
-                if(component[0].text == self.name.title()):
+            if(component.tag == "{http://pds.nasa.gov/pds4/pds/v1}Target_Identification"):
+                if(component[0].text.title() == self.name.title()):
                     component.getparent().remove(component)
 
         return label_root
 
-        # Get all xml labels in directory
-        # xml_path_list = get_xml_path(bundle.directory())
 
-        # # Traverse labels
-        # for xml_path in xml_path_list:
 
-        #     # Create Parser
-        #     parser = etree.XMLParser(
-        #         remove_blank_text=True, remove_comments=True)
-        #     tree = etree.parse(xml_path, parser)
-        #     label = open(xml_path, 'w')
-
-        #     # Do what needs to be done
-        #     root = tree.getroot()
-            
-        #     # for child in root:
-        #     #     print(child.name)
-        #     #     if child.name == "Target_Identification":
-        #     #         root.remove(child)
-
-        #     # When the time comes, add in if tag.localname is 'Product_Document' and if tag.localname is 'Product_Collection' and use the same function to call for those.
-
-        #     # Properly close file
-        #     label_tree = etree.tostring(
-        #         root, pretty_print=True, encoding='UTF-8', xml_declaration=True)
-        #     label.write(label_tree.decode())
-        #     label.close()
 
 
 """
@@ -1489,7 +1490,7 @@ class Instrument_Host(models.Model):
     # Relational Attributes
     investigations = models.ManyToManyField(Investigation)
     instruments = models.ManyToManyField(Instrument)
-    targets = models.ManyToManyField(Target)
+    # targets = models.ManyToManyField(Target)
 
     # inv = models.ManyToManyField(Investigation)
 
@@ -1587,6 +1588,18 @@ class Instrument_Host(models.Model):
         #         root, pretty_print=True, encoding='UTF-8', xml_declaration=True)
         #     label.write(label_tree.decode())
         #     label.close()
+
+    def remove_xml(self, label_root):
+        Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE))
+
+        Observing_System = Context_Area.find('{}Observing_System'.format(NAMESPACE))
+
+        for component in Observing_System:
+            if(component.tag == "{http://pds.nasa.gov/pds4/pds/v1}Observing_System_Component"):
+                if(component[0].text == self.name.title()):
+                    component.getparent().remove(component)
+
+        return label_root
 
 
 """
@@ -1741,6 +1754,18 @@ class Facility(models.Model):
         #         root, pretty_print=True, encoding='UTF-8', xml_declaration=True)
         #     label.write(label_tree.decode())
         #     label.close()
+
+    def remove_xml(self, label_root):
+        Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE))
+
+        Observing_System = Context_Area.find('{}Observing_System'.format(NAMESPACE))
+
+        for component in Observing_System:
+            if(component.tag == "{http://pds.nasa.gov/pds4/pds/v1}Observing_System_Component"):
+                if(component[0].text == self.name.title()):
+                    component.getparent().remove(component)
+
+        return label_root
 
 
 """
