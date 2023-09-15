@@ -1,12 +1,7 @@
 # Stdlib imports
 
 # Core Django imports
-<<<<<<< HEAD
-from django.conf.urls import re_path, include
-from django.conf.urls import url
-=======
 from django.conf.urls import url, include
->>>>>>> 354da66dabb0d343209b2f8955f8c037c8aa7ddb
 
 # Third-party app imports
 
@@ -56,15 +51,11 @@ urlpatterns = [
     url(r'^(?P<pk_bundle>\d+)/contextsearch/investigation/(?P<pk_investigation>\d+)/facility/(?P<pk_facility>\d+)/instrument_target/$', views.context_search_target_and_instrument, name='context_search_target_and_instrument'),
     url(r'^(?P<pk_bundle>\d+)/contextsearch/target/$', views.context_search_target, name='context_search_target'),
 
-<<<<<<< HEAD
-    re_path(r'^(?P<pk_bundle>\d+)/context/(?P<pk_target>\d+)/delete_target/$', views.delete_target, name='delete_target'),
-    re_path(r'^(?P<pk_bundle>\d+)/context/(?P<pk_instrument>\d+)/delete_instrument/$', views.delete_instrument, name='delete_instrument'),
-    re_path(r'^(?P<pk_bundle>\d+)/context/(?P<pk_instrument_host>\d+)/delete_instrument_host/$', views.delete_instrument_host, name='delete_instrument_host'),
-    re_path(r'^(?P<pk_bundle>\d+)/context/(?P<pk_facility>\d+)/delete_facility/$', views.delete_facility, name='delete_facility'),
-    re_path(r'^(?P<pk_bundle>\d+)/context/(?P<pk_investigation>\d+)/delete_investigation/$', views.delete_investigation, name='delete_investigation'),
-=======
     url(r'^(?P<pk_bundle>\d+)/context/(?P<pk_target>\d+)/delete_target/$', views.delete_target, name='delete_target'),
->>>>>>> 354da66dabb0d343209b2f8955f8c037c8aa7ddb
+    url(r'^(?P<pk_bundle>\d+)/context/(?P<pk_instrument>\d+)/delete_instrument/$', views.delete_instrument, name='delete_instrument'),
+    url(r'^(?P<pk_bundle>\d+)/context/(?P<pk_instrument_host>\d+)/delete_instrument_host/$', views.delete_instrument_host, name='delete_instrument_host'),
+    url(r'^(?P<pk_bundle>\d+)/context/(?P<pk_facility>\d+)/delete_facility/$', views.delete_facility, name='delete_facility'),
+    url(r'^(?P<pk_bundle>\d+)/context/(?P<pk_investigation>\d+)/delete_investigation/$', views.delete_investigation, name='delete_investigation'),
 
     url(r'^investigations/$', views.investigations, name='investigations'),
     url(r'^instruments/$', views.instruments, name='instruments'),
