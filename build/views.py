@@ -488,9 +488,10 @@ def build(request):
             print(url)
             print(bundle.id)
             print('testing online updating system')
+            print('please do something')
             # return HttpResponseRedirect('/elsa/build/' + bundle.id + '/')
-            # return redirect("/elsa/")
-            return redirect(url, request, context_dict)
+            return redirect("/elsa/")
+            # return redirect(url, request, context_dict)
             # return render(request, 'build/two.html', context_dict)
 
     return render(request, 'build/build.html', context_dict)
