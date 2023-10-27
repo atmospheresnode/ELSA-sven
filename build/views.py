@@ -485,6 +485,11 @@ def build(request):
             url = smart_str(bundle.id) + '/'
             #url = 'two/'
 
+            print(url)
+            print(bundle.id)
+            print('testing online updating system')
+            # return HttpResponseRedirect('/elsa/build/' + bundle.id + '/')
+            # return redirect("/elsa/")
             return redirect(url, request, context_dict)
             # return render(request, 'build/two.html', context_dict)
 
