@@ -2,7 +2,7 @@
 
 
 def allowed_hosts_production():
-    return [ 'atmos.nmsu.edu', u'atmos.nmsu.edu', 'atmos.nmsu.edu/elsa', 'https://atmos.nmsu.edu', 'https://atmos.nmsu.edu/elsa', u'atmos.nmsu.edu/elsa']
+    return [ 'atmos.nmsu.edu', u'atmos.nmsu.edu', 'atmos.nmsu.edu/elsa', 'https://atmos.nmsu.edu', 'https://atmos.nmsu.edu/elsa', u'atmos.nmsu.edu/elsa', 'atmos2023.nmsu.edu']
 
 def allowed_hosts_local():
     return [ '127.0.0.1' ]
