@@ -102,7 +102,7 @@ def get_user_document_directory(instance, filename):
 """
 
 
-@python_2_unicode_compatible
+# @python_2_unicode_compatible
 class Version(models.Model):
 
     num = models.CharField(max_length=4)
@@ -839,28 +839,40 @@ class Investigation(models.Model):
     def fill_label(self, label_root):
         Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE))
 
-        Observing_System = Context_Area.find('{}Observing_System'.format(NAMESPACE))
+        Investigation_Area = Context_Area.find('{}Investigation_Area'.format(NAMESPACE))
+
+        Investigation_Area.find('{}name'.format(NAMESPACE)).text = self.name
+        Investigation_Area.find('{}type'.format(NAMESPACE)).text = self.type_of
+        # Investigation_Area.name.text = self.name
+        # Investigation_Area.type.text = self.type_of
+
+        Internal_Reference = Investigation_Area.find('{}Internal_Reference'.format(NAMESPACE))
+        Internal_Reference.find('{}lid_reference'.format(NAMESPACE)).text = self.lid
+        Internal_Reference.find('{}reference_type'.format(NAMESPACE)).text = 'is_investigation'
+        # Internal_Reference.lid_reference.text = self.lid
+        # Internal_Reference.reference_type.text = 'is_investigation'
 
         # Add Facility to Observing System
-        Observing_System_Component = etree.SubElement(
-            Observing_System, 'Observing_System_Component')
-        name = etree.SubElement(Observing_System_Component, 'name')
-        name.text = self.name
-        facility_type = etree.SubElement(
-            Observing_System_Component, 'type')
-        facility_type.text = self.type_of
-        Internal_Reference = etree.SubElement(
-            Observing_System_Component, 'Internal_Reference')
-        lid_reference = etree.SubElement(
-            Internal_Reference, 'lid_reference')
-        lid_reference.text = self.lid
-        reference_type = etree.SubElement(
-            Internal_Reference, 'reference_type')
-        reference_type.text = 'is_investigation'
+        # Observing_System_Component = etree.SubElement(
+        #     Observing_System, 'Observing_System_Component')
+        # name = etree.SubElement(Observing_System_Component, 'name')
+        # name.text = self.name
+        # facility_type = etree.SubElement(
+        #     Observing_System_Component, 'type')
+        # facility_type.text = self.type_of
+        # Internal_Reference = etree.SubElement(
+        #     Observing_System_Component, 'Internal_Reference')
+        # lid_reference = etree.SubElement(
+        #     Internal_Reference, 'lid_reference')
+        # lid_reference.text = self.lid
+        # reference_type = etree.SubElement(
+        #     Internal_Reference, 'reference_type')
+        # reference_type.text = 'is_investigation'
 
         return label_root
 
         # Below is cursed do not touch - Said
+        # will remove eventually
         # Get all xml labels in bundle directory
         # xml_path_list = get_xml_path(bundle.directory())
 
@@ -920,6 +932,17 @@ class Investigation(models.Model):
 
     def remove_xml(self, label_root):
         Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE))
+
+        Investigation_Area = Context_Area.find('{}Investigation_Area'.format(NAMESPACE))
+
+        Investigation_Area.find('{}name'.format(NAMESPACE)).text = ''
+        Investigation_Area.find('{}type'.format(NAMESPACE)).text = ''
+        # Investigation_Area.name.text = self.name
+        # Investigation_Area.type.text = self.type_of
+
+        Internal_Reference = Investigation_Area.find('{}Internal_Reference'.format(NAMESPACE))
+        Internal_Reference.find('{}lid_reference'.format(NAMESPACE)).text = ''
+        Internal_Reference.find('{}reference_type'.format(NAMESPACE)).text = ''
 
         Observing_System = Context_Area.find('{}Observing_System'.format(NAMESPACE))
 
@@ -1141,10 +1164,14 @@ class Instrument(models.Model):
         Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE))
 
         Observing_System = Context_Area.find('{}Observing_System'.format(NAMESPACE))
+        
 
         # Add Facility to Observing System
         Observing_System_Component = etree.SubElement(
             Observing_System, 'Observing_System_Component')
+        
+        Observing_System.insert(2, Observing_System_Component)
+
         name = etree.SubElement(Observing_System_Component, 'name')
         name.text = self.name.title()
         facility_type = etree.SubElement(
@@ -1284,7 +1311,7 @@ class TargetManager(models.Manager):
         self.save()
 
 
-@python_2_unicode_compatible
+# @python_2_unicode_compatible
 class Target(models.Model):
     TARGET_TYPES = [
         ('Asteroid', 'Asteroid'),
@@ -1476,7 +1503,7 @@ class Instrument_HostManager(models.Manager):
         self.save()
 
 
-@python_2_unicode_compatible
+# @python_2_unicode_compatible
 class Instrument_Host(models.Model):
     INSTRUMENT_HOST_TYPES = [
         ('Earth Based', 'Earth Based'),
@@ -1528,6 +1555,9 @@ class Instrument_Host(models.Model):
         # Add Facility to Observing System
         Observing_System_Component = etree.SubElement(
             Observing_System, 'Observing_System_Component')
+
+        Observing_System.insert(1, Observing_System_Component)
+
         name = etree.SubElement(Observing_System_Component, 'name')
         name.text = self.name.title()
         facility_type = etree.SubElement(
@@ -1633,7 +1663,7 @@ Referenced from        Product_Context
 """
 
 
-@python_2_unicode_compatible
+# @python_2_unicode_compatible
 class Facility(models.Model):
     FACILITY_TYPES = [
         ('Laboratory', 'Laboratory'),
@@ -1793,7 +1823,7 @@ Referenced from        Context_Area
 """
 
 
-@python_2_unicode_compatible
+# @python_2_unicode_compatible
 class Mission(models.Model):
     investigation = models.ManyToManyField(Investigation)
     name = models.CharField(max_length=MAX_CHAR_FIELD)
@@ -1824,7 +1854,7 @@ class TelescopeManager(models.Manager):
         self.save()
 
 
-@python_2_unicode_compatible
+# @python_2_unicode_compatible
 class Telescope(models.Model):
 
     # Relational Attributes
@@ -1928,7 +1958,7 @@ class Telescope(models.Model):
 """
 
 
-@python_2_unicode_compatible
+# @python_2_unicode_compatible
 class Bundle(models.Model):
     """
     Bundle has a many-one correspondance with User so a User can have multiple Bundles.
@@ -2147,7 +2177,7 @@ class Bundle(models.Model):
 """
 
 
-@python_2_unicode_compatible
+# @python_2_unicode_compatible
 class Collections(models.Model):
     # Attributes
     bundle = models.OneToOneField(Bundle, on_delete=models.CASCADE)
@@ -2569,7 +2599,7 @@ Referenced from        none
 """
 
 
-@python_2_unicode_compatible
+# @python_2_unicode_compatible
 class Product_Bundle(models.Model):
     bundle = models.OneToOneField(Bundle, on_delete=models.CASCADE)
 
@@ -2781,7 +2811,7 @@ Referenced from        none
 """
 
 
-@python_2_unicode_compatible
+# @python_2_unicode_compatible
 class Product_Collection(models.Model):
     COLLECTION_CHOICES = (
 
@@ -2978,7 +3008,7 @@ class Product_Collection(models.Model):
 """
 
 
-@python_2_unicode_compatible
+# @python_2_unicode_compatible
 class Data(models.Model):
     PROCESSING_LEVEL_CHOICES = (
         ('Calibrated', 'Calibrated'),
@@ -3039,7 +3069,7 @@ Table and Field Objects
 """
 
 
-@python_2_unicode_compatible
+# @python_2_unicode_compatible
 class Table_Delimited(models.Model):
     DELIMITER_CHOICES = (
         ('Comma', 'Comma'),
@@ -3156,7 +3186,7 @@ class Table_Delimited(models.Model):
         return smart_str(self.id)
 
 
-@python_2_unicode_compatible
+# @python_2_unicode_compatible
 class Table_Binary(models.Model):
     name = models.CharField(max_length=256, blank=True)
     offset = models.IntegerField(default=1)
@@ -3245,7 +3275,7 @@ class Table_Binary(models.Model):
         return smart_str(self.id)
 
 
-@python_2_unicode_compatible
+# @python_2_unicode_compatible
 class Table_Fixed_Width(models.Model):
     RECORD_CHOICES = (
         ('Sample Choice', 'Sample Choice'),
@@ -3351,7 +3381,7 @@ class Table_Fixed_Width(models.Model):
         return smart_str(self.id)
 
 
-@python_2_unicode_compatible
+# @python_2_unicode_compatible
 class Field_Delimited(models.Model):
     name = models.CharField(max_length=256)
     field_number = models.IntegerField()
@@ -3365,7 +3395,7 @@ class Field_Delimited(models.Model):
         pass
 
 
-@python_2_unicode_compatible
+# @python_2_unicode_compatible
 class Field_Binary(models.Model):
     name = models.CharField(max_length=256)
     field_number = models.IntegerField()
@@ -3383,7 +3413,7 @@ class Field_Binary(models.Model):
         pass
 
 
-@python_2_unicode_compatible
+# @python_2_unicode_compatible
 class Field_Character(models.Model):
     name = models.CharField(max_length=256)
     field_number = models.IntegerField()
@@ -3428,7 +3458,7 @@ Referenced from        none
 """
 
 
-@python_2_unicode_compatible
+# @python_2_unicode_compatible
 class Product_Observational(models.Model):
     DOMAIN_TYPES = [
         ('Atmosphere', 'Atmosphere'),
@@ -3723,7 +3753,7 @@ Referenced from        Product_Document
 """
 
 
-@python_2_unicode_compatible
+# @python_2_unicode_compatible
 class Product_Document(models.Model):
     # Attributes
     bundle = models.ForeignKey(Bundle, on_delete=models.CASCADE)
@@ -3946,7 +3976,7 @@ Referenced from        Alias_List
 """
 
 
-@python_2_unicode_compatible
+# @python_2_unicode_compatible
 class Alias(models.Model):
 
     bundle = models.ForeignKey(Bundle, on_delete=models.CASCADE)
@@ -4023,31 +4053,40 @@ class Alias(models.Model):
 
         return label_root
 
-    def remove(self, xmlFile, removeTag):
+    def remove_xml(self, label_root):
+        Identification_Area = label_root.find('{}Identification_Area'.format(NAMESPACE))
 
-        bundle = xmlFile.directory()+'/bundle_'+xmlFile.name_file_case()+'.xml'
-        context = xmlFile.directory()+'/context/collection_context.xml'
-        document = xmlFile.directory()+'/document/collection_document.xml'
-        xml_schema = xmlFile.directory()+'/xml_schema/collection_xml_schema.xml'
+        Alias_List = Identification_Area.find('{}Alias_List'.format(NAMESPACE))
 
-        file_list = [bundle, context, document, xml_schema]
+        for alias in Alias_List:
+            if(alias[0].text.title() == self.alternate_id.title()):
+                alias.getparent().remove(alias)
 
-        '''Identification_Area = label_root.find('{}Identification_Area'.format(NAMESPACE))
-        alias_list = Identification_Area.find('{}Alias_List'.format(NAMESPACE))
+        return label_root
 
-        print Alias_List'''
+        # bundle = xmlFile.directory()+'/bundle_'+xmlFile.name_file_case()+'.xml'
+        # context = xmlFile.directory()+'/context/collection_context.xml'
+        # document = xmlFile.directory()+'/document/collection_document.xml'
+        # xml_schema = xmlFile.directory()+'/xml_schema/collection_xml_schema.xml'
 
-        for tree_file in file_list:
-            tree = etree.parse(tree_file)
-            root = tree.getroot()
+        # file_list = [bundle, context, document, xml_schema]
 
-            for item in root.getiterator():
-                if item.text == removeTag:
-                    removeTag = item.getparent()
-                    remParent = removeTag.getparent()
-                    remParent.remove(removeTag)
-                    break
-            tree.write(tree_file)
+        # '''Identification_Area = label_root.find('{}Identification_Area'.format(NAMESPACE))
+        # alias_list = Identification_Area.find('{}Alias_List'.format(NAMESPACE))
+
+        # print Alias_List'''
+
+        # for tree_file in file_list:
+        #     tree = etree.parse(tree_file)
+        #     root = tree.getroot()
+
+        #     for item in root.getiterator():
+        #         if item.text == removeTag:
+        #             removeTag = item.getparent()
+        #             remParent = removeTag.getparent()
+        #             remParent.remove(removeTag)
+        #             break
+        #     tree.write(tree_file)
 
     def print_alias_list(self):
         for element in alias_list:
@@ -4089,7 +4128,7 @@ Referenced from        Identification_Area
 """
 
 
-@python_2_unicode_compatible
+# @python_2_unicode_compatible
 class Citation_Information(models.Model):
 
     bundle = models.ForeignKey(Bundle, on_delete=models.CASCADE)
@@ -4131,6 +4170,19 @@ class Citation_Information(models.Model):
         publication_year.text = self.publication_year
         description = etree.SubElement(Citation_Information, 'description')
         description.text = self.description
+        return label_root
+    
+    def remove_xml(self, label_root):
+        Identification_Area = label_root.find('{}Identification_Area'.format(NAMESPACE))
+
+        Citation_Information = Identification_Area.find('{}Citation_Information'.format(NAMESPACE))
+
+        Citation_Information.getparent().remove(Citation_Information)
+
+        # for alias in Alias_List:
+        #     if(alias[0].text.title() == self.alternate_id.title()):
+        #         alias.getparent().remove(alias)
+
         return label_root
 
     # Meta
@@ -4175,6 +4227,19 @@ class Modification_History(models.Model):
         modification_date.text = self.modification_date
         return label_root
 
+    def remove_xml(self, label_root):
+        Identification_Area = label_root.find('{}Identification_Area'.format(NAMESPACE))
+
+        Modification_History = Identification_Area.findall('{}Modification_History'.format(NAMESPACE))
+
+        # Modification_History.getparent().remove(Modification_History)
+
+        for tag in Modification_History:
+            if(tag[0].text.title() == self.version_id.title()):
+                tag.getparent().remove(tag)
+
+        return label_root
+
     # Meta
     def __str__(self):
         return 'Need to finish this.'
@@ -4185,7 +4250,7 @@ class Modification_History(models.Model):
 """
 
 
-@python_2_unicode_compatible
+# @python_2_unicode_compatible
 class Table(models.Model):
 
     OBSERVATIONAL_TYPES = [
@@ -4218,7 +4283,7 @@ class Table(models.Model):
 """
 
 
-@python_2_unicode_compatible
+# @python_2_unicode_compatible
 class Array(models.Model):
 
     ARRAY_DIMENSIONS = [
@@ -4299,7 +4364,7 @@ class Array(models.Model):
         return label_root
 
 
-@python_2_unicode_compatible
+# @python_2_unicode_compatible
 class DisplayDictionary(models.Model):
     """
     This dictionary describes how to display Array data on a display device
@@ -4333,7 +4398,7 @@ The Movie_Display_Settings class provides
         """
 
 
-@python_2_unicode_compatible
+# @python_2_unicode_compatible
 class Color_Display_Settings(models.Model):
     """
 The blue_channel_band attribute identifies the
@@ -4392,7 +4457,7 @@ The red_channel_band attribute identifies the
         return "How you actually make a dictionary >.<"
 
 
-@python_2_unicode_compatible
+# @python_2_unicode_compatible
 class Display_Direction(models.Model):
     """
 The horizontal_display_axis attribute
@@ -4458,7 +4523,7 @@ The vertical_display_direction attribute
         return "How you actually make a dictionary >.<"
 
 
-@python_2_unicode_compatible
+# @python_2_unicode_compatible
 class Display_Settings(models.Model):
     pass
     #Local_Internal_Reference = models.CharField(max_length=MAX_CHAR_FIELD)
@@ -4515,7 +4580,7 @@ The time_display_axis attribute identifies, by
 """
 
 
-@python_2_unicode_compatible
+# @python_2_unicode_compatible
 class Movie_Display_Settings(models.Model):
     """
 The Movie_Display_Settings class provides

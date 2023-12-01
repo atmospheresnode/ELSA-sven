@@ -19,7 +19,13 @@ urlpatterns = [
     url(r'^(?P<pk_bundle>\d+)/alias_delete/(?P<pk_alias>[-\w]+)/$', views.alias_delete, name='alias_delete'),
 
     # Alias_Delete
-    url(r'^(?P<pk_bundle>\d+)/(?P<alias>[-\w]+)/alias_delete/$', views.alias_delete, name='alias_delete'),
+    url(r'^(?P<pk_bundle>\d+)/(?P<pk_alias>[-\w]+)/alias_delete/$', views.alias_delete, name='alias_delete'),
+
+    #Citation Information Delete
+    url(r'^(?P<pk_bundle>\d+)/(?P<pk_citation_information>[-\w]+)/citation_delete/$', views.delete_citation_information, name='citation_information_delete'),
+
+    #Modification History Delete
+    url(r'^(?P<pk_bundle>\d+)/(?P<pk_modification_history>[-\w]+)/modification_history/$', views.delete_modification_history, name='modification_history_delete'),
 
     # Build
     url(r'^$', views.build, name='build'),
