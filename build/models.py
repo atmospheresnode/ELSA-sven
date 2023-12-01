@@ -2602,7 +2602,7 @@ class Product_Bundle(models.Model):
         # set selected version
         update = Version()
         bundle = Bundle()
-        print(bundle.version + "<<<<<<<<")
+        print(bundle.version + "test<<<<<<<<")
         update.version_update_old(self.bundle.version, source_file, self.label())
 
         # Copy the base case template to the correct directory

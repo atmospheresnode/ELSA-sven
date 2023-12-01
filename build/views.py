@@ -376,7 +376,7 @@ def build(request):
         bundle_count = Bundle.objects.filter(
             name=bundle_name, user=bundle_user).count()
         if bundle_count == 0:  # If user and bundle name are unique, then...
-
+            print('At the start')
             # Create Bundle model.
             bundle = form_bundle.save(commit=False)
             #bundle.uniqueifier = bundle.name + "_" + smart_str(request.user.id)
@@ -418,13 +418,20 @@ def build(request):
             print(
                 '---------------- End Build Product_Bundle Base Case -------------------------')
 
+            print('before initial save')
             collections = form_collections.save(commit=False)
+            print('after initial save and before setting bundle')
             collections.bundle = bundle
-            collections.save()
+            print('after setting bundle and before final save')
+            # collections.save(commit=True)
+            print('here')
             print('\nCollections model object:    {}'.format(collections))
+            print('now here')
 
             # Create PDS4 compliant directories for each collection within the bundle.
+            print('before build collections directories')
             collections.build_directories()
+            print('after build collections directories')
 
             for collection in collections.list():
                 print(collection)
@@ -481,17 +488,21 @@ def build(request):
             context_dict['Product_Collection_Set'] = Product_Collection.objects.filter(
                 bundle=bundle)
 
+            # return redirect('build:build')
+
             #url = smart_str(bundle.id) +'/data_prep/'
             url = smart_str(bundle.id) + '/'
             #url = 'two/'
+
+            # return render(request, 'build/build.html', context_dict)
 
             print(url)
             print(bundle.id)
             print('testing online updating system')
             print('please do something')
             # return HttpResponseRedirect('/elsa/build/' + bundle.id + '/')
-            return redirect("/elsa/")
-            # return redirect(url, request, context_dict)
+            # return redirect("/elsa/")
+            return redirect(url, request, context_dict)
             # return render(request, 'build/two.html', context_dict)
 
     return render(request, 'build/build.html', context_dict)

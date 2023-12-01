@@ -92,8 +92,8 @@ DEBUG = False
 #    The following is literally read, if the DEBUG variable is set to False, then the only allowed hosts are those listed for production only.  By allowing DEBUG to be True AND using only the allowed hosts for production, we open ourselves up to vulnerabilities from outside attackers.
 if DEBUG == False:
     ALLOWED_HOSTS = for_production
-    SECURE_CONTENT_TYPE_NOSNIFF = False
-    SECURE_BROWSER_XSS_FILTER = False
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_BROWSER_XSS_FILTER = True
     SECURE_SSL_REDIRECT = False
     X_FRAME_OPTIONS = 'DENY'
 
