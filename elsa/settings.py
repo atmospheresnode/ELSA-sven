@@ -179,6 +179,7 @@ WSGI_APPLICATION = 'elsa.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
+        # Adding comment to trigger git change
         'NAME': 'elsa_online_db', #Change this to whatever database is required
         'USER': 'elsaadmin',
         'PASSWORD': 'JH7i5zHkcdnc6z1fv12Lz7SdX30kwaXd',
