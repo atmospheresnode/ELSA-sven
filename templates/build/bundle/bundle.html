@@ -485,7 +485,8 @@
    <!-- Alias List -->
    <div class="row">
       <div class="col-md-12" id="alias_detail">
-         <p class="card-header  black-text text-left z-depth-2">
+         <div class="card  black-text text-left z-depth-2">
+            <div class="card-body">
             <!-- No Alias Has Been Added -->
             {% if alias_set_count == 0 %}
             <strong>Alias:</strong> None<br>
@@ -493,13 +494,43 @@
             
             <!-- Alias Has Been Added -->
             {% else %}
+            
             <strong>Alias: You may edit Alias information of your choosing, by clicking on the blue link below </strong>
             
             {% for alias in alias_set %}
-            <a href="{% url 'build:alias_edit' bundle.pk alias.pk %}" data-toggle="tiptool" data-placement="right" title="Click me to edit this Alias Form">
+            <!-- <a href="{% url 'build:alias_edit' bundle.pk alias.pk %}" data-toggle="tiptool" data-placement="right" title="Click me to edit this Alias Form">
                <br>{{ alias.alternate_id }}: {{ alias.alternate_title }}: {{ alias.comment }}
-            </a>
+            </a> -->
+            <br>Alternate ID: {{ alias.alternate_id }}
+            <br>Alternate Title: {{ alias.alternate_title }}
+            <br>Comment: {{ alias.comment }}
+            <br>
+            <a class="btn btn-success" role="button" href="{% url 'build:alias_edit' bundle.pk alias.pk %}"> Edit </a>
+            <!-- <button class="btn btn-danger" role="button"> Delete </button> -->
+            <a data-toggle="modal" data-target="#aliasDeleteConfirmation">
+               <button type="button" class="btn btn-danger">Delete</button>
+            </a> 
+            <div class="modal fade" id="aliasDeleteConfirmation" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+               <div class="modal-dialog">
+                  <div class="modal-content">
+                     <div class="modal-header">
+                        <h1 class="modal-title fs-4" id="exampleModalLabel">Are you sure?</h1>
+                     </div>
+                     
+                     <div class="modal-footer">
+                        <button type="button" class="btn btn-danger" data-dismiss="modal">No</button>
+                        <!-- <a href="{% url 'build:alias_delete' bundle.pk alias.pk %}"> -->
+                        <a href="{% url 'build:alias_delete' bundle.pk alias.pk %}">
+                           <button type="button" class="btn btn-teal">Yes</button>
+                        </a>
+                     </div>
+                  </div>
+               </div>
+            </div> 
+            
+            
             {% endfor %}
+            
             
             <br>
             {% endif %}
@@ -508,6 +539,7 @@
             title="Aliases provide alternative ways to reference your data. Some spacecraft and instruments may have abbreviated names that are well-known. Adding Aliases allows these alternative names to be used in searching for your data across the PDS. Spacecraft especially, may also have alternative identifiers such as SPICE ids or OLAF ids, which are special identifiers for other systems within NASA.">
             + Add Alias
          </button>
+         </div>
          
          <!-- Button Styling -->
          <style>
@@ -526,7 +558,7 @@
             }
          </style>
          
-      </p>
+      </div>
    </div>
 </div>
 
@@ -551,7 +583,8 @@
 <!-- Citation Information List -->
 <div class="row">
    <div class="col-md-12">
-      <p class="card-header black-text text-left z-depth-2">
+      <div class="card black-text text-left z-depth-2">
+         <div class="card-body">
          <!-- No Citation Information Exists -->
          {% if citation_information_set_count == 0 %}
          <strong>Citation Information:</strong> None<br>
@@ -589,11 +622,33 @@
          <br>Publication Year: {{ citation_information.publication_year }}
          <br>Description: {{ citation_information.description }}
          <br>
-         <button class="btn btn-success" role="button"> Edit </button>
-         <button class="btn btn-danger" role="button"> Delete </button>
+         <a href="{% url 'main:construction' %}">
+            <button class="btn btn-success" role="button"> Edit </button>
+         </a>
+         <a data-toggle="modal" data-target="#citationDeleteConfirmation">
+            <button type="button" class="btn btn-danger">Delete</button>
+         </a>
+         
+         <div class="modal fade" id="citationDeleteConfirmation" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+               <div class="modal-content">
+                  <div class="modal-header">
+                     <h1 class="modal-title fs-4" id="exampleModalLabel">Are you sure?</h1>
+                  </div>
+                  
+                  <div class="modal-footer">
+                     <button type="button" class="btn btn-danger" data-dismiss="modal">No</button>
+                     <a href="{% url 'build:citation_information_delete' bundle.pk citation_information.pk %}">
+                        <button type="button" class="btn btn-teal">Yes</button>
+                     </a>
+                  </div>
+               </div>
+            </div>
+         </div>
          {% endfor %}
          {% endif %}
-      </p>
+         </div>
+      </div>
    </div>
 </div>
 
@@ -620,7 +675,8 @@
 <!--Modificaiton History List -->
 <div class="row">
    <div class="col-md-12">
-      <p class="card-header black-text text-left z-depth-2">
+      <div class="card black-text text-left z-depth-2">
+         <div class="card-body">
          <!-- No Modification History Has Been Added -->
          {% if modification_history_set_count == 0 %}
          <strong>Modification History:</strong> None<br>
@@ -633,7 +689,31 @@
          <br>Version ID: {{ mofification_history.version_id}}
          <br>Modification date: {{ mofification_history.modification_date }}
          <br>
+         <a href="{% url 'main:construction' %}">
+            <button class="btn btn-success" role="button"> Edit </button>
+         </a>
+         <a data-toggle="modal" data-target="#modificationDeleteConfirmation">
+            <button type="button" class="btn btn-danger">Delete</button>
+         </a>
+         
+         <div class="modal fade" id="modificationDeleteConfirmation" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+               <div class="modal-content">
+                  <div class="modal-header">
+                     <h1 class="modal-title fs-4" id="exampleModalLabel">Are you sure?</h1>
+                  </div>
+                  
+                  <div class="modal-footer">
+                     <button type="button" class="btn btn-danger" data-dismiss="modal">No</button>
+                     <a href="{% url 'build:modification_history_delete' bundle.pk mofification_history.pk %}">
+                        <button type="button" class="btn btn-teal">Yes</button>
+                     </a>
+                  </div>
+               </div>
+            </div>
+         </div> 
          {% endfor %}
+         <br>
          {% endif %}
          
          <button class="btn btn-teal" data-toggle="collapse" href="#displayModification" role="button"
@@ -641,6 +721,7 @@
          title="‘Modification History’ allows you to add details about updates to your labels. So, if you make changes to the templates in response to review comments or have new metadata to add to the label, you should add a new Modification Detail – these blocks of information will be added to the Modification History.">+
          Add Modification History (Detail) 
       </button>
+   </div>
       
       <!-- Button Styling -->
       <style>
@@ -658,7 +739,7 @@
             border-radius: 50%;
          }
       </style>
-   </p>
+   </div>
 </div>
 </div>
 

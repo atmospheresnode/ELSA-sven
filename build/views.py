@@ -171,32 +171,42 @@ def alias_delete(request, pk_bundle, pk_alias):
     if request.user == bundle.user:
         print("authorized user")
 
-        #alias = Alias.objects.get(pk=pk_alias)
+        alias = Alias.objects.get(pk=pk_alias)
 
-        delete_alias = request.POST.get('Delete')
+        product_bundle = Product_Bundle.objects.get(bundle=bundle)
+        product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
 
-        context_dict = {
-            'alias': pk_alias,
-            'bundle': bundle,
-            'delete_alias': delete_alias,
-        }
+        remove_from_label(alias, product_bundle, product_collections_list)
 
-        print(pk_alias)
-        print(request)
-        print(bundle)
+        alias.delete()
 
-        obj = get_object-or_404(alias_edit, id=id)
+        return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
 
-        alias_class = Alias()
 
-        if request.method == 'POST':
-            alias_class.remove(bundle, alias)
-            alias_to_remove = Alias.objects.filter(
-                bundle=bundle).filter(alternate_id=alias)
-            alias_to_remove.delete()
-            return HttpResponseRedirect("/")
+        # delete_alias = request.POST.get('Delete')
 
-        return render(request, 'build/alias/alias_delete.html', context_dict)
+        # context_dict = {
+        #     'alias': pk_alias,
+        #     'bundle': bundle,
+        #     'delete_alias': delete_alias,
+        # }
+
+        # print(pk_alias)
+        # print(request)
+        # print(bundle)
+
+        # obj = get_object-or_404(alias_edit, id=id)
+
+        # alias_class = Alias()
+
+        # if request.method == 'POST':
+        #     alias_class.remove(bundle, alias)
+        #     alias_to_remove = Alias.objects.filter(
+        #         bundle=bundle).filter(alternate_id=alias)
+        #     alias_to_remove.delete()
+        #     return HttpResponseRedirect("/")
+
+        # return render(request, 'build/alias/alias_delete.html', context_dict)
 
     else:
         print('unauthorized user attempting to access a restricted area.')
@@ -485,13 +495,8 @@ def build(request):
             url = smart_str(bundle.id) + '/'
             #url = 'two/'
 
-            print(url)
-            print(bundle.id)
-            print('testing online updating system')
-            print('please do something')
-            # return HttpResponseRedirect('/elsa/build/' + bundle.id + '/')
-            return redirect("/elsa/")
             # return redirect(url, request, context_dict)
+            return redirect("/")
             # return render(request, 'build/two.html', context_dict)
 
     return render(request, 'build/build.html', context_dict)
@@ -2701,6 +2706,60 @@ def delete_investigation(request, pk_bundle, pk_investigation):
     # have screen to choose between deleting investigation or choosing new host
     # return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/contextsearch/investigation/')
     return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/contextsearch/investigation/')
+
+@login_required
+def delete_citation_information(request, pk_bundle, pk_citation_information):
+
+    print(' \n\n \n\n-------------------------------------------------------------------------')
+    print('\n\n---------------------- Remove an Citation Information with ELSA ---------------------------')
+    print('------------------------------ DEBUGGER ---------------------------------')
+
+    bundle = Bundle.objects.get(pk=pk_bundle)
+
+    if request.user == bundle.user:
+        print("authorized user")
+
+        citation_information = Citation_Information.objects.get(pk=pk_citation_information)
+
+        product_bundle = Product_Bundle.objects.get(bundle=bundle)
+        product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+
+        remove_from_label(citation_information, product_bundle, product_collections_list)
+
+        citation_information.delete()
+
+        return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
+
+    else:
+        print('unauthorized user attempting to access a restricted area.')
+        return redirect('main:restricted_access')
+    
+@login_required
+def delete_modification_history(request, pk_bundle, pk_modification_history):
+
+    print(' \n\n \n\n-------------------------------------------------------------------------')
+    print('\n\n---------------------- Remove an Citation Information with ELSA ---------------------------')
+    print('------------------------------ DEBUGGER ---------------------------------')
+
+    bundle = Bundle.objects.get(pk=pk_bundle)
+
+    if request.user == bundle.user:
+        print("authorized user")
+
+        modification_history = Modification_History.objects.get(pk=pk_modification_history)
+
+        product_bundle = Product_Bundle.objects.get(bundle=bundle)
+        product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+
+        remove_from_label(modification_history, product_bundle, product_collections_list)
+
+        modification_history.delete()
+
+        return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
+
+    else:
+        print('unauthorized user attempting to access a restricted area.')
+        return redirect('main:restricted_access')
 
 # Directory View Functions
 # utils functions
