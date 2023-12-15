@@ -515,6 +515,7 @@ def build(request):
 #             # return redirect("/elsa/")
 #             return redirect(url, request, context_dict)
 # =======
+            print('trying to trigger server reset')
             return redirect(url, request, context_dict)
             # return redirect("/")
             # return render(request, 'build/two.html', context_dict)
