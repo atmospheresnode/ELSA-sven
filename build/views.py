@@ -350,13 +350,15 @@ def build(request):
     # Get forms
     form_bundle = BundleForm(request.POST or None)
     form_collections = CollectionsForm(request.POST or None)
-    form_product_collection = ProductCollectionForm(request.POST or None)
+    form_product_collection_document = ProductCollectionForm(request.POST or None)
+    form_product_collection_context = ProductCollectionForm(request.POST or None)
+    form_product_collection_schema = ProductCollectionForm(request.POST or None)
 
     # Declare context_dict for template
     context_dict = {
         'form_bundle': form_bundle,
         'form_collections': form_collections,
-        'form_product_collection': form_product_collection,
+        'form_product_collection': form_product_collection_document,
         'user': request.user,
     }
 
@@ -447,13 +449,18 @@ def build(request):
                 print(collection)
 
                 # Create Product_Collection model for each collection
-                product_collection = form_product_collection.save(commit=False)
-                product_collection.bundle = bundle
+                
                 if collection == 'document':
+                    product_collection = form_product_collection_document.save(commit=False)
+                    product_collection.bundle = bundle
                     product_collection.collection = 'Document'
                 elif collection == 'context':
+                    product_collection = form_product_collection_context.save(commit=False)
+                    product_collection.bundle = bundle
                     product_collection.collection = 'Context'
                 elif collection == 'xml_schema':
+                    product_collection = form_product_collection_schema.save(commit=False)
+                    product_collection.bundle = bundle
                     product_collection.collection = 'XML_Schema'
                 product_collection.save()
 
@@ -673,7 +680,7 @@ def bundle(request, pk_bundle):
             print('Alias model object: {}'.format(alias))
 
             product_bundle = Product_Bundle.objects.get(bundle=bundle)
-            product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+            product_collections_list = Product_Collection.objects.filter(bundle=bundle)
 
             write_into_label(alias, product_bundle, product_collections_list)
 
@@ -732,6 +739,8 @@ def bundle(request, pk_bundle):
 
             product_bundle = Product_Bundle.objects.get(bundle=bundle)
             product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+
+            print(product_collections_list)
 
             write_into_label(citation_information, product_bundle, product_collections_list)
 
