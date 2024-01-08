@@ -10,7 +10,7 @@ from django.contrib.auth.models import User
 from django.db import models
 from django.urls import reverse
 from django.utils import timezone
-from django.utils.encoding import python_2_unicode_compatible
+# from django.utils.encoding import python_2_unicode_compatible
 
 # Third-party app imports
 
@@ -20,7 +20,7 @@ from django.utils.encoding import python_2_unicode_compatible
 
 
 
-@python_2_unicode_compatible
+# @python_2_unicode_compatible
 class Category(models.Model):
     name = models.CharField(max_length=128, unique=True)
     overview = models.CharField(max_length=40)
@@ -39,7 +39,7 @@ class Category(models.Model):
         return self.name
 
 
-@python_2_unicode_compatible
+# @python_2_unicode_compatible
 class Post(models.Model):
     author = models.ForeignKey(User, on_delete=models.CASCADE)
     title = models.CharField(max_length=22)
@@ -58,7 +58,7 @@ class Post(models.Model):
     def get_absolute_url(self):
         return reverse('blog:detail', args=[smart_str(self.id)])
 
-@python_2_unicode_compatible
+# @python_2_unicode_compatible
 class Comment(models.Model):
     author = models.ForeignKey(User, on_delete=models.CASCADE)
     content = models.TextField(max_length=5000)
