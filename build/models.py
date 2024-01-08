@@ -14,7 +14,7 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.http import HttpResponseRedirect
 from django.shortcuts import render, redirect
 from django.urls import reverse
-from django.utils.encoding import python_2_unicode_compatible
+# from django.utils.encoding import python_2_unicode_compatible
 from django.utils.encoding import *
 from shutil import copyfile
 from .chocolate import *

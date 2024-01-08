@@ -5,7 +5,7 @@ from builtins import str
 from django.contrib.auth.models import User
 from django.db import models
 from django.urls import reverse
-from django.utils.encoding import python_2_unicode_compatible
+# from django.utils.encoding import python_2_unicode_compatible
 
 
 
@@ -19,7 +19,7 @@ from django.utils.encoding import python_2_unicode_compatible
 # Create your models here.
 
 # UserProfile is an extension of the User model.  So each User has a UserProfile.  And each UserProfile lists the associated user, their agency to be used in the urn, and their related user directory.
-@python_2_unicode_compatible
+# @python_2_unicode_compatible
 class UserProfile(models.Model):
     AGENCY_CHOICES = (
         ('nasa:pds','NASA'),
