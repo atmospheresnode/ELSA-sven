@@ -83,7 +83,7 @@ SECRET_KEY = secret_key()
 
 #     SECURITY WARNING: don't run with debug turned on in production!
 #                   use live debug for quick checks in production.
-DEBUG = True
+DEBUG = False
 
 
 
