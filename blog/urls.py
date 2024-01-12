@@ -1,7 +1,7 @@
 # Stdlib imports
 
 # Core Django imports
-from django.conf.urls import re_path
+from django.urls import re_path
 
 # Third-party app imports
 
