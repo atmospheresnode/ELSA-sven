@@ -180,7 +180,7 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         # Adding comment to trigger git change
-        'NAME': 'test_elsa_newdb', #Change this to whatever database is required
+        'NAME': 'test_elsa_offline_prime', #Change this to whatever database is required
         'USER': 'elsaadmin',
         'PASSWORD': 'JH7i5zHkcdnc6z1fv12Lz7SdX30kwaXd',
 
