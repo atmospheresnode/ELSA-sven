@@ -20,14 +20,8 @@ from django.utils.encoding import python_2_unicode_compatible
 # UserProfile is an extension of the User model.  So each User has a UserProfile.  And each UserProfile lists the associated user, their agency to be used in the urn, and their related user directory.
 @python_2_unicode_compatible
 class UserProfile(models.Model):
-    AGENCY_CHOICES = (
-        ('nasa:pds','NASA'),
-        ('esa:psa','ESA'),
-        ('jaxa:darts','JAXA'),
-        # We could be super cool and add more agencies.
-    )
     user = models.OneToOneField(User)
-    agency = models.CharField(max_length=10, choices=AGENCY_CHOICES, default='NASA')
+    agency = models.CharField(max_length=10, default='NASA')
     directory = models.CharField(max_length=1000)
     #picture = models.ImageField(upload_to='profile_images', blank=True)
 

@@ -48,9 +48,26 @@ class ConfirmForm(forms.Form):
 
 
 class AliasForm(forms.ModelForm):
-    alternate_id = forms.CharField(required=True)
-    alternate_title = forms.CharField(required=True)
-    comment = forms.CharField(required=False)
+    alternate_id = forms.CharField(required=True, max_length=100, widget = forms.TextInput(attrs={
+            'class': 'form-control form-outline',
+            'id': 'alt_id'
+        })
+    )
+
+    alternate_title = forms.CharField(required=True, max_length=100, widget = forms.TextInput(attrs={
+            'class': 'form-control form-outline',
+            'id': 'alt_title'
+        })
+    )
+
+    comment = forms.CharField(required=False, widget = forms.Textarea(attrs={
+            'class': 'form-control form-outline',
+            'id': 'comment',
+            'rows': '1'
+        })
+    )
+
+
 
     class Meta(object):
         model = Alias
@@ -79,10 +96,40 @@ class ArrayForm(forms.ModelForm):
     Bundle
 """
 
+BUNDLE_TYPE_CHOICES = (
+    ('Archive', 'Archive'),
+    ('Supplemental', 'Supplemental'),
+)
+
+VERSION_CHOICES = (
+    ('1K00', '1K00'),
+    ('1J00', '1J00'),
+    ('1I00', '1I00'),
+    ('1H00', '1H00'),
+    ('1G00', '1G00'),
+    ('1F00', '1F00'),
+    ('1E00', '1E00'),
+    ('1D00', '1D00'),
+)
 
 class BundleForm(forms.ModelForm):
-    name = forms.CharField(initial='Enter name here',
-                           required=True, max_length=50)
+    name = forms.CharField(required=True, max_length=50, widget = forms.TextInput(attrs={
+            'class': 'form-control form-outline',
+            'placeholder': 'Bundle Name'
+        })
+    )
+
+    bundle_type = forms.ChoiceField(required=True, choices=BUNDLE_TYPE_CHOICES, widget = forms.Select(attrs={
+            'class': 'form-control form-outline',
+            'placeholder': 'Bundle Type'
+        })
+    )
+
+    version = forms.ChoiceField(required=True, choices=VERSION_CHOICES, widget = forms.Select(attrs={
+            'class': 'form-control form-outline',
+            'placeholder': 'Bundle Version'
+        })
+    )
 
     class Meta(object):
         model = Bundle
@@ -128,14 +175,32 @@ class BundleForm(forms.ModelForm):
 
 
 class CitationInformationForm(forms.ModelForm):
+    author_list = forms.CharField(required=False, widget = forms.TextInput(attrs={
+        'class': 'form-control form-outline',
+        'id': 'author_list'
+    }))
 
-    description = forms.CharField(required=True)
-    #publication_year = forms.DateField(required=True, input_formats=['%m/%d/%Y','%d/%m/%Y','%Y-%m-%d','%m-%d-%Y','%d-%m-%Y'])
+    description = forms.CharField(required=True, widget = forms.TextInput(attrs={
+        'class': 'form-control form-outline',
+        'id': 'cite_desc'
+    }))
+
+    editor_list = forms.CharField(required=False, widget = forms.TextInput(attrs={
+        'class': 'form-control form-outline',
+        'id': 'editor_list'
+    }))
+
+    keyword = forms.CharField(required=False, widget = forms.TextInput(attrs={
+        'class': 'form-control form-outline',
+        'id': 'keyword'
+    }))
+
+    publication_year = forms.CharField(required=True, widget = forms.TextInput(attrs={
+        'class': 'form-control form-outline',
+        'id': 'publication_year'
+    }))
+
     # validators=[RegexValidator(r'^\d{1,10}$')])
-    publication_year = forms.CharField(required=True)
-    author_list = forms.CharField(required=False)
-    editor_list = forms.CharField(required=False)
-    keyword = forms.CharField(required=False)
 
     class Meta(object):
         model = Citation_Information
@@ -161,10 +226,22 @@ Test
 
 class ModificationHistoryForm(forms.ModelForm):
 
-    description = forms.CharField(required=True)
+    description = forms.CharField(required=True, widget = forms.TextInput(attrs={
+        'class': 'form-control form-outline',
+        'id': 'mod_desc'
+    }))
+
+    modification_date = forms.CharField(required=True, widget = forms.TextInput(attrs={
+        'class': 'form-control form-outline',
+        'id': 'mod_date'
+    }))
+
+    version_id = forms.CharField(required=False, widget = forms.TextInput(attrs={
+        'class': 'form-control form-outline',
+        'id': 'version_id'
+    }))
+
     # validators=[RegexValidator(r'^\d{1,10}$')])
-    modification_date = forms.CharField(required=True)
-    version_id = forms.CharField(required=False)
 
     class Meta(object):
         model = Modification_History
@@ -520,7 +597,7 @@ class Table_Delimited_Form(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         self.pk_ins = kwargs.pop('pk_ins')
         super(Table_Delimited_Form, self).__init__(*args, **kwargs)
-        self.fields['data'] = forms.ModelChoiceField(queryset=Table_Delimited.objects.filer(bundle=self.pk_ins), required = True)
+        self.fields['data'] = forms.ModelChoiceField(queryset=Table_Delimited.objects.filter(bundle=self.pk_ins), required = True)
 
 class Table_Binary_Form(forms.ModelForm):
     class Meta(object):
@@ -530,7 +607,7 @@ class Table_Binary_Form(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         self.pk_ins = kwargs.pop('pk_ins')
         super(Table_Binary_Form, self).__init__(*args, **kwargs)
-        self.fields['data'] = forms.ModelChoiceField(queryset=Table_Binary.objects.filer(bundle=self.pk_ins), required = True)
+        self.fields['data'] = forms.ModelChoiceField(queryset=Table_Binary.objects.filter(bundle=self.pk_ins), required = True)
 
 
 class Table_Fixed_Width_Form(forms.ModelForm):
@@ -541,7 +618,7 @@ class Table_Fixed_Width_Form(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         self.pk_ins = kwargs.pop('pk_ins')
         super(Table_Fixed_Width_Form, self).__init__(*args, **kwargs)
-        self.fields['data'] = forms.ModelChoiceField(queryset=Table_Fixed_Width.objects.filer(bundle=self.pk_ins), required = True)
+        self.fields['data'] = forms.ModelChoiceField(queryset=Table_Fixed_Width.objects.filter(bundle=self.pk_ins), required = True)
 
 
 class Field_Delimited_Form(forms.ModelForm):

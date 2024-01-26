@@ -180,9 +180,13 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'test_elsa_offline_prime', #Change this to whatever database is required
-        'HOST': '/var/lib/mysql/mysql.sock',
-        
+        'USER': 'elsaadmin',
+        'PASSWORD': 'JH7i5zHkcdnc6z1fv12Lz7SdX30kwaXd',
 
+        # Use This!
+        'HOST': 'localhost',
+        'PORT': '3306',
+        
         # 'ENGINE': 'django.db.backends.sqlite3',
         # 'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
     }
@@ -259,7 +263,7 @@ LOGGING = {
         'file': {
             'level': 'DEBUG',
             'class': 'logging.FileHandler',
-            'filename': '/export/atmos1/htdocs/elsa/elsa.log',
+            'filename': '/home/dsha77er/Desktop/elsa_github/ELSA-frankenstein/elsa.log',
         },
     },
     'loggers': {
