@@ -180,7 +180,14 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'test_elsa_offline_prime', #Change this to whatever database is required
-        'HOST': '/var/lib/mysql/mysql.sock',
+        # 'HOST': '/var/lib/mysql/mysql.sock',
+
+        'USER': 'elsaadmin',
+        'PASSWORD': 'JH7i5zHkcdnc6z1fv12Lz7SdX30kwaXd',
+
+        # Use This!
+        'HOST': 'localhost',
+        'PORT': '3306',
         
 
         # 'ENGINE': 'django.db.backends.sqlite3',
