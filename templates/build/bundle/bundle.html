@@ -172,7 +172,7 @@
       </div>
       
       <!-- Collections -->
-      <div id="investigation" class="collapse">
+      <div id="collections" class="collapse">
          <div class="row p-1 m-3 mt-1">
             <a data-bs-toggle="modal" data-bs-target="#collections_modal">
                <div class="card">
@@ -242,7 +242,7 @@
          <div class="modal-content">
             <!-- Title -->
             <div class="modal-header">
-               <h5 class="modal-title">Conext</h5>
+               <h5 class="modal-title">Context</h5>
                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
          </div>
@@ -259,7 +259,7 @@
                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
 
-            <div class="modal-body">
+            <div class="modal-body pt-0">
                <!-- Tabs -->
                <ul class="nav nav-tabs nav-justified" role="tablist">
                   <li class="nav-item" role="presentation">
@@ -276,9 +276,151 @@
                <!-- Content -->
                <div class="tab-content">
                   <!-- Alias -->
+                  <div class="tab-pane fade" id="inv_alias" role="tabpanel">
+                     <!-- Form -->
+                     <div class="row px-2">
+                        <form action="{% url 'build:bundle' bundle.pk %}" method="post" id="form_alias" >
+                           {% csrf_token %}
+   
+                           <!-- Alternate ID -->
+                           <div class="mt-3">
+                              <label for="alt_id" class="required">Alternate ID</label>
+                              {{ form_alias.alternate_id }}
+                           </div>
+   
+                           <!-- Alternate Title -->
+                           <div class="mt-3">
+                              <label for="alt_title" class="required">Alternate Title</label>
+                              {{ form_alias.alternate_title }}
+                           </div>
+   
+                           <!-- Comment -->
+                           <div class="mt-3">
+                              <label for="comment">Comment</label>
+                              {{ form_alias.comment }}
+                           </div>
+                           
+                           <!-- Create Alias -->
+                           <button type="submit" class="btn btn-light text-light my-4">Create Alias</button>
+                        </form>
+                     </div>
+
+                     <!-- List of Aliases -->
+                     <div class="modal-footer justify-content-start">
+                        <!-- No Aliases Exist -->
+                        {% if alias_set_count == 0 %}
+                           <p>No Aliases Found</p>
+                        
+                        <!-- Display Aliases -->
+                        {% else %}
+                        <!-- grab from old bundle.html -->
+                           {% for alias in alias_set %}
+                           <a href="{% url 'build:alias_edit' bundle.pk alias.pk %}" data-toggle="tiptool" data-placement="right" title="Click me to edit this Alias Form">
+                              {{ alias.alternate_id }}: {{ alias.alternate_title }}: {{ alias.comment }}
+                           </a>
+                           {% endfor %}
+                        {% endif %}
+                     </div>
+                  </div>
+
                   <!-- Modification History -->
+                  <div class="tab-pane fade" id="inv_mod" role="tabpanel">
+                     <div class="row px-2">
+                        <form action="{% url 'build:bundle' bundle.pk %}" method="post" id="form_modification_history">
+                           {% csrf_token %}
+   
+                           <!-- Description-->
+                           <div class="mt-3">
+                              <label for="mod_desc" class="required">Description</label>
+                              {{ form_modification_history.description }}
+                           </div>
+   
+                           <!-- Modification Date -->
+                           <div class="mt-3">
+                              <label for="mod_date" class="required">Modificaiton Date</label>
+                              {{ form_modification_history.modification_date }}
+                           </div>
+   
+                           <!-- Version ID -->
+                           <div class="mt-3">
+                              <label for="version_id">Version ID</label>
+                              {{ form_modification_history.version_id }}
+                           </div>
+                           
+                           <!-- Create Modification History -->
+                           <button type="submit" class="btn btn-light text-light my-4">Create Modification History</button>
+                        </form>
+                     </div>
+
+                     <!-- List of Modification History Snippets -->
+                     <div class="modal-footer justify-content-start">
+                        <!-- No Modificaiton History Snippets Exist -->
+                        {% if modification_history_set_count == 0 %}
+                           <p>No Modification History Found</p>
+                        
+                        <!-- Display Modification History Snippets -->
+                        {% else %}
+                        <!-- grab from old bundle.html -->
+                        {% endif %}
+                     </div>
+                  </div>
+
                   <!-- Citation Information -->
+                  <div class="tab-pane fade show active" id="inv_cite" role="tabpanel">
+                     <!-- Form -->
+                     <div class="row px-2">
+                        <form action="{% url 'build:bundle' bundle.pk %}" method="post" id="form_citation_information">
+                           {% csrf_token %}
+   
+                           <!-- Author List -->
+                           <div class="mt-3">
+                              <label for="author_list">Author List</label>
+                              {{ form_citation_information.author_list }}
+                           </div>
+   
+                           <!-- Editor List -->
+                           <div class="mt-3">
+                              <label for="editor_list">Editor List</label>
+                              {{ form_citation_information.editor_list }}
+                           </div>
+   
+                           <!-- Keyword -->
+                           <div class="mt-3">
+                              <label for="keyword">Keyword</label>
+                              {{ form_citation_information.keyword }}
+                           </div>
+   
+                           <!-- Publication Year -->
+                           <div class="mt-3">
+                              <label for="publication_year" class="required">Publication Year</label>
+                              {{ form_citation_information.publication_year }}
+                           </div>
+   
+                           <!-- Description -->
+                           <div class="mt-3">
+                              <label for="mod_desc" class="required">Description</label>
+                              {{ form_citation_information.description }}
+                           </div>
+   
+                           <!-- Create Citation Information -->
+                           <button type="submit" class="btn btn-light text-light my-4">Create Citaiton Information</button>
+                        </form>
+                     </div>
+   
+                     <!-- List of Citation Information Snippets -->
+                     <div class="modal-footer justify-content-start">
+                        <!-- No Citation Information Snippets Exist -->
+                        {% if citation_information_set_count == 0 %}
+                           <p>No Citation Information Found</p>
+                        
+                        <!-- Display Citation Information Snippets -->
+                        {% else %}
+                        <!-- grab from old bundle.html -->
+                        {% endif %}
+                     </div>
+                  </div>
                </div>
+
             </div>
          </div>
       </div>
@@ -289,7 +431,29 @@
 
    <!-- Modal Stylings -->
    <style>
+      /* Tabs Styling */
+      .nav-tabs .nav-item.show .nav-link, .nav-tabs .nav-link.active {
+         background-color: transparent;
+         border-color: transparent transparent white;
+         border-bottom: 2px solid;
+      }
+
+      .nav-tabs .nav-link {
+         border: 1px solid transparent;
+         border-top-left-radius: .25rem;
+         border-top-right-radius: .25rem;
+      }
+
+      .nav-link {
+         text-decoration: none;
+         color: black;
+      }
+
       /* Required Form Fields */
+      label.required::after {
+         content: ' *';
+         color: red;
+      }
    </style>
 </div>
 {% endblock %}
