@@ -1,90 +1,72 @@
 {% extends 'base-derk.html' %}
 {% load static %}
 
-<!-- My personal version of lorem ipsum paragraph, you don't have to use it - deric -->
-<!-- 
-  <p> 
-      Oh it's actually just a straight-up stolen song? It's just straight up stolen?
-      Wait... If you're gonna copy don't copy from someone with 10 million views.
-      You're unethical AND brain-dead, HOW ARE YOU BOTH?! HOW ARE YOU BOTH?! Disgusting.
-  </p> 
--->
-
 {% block body_block %}
   {% if user.is_authenticated %}
-    <div class="container-fluid">
-      <div class="row py-3 px-3">
+  <div class="container-fluid justify-content-center align-items-center">
 
-        <!-- Left Side -->
-        <div class="col">
-          <!-- What Card -->
-          <div class="card h-100">
-            <div class="card-header bg-dark text-light h2">What does ELSA do?</div>
-            <div class="card-body">
-              <div class="card-title h4">Take a walk with ELSA, {{ user }}.</div>
-              <br>
-              <div class="card-text">
-                ELSA is a user-centered application that aids in the creation of PDS4 compliant labels for your data bundles. 
-                Since ELSA is a user-centered application, we'll first go to your profile page. 
-                Your profile page will be the hub for all your created bundles. Click the button to begin the bundle creation process. 
-                There is additional help texts found by hovering the cursor over buttons that will give a clearer description of the purpose of that section.
-              </div>
-              <br>
-              <a href="{% url 'friends:logout' %}" class="btn btn-light text-light mt-0 mx-4 mb-4">Logout (will be removed, just a placeholder)</a>
-            </div>
-            <!-- To Bundle Button -->
-            <a href="{{ user.userprofile.get_absolute_url }}" class="btn btn-light text-light m-4">@{{user}}</a>
-          </div>
-        </div>
-        
-        <!-- Right Side -->
-        <div class="col">
-          <div class="d-flex flex-column vh-100">
-            <!-- Who Card -->
-            <div class="card mb-4 h-50">
-              <div class="card-header bg-dark text-light h2">Who is ELSA for?</div>
-              <div class="card-body">
-                <div class="card-title h4">Are you a part of the PDS4 Community?</div>
-                <br>
-                <div class="card-text">
-                  ELSA was created to help lessen the learning curve involved for new PDS4 users. 
-                  Check out the Planetary Data System's page to learn more about data archiving and distribution.
-                </div>
-              </div>
-              
-              <!-- PDS & ATM Buttons -->
-              <div class="row">
-                <div class="col m-3 me-0">
-                  <a href="https://pds.jpl.nasa.gov/" class="btn btn-light text-light w-100">@PDS</a>
-                </div>
-                <div class="col m-3 ms-0">
-                  <a href="http://atmos.nmsu.edu/" class="btn btn-light text-light w-100">@ATM</a>
-                </div>
-              </div>
-            </div>
-
-            <!-- Right Side Gap -->
-            <div class="flex-grow-2"></div>
-
-            <!-- Why Card -->
-            <div class="card h-50">
-              <div class="card-header bg-dark text-light h2">Why ELSA?</div>
-              <div class="card-body">
-                <div class="card-title h4">Well, ELSA is great!</div>
-                <br>
-                <div class="card-text">
-                  ... At least we think so! ELSA is an educational tool. 
-                  ELSA is currently in development but is making pretty good progress. 
-                  You can read more about ELSA below.
-                </div>
-              </div>
-              <a href="{% url 'main:about' %}" class="btn btn-light text-light m-4">About</a>
+    <!-- What Card -->
+    <div class="row px-4 pt-5">
+      <div class="col mt-3">
+        <div class="card h-100 d-flex flex-column">
+          <div class="card-header bg-dark text-light h2">What does ELSA do?</div>
+          <div class="card-body d-flex flex-column">
+            <div class="card-title h4">Take a walk with ELSA, {{ user }}.</div>
+            <br>
+            <div class="card-text">
+              ELSA is a user-centered application that aids in the creation of PDS4 compliant labels for your data bundles.
+              Since ELSA is a user-centered application, we'll first go to your profile page.
+              Your profile page will be the hub for all your created bundles. Click the button to begin the bundle creation process.
+              There is additional help texts found by hovering the cursor over buttons that will give a clearer description of the purpose of that section.
             </div>
           </div>
+          <!-- To Bundle Button -->
+          <a href="{{ user.userprofile.get_absolute_url }}" class="btn btn-light text-light m-4">@{{user}}</a>
         </div>
-
       </div>
     </div>
+
+    <div class="row px-4 pt-5">
+      <div class="col">
+        <!-- Who Card -->
+        <div class="card h-100 d-flex flex-column">
+          <div class="card-header bg-dark text-light h2">Who is ELSA for?</div>
+          <div class="card-body d-flex flex-column">
+              <div class="card-title h4">Are you a part of the PDS4 Community?</div>
+              <br>
+              <div class="card-text">
+                  ELSA was created to help lessen the learning curve involved for new PDS4 users. Check out the Planetary Data System's page to learn more about data archiving and distribution.
+              </div>
+          </div>
+          <!-- PDS & ATM Buttons -->
+          <div class="row">
+              <div class="col m-3 me-0">
+                  <a href="https://pds.jpl.nasa.gov/" class="btn btn-light text-light w-100">@PDS</a>
+              </div>
+              <div class="col m-3 ms-0">
+                  <a href="http://atmos.nmsu.edu/" class="btn btn-light text-light w-100">@ATM</a>
+              </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="col">
+        <!-- Why Card -->
+        <div class="card mb-4 h-100 d-flex flex-column">
+          <div class="card-header bg-dark text-light h2">Why ELSA?</div>
+          <div class="card-body d-flex flex-column">
+              <div class="card-title h4">Well, ELSA is great!</div>
+              <br>
+              <div class="card-text">
+                  ... At least we think so! ELSA is an educational tool. ELSA is currently in development but is making pretty good progress. You can read more about ELSA below.
+              </div>
+          </div>
+          <a href="{% url 'main:about' %}" class="btn btn-light text-light m-4">About</a>
+        </div>
+      </div>
+
+    </div>
+  </div>
   {% else %}
     <!-- Login Page -->
     <div class="container-fluid d-flex vh-100 text-center text-lg-start align-items-center justify-content-center">
