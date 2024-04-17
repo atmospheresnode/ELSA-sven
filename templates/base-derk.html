@@ -11,36 +11,32 @@
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.6.0/css/font-awesome.min.css">
     <link href="{% static 'css/mdb.min.css' %}" rel="stylesheet">
     <link href="{% static 'css/bootstrap.min.css' %}" rel="stylesheet">
-    
-    <!-- JQuery -->
-    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
 
-    <script>
-        $(document).ready(function(){
-            $('.toast').toast('show');
-        });
-    </script>
-    
-    <!-- Title -->
-    <title> ELSA: Educational Labeling System @Atmospheres </title>
+    <!-- SCRIPTS -->
+    <script type="text/javascript" src="{% static 'js/jquery-3.1.1.min.js' %}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
+    <script type="text/javascript" src="{% static 'js/mdb.min.js' %}"></script>
+    <script src="https://use.fontawesome.com/dc496c8662.js"></script>
+
+    <title>ELSA: Educational Labeling System @Atmospheres</title>
 
     <!-- Component Stylings -->
     <style>
         /* Buttons */
         .btn-light {
             background-color: rgb(43, 187, 173); 
-            box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19);
+            box-shadow: 0.25em 0.25em 0.75em rgba(0,0,0,0.5), 0.125em 0.125em 0.25em rgba(0,0,0,0.25);
             border-color: rgb(43, 187, 173);
         }
 
         .btn-light:hover {
-            background-color: rgb(40, 170, 158);
-            border-color: rgb(40, 170, 158);
+            background-color: #26A498;
+            border-color: #26A498;
         }
 
         /* Cards */
         .card {
-            box-shadow: 0 8px 16px 0 rgba(0,0,0,0.15), 0 6px 20px 0 rgba(0,0,0,0.13);
+            box-shadow: 0.25em 0.25em 0.75em rgba(0,0,0,0.5), 0.125em 0.125em 0.25em rgba(0,0,0,0.25);
             border-radius: 15px;
             overflow: hidden;
         }
@@ -67,15 +63,119 @@
 
 <body>
     <!-- Header -->
-    
-    <!-- If it isn't bg-light, means that I forgot to change it after testing - deric -->
-    <main class="bg-light">
-        {% block body_block %}{% endblock %}
+    <header class="row">
+        {% if user.is_authenticated %}
+        <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+            <!-- ELSA Logo -->
+            <a class="navbar-brand" href="{% url 'main:index' %}">
+              <img src="{% static 'images/ELSA-Logo-White.png' %}" style="text-shadow: none; font-size: 25px; color: rgb(43, 187, 173); height: 50px; width: 95px; line-height: 75px; text-align: center;"></img> 
+            </a>
+
+            <!-- PDS Logo -->
+            <a href="https://pds-atmospheres.nmsu.edu/">
+              <img src="{% static 'images/PDS_Planets_inv_clrbk_no_words.png' %}" style="text-shadow: none; font-size: 25px; color: rgb(43, 187, 173); height: 50px; width: 95px; line-height: 75px; text-align: center; "></i> 
+            </a>
+
+            <!-- For Smaller Screens -->
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar-links" aria-controls="navbar-links" aria-expanded="false" aria-label="Toggle navigation">
+              <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <!-- Links -->
+            <div class="collapse navbar-collapse" id="navbar-links">
+                <ul class="navbar-nav mr-auto">
+                    <!-- Header Links -->
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'main:about' %}">
+                            <i class="fa fa-snowflake-o" aria-hidden="true"></i>
+                            About
+                        </a>
+                    </li>
+
+                    {% if user.is_authenticated %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'main:services' %}">
+                            <i class="fa fa-briefcase"></i> 
+                            Bundle Apps 
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'blog:index' %}">
+                            <i class="fa fa-newspaper-o"></i>
+                            Blog
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'main:contact' %}">
+                            <i class="fa fa-envelope"></i>
+                            Contact
+                        </a>
+                    </li>
+
+                    <li class="nav-item dropdown">
+                        <button class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fa fa-user"></i> 
+                            {{ user }} 
+                        </button>
+
+                        <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+                            <a class="dropdown-item" href="{{ user.userprofile.get_absolute_url }}">{{ user.first_name }}'s Profile</a>
+                            <a class="dropdown-item" href="{% url 'friends:settings' user.pk %}">Profile Settings</a>
+                            <a class="dropdown-item" href="{% url 'friends:logout' %}">Logout</a>
+                        </div>
+                    </li>
+
+                    {% else %}
+                    <!-- <li class="nav-item">
+                        <a class="nav-link" href="{% url 'friends:register' %}">
+                            <i class="fa fa-hand-spock-o" aria-hidden="true"></i>
+                            Sign Up
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'friends:login' %}">
+                            <i class="fa fa-sign-in" aria-hidden="true"></i> 
+                            Login
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'main:contact' %}">
+                            <i class="fa fa-envelope"></i> 
+                            Contact
+                        </a>
+                    </li> -->
+                    {% endif %}
+                </ul>
+            </div>
+
+          </nav>
+        {% endif %}
+    </header>
+
+    <!-- Main Content -->
+    <main class="row">
+        <div class="col">{% block body_block %}{% endblock %}</div>
     </main>
 
     <!-- Footer -->
-
-    <!-- SCRIPTS -->
-    <script type="text/javascript" src="{% static 'js/bootstrap.min.js' %}"></script>
-
+    <footer class="row bg-dark text-light fixed-bottom">
+        <ul class="nav justify-content-center border-bottom border-secondary py-1 mb-1">
+            <li class="nav-item">
+                <a href="{% url 'main:index' %}" class="nav-link px-2 text-light" style="text-decoration: none;">
+                    <i class="fa fa-snowflake-o" style="color: rgb(43, 187, 173);"></i>
+                    Educational Labeling System @Atmospheres
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="http://atmos.nmsu.edu/" class="nav-link px-2 text-light" style="text-decoration: none;">
+                    <i class="fa fa-cloud" style="color: rgb(43, 187, 173);"></i>
+                    Planetary Atmospheres Node 
+                </a>   
+            </li>
+        </ul>
+        <p class="footer-copyright text-center pt-2">© 2024 New Mexico State University <a href="{% url 'main:index' %}"> https://atmos.nmsu.edu/elsa/ </a></p>
+    </footer>
+</body>
 </html>
