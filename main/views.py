@@ -66,18 +66,23 @@ def contact(request):
             print('user_contact_form is valid')
            
             context_dict['name'] = '{0}, {1}'.format(request.user.last_name, request.user.first_name)
-            context_dict['email'] = request.user.email
+            # context_dict['email'] = request.user.email
+            context_dict['email'] = 'atm-elsa@nmsu.edu'
             context_dict['agency'] = request.user.userprofile.agency
             context_dict['message'] = user_contact_form.cleaned_data['message']
             content = template.render(context_dict)
             email = EmailMessage(
                 subject = "{} is contacting ELSA".format(context_dict['name']),
                 body = content,
-                from_email = context_dict['email'],
-                to = ['elsa@atmos.nmsu.edu',],
-                headers = {'Reply-To': context_dict['email'] }
+                # from_email = context_dict['email'],
+                from_email = 'atm-elsa@nmsu.edu',
+                # to = ['elsa@atmos.nmsu.edu',],
+                to = ['sajomont@nmsu.edu'],
+                # headers = {'Reply-To': context_dict['email'] }
             )
+            print('before')
             email.send()
+            print('after')
             context_dict['email_sent'] = True
 
         #else:
@@ -89,16 +94,19 @@ def contact(request):
 
             # Email the profile with the contact information
             context_dict['name'] = contact_form.cleaned_data['name']
-            context_dict['email'] = contact_form.cleaned_data['email']
+            # context_dict['email'] = contact_form.cleaned_data['email']
+            context_dict['email'] = 'atm-elsa@nmsu.edu'
             context_dict['agency'] = contact_form.cleaned_data['agency']
             context_dict['message'] = contact_form.cleaned_data['message']
             content = template.render(context_dict)
             email = EmailMessage(
                 subject = "{} is contacting ELSA".format(context_dict['name']),
                 body = content,
-                from_email = context_dict['email'],
-                to = ['elsa@atmos.nmsu.edu',],
-                headers = {'Reply-To': context_dict['email'] }
+                # from_email = context_dict['email'],
+                from_email = 'atm-elsa@nmsu.edu',
+                # to = ['elsa@atmos.nmsu.edu',],
+                to = ['sajomont@nmsu.edu'],
+                # headers = {'Reply-To': context_dict['email'] }
             )
             email.send()
             context_dict['email_sent'] = True
@@ -106,7 +114,7 @@ def contact(request):
         #else:
             #logger.error('{}: contact_form is not valid.'.format(datetime.now()))
 
-    return render(request, 'main/construction.html', context_dict)
+    return render(request, 'main/contact.html', context_dict)
 
 # restricted_access is the page that displays if a user is travelling to an area they have no business being in.
 @login_required

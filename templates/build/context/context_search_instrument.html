@@ -1,4 +1,4 @@
-{% extends 'main/base-k.html' %}
+{% extends 'base-derk.html' %}
 {% load staticfiles %}
 
 
@@ -18,85 +18,73 @@ Add Context: Instrument
 
 
 {% block body_block %}
-<!--First row-->
-<div class="row pt-2">
-    <!--Column-->
-    <div class="col-md-12">
-        <h4 class="card-header stylish-color white-text text-center z-depth-2">Select your Instrument</h4>
-    </br>
-</div>
+<div class="row p-1 m-3 mt-0">
+    <div class="card">
+        <div class="card-title text-center h2">Select your Instrument</div>
+        <hr>
+        <div class="card-body text-left z-depth-2">
+            <form class="card-header black-text text-left z-depth-2" id="query01" method="post" action="{% url 'build:context_search_instrument' bundle.pk investigation.pk instrument_host.pk %}">
+                <p>Choose an associated instrument from the host product you just selected. Instruments are the pieces of equipment that actually collect the data, and it's important to include these in your observing systems.</p>
+                    {% csrf_token %}
+                    {{ form_instrument }}
+                    
+                    {{ form.errors }}
+                    {{ form.non_field_errors }}
+                    
+                    <input type="submit" class="btn btn-light text-light" value="Submit"/>
+            </form>
+        </div>
+    </div>
 </div>
 
-<div class="card">
-    <form class="card-header black-text text-left z-depth-2" id="query01" method="post" action="{% url 'build:context_search_instrument' bundle.pk investigation.pk instrument_host.pk %}">
-        <p>Choose an associated instrument from the host product you just selected. Instruments are the pieces of equipment that actually collect the data, and it's important to include these in your observing systems.</p>
-            {% csrf_token %}
-            {{ form_instrument }}
-            
-            {{ form.errors }}
-            {{ form.non_field_errors }}
-            
-            <input type="submit" class="btn btn-default" value="Submit"/>
-    </form>
-</div>
-<!--First row-->
-<!--Second row-->
-
-<!--/.Row-->
-<!--Row-->
-
-<!--/.Row-->
-<!--Row-->
-<div class="row pt-2">
-    <!--Column-->
-    <div class="col-md-12">
-        <h4 class="card-header stylish-color white-text text-center z-depth-2">Recently Added Instrument</h4>
-    </br>
-    <!-- <p class="card-header black-text text-left z-depth-2">Click on the added investigation product below to choose host products (spacecraft, facilities, etc.) associated with that investigation.</br>
-    </p> -->
-</div>
-</div>
-        
-{% if instrument %}
-<h3>Note: {{ instrument }} added to {{ bundle }}:</h3>
-<hr>
-{%for ins in bundle_instrument_set %}
-        <div class="card-header black-text text-left z-depth-2">
-        <div class="row">
-            <!--Card-->
-            <div class="col-sm-6 col-md-3">
-                <div class="button">
-                    <!--Link-->
-                    <a href="{% url 'build:context_search_target_investigation' bundle.pk ins.investigations.first.pk %}">
-                        <!--Card content-->
-                        <div class="card-body">
-                            <!--Title-->
-                            <h4 class="card-title">{{ ins.name }}</h4>
-                            <!--/.Title-->
-                            <!--Text-->
-                            <p class="card-text">{{ ins.lid }} <br/><br/><br/></p>
-                            <!--/.Text-->
+<div class="row p-1 m-3 mt-0">
+    <div class="card">
+        <div class="card-title text-center h2">Recently Added Instrument</div>
+        <hr>
+        {% if instrument %}
+        <h3>Note: {{ instrument }} added to {{ bundle }}:</h3>
+        <hr>
+        {%for ins in bundle_instrument_set %}
+                <div class="card-header black-text text-left z-depth-2">
+                <div class="row">
+                    <!--Card-->
+                    <div class="col-sm-6 col-md-3">
+                        <div class="button">
+                            <!--Link-->
+                            <a href="{% url 'build:context_search_target_investigation' bundle.pk ins.investigations.first.pk %}">
+                                <!--Card content-->
+                                <div class="card-body">
+                                    <!--Title-->
+                                    <h4 class="card-title">{{ ins.name }}</h4>
+                                    <!--/.Title-->
+                                    <!--Text-->
+                                    <p class="card-text">{{ ins.lid }} <br/><br/><br/></p>
+                                    <!--/.Text-->
+                                </div>
+                                <!--/.Card content-->
+                                <!--Image-->
+                            </a>
+                            <!--/.Link-->
                         </div>
-                        <!--/.Card content-->
-                        <!--Image-->
-                    </a>
-                    <!--/.Link-->
+                    </div>
+                    <!--/.Card-->
+                    </br></br>
                 </div>
-            </div>
-            <!--/.Card-->
-            </br></br>
-        </div>
-        </div>
-{% endfor %}
-{% endif %}
+                </div>
+        {% endfor %}
+        {% endif %}
+    </div>
+</div>
+
+        
 <!--/.Row-->
 <!--Row-->
 <hr>
 
 <div class="row pt-2">
     <div class="col-md-12 text-right ">
-        <a href="{% url 'build:context_search' bundle.pk %}">
-            <input type="submit" class="btn btn-default" value="Go Back to Context Search"/>
+        <a href="{% url 'build:bundle' bundle.pk %}">
+            <input type="submit" class="btn btn-light text-light" value="Go Back to Build Page"/>
         </a>
     </div>
     <!--/.Column-->

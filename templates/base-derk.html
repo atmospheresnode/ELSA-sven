@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+
+    <!-- Bootstrap Default Stylesheet -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.6.0/css/font-awesome.min.css">
+    <link href="{% static 'css/mdb.min.css' %}" rel="stylesheet">
+    <link href="{% static 'css/bootstrap.min.css' %}" rel="stylesheet">
+    
+    <!-- JQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+
+    <script>
+        $(document).ready(function(){
+            $('.toast').toast('show');
+        });
+    </script>
+    
+    <!-- Title -->
+    <title> ELSA: Educational Labeling System @Atmospheres </title>
+
+    <!-- Component Stylings -->
+    <style>
+        /* Buttons */
+        .btn-light {
+            background-color: rgb(43, 187, 173); 
+            box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19);
+            border-color: rgb(43, 187, 173);
+        }
+
+        .btn-light:hover {
+            background-color: rgb(40, 170, 158);
+            border-color: rgb(40, 170, 158);
+        }
+
+        /* Cards */
+        .card {
+            box-shadow: 0 8px 16px 0 rgba(0,0,0,0.15), 0 6px 20px 0 rgba(0,0,0,0.13);
+            border-radius: 15px;
+            overflow: hidden;
+        }
+
+        .card-header {
+            border-top-left-radius: inherit;
+            border-top-right-radius: inherit;
+        }
+
+        /* Forms */
+        .form-outline {
+            position: relative;
+        }
+
+        /* Specifically the info tooltip tag */
+        .form-outline span {
+            position: absolute;
+            top: 50%;
+            right: 5px;
+            transform: translateY(-50%);
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Header -->
+    
+    <!-- If it isn't bg-light, means that I forgot to change it after testing - deric -->
+    <main class="bg-light">
+        {% block body_block %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+
+    <!-- SCRIPTS -->
+    <script type="text/javascript" src="{% static 'js/bootstrap.min.js' %}"></script>
+
+</html>

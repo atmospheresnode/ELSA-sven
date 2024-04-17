@@ -52,6 +52,10 @@ urlpatterns = [
     url(r'^(?P<pk_bundle>\d+)/contextsearch/target/$', views.context_search_target, name='context_search_target'),
 
     url(r'^(?P<pk_bundle>\d+)/context/(?P<pk_target>\d+)/delete_target/$', views.delete_target, name='delete_target'),
+    url(r'^(?P<pk_bundle>\d+)/context/(?P<pk_instrument>\d+)/delete_instrument/$', views.delete_instrument, name='delete_instrument'),
+    url(r'^(?P<pk_bundle>\d+)/context/(?P<pk_instrument_host>\d+)/delete_instrument_host/$', views.delete_instrument_host, name='delete_instrument_host'),
+    url(r'^(?P<pk_bundle>\d+)/context/(?P<pk_facility>\d+)/delete_facility/$', views.delete_facility, name='delete_facility'),
+    url(r'^(?P<pk_bundle>\d+)/context/(?P<pk_investigation>\d+)/delete_investigation/$', views.delete_investigation, name='delete_investigation'),
 
     url(r'^investigations/$', views.investigations, name='investigations'),
     url(r'^instruments/$', views.instruments, name='instruments'),
