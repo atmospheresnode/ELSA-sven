@@ -15,6 +15,7 @@ from django.template import RequestContext
 from django import forms
 from django.forms import modelformset_factory
 from django.views.generic.edit import UpdateView, DeleteView
+from django.contrib import messages
 
 
 # from lxml import etree # debug product obs only
@@ -593,6 +594,13 @@ def bundle(request, pk_bundle):
         form_product_collection = ProductCollectionForm(request.POST or None)
         form_additional_collections = AdditionalCollectionForm(request.POST or None)
 
+        form_investigation = InvestigationForm(request.POST or None)
+        form_target = TargetFormAll(request.POST or None)
+        form_instrument_host = InstrumentHostForm(
+            request.POST or None, pk_inv=None)
+        
+        form_facility = FacilityForm(request.POST or None)
+
                         # Context dictionary for template
         context_dict = {
             'bundle':bundle,
@@ -615,6 +623,11 @@ def bundle(request, pk_bundle):
             'form_additional_collections': form_additional_collections,
             'additional_collections_count': len(additional_collections_set),
             'investigations': bundle.investigations.all(),
+            'form_investigation': form_investigation,
+            'form_target': form_target,
+            'form_instrument_host': form_instrument_host,
+            'instrument_hosts': bundle.instrument_hosts.all(),
+            'form_facility': form_facility,
             'facilities': bundle.facilities.all(),
             'telescopes': bundle.telescopes.all(),
             'instruments': bundle.instruments.all(),
@@ -670,11 +683,11 @@ def bundle(request, pk_bundle):
             context_dict['alias_set'] = alias_set
             context_dict['alias_set_count'] =  len(alias_set)
 
-            # #fixes the refresh duplication issue - deric
-            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
+            # # fixes the refresh duplication issue - deric
+            # return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
 
-            #fixes the refresh duplication issue, use this one for offline testing - deric
-            # return HttpResponseRedirect('/build/' + pk_bundle + '/')
+            # fixes the refresh duplication issue, use this one for offline testing - deric
+            return HttpResponseRedirect('/build/' + pk_bundle + '/')
 
         # After ELSAs friend hits submit, if the forms are completed correctly, we should enter
         # this conditional.
@@ -720,11 +733,11 @@ def bundle(request, pk_bundle):
             form_citation_information = CitationInformationForm()
             context_dict['form_citation_information'] = form_citation_information
 
-            # #fixes the refresh duplication issue - deric
-            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
+            # # fixes the refresh duplication issue - deric
+            # return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
 
-            #fixes the refresh duplication issue, use this one for offline testing - deric
-            # return HttpResponseRedirect('/build/' + pk_bundle + '/')
+            # fixes the refresh duplication issue, use this one for offline testing - deric
+            return HttpResponseRedirect('/build/' + pk_bundle + '/')
 
         additional_collections_list = []
         if form_additional_collections.is_valid():
@@ -776,11 +789,11 @@ def bundle(request, pk_bundle):
             context_dict['additional_collections_set'] = additional_collections_set
             context_dict['additional_collections_count'] =  len(additional_collections_set)
 
-            # #fixes the refresh duplication issue - deric
-            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
+            # # fixes the refresh duplication issue - deric
+            # return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
 
-            #fixes the refresh duplication issue, use this one for offline testing - deric
-            # return HttpResponseRedirect('/build/' + pk_bundle + '/')
+            # fixes the refresh duplication issue, use this one for offline testing - deric
+            return HttpResponseRedirect('/build/' + pk_bundle + '/')
                     
         # After ELSAs friend hits submit, if the forms are completed correctly, we should enter
         # this conditional.  We must do [] things: 1. Create the Document model object, 2. Add a Product_Document label to the Document Collection, 3. Add the Document as an Internal_Reference to the proper labels (like Product_Bundle and Product_Collection).
@@ -843,11 +856,11 @@ def bundle(request, pk_bundle):
             context_dict['form_document'] = form_document
             context_dict['documents'] = Product_Document.objects.filter(bundle=bundle)
 
-            # #fixes the refresh duplication issue - deric
-            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
+            # # fixes the refresh duplication issue - deric
+            # return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
 
-            #fixes the refresh duplication issue, use this one for offline testing - deric
-            # return HttpResponseRedirect('/build/' + pk_bundle + '/')
+            # fixes the refresh duplication issue, use this one for offline testing - deric
+            return HttpResponseRedirect('/build/' + pk_bundle + '/')
 
         if form_data.is_valid():
             print('\n\n---------------------- DATA INFO -------------------------------')
@@ -869,12 +882,13 @@ def bundle(request, pk_bundle):
             context_dict['form_data'] = form_data
             context_dict['data_set'] = Data.objects.filter(bundle=bundle)
 
-            #fixes the refresh duplication issue - deric
-            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
+            # # fixes the refresh duplication issue - deric
+            # return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
 
-            #fixes the refresh duplication issue, use this one for offline testing - deric
-            # return HttpResponseRedirect('/build/' + pk_bundle + '/')
+            # fixes the refresh duplication issue, use this one for offline testing - deric
+            return HttpResponseRedirect('/build/' + pk_bundle + '/')
 
+        context_dict['messages'] = messages.get_messages(request)
         return render(request, 'build/bundle/bundle.html', context_dict)
     else:
             print('unauthorized user attempting to access a restricted area.')
@@ -1249,9 +1263,17 @@ def context_search_investigation(request, pk_bundle):
                 print fileText
                 '''
                 i.fill_label(bundle)
-            return render(request, 'build/context/context_search_investigation.html', context_dict)
 
-        return render(request, 'build/context/context_search_investigation.html', context_dict)
+            messages.success(request, 'Investigation Product Added')
+            context_dict['messages'] = messages.get_messages(request)
+            # return render(request, 'build/context/context_search_investigation.html', context_dict)
+            # return render(request, 'build/bundle/bundle.html', context_dict)
+            return HttpResponseRedirect('/build/' + pk_bundle + '/')
+        
+        context_dict['messages'] = messages.get_messages(request)
+        return render(request, 'build/bundle/bundle.html', context_dict)
+        # return HttpResponseRedirect('/build/' + pk_bundle + '/')
+        # return render(request, 'build/context/context_search_investigation.html', context_dict)
 
     # Secure: Current user is not the user associated with the bundle, so...
     else:
@@ -2456,6 +2478,115 @@ def delete_target(request, pk_bundle, pk_target):
     target.delete()
 
     return redirect('../../bundle/')
+
+def delete_instrument(request, pk_bundle, pk_instrument):
+    bundle = Bundle.objects.get(pk=pk_bundle)
+    instrument = Instrument.objects.get(pk=pk_instrument)
+
+    instrument_host = instrument.instrument_hosts.first()
+    investigation = instrument.investigations.first()
+
+    print(instrument_host)
+
+    product_bundle = Product_Bundle.objects.get(bundle=bundle)
+    product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+
+    remove_from_label(instrument, product_bundle, product_collections_list)
+
+    bundle.instruments.remove(instrument)
+    # instrument.delete()
+
+    # Need to add to redirect to ask for a new instrument from
+    # re_path(r'^(?P<pk_bundle>\d+)/contextsearch/investigation/(?P<pk_investigation>\d+)/instrument_host/(?P<pk_instrument_host>\d+)/instrument/$', views.context_search_instrument, name='context_search_instrument')
+
+    # I'm not convinced this does what I want it to do
+    # return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/contextsearch/investigation/' + str(investigation.pk) + '/instrument_host/' + str(instrument_host.pk) + '/instrument/')
+    if instrument_host:
+        return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/contextsearch/investigation/' + str(investigation.pk) + '/instrument_host/' + str(instrument_host.pk) + '/instrument/')
+    else:
+        return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/contextsearch/')
+    # return redirect('../../bundle/')
+
+def delete_instrument_host(request, pk_bundle, pk_instrument_host):
+    bundle = Bundle.objects.get(pk=pk_bundle)
+    instrument_host = Instrument_Host.objects.get(pk=pk_instrument_host)
+
+    # instruments = instrument_host.instruments.all()
+    investigation = instrument_host.investigations.first()
+
+    product_bundle = Product_Bundle.objects.get(bundle=bundle)
+    product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+
+    for bundle_instrument in bundle.instruments.all():
+        if bundle_instrument in instrument_host.instruments.all():
+            remove_from_label(bundle_instrument, product_bundle, product_collections_list)
+            bundle.instruments.remove(bundle_instrument)
+
+    remove_from_label(instrument_host, product_bundle, product_collections_list)
+
+    bundle.instrument_hosts.remove(instrument_host)
+
+    if Instrument_Host.objects.filter(investigations=investigation.pk).count == 1:
+        # have screen to choose between deleting investigation or choosing new host
+        # return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/contextsearch/investigation/' + str(investigation.pk) + '/instrument_host_or_facility/')
+        return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/contextsearch/investigation/' + str(investigation.pk) + '/instrument_host_or_facility/')
+    else: 
+        # Have user select new host and probably create new html
+        # return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/contextsearch/investigation/' + str(investigation.pk) + '/instrument_host_or_facility/')
+        return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/contextsearch/investigation/' + str(investigation.pk) + '/instrument_host_or_facility/')
+
+def delete_facility(request, pk_bundle, pk_facility):
+    bundle = Bundle.objects.get(pk=pk_bundle)
+    facility = Facility.objects.get(pk=pk_facility)
+
+    # instruments = instrument_host.instruments.all()
+    investigation = facility.investigations.first()
+
+    product_bundle = Product_Bundle.objects.get(bundle=bundle)
+    product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+
+    for bundle_instrument in bundle.instruments.all():
+        if bundle_instrument in facility.instruments.all():
+            remove_from_label(bundle_instrument, product_bundle, product_collections_list)
+            bundle.instruments.remove(bundle_instrument)
+
+    remove_from_label(facility, product_bundle, product_collections_list)
+
+    bundle.facilities.remove(facility)
+
+    if Facility.objects.filter(investigations=investigation.pk).count == 1:
+        # have screen to choose between deleting investigation or choosing new host
+        # return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/contextsearch/investigation/' + str(investigation.pk) + '/instrument_host_or_facility/')
+        return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/contextsearch/investigation/' + str(investigation.pk) + '/instrument_host_or_facility/')
+    else:
+        return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/contextsearch/')
+
+def delete_investigation(request, pk_bundle, pk_investigation):
+    bundle = Bundle.objects.get(pk=pk_bundle)
+    investigation = Investigation.objects.get(pk=pk_investigation)
+
+    product_bundle = Product_Bundle.objects.get(bundle=bundle)
+    product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+
+    for bundle_instrument_host in bundle.instrument_hosts.all():
+        if bundle_instrument_host in investigation.instrument_hosts.all():
+            #remove attached instruments to found instrument host
+            for bundle_instrument in bundle.instruments.all():
+                if bundle_instrument in bundle_instrument_host.instruments.all():
+                    remove_from_label(bundle_instrument, product_bundle, product_collections_list)
+                    bundle.instruments.remove(bundle_instrument)
+
+            #remove instrument host
+            remove_from_label(bundle_instrument_host, product_bundle, product_collections_list)
+            bundle.instrument_hosts.remove(bundle_instrument_host)
+
+    remove_from_label(investigation, product_bundle, product_collections_list)
+
+    bundle.investigations.remove(investigation)
+
+    # have screen to choose between deleting investigation or choosing new host
+    # return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/contextsearch/investigation/')
+    return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/contextsearch/investigation/')
 
 # Directory View Functions
 # utils functions

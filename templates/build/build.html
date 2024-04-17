@@ -1,4 +1,4 @@
-{% extends 'base-k-se.html' %}
+{% extends 'base-derk.html' %}
 {% load static %}
 
 
@@ -10,7 +10,7 @@ Build A Bundle
 
 
 
-
+<!-- Figure out if we need to delete this portion -->
 {% block main_header_block %}
 <br/>
 So you want to build a bundle?
@@ -39,79 +39,66 @@ Your bundle may also contain other collections if needed (e.g., geometry, browse
 Context and xml_schema collections are system collections that will be added by the Atmospheres Node (ATM) after your bundle is complete.   
 
 {% endblock %}
-
+<!-- Figure out if we need to delete this portion -->
 
 
 {% block body_block %}
+<div class="container-fluid">
+    <div class="row justify-content-center align-items-center vh-100">
+        <div class="col-12 col-lg-9 col-xl-10">
+            <div class="card">
+                <div class="card-body p-4 p-md-5">
+                    <!-- Bundle Info Header -->
+                    <h2 class="mb-5 pb-2 pb-md-0 mb-md-4">Provide Bundle Information</h2>
 
-<!-- Bundle Info Header -->
-<div class="row pt-2">
-    <div class="col-md-12">
-        <h3 class="card-header elegant-color white-text text-center z-depth-2"> Provide Bundle Information </h3>
-        <br/>
-    </div>
-</div>
+                    <!-- Bundle Creator -->
+                    <form id="form_bundle" method="post" action="{% url 'build:build' %}">
+                        {% csrf_token %}
+                        <!-- Bundle Name -->
+                        <div class="mb-4 form-outline">
+                            {{ form_bundle.name }}
 
-<!-- Bundle Creator -->
-<div class="row pt-2">
-    <div class="col-md-12">
-        <form id="query01" method="post" action="{% url 'build:build' %}">
-            {% csrf_token %}
-            <div id="form_bundle">
-                <!-- {{ form_bundle.as_p }} -->
-                {{ form_bundle.non_field_errors }}
+                            <!-- Bundle Name Guideline Tooltip -->
+                            <span tabindex="0" data-toggle="tooltip" title="The name of your bundle is the unique name you would like your bundle to be archived as. The version of your bundle should be the most up-to-date version unless otherwise noted by your node personnel. The type of bundle depends on your data. If your bundle is meant to be archived, choose archive. This option is what most bundle types are. If your bundle contains supplemental data to an already archived bundle, choose supplemental. Each bundle contains a document, context, and xml_schema collection. All other collections contained in your bundle will be decided between you, {{ user.first_name }}, and your node personnel. If you are working directly with ATM and are unsure of which collections are in your bundle, send a message to ELSA and someone from ATM will get back to you shortly. If you are working with another node, please contact your node.">
+                                <button type="button" class="btn btn-block" style="pointer-events: none; border: none;" disabled>
+                                    <i class="fa fa-question"></i>
+                                </button>
+                            </span>
+                        </div>
 
-                <div class="fieldWrapper">
-                    {{ form_bundle.name.errors }}
-                    <label for="{{ form_bundle.name.id_for_label }}"> 
-                        Name
-                        <!-- Hover Help Button for Name -->
-                        <button class="round-button" data-toggle="tiptool"
-                    data-placement="right" title="The name of your bundle is the unique name you would like your bundle to be archived as. The version of your bundle should be the most up-to-date version unless otherwise noted by your node personnel. The type of bundle depends on your data. If your bundle is meant to be archived, choose archive. This option is what most bundle types are. If your bundle contains supplemental data to an already archived bundle, choose supplemental. Each bundle contains a document, context, and xml_schema collection. All other collections contained in your bundle will be decided between you, {{ user.first_name }}, and your node personnel. If you are working directly with ATM and are unsure of which collections are in your bundle, send a message to ELSA and someone from ATM will get back to you shortly. If you are working with another node, please contact your node." disabled>
-                        ?
-                        </button>
-                    </label>
-                    {{ form_bundle.name }}
-                </div>
-                <br>
-                <div class="fieldWrapper">
-                    {{ form_bundle.bundle_type.errors }}
-                    <label for="{{ form_bundle.bundle_type.id_for_label }}">Bundle Type</label>
-                    {{ form_bundle.bundle_type }}
-                </div>
-                <br>
-                <div class="fieldWrapper">
-                    {{ form_bundle.version.errors }}
-                    <label for="{{ form_bundle.version.id_for_label }}">Version</label>
-                    {{ form_bundle.version }}
+                        <!-- Bundle Type -->
+                        <div class="mb-4">
+                            <div class="row">
+                                <div class="col-md-2 mt-2">
+                                    <h6>Bundle Type</h6>
+                                </div>
+
+                                <div class="col-md-10">
+                                    {{ form_bundle.bundle_type }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Bundle Version -->
+                        <div class="mb-4">
+                            <div class="row">
+                                <div class="col-md-2 mt-2">
+                                    <h6>Bundle Version</h6>
+                                </div>
+
+                                <div class="col-md-10">
+                                    {{ form_bundle.version }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Create Bundle -->
+                        <button type="submit" class="btn btn-light text-light mt-4">Submit</button>
+                    </form>
                 </div>
             </div>
-            <br/>
-            <input type="submit" value="Submit"/>
-            <style>
-                .round-button {
-                    display: inline-block;
-                    height: 25px;
-                    width: 25px;
-                    color: white;
-                    text-align: center;
-                    margin: 4px 2px;
-                    background-color: #008080;
-                    font-size: 16px;
-                    font-weight: bold;
-                    border-color: #000000;
-                    border-radius: 50%;
-                }
-            </style>
-
-	        <button class="round-button" data-toggle="tiptool"
-	        data-placement="right" title="Submitting will create a stub of partially filled templates, based on your selection. If you are working directly with ATM and are unsure of which collections are in your bundle, send a message to ELSA and someone from ATM will get back to you shortly." disabled>?</button>
-        </form>   
-        <br>
-        <br>
-        <br>
-        <br>
-    </div>      
+        </div>
+    </div>
 </div>
 {% endblock %}
 

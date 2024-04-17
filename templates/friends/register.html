@@ -1,47 +1,81 @@
-{% extends 'main/base-k.html' %}
-{% load staticfiles %}
+{% extends 'base-derk.html' %}
+{% load static %}
 
 {% block title_block %}
 Register
 {% endblock %}
 
+<!-- Figure out if we really need this -->
 {% block main_header_block %}
     {% if user.is_authenticated %}
-    Hey, {{ user }}.
+        Hey, {{ user }}.
     {% else %}
-    Register here
+        Register here
     {% endif %}
 {% endblock %}
 
+
 {% block body_block %}
-    {% if user.is_authenticated %}
-    <!--First row-->
-    <div class="row pt-2">
-        <!--First column-->
-        <div class="col-md-12">
-            Looks like you're already friends with Elsa.
-            <a href="{% url 'elsa:index' %}">Visit Elsa</a>.
-        </div>
-        <!--/.First column-->
-    </div>
-    <!--/.First row-->
+    <div class="container-fluid">
+        <div class="row justify-content-center align-items-center vh-100">
+            <div class="col-12 col-lg-9 col-xl-10">
+                <div class="card">
+                    <div class="card-body p-4 p-md-5">
+                        <h2 class="mb-4 pb-2 pb-md-0 mb-md-4">Sign Up</h2>
 
-    {% else %}
-    <!--First row-->
-    <div class="row pt-2">
-        <!--First column-->
-        <div class="col-md-12">
-            <form id="register_form" method="post" action="{% url 'friends:register' %}" enctype="multipart/form-data">
-                {% csrf_token %}
-                {{ user_form.as_p }}
-                {{ profile_form.as_p }}
-                <input type="submit" name="submit" value="Register" class="btn btn-default"/>
-            </form>
-        </div>
-        <!--/.First column-->
-    </div>
-    <!--/.First row-->
-    {% endif %}
+                        <!-- Signup Form -->
+                        <form form id="register_form" method="post" action="{% url 'friends:register' %}" enctype="multipart/form-data">
+                            {% csrf_token %}
+                            <div class="row">
+                                <!-- First & Last Name -->
+                                <div class="col-md-6">
+                                    {{ user_form.first_name }}
+                                </div>
+                                <div class="col-md-6">
+                                    {{ user_form.last_name }}
+                                </div>
+                            </div>
 
-<!--/.Main layout-->
+                            <!-- Email -->
+                            <div class="mb-4">
+                                {{ user_form.email }}
+                            </div>
+
+                            <!-- Username -->
+                            <div class="mb-4 form-outline">
+                                {{ user_form.username }}
+
+                                <!-- Username Guidelines Info Tooltip -->
+                                <span tabindex="0" data-toggle="tooltip" title="150 characters or fewer. Letters, digits and @/./+/-/_ only">
+                                    <button type="button" class="btn btn-block" style="pointer-events: none; border: none;" disabled>
+                                        <i class="fa fa-question"></i>
+                                    </button>
+                                </span>
+                            </div>
+
+                            <!-- Password -->
+                            <div class="mb-4">
+                                {{ user_form.password }}
+                            </div>
+
+                            <!-- Agency Dropdown -->
+                            <div class="row">
+                                <div class="col-md-2 mt-2">
+                                    <h6>Agency</h6>
+                                </div>
+
+                                <div class="col-md-10">
+                                    {{ profile_form }}
+                                </div>
+                            </div>
+
+                            <!-- Create Account/Register -->
+                            <button type="submit" class="btn btn-light text-light mt-5">Create Account</button>
+                        </form>
+                        
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 {% endblock %}

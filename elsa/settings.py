@@ -266,7 +266,7 @@ LOGGING = {
         'file': {
             'level': 'DEBUG',
             'class': 'logging.FileHandler',
-            'filename': '/export/atmos1/htdocs/elsa/elsa.log',
+            'filename': '/home/sajomont/Documents/elsaVersions/ELSA-sven/._elsa.log',
         },
     },
     'loggers': {
