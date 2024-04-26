@@ -343,12 +343,10 @@
                            </div>
                            </a>
                         </div>
-                        <div id="context_options_{{ investigation.lid }}" class="collapse">
-                           {% with found_instrument_host=False %}
+                        <div id="context_options_{{ investigation.lid }}" class="bundle-collapse">
                            {% for instrument_host in instrument_hosts %}
                               <!-- Change so it only shows instrument host relevant to this investigation -->
                               {% if instrument_host.investigations.last == investigation %}
-                              {% with found_instrument_host=True %}
                               <div class="col-md-6">
                                  <div class="container mt-2">
                                     <a data-bs-toggle="collapse" data-bs-target="#filler">
@@ -368,11 +366,9 @@
                                     </a>
                                  </div>
                               </div>
-                              {% endwith %}
+                              {% else %}
                               {% endif %}
-                           {% endfor %}
-                           {% if found_instrument_host %}
-                           {% else %}
+                           {% empty %}
                            <div class="col-md-8 ms-5">
                               <div class="container mt-2">
                                  <a href="{% url 'build:context_search_instrument_host_and_facility' bundle.pk investigation.pk %}">
@@ -392,8 +388,7 @@
                                  </a>
                               </div>
                            </div>
-                           {% endif %}
-                           {% endwith %}
+                           {% endfor %}
                         </div>
                         {% endfor %}
                      {% else %}
