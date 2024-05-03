@@ -601,8 +601,20 @@ def bundle(request, pk_bundle):
         
         form_facility = FacilityForm(request.POST or None)
 
-                        # Context dictionary for template
+        # Following code is to get xml content of bundle xml files
+        # Temporary testing, will be better to add this to chocoloate.py as it's likely we want to do this multiple times
+        # Said Ajo :/
+        prod_bundle = Product_Bundle.objects.get(bundle=bundle)
+        labels = []
+        labels.append(prod_bundle)
+        parser = etree.XMLParser(remove_blank_text=False, remove_comments=False)
+        tree = etree.parse(labels[0].label())
+        xml_content = etree.tostring(tree, pretty_print=True, encoding='unicode')
+        
+
+        # Context dictionary for template
         context_dict = {
+            'xml_content': xml_content,
             'bundle':bundle,
             'alias_set':alias_set,
             'alias_set_count':len(alias_set), 
