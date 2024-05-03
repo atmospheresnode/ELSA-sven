@@ -59,57 +59,61 @@ def contact(request):
     context_dict['email_sent'] = False
     context_dict['user_logged_in'] = False
     template = get_template('main/contact_template.txt')
+    print('text')
+
+    if user_contact_form.is_valid():
+        print('user contact form is not valid')
            
-    if request.user.is_authenticated():
-        context_dict['user_logged_in'] = True
-        if user_contact_form.is_valid():
-            print('user_contact_form is valid')
+    # if request.user.is_authenticated():
+    #     context_dict['user_logged_in'] = True
+    #     if user_contact_form.is_valid():
+    #         print('user_contact_form is valid')
            
-            context_dict['name'] = '{0}, {1}'.format(request.user.last_name, request.user.first_name)
-            # context_dict['email'] = request.user.email
-            context_dict['email'] = 'atm-elsa@nmsu.edu'
-            context_dict['agency'] = request.user.userprofile.agency
-            context_dict['message'] = user_contact_form.cleaned_data['message']
-            content = template.render(context_dict)
-            email = EmailMessage(
-                subject = "{} is contacting ELSA".format(context_dict['name']),
-                body = content,
-                # from_email = context_dict['email'],
-                from_email = 'atm-elsa@nmsu.edu',
-                # to = ['elsa@atmos.nmsu.edu',],
-                to = ['sajomont@nmsu.edu'],
-                # headers = {'Reply-To': context_dict['email'] }
-            )
-            print('before')
-            email.send()
-            print('after')
-            context_dict['email_sent'] = True
+    #         context_dict['name'] = '{0}, {1}'.format(request.user.last_name, request.user.first_name)
+    #         # context_dict['email'] = request.user.email
+    #         context_dict['email'] = 'atm-elsa@nmsu.edu'
+    #         context_dict['agency'] = request.user.userprofile.agency
+    #         context_dict['message'] = user_contact_form.cleaned_data['message']
+    #         content = template.render(context_dict)
+    #         email = EmailMessage(
+    #             subject = "{} is contacting ELSA".format(context_dict['name']),
+    #             body = content,
+    #             # from_email = context_dict['email'],
+    #             from_email = 'atm-elsa@nmsu.edu',
+    #             # to = ['elsa@atmos.nmsu.edu',],
+    #             to = ['sajomont@nmsu.edu'],
+    #             # headers = {'Reply-To': context_dict['email'] }
+    #         )
+    #         print('before')
+    #         email.send()
+    #         print('after')
+    #         context_dict['email_sent'] = True
 
-        #else:
-         #   logger.error('{}: user_contact_form is not valid'.format(date.today()))
+    #     #else:
+    #      #   logger.error('{}: user_contact_form is not valid'.format(date.today()))
 
-    else:
-        if contact_form.is_valid():
-            print('contact_form is valid')
+    # else:
+    #     if contact_form.is_valid():
+    #         print('contact_form is valid')
 
-            # Email the profile with the contact information
-            context_dict['name'] = contact_form.cleaned_data['name']
-            # context_dict['email'] = contact_form.cleaned_data['email']
-            context_dict['email'] = 'atm-elsa@nmsu.edu'
-            context_dict['agency'] = contact_form.cleaned_data['agency']
-            context_dict['message'] = contact_form.cleaned_data['message']
-            content = template.render(context_dict)
-            email = EmailMessage(
-                subject = "{} is contacting ELSA".format(context_dict['name']),
-                body = content,
-                # from_email = context_dict['email'],
-                from_email = 'atm-elsa@nmsu.edu',
-                # to = ['elsa@atmos.nmsu.edu',],
-                to = ['sajomont@nmsu.edu'],
-                # headers = {'Reply-To': context_dict['email'] }
-            )
-            email.send()
-            context_dict['email_sent'] = True
+    #         # Email the profile with the contact information
+    #         context_dict['name'] = contact_form.cleaned_data['name']
+    #         # context_dict['email'] = contact_form.cleaned_data['email']
+    #         context_dict['email'] = 'atm-elsa@nmsu.edu'
+    #         context_dict['agency'] = contact_form.cleaned_data['agency']
+    #         context_dict['message'] = contact_form.cleaned_data['message']
+    #         content = template.render(context_dict)
+    #         email = EmailMessage(
+    #             subject = "{} is contacting ELSA".format(context_dict['name']),
+    #             body = content,
+    #             # from_email = context_dict['email'],
+    #             from_email = 'atm-elsa@nmsu.edu',
+    #             # to = ['elsa@atmos.nmsu.edu',],
+    #             to = ['sajomont@nmsu.edu'],
+    #             # headers = {'Reply-To': context_dict['email'] }
+    #         )
+    #         email.send()
+    #         context_dict['email_sent'] = True
 
         #else:
             #logger.error('{}: contact_form is not valid.'.format(datetime.now()))

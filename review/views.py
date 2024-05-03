@@ -4,6 +4,7 @@ from __future__ import print_function
 
 from django.contrib.auth.decorators import login_required
 from django.core.mail import EmailMessage
+from django.core.mail import send_mail
 from django.shortcuts import render, redirect
 from django.template import Context
 from django.template.loader import get_template
@@ -68,12 +69,20 @@ def index(request):
         email = EmailMessage(
             subject = "Derived Data Peer Review from {}".format(context_dict['contact_name']),
             body = content,
-            from_email = context_dict['contact_email'],
-            to = ['lneakras@nmsu.edu', 'lhuber@nmsu.edu'],
-            bcc = ['tpagan@nmsu.edu'],
+            from_email = 'atm-elsa@nmsu.edu',
+            # to = ['lneakras@nmsu.edu', 'lhuber@nmsu.edu'],
+            to =['sajomont@nmsu.edu'],
             headers = {'Reply-To': context_dict['contact_email'] }
         )
-        email.send()
+        print('before')
+        send_mail("Derived Data Peer Review from {}".format(context_dict['contact_name']),
+                  content,
+                  'atm-elsa@nmsu.edu',
+                  ['sajomont@nmsu.edu'],
+                  fail_silently=False)
+        
+        # email.send()
+        print('after')
         context_dict['email_sent'] = True
 
         return render(request, 'review/index.html', context_dict)
