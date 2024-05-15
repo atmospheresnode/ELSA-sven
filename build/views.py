@@ -5,7 +5,7 @@ from __future__ import print_function
 from builtins import str
 from .forms import *
 from .models import *
-#from context.models import *
+# from context.models import *
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
@@ -2552,11 +2552,11 @@ def Field_Creation(request, pk_bundle, pk_table, table_type):
 
     bundle = Bundle.objects.get(pk=pk_bundle)
 
-    if table_type is "Table Delimited":
+    if table_type == "Table Delimited":
         table = Table_Delimited.objects.get(pk=pk_table)
-    elif table_type is "Table Binary":
+    elif table_type == "Table Binary":
         table = Table_Binary.objects.get(pk=pk_table)
-    elif table_type is "Table Fixed Width":
+    elif table_type == "Table Fixed Width":
         table = Table_Fixed_Width.objects.get(pk=pk_table)
     else:
         raise Exception(table_type + "is an unknown table type")

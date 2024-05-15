@@ -73,9 +73,9 @@ def contact(request):
             email = EmailMessage(
                 subject = "{} is contacting ELSA".format(context_dict['name']),
                 body = content,
-                from_email = context_dict['email'],
-                to = ['elsa@atmos.nmsu.edu',],
-                headers = {'Reply-To': context_dict['email'] }
+                from_email = 'atm-elsa@nmsu.edu',
+                to = ['elsa@atmos.nmsu.edu', 'sajomont@nmsu.edu'],
+                headers = {'Reply-To': 'atm-elsa@nmsu.edu' }
             )
             email.send()
             context_dict['email_sent'] = True

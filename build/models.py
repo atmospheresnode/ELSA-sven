@@ -18,7 +18,7 @@ from django.urls import reverse
 from django.utils.encoding import *
 from shutil import copyfile
 from .chocolate import *
-#from context.models import *
+# from context.models import *
 from shutil import *
 import datetime
 import shutil
@@ -288,7 +288,7 @@ class Version(models.Model):
             chunk = fileText[j:j+4]
             if chunk == "AAAA":
 
-                if i is 2:
+                if i == 2:
                     fileText = list(fileText)
                     fileText[j:j+4] = self.with_dots(number)
                     fileText = "".join(fileText)
