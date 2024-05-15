@@ -1,4 +1,4 @@
-{% extends 'base-k-se.html' %}
+{% extends 'base-derk.html' %}
 {% load static %}
 
 {% block title_block %}
@@ -11,106 +11,131 @@
 {% endblock %}
 
 {% block body_block %}
-<!-- See if we can get card and side image to be the same height and on the same row -->
-<div class="row pt-2">
-    <div class="col-md-8">
-        <div class="card">
-            <div class="card-body">
-                <h4 class="card-title"> Welcome to your ELSA profile </h4>
-                <p class="card-text">
-                    Your profile page is your hub for editing your bundles. 
-                    Here you can:
-                    <ul>
-                        <li> Add new bundles </li>
-                        <li> View/Edit existing bundles </li>
-			            <li> Download bundle templates </li>
-                    </ul>
-                </p>                        
+<div class="container-fluid justify-content-center align-items-center pt-5 my-4 vh-100">
+    <!-- Welcome Card -->
+    <div class="row p-2 pt-4">
+        <div class="col">
+            <div class="card">
+                <div class="card-body ms-1">
+                    <h4 class="card-title">Welcome to your ELSA Profile</h4>
+                    <p class="card-text">
+                        Your profile is your hub for editing your bundles.
+                        Here you can
+                        <ul>
+                            <li>Add new bundles</li>
+                            <li>View/Edit existing bundles</li>
+                            <li>Download bundle templates</li>
+                        </ul>
+                    </p>
+                </div>
             </div>
         </div>
     </div>
 
-    <div class="col-md-4">
-        <img class="img-fluid" src="{% static 'images/team2.png' %}" >
-    </div>
-</div>
-
-<hr/>
-
-<!-- Bundle List Header -->
-<div class="row pt-2">
-    <div class="col-md-12">
-        <h3 class="card-header elegant-color white-text text-center z-depth-2"> Bundles </h3>
-    </div>
-</div>
-
-<hr/>
-
-<!-- Add Bundle Button -->
-<div class="row pt-2">
-    <div class="col-sm-6 col-md-3">
-        <a href="{% url 'build:build' %}">
+    <!-- Bundle List Card -->
+    <div class="row p-2 pt-4">
+        <div class="col">
             <div class="card">
-                <img class="img-fluid" src="{% static 'images/add.png' %}" alt="An image representing building a bundle.">
-                <div class="card-body">
-                    <h4 class="card-title"> Add Bundle </h4>
+                <div class="card-header bg-dark text-light h2 d-flex justify-content-between align-items-center">
+                    <!-- Add Bundle -->
+                    <a href="{% url 'build:build' %}" class="text-light"> Add Bundle <i class="fa fa-plus"></i></a>
                 </div>
-            </div>
-        </a>
-</div>
+                <div class="row">
+                    <!-- Bundle List -->
+                    <div class="carousel" id="bundle-carousel">
+                        <div class="carousel-inner" role="listbox">
+                            {% if bundles %}
+                                {% for bundle in bundles %}
+                                    <div class="carousel-item {% if forloop.first %}active{% endif %}">
+                                        <a href="{{ bundle.absolute_url }}">
+                                            <div class="card bundle-card">
+                                                <img class="img-fluid" src="{% static 'images/bundle.jpg' %}" alt="Bundle Image">
+                                                <div class="card-body">
+                                                    <h4 class="card-title"> {{ bundle }} </h4>
+                                                    <p class="card-text"> {{ bundle.lid }} </p>                        
+                                                </div>
+                                            </div>
+                                        </a>
+                                    </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="carousel-item active">
+                                    <div class="card bundle-card">
+                                        <img class="img-fluid" src="{% static 'images/bundle.jpg' %}" alt="Null">
+                                        <div class="card-body">
+                                            <h4 class="card-title"> No Bundles </h4>                      
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <!-- Carousel Controls -->
+                        <button class="carousel-control-prev" type="button" data-bs-target="#bundle-carousel" data-bs-slide="prev">
+                            <i class="fa fa-chevron-left fa-3x text-dark"></i>
+                        </button>
 
-<!-- Bundle List -->
-{% if bundles %}
-    {% for bundle in bundles %}
-        <div class="col-sm-6 col-md-3">
-            <a href="{{ bundle.absolute_url }}">
-                <div class="card">
-                    <img class="img-fluid" src="{% static 'images/bundle.jpg' %}" alt="Bundle Image">
-                    <div class="card-body">
-                        <h4 class="card-title"> {{ bundle }} </h4>
-                        <p class="card-text"> {{ bundle.lid }} </p>                        
+                        <button class="carousel-control-next" type="button" data-bs-target="#bundle-carousel" data-bs-slide="next">
+                            <i class="fa fa-chevron-right fa-3x text-dark"></i>
+                        </button>
                     </div>
                 </div>
-            </a>
-        </div>
-    {% endfor %}
-
-<!-- No Bundles Button-->
-{% else %}
-        <div class="col-sm-6  col-md-3">
-            <div class="card">
-                <img class="img-fluid" src="{% static 'images/null.png' %}" alt="An image representing no bundles.">
-                <div class="card-body">
-                    <h4 class="card-title"> No Bundles </h4>
-                </div>
             </div>
-        </div>
-{% endif %}
 
-<!-- DO NOT REMOVE, IDK WHY THIS FIXES THE FORMATTING BUT IT DOES - deric -->
-</div>
+            <!-- Bundle List Stylings -->
+            <style>
+                @media screen and (min-width: 576px) {
+                    .carousel-inner {
+                        display: flex;
+                    } 
+                    
+                    .carousel-item {
+                        display: block;
+                        margin-right: 0;
+                        flex: 0 0 calc(100% / 3);
+                    }
+                }
+                
+                .carousel-inner {
+                    padding: 1em;
+                }
 
-<hr/>
+                .carousel-item {
+                    padding: 1.25em;
+                }
 
-<!-- Settings Header -->
-<div class="row pt-2">
-    <div class="col-md-12">
-        <h3 class="card-header elegant-color white-text text-center z-depth-2"> {{ user.first_name }}'s Settings </h3>
-    </div>
-</div>
+                a {
+                    text-decoration: none;
+                }
+            </style>
 
-<!-- Change Settings Button -->
-<div class="row pt-2">
-    <div class="col-md-12">
-        <div class="col-sm-6 col-md-3">
-            <a href="{% url 'friends:settings' user.pk %}">
-                <div class="card">
-                    <img class="img-fluid" src="{% static 'images/211751_gear_icon.png' %}" alt="An image representing building a bundle.">
-                    <div class="card-body">
-                        <h4 class="card-title"> Change Settings </h4>
-                    </div>
-                </div>
-            </a>
+            <!-- Carousel Movement -->
+            <!-- Fix this -->
+            <script>
+                var carousel_width = $('.carousel-inner')[0].scrollWidth;
+                var card_width = $('.carousel-item').first().outerWidth(true);
+                var scroll_pos = 0;
+                
+                $('.carousel-control-prev').on('click', function() {
+                    if (scroll_pos >= 0) {
+                        scroll_pos -= card_width;
+                    } else {
+                        scroll_pos = 0;
+                    }
+                    
+                    $('.carousel-inner').animate({ scrollLeft: scroll_pos }, 600);
+
+                });
+
+                $('.carousel-control-next').on('click', function() {
+                    if (scroll_pos < (carousel_width - (card_width * 3))) {
+                        scroll_pos += card_width;
+                    } else {
+                        scroll_pos = carousel_width - (card_width * 3);
+                    }
+
+                    $('.carousel-inner').animate({ scrollLeft: scroll_pos }, 600);
+                });
+            </script>
         </div>
     </div>
 </div>
