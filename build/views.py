@@ -649,16 +649,21 @@ def bundle(request, pk_bundle):
         # Temporary testing, will be better to add this to chocoloate.py as it's likely we want to do this multiple times
         # Said Ajo :/
         prod_bundle = Product_Bundle.objects.get(bundle=bundle)
+        prod_col_list = Product_Collection.objects.filter(bundle=bundle)
         labels = []
         labels.append(prod_bundle)
-        parser = etree.XMLParser(remove_blank_text=False, remove_comments=False)
-        tree = etree.parse(labels[0].label())
-        xml_content = etree.tostring(tree, pretty_print=True, encoding='unicode')
+        labels.extend(prod_col_list)
+        xml_content_set = []
+        for label in labels:
+        # parser = etree.XMLParser(remove_blank_text=False, remove_comments=False)
+            tree = etree.parse(label.label())
+            xml_content = etree.tostring(tree, pretty_print=True, encoding='unicode')
+            xml_content_set.append(xml_content)
         
 
         # Context dictionary for template
         context_dict = {
-            'xml_content': xml_content,
+            'xml_content_set': xml_content_set,
             'bundle':bundle,
             'alias_set':alias_set,
             'alias_set_count':len(alias_set), 

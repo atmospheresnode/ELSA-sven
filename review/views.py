@@ -81,13 +81,13 @@ def index(request):
             headers = {'Reply-To': context_dict['contact_email'] }
         )
         print('before')
-        send_mail("Derived Data Peer Review from {}".format(context_dict['contact_name']),
-                  content,
-                  'atm-elsa@nmsu.edu',
-                  ['sajomont@nmsu.edu'],
-                  fail_silently=False)
+        # send_mail("Derived Data Peer Review from {}".format(context_dict['contact_name']),
+        #           content,
+        #           'atm-elsa@nmsu.edu',
+        #           ['sajomont@nmsu.edu'],
+        #           fail_silently=False)
         
-        # email.send()
+        email.send()
         print('after')
         context_dict['email_sent'] = True
 
