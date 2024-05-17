@@ -86,11 +86,8 @@ SECRET_KEY = secret_key()
 DEBUG = True
 
 
-print("MY COOL TEXT")
-
-
 #    The following is literally read, if the DEBUG variable is set to False, then the only allowed hosts are those listed for production only.  By allowing DEBUG to be True AND using only the allowed hosts for production, we open ourselves up to vulnerabilities from outside attackers.
-if DEBUG == True:
+if DEBUG == False:
     ALLOWED_HOSTS = for_production
     SECURE_CONTENT_TYPE_NOSNIFF = True
     SECURE_BROWSER_XSS_FILTER = True
@@ -109,10 +106,8 @@ if DEBUG == True:
         'https://atmos.nmsu.edu/elsa/accounts/login/'
     ]
 
-# else:
-#     ALLOWED_HOSTS = for_local
-    #dirpath = os.getcwd()
-    #print 'Current working directory for settings.py: {}'.format(dirpath)
+else:
+    ALLOWED_HOSTS = for_local
 
 
 

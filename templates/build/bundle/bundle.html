@@ -267,7 +267,15 @@
    </div>
 
    <!-- View XML Side -->
-   <div class="split right bg-secondary text-center text-light" style="right: 0;">
+   <div class="split right text-center text-light" style="right: 0;">
+      <div class="row p-1 m-3 mt-0">
+         <div class="btn-group" role="group">
+            <button type="button" class="btn btn-light text-light" data-bs-toggle="collapse" data-bs-target="#bundle_xml" aria-expanded="true" style="box-shadow: none;">Bundle</button>
+            <button type="button" class="btn btn-light text-light" data-bs-toggle="collapse" data-bs-target="#context_xml" aria-expanded="true" style="box-shadow: none;">Context</button>
+            <button type="button" class="btn btn-light text-light" data-bs-toggle="collapse" data-bs-target="#document_xml" aria-expanded="true" style="box-shadow: none;">Document</button>
+            <button type="button" class="btn btn-light text-light" data-bs-toggle="collapse" data-bs-target="#xml_schema" aria-expanded="true" style="box-shadow: none;">XML Schema</button>
+         </div>
+      </div>
       <style>
          .xml-container {
             color:black;
@@ -276,10 +284,58 @@
             text-align: left;
          }
       </style>
-      <div class="xml-container">
-         <pre><code>{{ xml_content }}</code></pre>
+      <div id="bundle_xml" class="bundle-collapse">
+         <div class="row p-1 m-3 mt-1">
+            <a data-bs-toggle="modal" data-bs-target="#context_modal">
+               <div class="card modal-card">
+                  <h5 class="card-title black-text mt-3 text-center"><strong>Bundle XML</strong></h5>
+                  <hr>
+                  <div class="xml-container">
+                     <pre><code>{{ xml_content_set.0 }}</code></pre>
+                  </div>
+               </div>
+            </a>
+         </div>
       </div>
-      
+      <div id="context_xml" class="bundle-collapse">
+         <div class="row p-1 m-3 mt-1">
+            <a data-bs-toggle="modal" data-bs-target="#context_modal">
+               <div class="card modal-card">
+                  <h5 class="card-title black-text mt-3 text-center"><strong>Context XML</strong></h5>
+                  <hr>
+                  <div class="xml-container">
+                     <pre><code>{{ xml_content_set.1 }}</code></pre>
+                  </div>
+               </div>
+            </a>
+         </div>
+      </div>
+      <div id="document_xml" class="bundle-collapse">
+         <div class="row p-1 m-3 mt-1">
+            <a data-bs-toggle="modal" data-bs-target="#context_modal">
+               <div class="card modal-card">
+                  <h5 class="card-title black-text mt-3 text-center"><strong>Document XML</strong></h5>
+                  <hr>
+                  <div class="xml-container">
+                     <pre><code>{{ xml_content_set.2 }}</code></pre>
+                  </div>
+               </div>
+            </a>
+         </div>
+      </div>
+      <div id="xml_schema" class="bundle-collapse">
+         <div class="row p-1 m-3 mt-1">
+            <a data-bs-toggle="modal" data-bs-target="#context_modal">
+               <div class="card modal-card">
+                  <h5 class="card-title black-text mt-3 text-center"><strong>XML Schema</strong></h5>
+                  <hr>
+                  <div class="xml-container">
+                     <pre><code>{{ xml_content_set.3 }}</code></pre>
+                  </div>
+               </div>
+            </a>
+         </div>
+      </div>
    </div>
 
 
