@@ -80,27 +80,6 @@
 
 <!-- Stylings -->
 <style>
-   /* Split the screen in half */
-   .split {
-      height: 100%;
-      width: 50%;
-      position: fixed;
-      z-index: 1;
-      top: 0;
-      overflow-x: hidden;
-      padding-top: 6em;
-   }
-
-   .btn-light.active {
-      background-color: rgb(40, 170, 158);
-      border-color: rgb(40, 170, 158);
-   }
-
-   .bundle-collapse {
-      overflow: hidden;
-      transition: 0 1s ease;
-   }
-
    a:hover{
       cursor: pointer;
    }
@@ -108,6 +87,10 @@
    a:hover .modal-card {
       transform: scale(1.025);
       transition: transform 0.3s ease;
+   }
+
+   .bundle-collapse {
+      display: none;
    }
 
    /* Tabs Styling */
@@ -135,114 +118,194 @@
    }
 </style>
 
-<div class="container-fluid">
-   <!-- Fill Out Forms Side -->
-   <div class="split left" style="left: 0;">
-      <!-- Info Card -->
-      <div class="row p-1 m-3 mt-0">
-         <div class="card d-flex">
-            <h3 class="card-title text-center mt-3">{{ bundle.name }}</h3>
-            <p class="card-body text-left z-depth-2">
-               <!-- LID -->
-               <strong>LID:</strong> {{ bundle.lid }}
-               <br>
-      
-               <!-- Status -->
-               <strong>Status:</strong>
-               {% if bundle.status == 'b' %} Build <br>
-               {% elif bundle.status == 'r' %} Review <br>
-               {% else %} Submit <br>
-               {% endif %}
-      
-               <!-- Creator -->
-               <strong>Creator:</strong> {{bundle.user}}<br>
-               
-               <br>
-               Below are several sections that ELSA needs you to fill out to make your templates as complete as possible.
-               Several sections are used universally throughout your bundle (e.g., Investigation Area and Context). The
-               Collections section will allow you to add, view, and edit collections that you would like to include in your
-               bundle.
-            </p>
+<div class="container-fluid vh-100 pt-5 mt-5">
+   <div class="row">
+      <!-- Fill Out Forms Side -->
+      <div class="col-md-6">
+         <!-- Info Card -->
+         <div class="row p-1 m-3 mt-0">
+            <div class="card d-flex">
+               <h3 class="card-title text-center mt-3">{{ bundle.name }}</h3>
+               <p class="card-body text-left z-depth-2">
+                  <!-- LID -->
+                  <strong>LID:</strong> {{ bundle.lid }}
+                  <br>
+         
+                  <!-- Status -->
+                  <strong>Status:</strong>
+                  {% if bundle.status == 'b' %} Build <br>
+                  {% elif bundle.status == 'r' %} Review <br>
+                  {% else %} Submit <br>
+                  {% endif %}
+         
+                  <!-- Creator -->
+                  <strong>Creator:</strong> {{bundle.user}}<br>
+                  
+                  <br>
+                  Below are several sections that ELSA needs you to fill out to make your templates as complete as possible.
+                  Several sections are used universally throughout your bundle (e.g., Investigation Area and Context). The
+                  Collections section will allow you to add, view, and edit collections that you would like to include in your
+                  bundle.
+               </p>
+            </div>
          </div>
-      </div>
 
-      <!-- Buttons -->
-      <div class="row p-1 m-3 mt-0">
-         <div class="btn-group" role="group">
-            <button type="button" class="btn btn-light text-light" data-bs-toggle="collapse" data-bs-target="#context" aria-expanded="true" style="box-shadow: none;">Context</button>
-            <button type="button" class="btn btn-light text-light" data-bs-toggle="collapse" data-bs-target="#investigation" aria-expanded="true" style="box-shadow: none;">Investigation Area</button>
-            <button type="button" class="btn btn-light text-light" data-bs-toggle="collapse" data-bs-target="#collections" aria-expanded="true" style="box-shadow: none;">Collections</button>
+         <!-- Buttons -->
+         <div class="row p-1 m-3 mt-0">
+            <div class="btn-group" role="group">
+               <button type="button" class="btn btn-light btn-collapse text-light" data-bs-toggle="collapse" data-bs-target="#context" aria-expanded="true" style="box-shadow: none;">Context</button>
+               <button type="button" class="btn btn-light btn-collapse text-light" data-bs-toggle="collapse" data-bs-target="#investigation" aria-expanded="true" style="box-shadow: none;">Investigation Area</button>
+               <button type="button" class="btn btn-light btn-collapse text-light" data-bs-toggle="collapse" data-bs-target="#collections" aria-expanded="true" style="box-shadow: none;">Collections</button>
+            </div>
          </div>
-      </div>
 
-      <!-- Context -->
-      <div id="context" class="bundle-collapse">
-         <div class="row p-1 m-3 mt-1">
-            <a data-bs-toggle="modal" data-bs-target="#context_modal">
-               <div class="card modal-card">
-                  <h5 class="card-title black-text mt-3 text-center"><strong>CONTEXT</strong></h5>
-                  <hr>
-                  <div class="card-body black-text pt-1 text-left">
-                     <p>
-                        Look at the sunset, life is amazing, life is beautiful, life is what you make it. 
-                        Mogul talk. Don’t ever play yourself. To be successful you’ve got to work hard, to make history, simple, you’ve got to make it. The key is to enjoy life, because they don’t want you to enjoy life. I promise you, they don’t want you to jetski, they don’t want you to smile. In life there will be road blocks but we will over come it. 
-                        The key to more success is to get a massage once a week, very important, major key, cloth talk. 
-                        Give thanks to the most high.
-                     </p>
+         <!-- Context -->
+         <div id="context" class="bundle-collapse">
+            <div class="row p-1 m-3 mt-1">
+               <a data-bs-toggle="modal" data-bs-target="#context_modal">
+                  <div class="card modal-card">
+                     <h5 class="card-title black-text mt-3 text-center"><strong>CONTEXT</strong></h5>
+                     <hr>
+                     <div class="card-body black-text pt-1 text-left">
+                        <p>
+                           Look at the sunset, life is amazing, life is beautiful, life is what you make it. 
+                           Mogul talk. Don’t ever play yourself. To be successful you’ve got to work hard, to make history, simple, you’ve got to make it. The key is to enjoy life, because they don’t want you to enjoy life. I promise you, they don’t want you to jetski, they don’t want you to smile. In life there will be road blocks but we will over come it. 
+                           The key to more success is to get a massage once a week, very important, major key, cloth talk. 
+                           Give thanks to the most high.
+                        </p>
+                     </div>
                   </div>
-               </div>
-            </a>
+               </a>
+            </div>
+         </div>
+
+         <!-- Investigation Area -->
+         <div id="investigation" class="bundle-collapse">
+            <div class="row p-1 m-3 mt-1">
+               <a data-bs-toggle="modal" data-bs-target="#invest_area_modal">
+                  <div class="card modal-card">
+                     <h5 class="card-title black-text mt-3 text-center"><strong>INVESTIGATION AREA</strong></h5>
+                     <hr>
+                     <div class="card-body black-text pt-1 text-left">
+                        <p>
+                           You do know, you do know that they don’t want you to have lunch. I’m keeping it real with you, so what you going do is have lunch. 
+                           We don’t see them, we will never see them. A major key, never panic. Don’t panic, when it gets crazy and rough, don’t panic, stay calm. 
+                           I’m giving you cloth talk, cloth. Special cloth alert, cut from a special cloth. How’s business? Boomin. 
+                           You see the hedges, how I got it shaped up? It’s important to shape up your hedges, it’s like getting a haircut, stay fresh. 
+                           You do know, you do know that they don’t want you to have lunch. I’m keeping it real with you, so what you going do is have lunch.
+                        </p>
+                     </div>
+                  </div>
+               </a>
+            </div>
+         </div>
+         
+         <!-- Collections -->
+         <div id="collections" class="bundle-collapse">
+            <div class="row p-1 m-3 mt-1">
+               <a data-bs-toggle="modal" data-bs-target="#collections_modal">
+                  <div class="card modal-card">
+                     <h5 class="card-title black-text mt-3 text-center"><strong>COLLECTIONS</strong></h5>
+                     <hr>
+                     <div class="card-body black-text pt-1 text-left">
+                        <p>
+                           Watch your back, but more importantly when you get out the shower, dry your back, it’s a cold world out there. 
+                           You should never complain, complaining is a weak emotion, you got life, we breathing, we blessed. Bless up. 
+                           They will try to close the door on you, just open it. The key is to enjoy life, because they don’t want you to enjoy life. 
+                           I promise you, they don’t want you to jetski, they don’t want you to smile. Surround yourself with angels. Mogul talk.
+                        </p>
+                     </div>
+                  </div>
+               </a>
+            </div>
          </div>
       </div>
 
-      <!-- Investigation Area -->
-      <div id="investigation" class="bundle-collapse">
-         <div class="row p-1 m-3 mt-1">
-            <a data-bs-toggle="modal" data-bs-target="#invest_area_modal">
-               <div class="card modal-card">
-                  <h5 class="card-title black-text mt-3 text-center"><strong>INVESTIGATION AREA</strong></h5>
-                  <hr>
-                  <div class="card-body black-text pt-1 text-left">
-                     <p>
-                        You do know, you do know that they don’t want you to have lunch. I’m keeping it real with you, so what you going do is have lunch. 
-                        We don’t see them, we will never see them. A major key, never panic. Don’t panic, when it gets crazy and rough, don’t panic, stay calm. 
-                        I’m giving you cloth talk, cloth. Special cloth alert, cut from a special cloth. How’s business? Boomin. 
-                        You see the hedges, how I got it shaped up? It’s important to shape up your hedges, it’s like getting a haircut, stay fresh. 
-                        You do know, you do know that they don’t want you to have lunch. I’m keeping it real with you, so what you going do is have lunch.
-                     </p>
-                  </div>
+      <div class="col-md-6">
+         <!-- View XML Side -->
+         <div class="text-center text-light">
+            <div class="row p-1 m-3 mt-0">
+               <div class="btn-group" role="group">
+                  <button type="button" class="btn btn-light text-light" data-bs-toggle="collapse" data-bs-target="#bundle_xml" aria-expanded="true" style="box-shadow: none;">Bundle</button>
+                  <button type="button" class="btn btn-light text-light" data-bs-toggle="collapse" data-bs-target="#context_xml" aria-expanded="true" style="box-shadow: none;">Context</button>
+                  <button type="button" class="btn btn-light text-light" data-bs-toggle="collapse" data-bs-target="#document_xml" aria-expanded="true" style="box-shadow: none;">Document</button>
+                  <button type="button" class="btn btn-light text-light" data-bs-toggle="collapse" data-bs-target="#xml_schema" aria-expanded="true" style="box-shadow: none;">XML Schema</button>
                </div>
-            </a>
+            </div>
+            <style>
+               .xml-container {
+                  color:black;
+                  white-space: pre;
+                  font-family: monospace;
+                  text-align: left;
+               }
+            </style>
+            <div id="bundle_xml" class="bundle-collapse">
+               <div class="row p-1 m-3 mt-1">
+                  <a data-bs-toggle="modal" data-bs-target="#context_modal">
+                     <div class="card modal-card">
+                        <h5 class="card-title black-text mt-3 text-center"><strong>Bundle XML</strong></h5>
+                        <hr>
+                        <div class="xml-container">
+                           <pre><code>{{ xml_content_set.0 }}</code></pre>
+                        </div>
+                     </div>
+                  </a>
+               </div>
+            </div>
+            <div id="context_xml" class="bundle-collapse">
+               <div class="row p-1 m-3 mt-1">
+                  <a data-bs-toggle="modal" data-bs-target="#context_modal">
+                     <div class="card modal-card">
+                        <h5 class="card-title black-text mt-3 text-center"><strong>Context XML</strong></h5>
+                        <hr>
+                        <div class="xml-container">
+                           <pre><code>{{ xml_content_set.1 }}</code></pre>
+                        </div>
+                     </div>
+                  </a>
+               </div>
+            </div>
+            <div id="document_xml" class="bundle-collapse">
+               <div class="row p-1 m-3 mt-1">
+                  <a data-bs-toggle="modal" data-bs-target="#context_modal">
+                     <div class="card modal-card">
+                        <h5 class="card-title black-text mt-3 text-center"><strong>Document XML</strong></h5>
+                        <hr>
+                        <div class="xml-container">
+                           <pre><code>{{ xml_content_set.2 }}</code></pre>
+                        </div>
+                     </div>
+                  </a>
+               </div>
+            </div>
+            <div id="xml_schema" class="bundle-collapse">
+               <div class="row p-1 m-3 mt-1">
+                  <a data-bs-toggle="modal" data-bs-target="#context_modal">
+                     <div class="card modal-card">
+                        <h5 class="card-title black-text mt-3 text-center"><strong>XML Schema</strong></h5>
+                        <hr>
+                        <div class="xml-container">
+                           <pre><code>{{ xml_content_set.3 }}</code></pre>
+                        </div>
+                     </div>
+                  </a>
+               </div>
+            </div>
          </div>
       </div>
-      
-      <!-- Collections -->
-      <div id="collections" class="bundle-collapse">
-         <div class="row p-1 m-3 mt-1">
-            <a data-bs-toggle="modal" data-bs-target="#collections_modal">
-               <div class="card modal-card">
-                  <h5 class="card-title black-text mt-3 text-center"><strong>COLLECTIONS</strong></h5>
-                  <hr>
-                  <div class="card-body black-text pt-1 text-left">
-                     <p>
-                        Watch your back, but more importantly when you get out the shower, dry your back, it’s a cold world out there. 
-                        You should never complain, complaining is a weak emotion, you got life, we breathing, we blessed. Bless up. 
-                        They will try to close the door on you, just open it. The key is to enjoy life, because they don’t want you to enjoy life. 
-                        I promise you, they don’t want you to jetski, they don’t want you to smile. Surround yourself with angels. Mogul talk.
-                     </p>
-                  </div>
-               </div>
-            </a>
-         </div>
-      </div>
-
-      <!-- Possibly Add delete, download, etc. here at the bottom -->
+   </div>
 
       <!-- Collapse Functionality -->
       <script>
          $(document).ready(function() {
-            $('.collapse').on('show.bs.collapse', function() {
-               $('.collapse.show').collapse('hide');
+            $('.btn-collapse').on('click', function(){
+               var target = $(this).data('bs-target');
+
+               // Toggle display between none and flex
+               $(target).css('display', function(i, display) {
+                  return display === 'none' ? 'flex' : 'none';
+               });
             });
          });
       </script>
@@ -264,79 +327,7 @@
          </div>
       {% endif %}
       {% endblock %}
-   </div>
 
-   <!-- View XML Side -->
-   <div class="split right text-center text-light" style="right: 0;">
-      <div class="row p-1 m-3 mt-0">
-         <div class="btn-group" role="group">
-            <button type="button" class="btn btn-light text-light" data-bs-toggle="collapse" data-bs-target="#bundle_xml" aria-expanded="true" style="box-shadow: none;">Bundle</button>
-            <button type="button" class="btn btn-light text-light" data-bs-toggle="collapse" data-bs-target="#context_xml" aria-expanded="true" style="box-shadow: none;">Context</button>
-            <button type="button" class="btn btn-light text-light" data-bs-toggle="collapse" data-bs-target="#document_xml" aria-expanded="true" style="box-shadow: none;">Document</button>
-            <button type="button" class="btn btn-light text-light" data-bs-toggle="collapse" data-bs-target="#xml_schema" aria-expanded="true" style="box-shadow: none;">XML Schema</button>
-         </div>
-      </div>
-      <style>
-         .xml-container {
-            color:black;
-            white-space: pre;
-            font-family: monospace;
-            text-align: left;
-         }
-      </style>
-      <div id="bundle_xml" class="bundle-collapse">
-         <div class="row p-1 m-3 mt-1">
-            <a data-bs-toggle="modal" data-bs-target="#context_modal">
-               <div class="card modal-card">
-                  <h5 class="card-title black-text mt-3 text-center"><strong>Bundle XML</strong></h5>
-                  <hr>
-                  <div class="xml-container">
-                     <pre><code>{{ xml_content_set.0 }}</code></pre>
-                  </div>
-               </div>
-            </a>
-         </div>
-      </div>
-      <div id="context_xml" class="bundle-collapse">
-         <div class="row p-1 m-3 mt-1">
-            <a data-bs-toggle="modal" data-bs-target="#context_modal">
-               <div class="card modal-card">
-                  <h5 class="card-title black-text mt-3 text-center"><strong>Context XML</strong></h5>
-                  <hr>
-                  <div class="xml-container">
-                     <pre><code>{{ xml_content_set.1 }}</code></pre>
-                  </div>
-               </div>
-            </a>
-         </div>
-      </div>
-      <div id="document_xml" class="bundle-collapse">
-         <div class="row p-1 m-3 mt-1">
-            <a data-bs-toggle="modal" data-bs-target="#context_modal">
-               <div class="card modal-card">
-                  <h5 class="card-title black-text mt-3 text-center"><strong>Document XML</strong></h5>
-                  <hr>
-                  <div class="xml-container">
-                     <pre><code>{{ xml_content_set.2 }}</code></pre>
-                  </div>
-               </div>
-            </a>
-         </div>
-      </div>
-      <div id="xml_schema" class="bundle-collapse">
-         <div class="row p-1 m-3 mt-1">
-            <a data-bs-toggle="modal" data-bs-target="#context_modal">
-               <div class="card modal-card">
-                  <h5 class="card-title black-text mt-3 text-center"><strong>XML Schema</strong></h5>
-                  <hr>
-                  <div class="xml-container">
-                     <pre><code>{{ xml_content_set.3 }}</code></pre>
-                  </div>
-               </div>
-            </a>
-         </div>
-      </div>
-   </div>
 
 
 

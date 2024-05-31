@@ -63,22 +63,22 @@
 
 <body>
     <!-- Header -->
+    {% if user.is_authenticated %}
     <header class="row">
-        {% if user.is_authenticated %}
         <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
             <!-- ELSA Logo -->
             <a class="navbar-brand" href="{% url 'main:index' %}">
-              <img src="{% static 'images/ELSA-Logo-White.png' %}" style="text-shadow: none; font-size: 25px; color: rgb(43, 187, 173); height: 50px; width: 95px; line-height: 75px; text-align: center;"></img> 
+                <img src="{% static 'images/ELSA-Logo-White.png' %}" style="text-shadow: none; font-size: 25px; color: rgb(43, 187, 173); height: 50px; width: 95px; line-height: 75px; text-align: center;"></img> 
             </a>
 
             <!-- PDS Logo -->
             <a href="https://pds-atmospheres.nmsu.edu/">
-              <img src="{% static 'images/PDS_Planets_inv_clrbk_no_words.png' %}" style="text-shadow: none; font-size: 25px; color: rgb(43, 187, 173); height: 50px; width: 95px; line-height: 75px; text-align: center; "></i> 
+                <img src="{% static 'images/PDS_Planets_inv_clrbk_no_words.png' %}" style="text-shadow: none; font-size: 25px; color: rgb(43, 187, 173); height: 50px; width: 95px; line-height: 75px; text-align: center; "></i> 
             </a>
 
             <!-- For Smaller Screens -->
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar-links" aria-controls="navbar-links" aria-expanded="false" aria-label="Toggle navigation">
-              <span class="navbar-toggler-icon"></span>
+                <span class="navbar-toggler-icon"></span>
             </button>
             
             <!-- Links -->
@@ -92,7 +92,6 @@
                         </a>
                     </li>
 
-                    {% if user.is_authenticated %}
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'main:services' %}">
                             <i class="fa fa-briefcase"></i> 
@@ -126,33 +125,11 @@
                             <a class="dropdown-item" href="{% url 'friends:logout' %}">Logout</a>
                         </div>
                     </li>
-
-                    {% else %}
-                    <!-- <li class="nav-item">
-                        <a class="nav-link" href="{% url 'friends:register' %}">
-                            <i class="fa fa-hand-spock-o" aria-hidden="true"></i>
-                            Sign Up
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'friends:login' %}">
-                            <i class="fa fa-sign-in" aria-hidden="true"></i> 
-                            Login
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'main:contact' %}">
-                            <i class="fa fa-envelope"></i> 
-                            Contact
-                        </a>
-                    </li> -->
-                    {% endif %}
                 </ul>
             </div>
-
-          </nav>
-        {% endif %}
+        </nav>
     </header>
+    {% endif %}
 
     <!-- Main Content -->
     <main class="row">
@@ -160,7 +137,8 @@
     </main>
 
     <!-- Footer -->
-    <footer class="row bg-dark text-light fixed-bottom">
+    {% if user.is_authenticated %}
+    <footer class="row bg-dark text-light">
         <ul class="nav justify-content-center border-bottom border-secondary py-1 mb-1">
             <li class="nav-item">
                 <a href="{% url 'main:index' %}" class="nav-link px-2 text-light" style="text-decoration: none;">
@@ -177,5 +155,6 @@
         </ul>
         <p class="footer-copyright text-center pt-2">© 2024 New Mexico State University <a href="{% url 'main:index' %}"> https://atmos.nmsu.edu/elsa/ </a></p>
     </footer>
+    {% endif %}
 </body>
 </html>
