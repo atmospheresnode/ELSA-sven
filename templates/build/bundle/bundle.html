@@ -80,27 +80,6 @@
 
 <!-- Stylings -->
 <style>
-   /* Split the screen in half */
-   .split {
-      height: 100%;
-      width: 50%;
-      position: fixed;
-      z-index: 1;
-      top: 0;
-      overflow-x: hidden;
-      padding-top: 6em;
-   }
-
-   .btn-light.active {
-      background-color: rgb(40, 170, 158);
-      border-color: rgb(40, 170, 158);
-   }
-
-   .bundle-collapse {
-      overflow: hidden;
-      transition: 0 1s ease;
-   }
-
    a:hover{
       cursor: pointer;
    }
@@ -108,6 +87,10 @@
    a:hover .modal-card {
       transform: scale(1.025);
       transition: transform 0.3s ease;
+   }
+
+   .bundle-collapse {
+      display: none;
    }
 
    /* Tabs Styling */
@@ -135,9 +118,10 @@
    }
 </style>
 
-<div class="container-fluid justify-content-center align-items-center py-5">
-   <div class="row px-4 pt-5">
-      <div class="col">
+<div class="container-fluid vh-100 pt-5 mt-5">
+   <div class="row">
+      <!-- Fill Out Forms Side -->
+      <div class="col-md-6">
          <!-- Info Card -->
          <div class="row p-1 m-3 mt-0">
             <div class="card d-flex">
@@ -165,16 +149,13 @@
                </p>
             </div>
          </div>
-      </div>
-   </div>
-   <div class="row px-4 pt-5">
-      <div class="col">
+
          <!-- Buttons -->
          <div class="row p-1 m-3 mt-0">
             <div class="btn-group" role="group">
-               <button type="button" class="btn btn-light text-light" data-bs-toggle="collapse" data-bs-target="#context" aria-expanded="true" style="box-shadow: none;">Context</button>
-               <button type="button" class="btn btn-light text-light" data-bs-toggle="collapse" data-bs-target="#investigation" aria-expanded="true" style="box-shadow: none;">Investigation Area</button>
-               <button type="button" class="btn btn-light text-light" data-bs-toggle="collapse" data-bs-target="#collections" aria-expanded="true" style="box-shadow: none;">Collections</button>
+               <button type="button" class="btn btn-light btn-collapse text-light" data-bs-toggle="collapse" data-bs-target="#context" aria-expanded="true" style="box-shadow: none;">Context</button>
+               <button type="button" class="btn btn-light btn-collapse text-light" data-bs-toggle="collapse" data-bs-target="#investigation" aria-expanded="true" style="box-shadow: none;">Investigation Area</button>
+               <button type="button" class="btn btn-light btn-collapse text-light" data-bs-toggle="collapse" data-bs-target="#collections" aria-expanded="true" style="box-shadow: none;">Collections</button>
             </div>
          </div>
 
@@ -206,9 +187,11 @@
                      <hr>
                      <div class="card-body black-text pt-1 text-left">
                         <p>
-                           The <strong> INVESTIGATION AREA </strong> provides references for your bundle including alternative names for
-                           your dataset <strong>(Alias)</strong>, citation information for giving credit to those working on your data
-                           <strong>(Citation Information)</strong>, and updates to the editing of the bundle <strong>(Modification History)</strong
+                           You do know, you do know that they don’t want you to have lunch. I’m keeping it real with you, so what you going do is have lunch. 
+                           We don’t see them, we will never see them. A major key, never panic. Don’t panic, when it gets crazy and rough, don’t panic, stay calm. 
+                           I’m giving you cloth talk, cloth. Special cloth alert, cut from a special cloth. How’s business? Boomin. 
+                           You see the hedges, how I got it shaped up? It’s important to shape up your hedges, it’s like getting a haircut, stay fresh. 
+                           You do know, you do know that they don’t want you to have lunch. I’m keeping it real with you, so what you going do is have lunch.
                         </p>
                      </div>
                   </div>
@@ -225,140 +208,125 @@
                      <hr>
                      <div class="card-body black-text pt-1 text-left">
                         <p>
-                           In this section you should be able to manage your
-                           bundle's collections.You can edit exsiting collection (label metadata, adding files to the collection), and
-                           add new colections.The Context and XML Schema collections are used for system managemetn and will be
-                           generated automatically and therefore are not neccessary to edit. You may add multiple document and data
-                           collections as needed. ATM requires that you have at least one document collection to ensure your fianl
-                           bundle will have adequate background documentation.
+                           Watch your back, but more importantly when you get out the shower, dry your back, it’s a cold world out there. 
+                           You should never complain, complaining is a weak emotion, you got life, we breathing, we blessed. Bless up. 
+                           They will try to close the door on you, just open it. The key is to enjoy life, because they don’t want you to enjoy life. 
+                           I promise you, they don’t want you to jetski, they don’t want you to smile. Surround yourself with angels. Mogul talk.
                         </p>
                      </div>
                   </div>
                </a>
             </div>
          </div>
-
-         <!-- Possibly Add delete, download, etc. here at the bottom -->
-
-         <!-- Collapse Functionality -->
-         <script>
-            $(document).ready(function() {
-               $('.collapse').on('show.bs.collapse', function() {
-                  $('.collapse.show').collapse('hide');
-               });
-            });
-         </script>
-
-         {% block toast_block %}
-         {% if messages %}
-            <div class="toast position-fixed bottom-0" role="alert" aria-live="assertive" aria-atomic="true" data-delay="5000">
-               <div class="toast-header">
-                     <strong class="mr-auto">Notification</strong>
-                     <button type="button" class="ml-2 mb-1 close" data-dismiss="toast" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                     </button>
-               </div>
-               <div class="toast-body">
-                     {% for message in messages %}
-                        {{ message }}
-                     {% endfor %}
-               </div>
-            </div>
-         {% endif %}
-         {% endblock %}
       </div>
-      <div class="col">
-         <div class="row p-1 m-3 mt-0">
-            <div class="btn-group" role="group">
-               <button type="button" class="btn btn-light text-light" data-bs-toggle="collapse" data-bs-target="#bundle_xml" aria-expanded="true" style="box-shadow: none;">Bundle</button>
-               <button type="button" class="btn btn-light text-light" data-bs-toggle="collapse" data-bs-target="#context_xml" aria-expanded="true" style="box-shadow: none;">Context</button>
-               <button type="button" class="btn btn-light text-light" data-bs-toggle="collapse" data-bs-target="#document_xml" aria-expanded="true" style="box-shadow: none;">Document</button>
-               <button type="button" class="btn btn-light text-light" data-bs-toggle="collapse" data-bs-target="#xml_schema" aria-expanded="true" style="box-shadow: none;">XML Schema</button>
+
+      <div class="col-md-6">
+         <!-- View XML Side -->
+         <div class="text-center text-light">
+            <div class="row p-1 m-3 mt-0">
+               <div class="btn-group" role="group">
+                  <button type="button" class="btn btn-light text-light" data-bs-toggle="collapse" data-bs-target="#bundle_xml" aria-expanded="true" style="box-shadow: none;">Bundle</button>
+                  <button type="button" class="btn btn-light text-light" data-bs-toggle="collapse" data-bs-target="#context_xml" aria-expanded="true" style="box-shadow: none;">Context</button>
+                  <button type="button" class="btn btn-light text-light" data-bs-toggle="collapse" data-bs-target="#document_xml" aria-expanded="true" style="box-shadow: none;">Document</button>
+                  <button type="button" class="btn btn-light text-light" data-bs-toggle="collapse" data-bs-target="#xml_schema" aria-expanded="true" style="box-shadow: none;">XML Schema</button>
+               </div>
             </div>
-         </div>
-         <style>
-            .xml-container {
-               color:black;
-               white-space: pre;
-               font-family: monospace;
-               /* text-align: left; */
-            }
-            .pre {
-               overflow: auto;
-               width: 100px;
-            }
-         </style>
-         <div id="bundle_xml" class="bundle-collapse">
-            <div class="row p-1 m-3 mt-1">
-               <a data-bs-toggle="modal" data-bs-target="#context_modal">
-                  <div class="card modal-card">
-                     <h5 class="card-title black-text mt-3 text-center"><strong>Bundle XML</strong></h5>
-                     <hr>
-                     <div class="card-body black-text">
-                        {{ xml_content_set.0 }}
+            <style>
+               .xml-container {
+                  color:black;
+                  white-space: pre;
+                  font-family: monospace;
+                  text-align: left;
+               }
+            </style>
+            <div id="bundle_xml" class="bundle-collapse">
+               <div class="row p-1 m-3 mt-1">
+                  <a data-bs-toggle="modal" data-bs-target="#context_modal">
+                     <div class="card modal-card">
+                        <h5 class="card-title black-text mt-3 text-center"><strong>Bundle XML</strong></h5>
+                        <hr>
+                        <div class="xml-container">
+                           <pre><code>{{ xml_content_set.0 }}</code></pre>
+                        </div>
                      </div>
-                  </div>
-               </a>
+                  </a>
+               </div>
             </div>
-         </div>
-         <!-- <div id="context_xml" class="bundle-collapse">
-            <div class="row p-1 m-3 mt-1">
-               <a data-bs-toggle="modal" data-bs-target="#context_modal">
-                  <div class="card modal-card">
-                     <h5 class="card-title black-text mt-3 text-center"><strong>Context XML</strong></h5>
-                     <hr>
-                     <div class="xml-container">
-                        <pre><code>{{ xml_content_set.1 }}</code></pre>
+            <div id="context_xml" class="bundle-collapse">
+               <div class="row p-1 m-3 mt-1">
+                  <a data-bs-toggle="modal" data-bs-target="#context_modal">
+                     <div class="card modal-card">
+                        <h5 class="card-title black-text mt-3 text-center"><strong>Context XML</strong></h5>
+                        <hr>
+                        <div class="xml-container">
+                           <pre><code>{{ xml_content_set.1 }}</code></pre>
+                        </div>
                      </div>
-                  </div>
-               </a>
+                  </a>
+               </div>
             </div>
-         </div>
-         <div id="document_xml" class="bundle-collapse">
-            <div class="row p-1 m-3 mt-1">
-               <a data-bs-toggle="modal" data-bs-target="#context_modal">
-                  <div class="card modal-card">
-                     <h5 class="card-title black-text mt-3 text-center"><strong>Document XML</strong></h5>
-                     <hr>
-                     <div class="xml-container">
-                        <pre><code>{{ xml_content_set.2 }}</code></pre>
+            <div id="document_xml" class="bundle-collapse">
+               <div class="row p-1 m-3 mt-1">
+                  <a data-bs-toggle="modal" data-bs-target="#context_modal">
+                     <div class="card modal-card">
+                        <h5 class="card-title black-text mt-3 text-center"><strong>Document XML</strong></h5>
+                        <hr>
+                        <div class="xml-container">
+                           <pre><code>{{ xml_content_set.2 }}</code></pre>
+                        </div>
                      </div>
-                  </div>
-               </a>
+                  </a>
+               </div>
             </div>
-         </div>
-         <div id="xml_schema" class="bundle-collapse">
-            <div class="row p-1 m-3 mt-1">
-               <a data-bs-toggle="modal" data-bs-target="#context_modal">
-                  <div class="card modal-card">
-                     <h5 class="card-title black-text mt-3 text-center"><strong>XML Schema</strong></h5>
-                     <hr>
-                     <div class="xml-container">
-                        <pre><code>{{ xml_content_set.3 }}</code></pre>
+            <div id="xml_schema" class="bundle-collapse">
+               <div class="row p-1 m-3 mt-1">
+                  <a data-bs-toggle="modal" data-bs-target="#context_modal">
+                     <div class="card modal-card">
+                        <h5 class="card-title black-text mt-3 text-center"><strong>XML Schema</strong></h5>
+                        <hr>
+                        <div class="xml-container">
+                           <pre><code>{{ xml_content_set.3 }}</code></pre>
+                        </div>
                      </div>
-                  </div>
-               </a>
+                  </a>
+               </div>
             </div>
          </div>
-      </div> -->
+      </div>
+   </div>
+
       <!-- Collapse Functionality -->
       <script>
          $(document).ready(function() {
-            $('.collapse').on('show.bs.collapse', function() {
-               $('.collapse.show').collapse('hide');
+            $('.btn-collapse').on('click', function(){
+               var target = $(this).data('bs-target');
+
+               // Toggle display between none and flex
+               $(target).css('display', function(i, display) {
+                  return display === 'none' ? 'flex' : 'none';
+               });
             });
          });
       </script>
-   </div>
-   <!-- Fill Out Forms Side -->
-   <!-- <div class="split left" style="left: 0;">
-      
-   </div> -->
 
-   <!-- View XML Side -->
-   <!-- <div class="split right text-center text-light" style="right: 0;">
-      
-   </div> -->
+      {% block toast_block %}
+      {% if messages %}
+         <div class="toast position-fixed bottom-0" role="alert" aria-live="assertive" aria-atomic="true" data-delay="5000">
+            <div class="toast-header">
+                  <strong class="mr-auto">Notification</strong>
+                  <button type="button" class="ml-2 mb-1 close" data-dismiss="toast" aria-label="Close">
+                     <span aria-hidden="true">&times;</span>
+                  </button>
+            </div>
+            <div class="toast-body">
+                  {% for message in messages %}
+                     {{ message }}
+                  {% endfor %}
+            </div>
+         </div>
+      {% endif %}
+      {% endblock %}
+
 
 
 
