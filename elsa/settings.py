@@ -269,7 +269,7 @@ LOGGING = {
         'file': {
             'level': 'DEBUG',
             'class': 'logging.FileHandler',
-            'filename': '/home/sajomont/Documents/elsaVersions/ELSA-sven/._elsa.log',
+            'filename': '/home/dsha77er/Desktop/elsa_github/ELSA-sven/._elsa.log',
         },
     },
     'loggers': {
