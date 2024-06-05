@@ -135,109 +135,212 @@
    }
 </style>
 
-<div class="container-fluid">
-   <!-- Fill Out Forms Side -->
-   <div class="split left" style="left: 0;">
-      <!-- Info Card -->
-      <div class="row p-1 m-3 mt-0">
-         <div class="card d-flex">
-            <h3 class="card-title text-center mt-3">{{ bundle.name }}</h3>
-            <p class="card-body text-left z-depth-2">
-               <!-- LID -->
-               <strong>LID:</strong> {{ bundle.lid }}
-               <br>
-      
-               <!-- Status -->
-               <strong>Status:</strong>
-               {% if bundle.status == 'b' %} Build <br>
-               {% elif bundle.status == 'r' %} Review <br>
-               {% else %} Submit <br>
-               {% endif %}
-      
-               <!-- Creator -->
-               <strong>Creator:</strong> {{bundle.user}}<br>
-               
-               <br>
-               Below are several sections that ELSA needs you to fill out to make your templates as complete as possible.
-               Several sections are used universally throughout your bundle (e.g., Investigation Area and Context). The
-               Collections section will allow you to add, view, and edit collections that you would like to include in your
-               bundle.
-            </p>
+<div class="container-fluid justify-content-center align-items-center py-5">
+   <div class="row px-4 pt-5">
+      <div class="col">
+         <!-- Info Card -->
+         <div class="row p-1 m-3 mt-0">
+            <div class="card d-flex">
+               <h3 class="card-title text-center mt-3">{{ bundle.name }}</h3>
+               <p class="card-body text-left z-depth-2">
+                  <!-- LID -->
+                  <strong>LID:</strong> {{ bundle.lid }}
+                  <br>
+         
+                  <!-- Status -->
+                  <strong>Status:</strong>
+                  {% if bundle.status == 'b' %} Build <br>
+                  {% elif bundle.status == 'r' %} Review <br>
+                  {% else %} Submit <br>
+                  {% endif %}
+         
+                  <!-- Creator -->
+                  <strong>Creator:</strong> {{bundle.user}}<br>
+                  
+                  <br>
+                  Below are several sections that ELSA needs you to fill out to make your templates as complete as possible.
+                  Several sections are used universally throughout your bundle (e.g., Investigation Area and Context). The
+                  Collections section will allow you to add, view, and edit collections that you would like to include in your
+                  bundle.
+               </p>
+            </div>
          </div>
       </div>
-
-      <!-- Buttons -->
-      <div class="row p-1 m-3 mt-0">
-         <div class="btn-group" role="group">
-            <button type="button" class="btn btn-light text-light" data-bs-toggle="collapse" data-bs-target="#context" aria-expanded="true" style="box-shadow: none;">Context</button>
-            <button type="button" class="btn btn-light text-light" data-bs-toggle="collapse" data-bs-target="#investigation" aria-expanded="true" style="box-shadow: none;">Investigation Area</button>
-            <button type="button" class="btn btn-light text-light" data-bs-toggle="collapse" data-bs-target="#collections" aria-expanded="true" style="box-shadow: none;">Collections</button>
+   </div>
+   <div class="row px-4 pt-5">
+      <div class="col">
+         <!-- Buttons -->
+         <div class="row p-1 m-3 mt-0">
+            <div class="btn-group" role="group">
+               <button type="button" class="btn btn-light text-light" data-bs-toggle="collapse" data-bs-target="#context" aria-expanded="true" style="box-shadow: none;">Context</button>
+               <button type="button" class="btn btn-light text-light" data-bs-toggle="collapse" data-bs-target="#investigation" aria-expanded="true" style="box-shadow: none;">Investigation Area</button>
+               <button type="button" class="btn btn-light text-light" data-bs-toggle="collapse" data-bs-target="#collections" aria-expanded="true" style="box-shadow: none;">Collections</button>
+            </div>
          </div>
-      </div>
 
-      <!-- Context -->
-      <div id="context" class="bundle-collapse">
-         <div class="row p-1 m-3 mt-1">
-            <a data-bs-toggle="modal" data-bs-target="#context_modal">
-               <div class="card modal-card">
-                  <h5 class="card-title black-text mt-3 text-center"><strong>CONTEXT</strong></h5>
-                  <hr>
-                  <div class="card-body black-text pt-1 text-left">
-                     <p>
-                        Look at the sunset, life is amazing, life is beautiful, life is what you make it. 
-                        Mogul talk. Don’t ever play yourself. To be successful you’ve got to work hard, to make history, simple, you’ve got to make it. The key is to enjoy life, because they don’t want you to enjoy life. I promise you, they don’t want you to jetski, they don’t want you to smile. In life there will be road blocks but we will over come it. 
-                        The key to more success is to get a massage once a week, very important, major key, cloth talk. 
-                        Give thanks to the most high.
-                     </p>
+         <!-- Context -->
+         <div id="context" class="bundle-collapse">
+            <div class="row p-1 m-3 mt-1">
+               <a data-bs-toggle="modal" data-bs-target="#context_modal">
+                  <div class="card modal-card">
+                     <h5 class="card-title black-text mt-3 text-center"><strong>CONTEXT</strong></h5>
+                     <hr>
+                     <div class="card-body black-text pt-1 text-left">
+                        <p>
+                           Adding context products entails associating your bundle
+                           with the missions, facilities, telescopes, instruments, the hosts of those instruments, targets, and the
+                           like that relate to the data within your bundle.
+                        </p>
+                     </div>
                   </div>
-               </div>
-            </a>
+               </a>
+            </div>
          </div>
-      </div>
 
-      <!-- Investigation Area -->
-      <div id="investigation" class="bundle-collapse">
-         <div class="row p-1 m-3 mt-1">
-            <a data-bs-toggle="modal" data-bs-target="#invest_area_modal">
-               <div class="card modal-card">
-                  <h5 class="card-title black-text mt-3 text-center"><strong>INVESTIGATION AREA</strong></h5>
-                  <hr>
-                  <div class="card-body black-text pt-1 text-left">
-                     <p>
-                        You do know, you do know that they don’t want you to have lunch. I’m keeping it real with you, so what you going do is have lunch. 
-                        We don’t see them, we will never see them. A major key, never panic. Don’t panic, when it gets crazy and rough, don’t panic, stay calm. 
-                        I’m giving you cloth talk, cloth. Special cloth alert, cut from a special cloth. How’s business? Boomin. 
-                        You see the hedges, how I got it shaped up? It’s important to shape up your hedges, it’s like getting a haircut, stay fresh. 
-                        You do know, you do know that they don’t want you to have lunch. I’m keeping it real with you, so what you going do is have lunch.
-                     </p>
+         <!-- Investigation Area -->
+         <div id="investigation" class="bundle-collapse">
+            <div class="row p-1 m-3 mt-1">
+               <a data-bs-toggle="modal" data-bs-target="#invest_area_modal">
+                  <div class="card modal-card">
+                     <h5 class="card-title black-text mt-3 text-center"><strong>INVESTIGATION AREA</strong></h5>
+                     <hr>
+                     <div class="card-body black-text pt-1 text-left">
+                        <p>
+                           The <strong> INVESTIGATION AREA </strong> provides references for your bundle including alternative names for
+                           your dataset <strong>(Alias)</strong>, citation information for giving credit to those working on your data
+                           <strong>(Citation Information)</strong>, and updates to the editing of the bundle <strong>(Modification History)</strong
+                        </p>
+                     </div>
                   </div>
-               </div>
-            </a>
+               </a>
+            </div>
          </div>
-      </div>
-      
-      <!-- Collections -->
-      <div id="collections" class="bundle-collapse">
-         <div class="row p-1 m-3 mt-1">
-            <a data-bs-toggle="modal" data-bs-target="#collections_modal">
-               <div class="card modal-card">
-                  <h5 class="card-title black-text mt-3 text-center"><strong>COLLECTIONS</strong></h5>
-                  <hr>
-                  <div class="card-body black-text pt-1 text-left">
-                     <p>
-                        Watch your back, but more importantly when you get out the shower, dry your back, it’s a cold world out there. 
-                        You should never complain, complaining is a weak emotion, you got life, we breathing, we blessed. Bless up. 
-                        They will try to close the door on you, just open it. The key is to enjoy life, because they don’t want you to enjoy life. 
-                        I promise you, they don’t want you to jetski, they don’t want you to smile. Surround yourself with angels. Mogul talk.
-                     </p>
+         
+         <!-- Collections -->
+         <div id="collections" class="bundle-collapse">
+            <div class="row p-1 m-3 mt-1">
+               <a data-bs-toggle="modal" data-bs-target="#collections_modal">
+                  <div class="card modal-card">
+                     <h5 class="card-title black-text mt-3 text-center"><strong>COLLECTIONS</strong></h5>
+                     <hr>
+                     <div class="card-body black-text pt-1 text-left">
+                        <p>
+                           In this section you should be able to manage your
+                           bundle's collections.You can edit exsiting collection (label metadata, adding files to the collection), and
+                           add new colections.The Context and XML Schema collections are used for system managemetn and will be
+                           generated automatically and therefore are not neccessary to edit. You may add multiple document and data
+                           collections as needed. ATM requires that you have at least one document collection to ensure your fianl
+                           bundle will have adequate background documentation.
+                        </p>
+                     </div>
                   </div>
-               </div>
-            </a>
+               </a>
+            </div>
          </div>
+
+         <!-- Possibly Add delete, download, etc. here at the bottom -->
+
+         <!-- Collapse Functionality -->
+         <script>
+            $(document).ready(function() {
+               $('.collapse').on('show.bs.collapse', function() {
+                  $('.collapse.show').collapse('hide');
+               });
+            });
+         </script>
+
+         {% block toast_block %}
+         {% if messages %}
+            <div class="toast position-fixed bottom-0" role="alert" aria-live="assertive" aria-atomic="true" data-delay="5000">
+               <div class="toast-header">
+                     <strong class="mr-auto">Notification</strong>
+                     <button type="button" class="ml-2 mb-1 close" data-dismiss="toast" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                     </button>
+               </div>
+               <div class="toast-body">
+                     {% for message in messages %}
+                        {{ message }}
+                     {% endfor %}
+               </div>
+            </div>
+         {% endif %}
+         {% endblock %}
       </div>
-
-      <!-- Possibly Add delete, download, etc. here at the bottom -->
-
+      <div class="col">
+         <div class="row p-1 m-3 mt-0">
+            <div class="btn-group" role="group">
+               <button type="button" class="btn btn-light text-light" data-bs-toggle="collapse" data-bs-target="#bundle_xml" aria-expanded="true" style="box-shadow: none;">Bundle</button>
+               <button type="button" class="btn btn-light text-light" data-bs-toggle="collapse" data-bs-target="#context_xml" aria-expanded="true" style="box-shadow: none;">Context</button>
+               <button type="button" class="btn btn-light text-light" data-bs-toggle="collapse" data-bs-target="#document_xml" aria-expanded="true" style="box-shadow: none;">Document</button>
+               <button type="button" class="btn btn-light text-light" data-bs-toggle="collapse" data-bs-target="#xml_schema" aria-expanded="true" style="box-shadow: none;">XML Schema</button>
+            </div>
+         </div>
+         <style>
+            .xml-container {
+               color:black;
+               white-space: pre;
+               font-family: monospace;
+               /* text-align: left; */
+            }
+            .pre {
+               overflow: auto;
+               width: 100px;
+            }
+         </style>
+         <div id="bundle_xml" class="bundle-collapse">
+            <div class="row p-1 m-3 mt-1">
+               <a data-bs-toggle="modal" data-bs-target="#context_modal">
+                  <div class="card modal-card">
+                     <h5 class="card-title black-text mt-3 text-center"><strong>Bundle XML</strong></h5>
+                     <hr>
+                     <div class="card-body black-text">
+                        {{ xml_content_set.0 }}
+                     </div>
+                  </div>
+               </a>
+            </div>
+         </div>
+         <!-- <div id="context_xml" class="bundle-collapse">
+            <div class="row p-1 m-3 mt-1">
+               <a data-bs-toggle="modal" data-bs-target="#context_modal">
+                  <div class="card modal-card">
+                     <h5 class="card-title black-text mt-3 text-center"><strong>Context XML</strong></h5>
+                     <hr>
+                     <div class="xml-container">
+                        <pre><code>{{ xml_content_set.1 }}</code></pre>
+                     </div>
+                  </div>
+               </a>
+            </div>
+         </div>
+         <div id="document_xml" class="bundle-collapse">
+            <div class="row p-1 m-3 mt-1">
+               <a data-bs-toggle="modal" data-bs-target="#context_modal">
+                  <div class="card modal-card">
+                     <h5 class="card-title black-text mt-3 text-center"><strong>Document XML</strong></h5>
+                     <hr>
+                     <div class="xml-container">
+                        <pre><code>{{ xml_content_set.2 }}</code></pre>
+                     </div>
+                  </div>
+               </a>
+            </div>
+         </div>
+         <div id="xml_schema" class="bundle-collapse">
+            <div class="row p-1 m-3 mt-1">
+               <a data-bs-toggle="modal" data-bs-target="#context_modal">
+                  <div class="card modal-card">
+                     <h5 class="card-title black-text mt-3 text-center"><strong>XML Schema</strong></h5>
+                     <hr>
+                     <div class="xml-container">
+                        <pre><code>{{ xml_content_set.3 }}</code></pre>
+                     </div>
+                  </div>
+               </a>
+            </div>
+         </div>
+      </div> -->
       <!-- Collapse Functionality -->
       <script>
          $(document).ready(function() {
@@ -246,97 +349,16 @@
             });
          });
       </script>
-
-      {% block toast_block %}
-      {% if messages %}
-         <div class="toast position-fixed bottom-0" role="alert" aria-live="assertive" aria-atomic="true" data-delay="5000">
-            <div class="toast-header">
-                  <strong class="mr-auto">Notification</strong>
-                  <button type="button" class="ml-2 mb-1 close" data-dismiss="toast" aria-label="Close">
-                     <span aria-hidden="true">&times;</span>
-                  </button>
-            </div>
-            <div class="toast-body">
-                  {% for message in messages %}
-                     {{ message }}
-                  {% endfor %}
-            </div>
-         </div>
-      {% endif %}
-      {% endblock %}
    </div>
+   <!-- Fill Out Forms Side -->
+   <!-- <div class="split left" style="left: 0;">
+      
+   </div> -->
 
    <!-- View XML Side -->
-   <div class="split right text-center text-light" style="right: 0;">
-      <div class="row p-1 m-3 mt-0">
-         <div class="btn-group" role="group">
-            <button type="button" class="btn btn-light text-light" data-bs-toggle="collapse" data-bs-target="#bundle_xml" aria-expanded="true" style="box-shadow: none;">Bundle</button>
-            <button type="button" class="btn btn-light text-light" data-bs-toggle="collapse" data-bs-target="#context_xml" aria-expanded="true" style="box-shadow: none;">Context</button>
-            <button type="button" class="btn btn-light text-light" data-bs-toggle="collapse" data-bs-target="#document_xml" aria-expanded="true" style="box-shadow: none;">Document</button>
-            <button type="button" class="btn btn-light text-light" data-bs-toggle="collapse" data-bs-target="#xml_schema" aria-expanded="true" style="box-shadow: none;">XML Schema</button>
-         </div>
-      </div>
-      <style>
-         .xml-container {
-            color:black;
-            white-space: pre;
-            font-family: monospace;
-            text-align: left;
-         }
-      </style>
-      <div id="bundle_xml" class="bundle-collapse">
-         <div class="row p-1 m-3 mt-1">
-            <a data-bs-toggle="modal" data-bs-target="#context_modal">
-               <div class="card modal-card">
-                  <h5 class="card-title black-text mt-3 text-center"><strong>Bundle XML</strong></h5>
-                  <hr>
-                  <div class="xml-container">
-                     <pre><code>{{ xml_content_set.0 }}</code></pre>
-                  </div>
-               </div>
-            </a>
-         </div>
-      </div>
-      <div id="context_xml" class="bundle-collapse">
-         <div class="row p-1 m-3 mt-1">
-            <a data-bs-toggle="modal" data-bs-target="#context_modal">
-               <div class="card modal-card">
-                  <h5 class="card-title black-text mt-3 text-center"><strong>Context XML</strong></h5>
-                  <hr>
-                  <div class="xml-container">
-                     <pre><code>{{ xml_content_set.1 }}</code></pre>
-                  </div>
-               </div>
-            </a>
-         </div>
-      </div>
-      <div id="document_xml" class="bundle-collapse">
-         <div class="row p-1 m-3 mt-1">
-            <a data-bs-toggle="modal" data-bs-target="#context_modal">
-               <div class="card modal-card">
-                  <h5 class="card-title black-text mt-3 text-center"><strong>Document XML</strong></h5>
-                  <hr>
-                  <div class="xml-container">
-                     <pre><code>{{ xml_content_set.2 }}</code></pre>
-                  </div>
-               </div>
-            </a>
-         </div>
-      </div>
-      <div id="xml_schema" class="bundle-collapse">
-         <div class="row p-1 m-3 mt-1">
-            <a data-bs-toggle="modal" data-bs-target="#context_modal">
-               <div class="card modal-card">
-                  <h5 class="card-title black-text mt-3 text-center"><strong>XML Schema</strong></h5>
-                  <hr>
-                  <div class="xml-container">
-                     <pre><code>{{ xml_content_set.3 }}</code></pre>
-                  </div>
-               </div>
-            </a>
-         </div>
-      </div>
-   </div>
+   <!-- <div class="split right text-center text-light" style="right: 0;">
+      
+   </div> -->
 
 
 
