@@ -4,14 +4,14 @@
 
 
 
-{% block title_block %}
+<!-- {% block title_block %}
 Build A Bundle
-{% endblock %}
+{% endblock %} -->
 
 
 
 <!-- Figure out if we need to delete this portion -->
-{% block main_header_block %}
+<!-- {% block main_header_block %}
 <br/>
 So you want to build a bundle?
 {% endblock %}
@@ -38,14 +38,28 @@ Each bundle contains a document collection and data collections.
 Your bundle may also contain other collections if needed (e.g., geometry, browse, calibration, etc.). 
 Context and xml_schema collections are system collections that will be added by the Atmospheres Node (ATM) after your bundle is complete.   
 
-{% endblock %}
+{% endblock %} -->
 <!-- Figure out if we need to delete this portion -->
 
 
 {% block body_block %}
 <div class="container-fluid">
-    <div class="row justify-content-center align-items-center vh-100">
+    <div class="row justify-content-center align-items-center">
         <div class="col-12 col-lg-9 col-xl-10">
+            <div class="card">
+                <div class="card-body p-4 p-md-5">
+                    <h2 class="mb-5 pb-2 pb-md-0 mb-md-4">Building a Bundle?</h2>
+                        ELSA helps you to build PDS4 compliant labels for your data by building your bundle all at once and will provide a downloadable template package partially filled-out for you to work with your node representative. 
+To begin, ELSA needs some basic information about your bundle. 
+Please provide a title for your bundle and select the version of the PDS4 IM you want to use (new users should choose the top-most selection for version). 
+NOTE: Once the bundle is named, you will be directed to a 'Bundle View' that will prompt you for various parts of the bundles including the ability to add collections. 
+Some collections are required by the ATM node and will be automatically generated for your use. 
+Namely you will be expected to provide documentation for your bundle - a document collection has been generated for that purpose. 
+XML_Schema and Context collections will also be generated for you. 
+These serve as system augmentations for the PDS and will be completely handled by ELSA. 
+                </div>
+            </div>
+            <br>
             <div class="card">
                 <div class="card-body p-4 p-md-5">
                     <!-- Bundle Info Header -->
