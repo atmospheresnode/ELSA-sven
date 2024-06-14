@@ -659,7 +659,23 @@ def bundle(request, pk_bundle):
             tree = etree.parse(label.label())
             xml_content = etree.tostring(tree, pretty_print=True, encoding='unicode')
             xml_content_set.append(xml_content)
-        
+
+
+        instrument_host_investigations = []
+        for instrument_host in bundle.instrument_hosts.all():
+            instrument_host_investigations.append(instrument_host.investigations.last())      
+
+        instrument_investigations = []
+        for instrument in bundle.instruments.all():
+            instrument_investigations.append(instrument.investigations.last())
+
+        facility_investigations = []
+        for facility in bundle.facilities.all():
+            facility_investigations.append(facility.investigations.last())
+
+        telescope_investigations = []
+        for telescope in bundle.telescopes.all():
+            telescope_investigations.append(telescope.investigations.last())
 
         # Context dictionary for template
         context_dict = {
@@ -692,7 +708,10 @@ def bundle(request, pk_bundle):
             'facilities': bundle.facilities.all(),
             'telescopes': bundle.telescopes.all(),
             'instruments': bundle.instruments.all(),
-            'instrument_hosts': bundle.instrument_hosts.all(),
+            'instrument_host_investigations': instrument_host_investigations,
+            'instrument_investigations': instrument_investigations,
+            'facility_investigations': facility_investigations,
+            'telescope_investigations': telescope_investigations,
             'targets': bundle.targets.all(),
             'product_observational_set':product_observational_set,
             'documents':Product_Document.objects.filter(bundle=bundle),
