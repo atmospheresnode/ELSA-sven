@@ -187,11 +187,9 @@
                      <hr>
                      <div class="card-body black-text pt-1 text-left">
                         <p>
-                           You do know, you do know that they don’t want you to have lunch. I’m keeping it real with you, so what you going do is have lunch. 
-                           We don’t see them, we will never see them. A major key, never panic. Don’t panic, when it gets crazy and rough, don’t panic, stay calm. 
-                           I’m giving you cloth talk, cloth. Special cloth alert, cut from a special cloth. How’s business? Boomin. 
-                           You see the hedges, how I got it shaped up? It’s important to shape up your hedges, it’s like getting a haircut, stay fresh. 
-                           You do know, you do know that they don’t want you to have lunch. I’m keeping it real with you, so what you going do is have lunch.
+                           The <strong> INVESTIGATION AREA </strong> provides references for your bundle including alternative names for
+            your dataset <strong>(Alias)</strong>, citation information for giving credit to those working on your data
+            <strong>(Citation Information)</strong>, and updates to the editing of the bundle <strong>(Modification History)</strong>.
                         </p>
                      </div>
                   </div>
@@ -208,10 +206,12 @@
                      <hr>
                      <div class="card-body black-text pt-1 text-left">
                         <p>
-                           Watch your back, but more importantly when you get out the shower, dry your back, it’s a cold world out there. 
-                           You should never complain, complaining is a weak emotion, you got life, we breathing, we blessed. Bless up. 
-                           They will try to close the door on you, just open it. The key is to enjoy life, because they don’t want you to enjoy life. 
-                           I promise you, they don’t want you to jetski, they don’t want you to smile. Surround yourself with angels. Mogul talk.
+                           In this section you should be able to manage your
+            bundle's collections.You can edit exsiting collection (label metadata, adding files to the collection), and
+            add new colections.The Context and XML Schema collections are used for system managemetn and will be
+            generated automatically and therefore are not neccessary to edit. You may add multiple document and data
+            collections as needed. ATM requires that you have at least one document collection to ensure your fianl
+            bundle will have adequate background documentation.
                         </p>
                      </div>
                   </div>
@@ -225,10 +225,10 @@
          <div class="text-center text-light">
             <div class="row p-1 m-3 mt-0">
                <div class="btn-group" role="group">
-                  <button type="button" class="btn btn-light text-light" data-bs-toggle="collapse" data-bs-target="#bundle_xml" aria-expanded="true" style="box-shadow: none;">Bundle</button>
-                  <button type="button" class="btn btn-light text-light" data-bs-toggle="collapse" data-bs-target="#context_xml" aria-expanded="true" style="box-shadow: none;">Context</button>
-                  <button type="button" class="btn btn-light text-light" data-bs-toggle="collapse" data-bs-target="#document_xml" aria-expanded="true" style="box-shadow: none;">Document</button>
-                  <button type="button" class="btn btn-light text-light" data-bs-toggle="collapse" data-bs-target="#xml_schema" aria-expanded="true" style="box-shadow: none;">XML Schema</button>
+                  <button type="button" class="btn btn-light btn-collapse text-light" data-bs-toggle="collapse" data-bs-target="#bundle_xml" aria-expanded="true" style="box-shadow: none;">Bundle</button>
+                  <button type="button" class="btn btn-light btn-collapse text-light" data-bs-toggle="collapse" data-bs-target="#context_xml" aria-expanded="true" style="box-shadow: none;">Context</button>
+                  <button type="button" class="btn btn-light btn-collapse text-light" data-bs-toggle="collapse" data-bs-target="#document_xml" aria-expanded="true" style="box-shadow: none;">Document</button>
+                  <button type="button" class="btn btn-light btn-collapse text-light" data-bs-toggle="collapse" data-bs-target="#xml_schema" aria-expanded="true" style="box-shadow: none;">XML Schema</button>
                </div>
             </div>
             <style>
@@ -381,73 +381,211 @@
 
                      {% if investigations %}
                         {% for investigation in investigations %}
-                        <div class="container mt-3">
-                           <a data-bs-toggle="collapse" data-bs-target="#context_options_{{ investigation.lid }}">
-                           <div class="card">
-                              <div class="row no-gutters">
-                                 <div class="col-md-2">
-                                    <img class="img-fluid" src="{% static 'images/investigation.png' %}" alt="Investigation Image" style="max-width: 65%;">
-                                 </div>
-                                 <div class="col-md-8">
-                                    <div class="card-body">
-                                       <h5 class="card-title">{{ investigation }}</h5>
-                                       <p class="card-text">{{ investigation.lid }}</p>
-                                       <button type="button" class="btn btn-danger">Remove</button>
+                           <div class="container mt-3">
+                              <a class="btn-collapse" data-bs-toggle="collapse" data-bs-target="#context_options_{{ investigation.name|slugify }}">
+                              <div class="card">
+                                 <div class="row no-gutters">
+                                    <div class="col-md-2">
+                                       <img class="img-fluid" src="{% static 'images/investigation.png' %}" alt="Investigation Image" style="max-width: 65%;">
+                                    </div>
+                                    <div class="col-md-8">
+                                       <div class="card-body">
+                                          <h5 class="card-title">{{ investigation }}</h5>
+                                          <p class="card-text">{{ investigation.lid }}</p>
+                                          <button type="button" class="btn btn-danger">Remove</button>
 
-                                   <!-- <p class="card-text"><small class="text-muted">Last updated 3 mins ago</small></p> -->
+                                    <!-- <p class="card-text"><small class="text-muted">Last updated 3 mins ago</small></p> -->
+                                       </div>
                                     </div>
                                  </div>
                               </div>
+                              </a>
                            </div>
-                           </a>
-                        </div>
-                        <div id="context_options_{{ investigation.lid }}" class="bundle-collapse">
-                           {% for instrument_host in instrument_hosts %}
-                              <!-- Change so it only shows instrument host relevant to this investigation -->
-                              {% if instrument_host.investigations.last == investigation %}
-                              <div class="col-md-6">
-                                 <div class="container mt-2">
-                                    <a data-bs-toggle="collapse" data-bs-target="#filler">
-                                    <div class="sub-card card">
-                                       <div class="row no-gutters">
-                                          <div class="col-md-2">
-                                             <img class="img-fluid" src="{% static 'images/host.png' %}" alt="Host Image" style="max-width: 65%;">
+                           <div id="context_options_{{ investigation.name|slugify }}" class="bundle-collapse">
+                              {% if investigation in instrument_host_investigations %}
+                                 {% for instrument_host in instrument_hosts %}
+                                    {% if instrument_host.investigations.last == investigation %}
+                                       <div class="col-md-6">
+                                          <div class="container mt-2">
+                                             <a data-bs-toggle="collapse" data-bs-target="#filler">
+                                             <div class="sub-card card">
+                                                <div class="row no-gutters">
+                                                   <div class="col-md-2">
+                                                      <img class="img-fluid" src="{% static 'images/host.png' %}" alt="Host Image" style="max-width: 65%;">
+                                                   </div>
+                                                   <div class="col-md-8">
+                                                      <div class="card-body">
+                                                         <h5 class="card-title">{{ instrument_host }}</h5>
+                                                         <p class="card-text">{{ instrument_host.lid }}</p>
+                                                      </div>
+                                                   </div>
+                                                </div>
+                                             </div>
+                                             </a>
                                           </div>
-                                          <div class="col-md-8">
-                                             <div class="card-body">
-                                                <h5 class="card-title">{{ instrument_host }}</h5>
-                                                <p class="card-text">{{ instrument_host.lid }}</p>
+                                       </div>
+                                    {% endif %}
+                                 {% endfor %}
+
+                                 {% if investigation in instrument_investigations %}
+                                    {% for instrument in instruments %}
+                                       {% if instrument.investigations.last == investigation %}
+                                          <div class="col-md-6">
+                                             <div class="container mt-2">
+                                                <a data-bs-toggle="collapse" data-bs-target="#filler">
+                                                <div class="sub-card card">
+                                                   <div class="row no-gutters">
+                                                      <div class="col-md-2">
+                                                         <img class="img-fluid" src="{% static 'images/host.png' %}" alt="Host Image" style="max-width: 65%;">
+                                                      </div>
+                                                      <div class="col-md-8">
+                                                         <div class="card-body">
+                                                            <h5 class="card-title">{{ instrument }}</h5>
+                                                            <p class="card-text">{{ instrument.lid }}</p>
+                                                         </div>
+                                                      </div>
+                                                   </div>
+                                                </div>
+                                                </a>
+                                             </div>
+                                          </div>
+                                       {% endif %}
+                                    {% endfor %}
+                                 {% else %}
+                                    <div class="col-md-6">
+                                       <div class="container mt-2">
+                                          <a href="{% url 'build:context_search_instrument_host_and_facility' bundle.pk investigation.pk %}">
+                                          <div class="sub-card card">
+                                             <div class="row no-gutters">
+                                                <div class="col-md-2">
+                                                   <img class="img-fluid" src="{% static 'images/null.png' %}" alt="Null" style="max-width: 65%;">
+                                                </div>
+                                                <div class="col-md-8">
+                                                   <div class="card-body">
+                                                      <h5 class="card-title">No Instrument</h5>
+                                                      <p class="card-text">Add a Instrument</p>
+                                                   </div>
+                                                </div>
+                                             </div>
+                                          </div>
+                                          </a>
+                                       </div>
+                                    </div>
+                                 {% endif %}
+                              {% else %}
+                                 <div class="col-md-6">
+                                    <div class="container mt-2">
+                                       <a href="{% url 'build:context_search_instrument_host_and_facility' bundle.pk investigation.pk %}">
+                                       <div class="sub-card card">
+                                          <div class="row no-gutters">
+                                             <div class="col-md-2">
+                                                <img class="img-fluid" src="{% static 'images/null.png' %}" alt="Null" style="max-width: 65%;">
+                                             </div>
+                                             <div class="col-md-8">
+                                                <div class="card-body">
+                                                   <h5 class="card-title">No Instrument Hosts</h5>
+                                                   <p class="card-text">Add a Instrument Host</p>
+                                                </div>
                                              </div>
                                           </div>
                                        </div>
+                                       </a>
                                     </div>
-                                    </a>
                                  </div>
-                              </div>
-                              {% else %}
                               {% endif %}
-                           {% empty %}
-                           <div class="col-md-8 ms-5">
-                              <div class="container mt-2">
-                                 <a href="{% url 'build:context_search_instrument_host_and_facility' bundle.pk investigation.pk %}">
-                                 <div class="sub-card card">
-                                    <div class="row no-gutters">
-                                       <div class="col-md-2">
-                                          <img class="img-fluid" src="{% static 'images/null.png' %}" alt="Null" style="max-width: 65%;">
-                                       </div>
-                                       <div class="col-md-8">
-                                          <div class="card-body">
-                                             <h5 class="card-title">No Instrument Hosts</h5>
-                                             <p class="card-text">Add a Instrument Host</p>
+
+                              {% if investigation in facility_investigations %}
+                                 {% for facility in facilities %}
+                                    {% if facility.investigations.last == investigation %}
+                                       <div class="col-md-6">
+                                          <div class="container mt-2">
+                                             <a data-bs-toggle="collapse" data-bs-target="#filler">
+                                             <div class="sub-card card">
+                                                <div class="row no-gutters">
+                                                   <div class="col-md-2">
+                                                      <img class="img-fluid" src="{% static 'images/host.png' %}" alt="Host Image" style="max-width: 65%;">
+                                                   </div>
+                                                   <div class="col-md-8">
+                                                      <div class="card-body">
+                                                         <h5 class="card-title">{{ facility }}</h5>
+                                                         <p class="card-text">{{ facility.lid }}</p>
+                                                      </div>
+                                                   </div>
+                                                </div>
+                                             </div>
+                                             </a>
                                           </div>
                                        </div>
+                                    {% endif %}
+                                 {% endfor %}
+
+                                 {% if investigation in telescope_investigations %}
+                                    {% for telescope in telescopes %}
+                                       {% if telescope.investigations.last == investigation %}
+                                          <div class="col-md-6">
+                                             <div class="container mt-2">
+                                                <a data-bs-toggle="collapse" data-bs-target="#filler">
+                                                <div class="sub-card card">
+                                                   <div class="row no-gutters">
+                                                      <div class="col-md-2">
+                                                         <img class="img-fluid" src="{% static 'images/host.png' %}" alt="Host Image" style="max-width: 65%;">
+                                                      </div>
+                                                      <div class="col-md-8">
+                                                         <div class="card-body">
+                                                            <h5 class="card-title">{{ telescope }}</h5>
+                                                            <p class="card-text">{{ telescope.lid }}</p>
+                                                         </div>
+                                                      </div>
+                                                   </div>
+                                                </div>
+                                                </a>
+                                             </div>
+                                          </div>
+                                       {% endif %}
+                                    {% endfor %}
+                                 {% else %}
+                                    <div class="col-md-6">
+                                       <div class="container mt-2">
+                                          <a href="{% url 'build:context_search_instrument_host_and_facility' bundle.pk investigation.pk %}">
+                                          <div class="sub-card card">
+                                             <div class="row no-gutters">
+                                                <div class="col-md-2">
+                                                   <img class="img-fluid" src="{% static 'images/null.png' %}" alt="Null" style="max-width: 65%;">
+                                                </div>
+                                                <div class="col-md-8">
+                                                   <div class="card-body">
+                                                      <h5 class="card-title">No Telescope</h5>
+                                                      <p class="card-text">Add a Telescope</p>
+                                                   </div>
+                                                </div>
+                                             </div>
+                                          </div>
+                                          </a>
+                                       </div>
+                                    </div>
+                                 {% endif %}
+                              {% else %}
+                                 <div class="col-md-6">
+                                    <div class="container mt-2">
+                                       <a href="{% url 'build:context_search_instrument_host_and_facility' bundle.pk investigation.pk %}">
+                                       <div class="sub-card card">
+                                          <div class="row no-gutters">
+                                             <div class="col-md-2">
+                                                <img class="img-fluid" src="{% static 'images/null.png' %}" alt="Null" style="max-width: 65%;">
+                                             </div>
+                                             <div class="col-md-8">
+                                                <div class="card-body">
+                                                   <h5 class="card-title">No Facility</h5>
+                                                   <p class="card-text">Add a Facility</p>
+                                                </div>
+                                             </div>
+                                          </div>
+                                       </div>
+                                       </a>
                                     </div>
                                  </div>
-                                 </a>
-                              </div>
+                              {% endif %}
                            </div>
-                           {% endfor %}
-                        </div>
                         {% endfor %}
                      {% else %}
                      {% endif %}
