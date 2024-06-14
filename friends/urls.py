@@ -6,7 +6,7 @@ from . import views
 
 app_name='friends'
 urlpatterns = [
-    #re_path(r'^$', views.FriendList.as_view(), name='friends'),
+    #url(r'^$', views.FriendList.as_view(), name='friends'),
     re_path(r'^(?P<pk_user>\d+)/$', views.profile, name='profile'),
     re_path(r'^login/$', views.friend_login, name='login'),
     re_path(r'^logout/$', views.friend_logout, name='logout'),

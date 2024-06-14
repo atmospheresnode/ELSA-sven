@@ -1,116 +1,129 @@
-{% extends 'main/base-k.html' %}
+{% extends 'base-derk.html' %}
 {% load static %}
 
-{% block main_header_block %}
-<br/>
-Welcome to <span class="text-muted">ELSA</span>.
-<hr/>
-{% endblock %}
-
 {% block body_block %}
-    <!-- About Page -->
-    {% if user.is_authenticated %}
-        <!--  What Card -->
-        <div class="row pt-2">
-            <div class="col-md-12">    
-                <div class="card">
-                    <h3 class="card-header elegant-color white-text text-center z-depth-2"> What does ELSA do? </h3>
-                    <div class="card-body">
-                        <br/>
-                        <h4 class="card-title"> Take a walk with ELSA, {{ user.first_name }}. </h4>
-                        <p class="card-text"> 
-                            ELSA is a user-centered application that aids in the creation of PDS4 compliant labels for your data bundles. 
-                            Since ELSA is a user-centered application, we'll first go to your profile page. Your profile page will be the hub for all your created bundles. 
-                            Click the button to begin the bundle creation process. 
-                            There is additional help texts found by hovering the cursor over buttons that will give a clearer description of the purpose of that section.
-                        </p>
-                        <center>
-                            <a class="btn btn-default" href="{{ user.userprofile.get_absolute_url }}"> @{{ user }} </a>
-                        </center>
-                    </div>
-                </div>
+  {% if user.is_authenticated %}
+  <div class="container-fluid justify-content-center align-items-center py-5">
+
+    <!-- What Card -->
+    <div class="row px-4 pt-5">
+      <div class="col mt-3">
+        <div class="card h-100 d-flex flex-column">
+          <div class="card-header bg-dark text-light h2">What does ELSA do?</div>
+          <div class="card-body d-flex flex-column">
+            <div class="card-title h4">Take a walk with ELSA, {{ user }}.</div>
+            <br>
+            <div class="card-text">
+              ELSA is a user-centered application that aids in the creation of PDS4 compliant labels for your data bundles.
+              Since ELSA is a user-centered application, we'll first go to your profile page.
+              Your profile page will be the hub for all your created bundles. Click the button to begin the bundle creation process.
+              There is additional help texts found by hovering the cursor over buttons that will give a clearer description of the purpose of that section.
             </div>
+          </div>
+          <!-- To Bundle Button -->
+          <a href="{{ user.userprofile.get_absolute_url }}" class="btn btn-light text-light m-4">@{{user}}</a>
         </div>
+      </div>
+    </div>
 
-        <hr/>
-
+    <div class="row px-4 pt-5">
+      <div class="col">
         <!-- Who Card -->
-        <div class="row pt-2">
-            <div class="col-md-12">    
-                <div class="card">
-                    <h3 class="card-header elegant-color white-text text-center z-depth-2"> Who is ELSA for? </h3>
-                    <div class="card-body">
-                        <br/>
-                        <h4 class="card-title"> Are you part of the PDS4 community? </h4>
-                        <p class="card-text"> ELSA was created to help lessen the learning curve involved for new PDS4 users.
-                             Check out the Planetary Data System's page to learn more about data archiving and distribution.
-                        </p>
-                        <center>
-                            <a class="btn btn-default" href="https://pds.jpl.nasa.gov/"> @PDS </a> 
-                            <a class="btn btn-default" href="http://atmos.nmsu.edu/"> @ATM </a>
-                        </center>
-                    </div>
-                </div>
-            </div>
+        <div class="card h-100 d-flex flex-column">
+          <div class="card-header bg-dark text-light h2">Who is ELSA for?</div>
+          <div class="card-body d-flex flex-column">
+              <div class="card-title h4">Are you a part of the PDS4 Community?</div>
+              <br>
+              <div class="card-text">
+                  ELSA was created to help lessen the learning curve involved for new PDS4 users. Check out the Planetary Data System's page to learn more about data archiving and distribution.
+              </div>
+          </div>
+          <!-- PDS & ATM Buttons -->
+          <div class="row">
+              <div class="col m-3 me-0">
+                  <a href="https://pds.jpl.nasa.gov/" class="btn btn-light text-light w-100">@PDS</a>
+              </div>
+              <div class="col m-3 ms-0">
+                  <a href="http://atmos.nmsu.edu/" class="btn btn-light text-light w-100">@ATM</a>
+              </div>
+          </div>
         </div>
-
-        <hr/>
-
+      </div>
+      
+      <div class="col">
         <!-- Why Card -->
-        <div class="row pt-2">
-            <div class="col-md-12">    
-                <div class="card">
-                    <h3 class="card-header elegant-color white-text text-center z-depth-2"> Why ELSA? </h3>
-                    <div class="card-body">
-                        <br/>
-                        <h4 class="card-title">Well, ELSA is great!</h4>
-                        <p class="card-text">.
-                            .. At least we think so! ELSA is an educational tool. 
-                            ELSA is currently in development but is making pretty good progress. 
-                            You can read more about ELSA below. 
-                        </p>
-                        <center>
-                            <a class="btn btn-default" href="{% url 'main:about' %}"> @ABOUT </a>
-                        </center>
-                    </div>
-                </div>
-            </div>
+        <div class="card mb-4 h-100 d-flex flex-column">
+          <div class="card-header bg-dark text-light h2">Why ELSA?</div>
+          <div class="card-body d-flex flex-column">
+              <div class="card-title h4">Well, ELSA is great!</div>
+              <br>
+              <div class="card-text">
+                  ... At least we think so! ELSA is an educational tool. ELSA is currently in development but is making pretty good progress. You can read more about ELSA below.
+              </div>
+          </div>
+          <a href="{% url 'main:about' %}" class="btn btn-light text-light m-4">About</a>
         </div>
+      </div>
 
-        <hr/>
+    </div>
+  </div>
+  {% else %}
     <!-- Login Page -->
-    {% else %}
-        <!-- Flavor Text -->
-        <div class="row pt-2">
-            <div class="col-md-12">
-                <p> The Educational Labeling System @Atmospheres (ELSA) is a tool designed to help streamline the creation of PDS4 compliant labels. 
-                    Here at Atmos, we believe in taking a top-down approach when it comes to your data. 
-                    ELSA begins with the unique name of your bundle, trickles down through your collections, and ends with the details of your data to provide you with PDS4 labels.
-                </p>
-            </div>
+    <div class="container-fluid d-flex vh-100 text-center text-lg-start align-items-center justify-content-center">
+      <div class="row">
+        <!-- Left-Side Info Text -->
+        <div class="col text-center ms-5">
+          <h1 class="display-3 fw-bold ls-tight"> Welcome to <span class="text-secondary">ELSA</span></h1>
+          <hr>
+          <p>
+            The Educational Labeling System @Atmospheres (ELSA) is a tool designed to help streamline the creation of PDS4 compliant labels. 
+            Data sets within the PDS4 archiving standard begin at the top with setting up the bundle file, which defines what collections you intend to include, 
+            and eventually includes products (your files + metadata labels). 
+            ELSA provides a consistent way to populate the XML labels with the unique identifiers that serve as the backbone of PDS4 in an easy and helpful way.
+          </p>
         </div>
 
-        <hr/>
-       
-        <!-- Login Form -->
-        <div class="row pt-2">
-            <div class="col-md-6 push-md-3">
-                <br/>
-                <p> 
-                    <form id="login_form" method="post" action="{% url 'friends:login' %}">
-                        {% csrf_token %}
-                        <strong>Username</strong><input type="text" name="username" value="" size="50"/> 
-                        <br/><br/>
-                        <strong>Password</strong><input type="password" name="password" value="" size="50"/> 
-                        <br/><br/>
-                        <center>
-                            <input class="btn btn-default" type="submit" value="login"/>
-                            <a class="btn btn-default" href="{% url 'friends:password_reset' %}"> Forgot Password? </a>
-                            <a class="btn btn-default" href="{% url 'friends:register' %}"> Sign Up Here </a>
-                        </center>
-                    </form>
-                </p>
+        <!-- Right-Side Card-->
+        <div class="col mb-5 mb-lg-0 mx-5">
+          <div class="card">
+            <div class="card-body py-5 px-md-5">
+              <div class="row justify-content-start">
+                <!-- ELSA & PDS LOGO -->
+                <div class="col mb-4">
+                  <img src="{% static 'images/thumbnail_ELSA_Logo-black.png' %}" alt="elsa logo" style="height: 50px; width: 90px;">
+                  <img src="{% static 'images/PDS_Planets.png' %}" alt="pds logo" style="height: 50px; width: 90px;">
+                </div>
+              </div>
+
+              <!-- Login Form -->
+              <form id="login_form" method="post" action="{% url 'friends:login' %}">
+                {% csrf_token %}
+                <!-- Username and Password Input Fields -->
+                <div class="form-outline mb-4">
+                  <input type="text" class="form-control" name="username" placeholder="Username"/>
+                </div>
+
+                <div class="form-outline mb-4">
+                  <input type="password" class="form-control" name="password" placeholder="Password"/>
+                </div>
+
+                <!-- Forgot Password -->
+                <div class="mt-3 mb-4 ms-1">
+                  <a class="text-dark" href="{% url 'friends:password_reset' %}" style="text-decoration: none;">Forgot password?</a>
+                </div>
+
+                <!-- Login Button -->
+                <button type="submit" class="btn btn-light text-light">
+                  Login
+                </button>
+
+                <!-- Sign Up -->
+                <a class="ms-3 text-dark" style="text-decoration: none;" href="{% url 'friends:register' %}">Sign Up Here</a>
+              </form>
             </div>
+          </div>
         </div>
-    {% endif %}
+      </div>
+    </div>
+  {% endif %}
 {% endblock %}

@@ -13,7 +13,7 @@ from . import views
 app_name='build'
 urlpatterns = [
     # Alias
-#    re_path(r'^(?P<pk_bundle>\d+)/alias/$', views.alias, name='alias'),
+#    url(r'^(?P<pk_bundle>\d+)/alias/$', views.alias, name='alias'),
     re_path(r'^(?P<pk_bundle>\d+)/alias_edit/(?P<pk_alias>[-\w]+)/$', views.alias_edit, name='alias_edit'),
 
     re_path(r'^(?P<pk_bundle>\d+)/alias_delete/(?P<pk_alias>[-\w]+)/$', views.alias_delete, name='alias_delete'),
@@ -70,7 +70,7 @@ urlpatterns = [
 
 
     # Data
-#    re_path(r'^(?P<pk_bundle>\d+)/data/$', views.data, name='data'),
+#    url(r'^(?P<pk_bundle>\d+)/data/$', views.data, name='data'),
     re_path(r'^(?P<pk_bundle>\d+)/data/(?P<pk_data>\d+)/$', views.data, name='data'),    
     re_path(r'^(?P<pk_bundle>\d+)/data/(?P<pk_product_observational>\d+)/$', views.product_observational, name='product_observational'),
 
@@ -101,7 +101,7 @@ urlpatterns = [
     re_path(r'^(?P<path>.*)/$', views.index, name='directory_view'),
 
 
-    # XML_Schema --> A view that no one sees.  So no xml_schema re_path.  This might even be removed 
+    # XML_Schema --> A view that no one sees.  So no xml_schema url.  This might even be removed 
     # completely from PDS4
 
 
