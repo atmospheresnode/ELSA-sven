@@ -1974,29 +1974,11 @@ class Bundle(models.Model):
         ('s', 'Submit'),
     )
 
-    BUNDLE_TYPE_CHOICES = (
-        ('Archive', 'Archive'),
-        ('Supplemental', 'Supplemental'),
-    )
-
-    VERSION_CHOICES = (
-        ('1K00', '1K00'),
-        ('1J00', '1J00'),
-        ('1I00', '1I00'),
-        ('1H00', '1H00'),
-        ('1G00', '1G00'),
-        ('1F00', '1F00'),
-        ('1E00', '1E00'),
-        ('1D00', '1D00'),
-    )
-
-    bundle_type = models.CharField(
-        max_length=12, choices=BUNDLE_TYPE_CHOICES, default='Archive',)
+    bundle_type = models.CharField(max_length=12, default='Archive',)
     name = models.CharField(max_length=MAX_CHAR_FIELD, unique=True)
-    status = models.CharField(
-        max_length=1, choices=BUNDLE_STATUS, blank=False, default='b')
+    status = models.CharField(max_length=1, choices=BUNDLE_STATUS, blank=False, default='b')
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    version = models.CharField(max_length=4, choices=VERSION_CHOICES,)
+    version = models.CharField(max_length=4)
     #version = models.ForeignKey(Version, on_delete=models.CASCADE, default=get_most_current_version())
     #raw_enum = models.PositiveIntegerField(null=True, default = 0)
     #calibrated_enum = models.PositiveIntegerField(null=True, default = 0)
