@@ -63,8 +63,8 @@ def check():
 
 # Redirecting accounts/login to elsa/ (taking the user to the new UI)
 def redirect_to_elsa_home(request): 
-    return redirect('https://atmos.nmsu.edu/elsa/')  # takes to the online ELSA instead of the local
-    #return redirect('/')  # does not login / not the original login page
+    #return redirect('https://atmos.nmsu.edu/elsa/')  # takes to the online ELSA instead of the local
+    return HttpResponseRedirect(reverse('main:index'))  # does not login / not the original login page
 
 
 
@@ -116,7 +116,8 @@ def friend_login(request):
             return HttpResponse("Invalid login details supplied.")
     else:
         # Not a POST, so simply display the login form
-        return render(request, 'friends/login.html', {})
+        #return render(request, 'friends/login.html', {})
+        return HttpResponseRedirect(reverse('main:index'))
 
 
 
