@@ -1,13 +1,13 @@
 {% extends 'base-derk.html' %}
 {% load static %}
 
-{% block title_block %}
+<!-- {% block title_block %}
 PDS Data Peer Review
 {% endblock %}
 
 {% block main_header_block %}
 PDS Data Peer Review
-{% endblock %}
+{% endblock %} -->
 
 {% block body_block %}
 {% if email_sent %}
@@ -28,29 +28,115 @@ PDS Data Peer Review
 </div>
 <!--/.First row-->
 {% else %}
-<!--First row-->
-<div class="row pt-2">
-    <!--First column-->
-    <div class="col-md-12">
-        <!--Card-->
-        <div class="card">
-            <!--Card content-->
-            <div class="card-body">
-                <!--Title-->
-                <h4 class="card-title">Review Comments</h4>
-                <!--Text-->
-                <p class="card-text">
+<hr>
+<div class="container-fluid justify-content-center align-items-center py-5">
+    <div class="row justify-content-center align-items-center">
+        <div class="col-12 col-lg-9 col-xl-10">
+            <div class="card">
+                <div class="card-body p-4 p-md-5">
+                    <h2 class="mb-5 pb-2 pb-md-0 mb-md-4">Review Comments</h2>
                     <form role="form" action="" method="post">
                         {% csrf_token %}
-                        {{ review_form.as_p }}
-                        <button type="submit" class="btn btn-primary">Submit</button>
+                        <div class="mb-4">
+                            <div class="row g-0">
+                                <div class="col-md-1 mt-2">
+                                    <h6>Full Name</h6>
+                                </div>
+
+                                <div class="col-md-11 form-outline">
+                                    {{ review_form.user_name }}
+                                </div>
+                            </div>   
+                        </div>
+                        <div class="mb-4">
+                            <div class="row g-0">
+                                <div class="col-sm-2 mt-2">
+                                    <h6>Email Address</h6>
+                                </div>
+
+                                <div class="col-sm-10 form-outline">
+                                    {{ review_form.user_email }}
+                                </div>
+                            </div>  
+                        </div>
+                        <div class="mb-4">
+                            <div class="row g-0">
+                                <div class="col-md-2 mt-2">
+                                    <h6>Name of PDS data set reviewed</h6>
+                                </div>
+
+                                <div class="col-md-10 form-outline">
+                                    {{ review_form.derived_data }}
+                                </div>
+                            </div>  
+                        </div>
+
+                        <div class="mb-4">
+                            <div class="row g-0">
+                                <div class="col-md-2 mt-2">
+                                    <h6>Archive Standard</h6>
+                                </div>
+
+                                <div class="col-md-10">
+                                    {{ review_form.archive_standard }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <div class="col g-0">
+                                <div class="mt-2">
+                                    <h6>Does the data provide clear and concise documentation adequate for its usage?</h6>
+                                </div>
+
+                                <div class="row">
+                                    {{ review_form.question1 }}
+                                </div>
+                            </div>  
+                        </div>
+
+                        <div class="mb-4">
+                            <div class="col g-0">
+                                <div class="mt-2">
+                                    <h6>Are you able to manipulate and plot the data, interpret columns into tables, and understand the context and relationships of the data products?</h6>
+                                </div>
+
+                                <div class="row">
+                                    {{ review_form.question2 }}
+                                </div>
+                            </div>  
+                        </div>
+
+                        <div class="mb-4">
+                            <div class="col g-0">
+                                <div class="mt-2">
+                                    <h6>Are there any concerns about the creation/generation, calibration, or general usability of the data?</h6>
+                                </div>
+
+                                <div class="row">
+                                    {{ review_form.question3 }}
+                                </div>
+                            </div>  
+                        </div>
+
+                        <div class="mb-4">
+                            <div class="col g-0">
+                                <div class="mt-2">
+                                    <h6>Any further comments to PDS Atmospheres Node about the data?</h6>
+                                </div>
+
+                                <div class="row">
+                                    {{ review_form.question4 }}
+                                </div>
+                            </div>  
+                        </div>
+
+                        <button type="submit" class="btn btn-light text-light mt-4">Submit</button>
                     </form>
-                </p>
+                </div>
             </div>
-        <!--/.Card-->
+        </div>
     </div>
-    <!--/.First column-->
 </div>
-<!--/.First row-->
 {% endif %}
 {% endblock %}

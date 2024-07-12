@@ -1357,6 +1357,9 @@ class Target(models.Model):
     vid = models.FloatField(default=1.0)
     file_ref = models.CharField(max_length=MAX_CHAR_FIELD)
 
+    # Hold's investigations target was chosen from
+    investigations = models.ManyToManyField("Investigation")
+
     # Attributes used to manage Instrument Host object
     #objects = TargetManager()
 

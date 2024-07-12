@@ -1481,6 +1481,8 @@ def context_search_instrument_host_and_facility(request, pk_bundle, pk_investiga
                 i.investigations.add(investigation)
                 i.save()
 
+                print(i.investigations)
+
                 # Label Fix for context products - Said
                 product_bundle = Product_Bundle.objects.get(bundle=bundle)
                 product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
@@ -1595,7 +1597,7 @@ def context_search_target_inv(request, pk_bundle, pk_investigation):
                 context_dict['target'] = i
                 bundle.targets.add(i)
 
-                # i.investigations.add(investigation)
+                i.investigations.add(investigation)
 
                 # Label Fix for context products - Said
                 product_bundle = Product_Bundle.objects.get(bundle=bundle)
