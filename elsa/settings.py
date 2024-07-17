@@ -83,7 +83,8 @@ SECRET_KEY = secret_key()
 
 #     SECURITY WARNING: don't run with debug turned on in production!
 #                   use live debug for quick checks in production.
-DEBUG = True
+
+DEBUG = True #Set to True for local development, False for production
 
 
 #    The following is literally read, if the DEBUG variable is set to False, then the only allowed hosts are those listed for production only.  By allowing DEBUG to be True AND using only the allowed hosts for production, we open ourselves up to vulnerabilities from outside attackers.

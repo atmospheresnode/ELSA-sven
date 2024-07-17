@@ -61,6 +61,13 @@ def check():
 
 
 
+# Redirecting accounts/login to elsa/ (taking the user to the new UI)
+def redirect_to_elsa_home(request): 
+    #return redirect('https://atmos.nmsu.edu/elsa/')  # takes to the online ELSA instead of the local
+    return HttpResponseRedirect(reverse('main:index'))  # does not login / not the original login page
+
+
+
 # Normal profile page for users.  Displays the user, associated userprofile, and a list of related bundles.
 @login_required
 def profile(request, pk_user):
@@ -88,7 +95,6 @@ def profile(request, pk_user):
         return redirect('main:restricted_access')
 
 
-    
 
 # let's elsa's friends login
 def friend_login(request):
@@ -110,7 +116,8 @@ def friend_login(request):
             return HttpResponse("Invalid login details supplied.")
     else:
         # Not a POST, so simply display the login form
-        return render(request, 'friends/login.html', {})
+        #return render(request, 'friends/login.html', {})
+        return HttpResponseRedirect(reverse('main:index'))
 
 
 
@@ -213,10 +220,5 @@ def friend_settings(request, pk_user):
 
     else:
         return redirect('main:restricted_access')
-
-
-
-
-
-
+    
 

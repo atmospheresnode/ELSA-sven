@@ -10,21 +10,20 @@ Login to Elsa
 {% endblock %}
 
 {% block body_block %}
-<!--First row-->
+<!-- First row -->
 <div class="row pt-2">
-    <!--First column-->
+    <!-- First column -->
     <div class="col-md-12">
-        <form id="login_form" method="post" action="{% url 'friends:login' %}">
+        <form id="login_form" method="post" action="{% url 'friends:redirect_to_elsa' %}">
             {% csrf_token %}
             Username: <input type="text" name="username" value="" size="50"/>
             <br/>
             Password: <input type="password" name="password" value="" size="50"/>
             <br/>
-            <input type="submit" value="submit"/>
+            <input type="submit" value="Submit"/>
         </form>
     </div>
-    <!--/.First column-->
+    <!-- /.First column -->
 </div>
-<!--/.First row-->
+<!-- /.First row -->
 {% endblock %}
-
