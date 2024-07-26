@@ -1,4 +1,4 @@
-{% extends 'main/base-k.html' %}
+{% extends 'base-derk.html' %}
 {% load static %}
 
 {% block title_block %}
@@ -9,15 +9,48 @@
 Profile Settings
 {% endblock %}
 
+
+           
+
 {% block body_block %}
+<hr>
+<hr>
+
+<style> 
+	.bg{
+		background-image: url('/static/images/team2.png');
+		background-position:center;
+		opacity:.5;
+	}
+
+	.special-body{ 
+		opacity:1;
+	}
+
+	.main-card{
+		opacity:1;
+	}
+</style>
+
+<div class="container-fluid justify-content-center align-items-center py-5">
+    <div class="row justify-content-center align-items-center">
+        <div class="col-12 col-lg-9 col-xl-10">
 <!--Row-->
-<div class="row pt-2">
+
+<div class="card">
+<div class="justify-content-center">
+<img class="card-img" src="{% static 'images/team2.png' %}" style="opacity:.25; object-fit:cover; height:750px;">
+</div>
+<div class="card-img-overlay">
+	<div class="card-body special-body p-4 p-md-5">
+		
+
     <!--Column-->
-    <div class="col-md-8">
-        <!--Card-->
+    
+        {% comment %} <!--Card-->
         <div class="card">
             <!--Card content-->
-            <div class="card-body">
+            <div class="card-body"> {% endcomment %}
                 <!--Title-->
                 <h3 class="card-title">Profile Settings</h3>
 		<hr >
@@ -64,23 +97,22 @@ Profile Settings
             	    Confirm New Password: <input type="password" name="confirm_password" value="" size="50"/>
             	    <br/>
             	    <input type="submit" value="submit"/>
-        	</form>                  
-            </div>
+        	</form>  
+			</div>
+		</div>           
         </div>
+
+		{% comment %} <div class="text-center">
+			<img src="{% static 'images/team2.png' %}" class="img-fluid" style="max-width:50%;" align="center">
+		</div> {% endcomment %}
         <!--/.Card-->
-    </div>
+   
     <!--/.Column-->
     <!--Column-->
-    <div class="col-md-4">
-        <img src="{% static 'images/team2.png' %}" class="img-fluid">
-    </div>
+    
     <!--/.Column-->
 </div>
-<!--/.Row-->
-<hr/>
-<!--Row-->
-
-<!--/.Row-->
-<hr/>
+</div>
+</div>
 
 {% endblock %}
