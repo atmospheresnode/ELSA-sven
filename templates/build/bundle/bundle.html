@@ -89,10 +89,6 @@
       transition: transform 0.3s ease;
    }
 
-   .bundle-collapse {
-      display: none;
-   }
-
    /* Tabs Styling */
    .bundle-nav-tabs .bundle-nav-item.show .bundle-nav-link .bundle-nav-link.active {
       background-color: transparent;
@@ -146,180 +142,193 @@
                   Several sections are used universally throughout your bundle (e.g., Investigation Area and Context). The
                   Collections section will allow you to add, view, and edit collections that you would like to include in your
                   bundle.
+
+                  <div class="col p-1 m-3 mt-0">
+                        <a type="button" class="btn btn-info text-light" href="" aria-expanded="true" style="box-shadow: none;">Help</a>
+                        <a type="button" class="btn btn-danger text-light" href="{% url 'build:bundle_delete' bundle.pk %}" aria-expanded="false" style="box-shadow: none;">Delete Bundle</a>
+                        <a type="button" class="btn btn-light text-light" href="{% url 'build:directory_view' bundle.relative_dir %}" aria-expanded="false" style="box-shadow: none;">View Bundle</a>
+                        <a type="button" class="btn btn-warning text-light" href="{% url 'build:bundle_download' bundle.pk %}" aria-expanded="false" style="box-shadow: none;">Download Bundle</a>
+                  </div>
+
+                  
                </p>
             </div>
          </div>
 
-         <!-- Buttons -->
-         <div class="row p-1 m-3 mt-0">
-            <div class="btn-group" role="group">
-               <button type="button" class="btn btn-light btn-collapse text-light" data-bs-toggle="collapse" data-bs-target="#context" aria-expanded="true" style="box-shadow: none;">Context</button>
-               <button type="button" class="btn btn-light btn-collapse text-light" data-bs-toggle="collapse" data-bs-target="#investigation" aria-expanded="true" style="box-shadow: none;">Investigation Area</button>
-               <button type="button" class="btn btn-light btn-collapse text-light" data-bs-toggle="collapse" data-bs-target="#collections" aria-expanded="true" style="box-shadow: none;">Collections</button>
+         <div id="accordion" class="mb-5">
+            <!-- Buttons -->
+            <div class="row p-1 m-3 mt-0">
+               <div class="btn-group" role="group">
+                  <button type="button" class="btn btn-light text-light" data-bs-toggle="collapse" data-bs-target="#context" aria-expanded="true" style="box-shadow: none;">Context</button>
+                  <button type="button" class="btn btn-light text-light" data-bs-toggle="collapse" data-bs-target="#investigation" aria-expanded="false" style="box-shadow: none;">Investigation Area</button>
+                  <button type="button" class="btn btn-light text-light" data-bs-toggle="collapse" data-bs-target="#collections" aria-expanded="false" style="box-shadow: none;">Collections</button>
+               </div>
             </div>
-         </div>
 
-         <!-- Context -->
-         <div id="context" class="bundle-collapse">
-            <div class="row p-1 m-3 mt-1">
-               <a data-bs-toggle="modal" data-bs-target="#context_modal">
-                  <div class="card modal-card">
-                     <h5 class="card-title black-text mt-3 text-center"><strong>CONTEXT</strong></h5>
-                     <hr>
-                     <div class="card-body black-text pt-1 text-left">
-                        <p>
-                           Adding context products entails associating your bundle
-                           with the missions, facilities, telescopes, instruments, the hosts of those instruments, targets, and the
-                           like that relate to the data within your bundle.
-                        </p>
+            <!-- Context -->
+            <div id="context" class="collapse show" data-bs-parent="#accordion">
+               <div class="row p-1 m-3 mt-1">
+                  <a data-bs-toggle="modal" data-bs-target="#context_modal">
+                     <div class="card modal-card">
+                        <h5 class="card-title black-text mt-3 text-center"><strong>CONTEXT</strong></h5>
+                        <hr>
+                        <div class="card-body black-text pt-1 text-left">
+                           <p>
+                              Adding context products entails associating your bundle
+                              with the missions, facilities, telescopes, instruments, the hosts of those instruments, targets, and the
+                              like that relate to the data within your bundle.
+                           </p>
+                        </div>
                      </div>
-                  </div>
-               </a>
+                  </a>
+               </div>
             </div>
-         </div>
 
-         <!-- Investigation Area -->
-         <div id="investigation" class="bundle-collapse">
-            <div class="row p-1 m-3 mt-1">
-               <a data-bs-toggle="modal" data-bs-target="#invest_area_modal">
-                  <div class="card modal-card">
-                     <h5 class="card-title black-text mt-3 text-center"><strong>INVESTIGATION AREA</strong></h5>
-                     <hr>
-                     <div class="card-body black-text pt-1 text-left">
-                        <p>
-                           The <strong> INVESTIGATION AREA </strong> provides references for your bundle including alternative names for
-            your dataset <strong>(Alias)</strong>, citation information for giving credit to those working on your data
-            <strong>(Citation Information)</strong>, and updates to the editing of the bundle <strong>(Modification History)</strong>.
-                        </p>
+            <!-- Investigation Area -->
+            <div id="investigation" class="collapse" data-bs-parent="#accordion">
+               <div class="row p-1 m-3 mt-1">
+                  <a data-bs-toggle="modal" data-bs-target="#invest_area_modal">
+                     <div class="card modal-card">
+                        <h5 class="card-title black-text mt-3 text-center"><strong>INVESTIGATION AREA</strong></h5>
+                        <hr>
+                        <div class="card-body black-text pt-1 text-left">
+                           <p>
+                              The <strong> INVESTIGATION AREA </strong> provides references for your bundle including alternative names for
+               your dataset <strong>(Alias)</strong>, citation information for giving credit to those working on your data
+               <strong>(Citation Information)</strong>, and updates to the editing of the bundle <strong>(Modification History)</strong>.
+                           </p>
+                        </div>
                      </div>
-                  </div>
-               </a>
+                  </a>
+               </div>
             </div>
-         </div>
-         
-         <!-- Collections -->
-         <div id="collections" class="bundle-collapse">
-            <div class="row p-1 m-3 mt-1">
-               <a data-bs-toggle="modal" data-bs-target="#collections_modal">
-                  <div class="card modal-card">
-                     <h5 class="card-title black-text mt-3 text-center"><strong>COLLECTIONS</strong></h5>
-                     <hr>
-                     <div class="card-body black-text pt-1 text-left">
-                        <p>
-                           In this section you should be able to manage your
-            bundle's collections.You can edit exsiting collection (label metadata, adding files to the collection), and
-            add new colections.The Context and XML Schema collections are used for system managemetn and will be
-            generated automatically and therefore are not neccessary to edit. You may add multiple document and data
-            collections as needed. ATM requires that you have at least one document collection to ensure your fianl
-            bundle will have adequate background documentation.
-                        </p>
+            
+            <!-- Collections -->
+            <div id="collections" class="collapse" data-bs-parent="#accordion">
+               <div class="row p-1 m-3 mt-1">
+                  <a data-bs-toggle="modal" data-bs-target="#collections_modal">
+                     <div class="card modal-card">
+                        <h5 class="card-title black-text mt-3 text-center"><strong>COLLECTIONS</strong></h5>
+                        <hr>
+                        <div class="card-body black-text pt-1 text-left">
+                           <p>
+                              In this section you should be able to manage your
+               bundle's collections.You can edit exsiting collection (label metadata, adding files to the collection), and
+               add new colections.The Context and XML Schema collections are used for system managemetn and will be
+               generated automatically and therefore are not neccessary to edit. You may add multiple document and data
+               collections as needed. ATM requires that you have at least one document collection to ensure your fianl
+               bundle will have adequate background documentation.
+                           </p>
+                        </div>
                      </div>
-                  </div>
-               </a>
+                  </a>
+               </div>
             </div>
          </div>
       </div>
 
       <div class="col-md-6">
-         <!-- View XML Side -->
-         <div class="text-center text-light">
-            <div class="row p-1 m-3 mt-0">
-               <div class="btn-group" role="group">
-                  <button type="button" class="btn btn-light btn-collapse text-light" data-bs-toggle="collapse" data-bs-target="#bundle_xml" aria-expanded="true" style="box-shadow: none;">Bundle</button>
-                  <button type="button" class="btn btn-light btn-collapse text-light" data-bs-toggle="collapse" data-bs-target="#context_xml" aria-expanded="true" style="box-shadow: none;">Context</button>
-                  <button type="button" class="btn btn-light btn-collapse text-light" data-bs-toggle="collapse" data-bs-target="#document_xml" aria-expanded="true" style="box-shadow: none;">Document</button>
-                  <button type="button" class="btn btn-light btn-collapse text-light" data-bs-toggle="collapse" data-bs-target="#xml_schema" aria-expanded="true" style="box-shadow: none;">XML Schema</button>
+         <div id="accordion2">
+            <!-- View XML Side -->
+            <div class="text-center text-light">
+               <div class="row p-1 m-3 mt-0">
+                  <div class="btn-group" role="group">
+                     <button type="button" class="btn btn-light text-light" data-bs-toggle="collapse" data-bs-target="#bundle_xml" aria-expanded="true" style="box-shadow: none;">Bundle</button>
+                     <button type="button" class="btn btn-light text-light" data-bs-toggle="collapse" data-bs-target="#context_xml" aria-expanded="false" style="box-shadow: none;">Context</button>
+                     <button type="button" class="btn btn-light text-light" data-bs-toggle="collapse" data-bs-target="#document_xml" aria-expanded="false" style="box-shadow: none;">Document</button>
+                     <button type="button" class="btn btn-light text-light" data-bs-toggle="collapse" data-bs-target="#xml_schema" aria-expanded="false" style="box-shadow: none;">XML Schema</button>
+                  </div>
                </div>
-            </div>
-            <style>
-               .xml-card {
-                  height: 500px;
-               }
+               <style>
+                  .xml-card {
+                     height: 500px;
+                  }
 
-               .xml-container {
-                  color:black;
-                  white-space: pre;
-                  font-family: monospace;
-                  font-size: small;
-                  text-align: left;
-                  overflow-y: auto;
-               }
-            </style>
+                  .xml-container {
+                     color:black;
+                     white-space: pre;
+                     font-family: monospace;
+                     font-size: small;
+                     text-align: left;
+                     overflow-y: auto;
+                  }
+               </style>
 
-            <div id="bundle_xml">
-               <div class="row">
-                  <div class="col-sm-6">
-                     <a data-bs-toggle="modal" data-bs-target="#bundle_xml_modal">
-                     <div class="card xml-card modal-card">
-                        <h5 class="card-title black-text mt-3 text-center"><strong>Bundle XML</strong></h5>
-                        <hr>
-                        <div class="xml-container">
-                           <pre><code>{{ xml_content_set.0 }}</code></pre>
+               <div id="bundle_xml" class="collapse show" data-bs-parent="#accordion2">
+                  <div class="row">
+                     <div class="col-sm-6">
+                        <!-- <a data-bs-toggle="modal" data-bs-target="#bundle_xml_modal"> -->
+                        <div class="card xml-card modal-card">
+                           <h5 class="card-title black-text mt-3 text-center"><strong>Bundle XML</strong></h5>
+                           <hr>
+                           <div class="xml-container">
+                              <pre><code>{{ xml_content_set.0 }}</code></pre>
+                           </div>
                         </div>
+                        <!-- </a> -->
                      </div>
+                  </div>
+               </div>
+
+               <!-- <div id="bundle_xml" class="bundle-collapse">
+                  <div class="row p-1 m-3 mt-1">
+                     <a data-bs-toggle="modal" data-bs-target="#bundle_xml_modal">
+                        <div class="card h-100">
+                           <h5 class="card-title black-text mt-3 text-center"><strong>Bundle XML</strong></h5>
+                           <hr>
+                           <div class="xml-container">
+                              <pre><code>{{ xml_content_set.0 }}</code></pre>
+                           </div>
+                        </div>
+                     </a>
+                  </div>
+               </div> -->
+               <div id="context_xml" class="collapse" data-bs-parent="#accordion2">
+                  <div class="row p-1 m-3 mt-1">
+                     <a data-bs-toggle="modal" data-bs-target="">
+                        <div class="card modal-card">
+                           <h5 class="card-title black-text mt-3 text-center"><strong>Context XML</strong></h5>
+                           <hr>
+                           <div class="xml-container">
+                              <pre><code>{{ xml_content_set.1 }}</code></pre>
+                           </div>
+                        </div>
+                     </a>
+                  </div>
+               </div>
+               <div id="document_xml" class="collapse" data-bs-parent="#accordion2">
+                  <div class="row p-1 m-3 mt-1">
+                     <a data-bs-toggle="modal" data-bs-target="">
+                        <div class="card modal-card">
+                           <h5 class="card-title black-text mt-3 text-center"><strong>Document XML</strong></h5>
+                           <hr>
+                           <div class="xml-container">
+                              <pre><code>{{ xml_content_set.2 }}</code></pre>
+                           </div>
+                        </div>
+                     </a>
+                  </div>
+               </div>
+               <div id="xml_schema" class="collapse" data-bs-parent="#accordion2">
+                  <div class="row p-1 m-3 mt-1">
+                     <a data-bs-toggle="modal" data-bs-target="">
+                        <div class="card modal-card">
+                           <h5 class="card-title black-text mt-3 text-center"><strong>XML Schema</strong></h5>
+                           <hr>
+                           <div class="xml-container">
+                              <pre><code>{{ xml_content_set.3 }}</code></pre>
+                           </div>
+                        </div>
                      </a>
                   </div>
                </div>
             </div>
-
-            <!-- <div id="bundle_xml" class="bundle-collapse">
-               <div class="row p-1 m-3 mt-1">
-                  <a data-bs-toggle="modal" data-bs-target="#bundle_xml_modal">
-                     <div class="card h-100">
-                        <h5 class="card-title black-text mt-3 text-center"><strong>Bundle XML</strong></h5>
-                        <hr>
-                        <div class="xml-container">
-                           <pre><code>{{ xml_content_set.0 }}</code></pre>
-                        </div>
-                     </div>
-                  </a>
-               </div>
-            </div> -->
-            <div id="context_xml" class="bundle-collapse">
-               <div class="row p-1 m-3 mt-1">
-                  <a data-bs-toggle="modal" data-bs-target="">
-                     <div class="card modal-card">
-                        <h5 class="card-title black-text mt-3 text-center"><strong>Context XML</strong></h5>
-                        <hr>
-                        <div class="xml-container">
-                           <pre><code>{{ xml_content_set.1 }}</code></pre>
-                        </div>
-                     </div>
-                  </a>
-               </div>
-            </div>
-            <div id="document_xml" class="bundle-collapse">
-               <div class="row p-1 m-3 mt-1">
-                  <a data-bs-toggle="modal" data-bs-target="">
-                     <div class="card modal-card">
-                        <h5 class="card-title black-text mt-3 text-center"><strong>Document XML</strong></h5>
-                        <hr>
-                        <div class="xml-container">
-                           <pre><code>{{ xml_content_set.2 }}</code></pre>
-                        </div>
-                     </div>
-                  </a>
-               </div>
-            </div>
-            <div id="xml_schema" class="bundle-collapse">
-               <div class="row p-1 m-3 mt-1">
-                  <a data-bs-toggle="modal" data-bs-target="">
-                     <div class="card modal-card">
-                        <h5 class="card-title black-text mt-3 text-center"><strong>XML Schema</strong></h5>
-                        <hr>
-                        <div class="xml-container">
-                           <pre><code>{{ xml_content_set.3 }}</code></pre>
-                        </div>
-                     </div>
-                  </a>
-               </div>
-            </div>
          </div>
-      </div>
+   </div>
    </div>
 
       <!-- Collapse Functionality -->
-      <script>
+      <!-- <script>
          $(document).ready(function() {
             $('.btn-collapse').on('click', function(){
                var target = $(this).data('bs-target');
@@ -330,7 +339,7 @@
                });
             });
          });
-      </script>
+      </script> -->
 
       {% block toast_block %}
       {% if messages %}
@@ -753,7 +762,15 @@
                         
                         <!-- Display Modification History Snippets -->
                         {% else %}
-                        <!-- grab from old bundle.html -->
+                        {% for mofification_history in modification_history_set %}
+                        <div class="card snippet-card ms-0 me-3">
+                           <div class="card-body">
+                              <p class="card-text">Description: {{ mofification_history.description }}</p>
+                              <p class="card-text">Version ID: {{ mofification_history.version_id}}</p>
+                              <p class="card-text">Modification date: {{ mofification_history.modification_date }}</p>
+                           </div>
+                        </div>
+                        {% endfor %}
                         {% endif %}
                      </div>
                   </div>
@@ -808,7 +825,17 @@
                         
                         <!-- Display Citation Information Snippets -->
                         {% else %}
-                        <!-- grab from old bundle.html -->
+                        {% for citation_information in citation_information_set %}
+                        <div class="card snippet-card ms-0 me-3">
+                           <div class="card-body">
+                              <p class="card-text">Author List: {{ citation_information.author_list }}</p>
+                              <p class="card-text">Editor List: {{ citation_information.editor_list }}</p>
+                              <p class="card-text">Keyword(s): {{ citation_information.editor_list }}</p>
+                              <p class="card-text">Publication Year: {{ citation_information.publication_year }}</p>
+                              <p class="card-text">Description: {{ citation_information.description }}</p>
+                           </div>
+                        </div>
+                        {% endfor %}
                         {% endif %}
                      </div>
                   </div>
@@ -820,5 +847,194 @@
    </div>
 
    <!-- Collections Modal -->
+   <div class="modal fade" id="collections_modal">
+      <div class="modal-dialog modal-xl">
+         <div class="modal-content">
+            <!-- Title -->
+            <div class="modal-header">
+               <h5 class="modal-title">Collections Area</h5>
+               <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body pt-0">
+               <!-- Tabs -->
+               <ul class="nav nav-tabs nav-justified" role="tablist">
+                  <li class="bundle-nav-item nav-item" role="presentation">
+                     <button class="bundle-nav-link nav-link active" data-bs-toggle="tab" data-bs-target="#doc_collection" type="button" role="tab" aria-selected="false">Document Collection</button>
+                  </li>
+                  <li class="bundle-nav-item nav-item" role="presentation">
+                     <button class="bundle-nav-link nav-link" data-bs-toggle="tab" data-bs-target="#additional_collection" type="button" role="tab" aria-selected="true">Additional Collections</button>
+                  </li>
+               </ul>
+
+               <!-- Content -->
+               <div class="tab-content">
+                  <!-- Additional Collections -->
+                  <div class="tab-pane fade" id="additional_collection" role="tabpanel">
+                     <!-- Form -->
+                     <div class="row px-2">
+                        <form action="{% url 'build:bundle' bundle.pk %}" method="post" id="form_collections" >
+                           {% csrf_token %}
+   
+                           <!-- Collection Name -->
+                           <div class="mt-3">
+                              <label for="col_name" class="required">Collection Name</label>
+                              {{ form_additional_collections.collection_name }}
+                           </div>
+   
+                           <!-- Alternate Title -->
+                           <div class="mt-3">
+                              <label for="col_type" class="required">Collection Type</label>
+                              {{ form_additional_collections.collection_type }}
+                           </div>
+   
+                           <!-- Create Collection -->
+                           <button type="submit" class="btn btn-light text-light my-4">Create Collection</button>
+                        </form>
+                     </div>
+
+                     <!-- List of Collections -->
+                     <div class="modal-footer justify-content-start">
+                        {% if additional_collections_count != 0 %}
+                           {% for additional_collection in additional_collections_set %}
+                              {% for collection in additional_collection.collections_list %}
+                              <div class="card snippet-card ms-0 me-3">
+                                 <div class="card-body">
+                                    <h5 class="card-title">{{ collection.0}} Collection</h5>
+                                    {% if collection.1 == 'Data' %}
+                                    <h6 class="card-subtitle">In here is where you will be able to add your data products that belong to this collection. You may choose from different processing levels for each data product.</h6>
+                                    <a href="" class="btn btn-light text-light d-flex justify-content-center">Add DATA</a>
+                                    {% endif %}
+                                 </div>
+                              </div>
+                              {% endfor %}
+                           {% endfor %}
+                        {% else %}
+                           <p>No Collections Found</p>
+                        {% endif %}
+                     </div>
+                  </div>
+
+                  <!-- Document Collection -->
+                  <div class="tab-pane fade" id="doc_collection" role="tabpanel">
+                     <div class="row px-2">
+                        <form action="{% url 'build:bundle' bundle.pk %}" method="post" id="form_document">
+                           {% csrf_token %}
+   
+                           <!-- Name-->
+                           <div class="mt-3">
+                              <label for="doc_name" class="required">Document Name</label>
+                              {{ form_document.document_name }}
+                           </div>
+   
+                           <!-- Publication Date -->
+                           <div class="mt-3">
+                              <label for="pub_date" class="required">Publication Date</label>
+                              {{ form_document.publication_date }}
+                           </div>
+   
+                           <!-- Author List -->
+                           <div class="mt-3">
+                              <label for="auth_list">Author List</label>
+                              {{ form_document.author_list }}
+                           </div>
+
+                           <!-- Copyright-->
+                           <div class="mt-3">
+                              <label for="copyright">Copyright</label>
+                              {{ form_document.copyright }}
+                           </div>
+   
+                           <!-- Description -->
+                           <div class="mt-3">
+                              <label for="description">Description</label>
+                              {{ form_document.description }}
+                           </div>
+   
+                           <!-- document_editions -->
+                           <div class="mt-3">
+                              <label for="doc_editions">Document Editions</label>
+                              {{ form_document.document_editions }}
+                           </div>
+
+                           <!-- Revision ID-->
+                           <div class="mt-3">
+                              <label for="rev_id">Revision ID</label>
+                              {{ form_document.revision_id }}
+                           </div>
+   
+                           <!-- edition name -->
+                           <div class="mt-3">
+                              <label for="edition_name">Edition Name</label>
+                              {{ form_document.edition_name }}
+                           </div>
+   
+                           <!-- Language -->
+                           <div class="mt-3">
+                              <label for="language">Language</label>
+                              {{ form_document.language }}
+                           </div>
+
+                           <!-- Files-->
+                           <div class="mt-3">
+                              <label for="files">Files</label>
+                              {{ form_document.files }}
+                           </div>
+   
+                           <!-- file_name -->
+                           <div class="mt-3">
+                              <label for="file_name">File Name</label>
+                              {{ form_document.file_name }}
+                           </div>
+   
+                           <!-- Local ID -->
+                           <div class="mt-3">
+                              <label for="local_id">Local ID</label>
+                              {{ form_document.local_id }}
+                           </div>
+                           
+                           <!-- Document SSTD ID -->
+                           <div class="mt-3">
+                              <label for="doc_std_id">Document STD ID</label>
+                              {{ form_document.document_std_id }}
+                           </div>
+
+                           <!-- Create Product Document -->
+                           <button type="submit" class="btn btn-light text-light my-4">Create Document</button>
+                        </form>
+                     </div>
+
+                     <!-- List of Product Documents -->
+                     <div class="modal-footer justify-content-start">
+                        {% if documents %}
+                           {% for document in documents %}
+                           <div class="card snippet-card ms-0 me-3">
+                              <div class="card-body">
+                                 <h5 class="card-title">{{ document.document_name }}</h5>
+                                 <p class="card-text">Acknowledgment list: {{ document.acknowledgement_text }}</p>
+                                 <p class="card-text">Author list: {{ document.author_list }}</p>
+                                 <p class="card-text">Copyright: {{ document.copyright }}</p>
+                                 <p class="card-text">Description: {{ document.description }}</p>
+                                 <p class="card-text">Document editions: {{ document.document_editions }}</p>
+                                 <p class="card-text">DOI: {{ document.doi }}</p>
+                                 <p class="card-text">Editor list {{ document.editor_list }}</p>
+                                 <p class="card-text">Publication date: {{ document.publication_date }}</p>
+                                 <p class="card-text">revision ID: {{ document.revision_id }}</p>
+                                 <a href="{%  url 'build:product_document' bundle.pk document.pk %}" class="btn btn-light text-light d-flex justify-content-center">Edit</a>
+                              </div>
+                           </div>
+                           {% endfor%}
+                        {% else %}
+                        <p>No Documents Found</p>
+                        {% endif %}
+                     </div>
+                  </div>
+
+               </div>
+
+            </div>
+         </div>
+      </div>
+   </div>
 </div>
 {% endblock %}

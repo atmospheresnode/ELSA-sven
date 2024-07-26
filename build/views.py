@@ -719,6 +719,8 @@ def bundle(request, pk_bundle):
             'user':request.user,
         }
 
+        print(modification_history_set)
+
         # satisfy this conditional
         if form_alias.is_valid():
             print('form_alias is valid for {}.'.format(bundle.user))
