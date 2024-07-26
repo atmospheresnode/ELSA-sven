@@ -1,13 +1,9 @@
 {% extends 'base-derk.html' %}
 {% load static %}
 
-
-
-
 {% block title_block %}
 About
 {% endblock %}
-
 
 {% block main_header_block %}
 Educational Labeling System @Atmospheres
@@ -15,152 +11,127 @@ Educational Labeling System @Atmospheres
 
 {% block about_header_block %}
 <div id="thatnewnew">
-    <div id="secretmessage">
-    
-    </div>
+    <div id="secretmessage"></div>
 </div>
 {% endblock %}
 
 
-
-
 {% block body_block %}
 
-<!--Section: Blog v.1-->
-<section class="section pb-3 text-center text-lg-left">
+<style>
+    .container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+    }
 
+    .spacer { 
+        height: 120px;
+    }
 
-    <!--Grid row-->
-    <div class="row">
+    .section-title {
+        font-weight: bold;
+        margin-bottom: 10px;
+    }
 
-        <!--Grid column-->
-        <div class="col-lg-5 ml-auto col-xl-4 pb-3">
-            <!--Featured image-->
-            <div class="view overlay hm-white-slight z-depth-1-half">
-                <img src="{% static 'images/thumbnail_ELSA_Logo-black.png' %}" class="img-fluid">
-                <a>
-                    <div class="mask"></div>
-                </a>
+    .section-content {
+        border: 2px solid #ddd;
+        padding: 2rem;
+        border-radius: 5px;
+        background-color: #FFFAF0;
+        margin-bottom: 30px
+    }
+
+    .button {
+        background-color: #007bff;
+        color: #fff;
+        padding: 0.3rem 0.5rem;
+    }
+</style>
+
+<div class="spacer"></div>
+
+<div class="container">
+
+    <!--Section: Introduction-->
+    <section class="text-center text-lg-left section-content">
+        <div class="row">
+            <div class="col-lg-4">
+                <div class="view overlay hm-white-slight z-depth-1-half">
+                    <img src="{% static 'images/thumbnail_ELSA_Logo-black.png' %}" style="max-width: 90%" class="img-fluid" alt="ELSA Logo">
+                </div>
+            </div>
+            <div class="col-lg-8">
+                <h6 class="section-title text-primary"><i class="fa fa-snowflake-o"></i> ELSA</h6>
+                <h4><strong>Introduction</strong></h4>
+                <p>The Educational Labeling System for Atmospheres (ELSA) is designed as a tool to learn aspects of the PDS4 archiving standard by creating compliant PDS4 label templates. Many data providers have little or no experience creating data labels (metadata) for the Planetary Data Systems (PDS). The goal of ELSA is to provide an online environment where data providers can learn about PDS4, build PDS4 bundles, submit completed bundles to ATM, and eventually manage the reviews/lien resolutions.</p>
             </div>
         </div>
-        <!--Grid column-->
+    </section>
 
-        <!--Grid column-->
-        <div class="col-lg-7 mr-auto col-xl-6">
-            <!--Excerpt-->
-            <a href="" class="green-text"><h6 class="font-bold pb-1"><i class="fa fa-snowflake-o"></i> ELSA</h6></a>
-            <h4 class="mb-4"><strong>Introduction.</strong></h4>
-            <p>The Educational Labeling System for Atmospheres (ELSA) is designed as a tool to learn aspects of the PDS4 archiving standard by creating compliant PDS4 label templates. Many data providers have little or no experience creating data labels (metadata) for the Planetary Data Systems (PDS). The goal of ELSA is to provide an online environment where data providers can learn about PDS4, build PDS4 bundles, submit completed bundles to ATM, and eventually manage the reviews/lien resolutions.
-</p>
-            
-        </div>
-        <!--Grid column-->
+    <hr class="mb-3">
 
-    </div>
-    <!--Grid row-->
-
-    <hr class="hr-width mb-5 mt-5 pb-3">
-
-
-    <!--Grid row-->
-    <div class="row pb-5">
-
-        <!--Grid column-->
-        <div class="col-lg-5 ml-auto col-xl-4 pb-3">
-            <!--Featured image-->
-            <div class="view overlay hm-white-slight z-depth-1-half">
-                <img src="{% static 'images/PDS_Planets.png' %}" alt="Thrid image in the blog listing." class="img-fluid">
-                <a>
-                    <div class="mask"></div>
-                </a>
+    <!--Section: PDS4 Standard-->
+    <section class="text-center text-lg-left section-content">
+        <div class="row">
+            <div class="col-lg-4">
+                <div class="view overlay hm-white-slight z-depth-1-half">
+                    <img src="{% static 'images/PDS_Planets.png' %}" class="img-fluid" alt="PDS Planets">
+                </div>
+            </div>
+            <div class="col-lg-8">
+                <h6 class="section-title text-indigo"><i class="fa fa-suitcase"></i> PDS4 Standard</h6>
+                <h4><strong>Introduction to PDS4</strong></h4>
+                <p>PDS uses 'labels' to describe the associated files by organization of common metadata. Metadata are pieces of information necessary to understand associated files and can include observational parameters, associated other projects, documentation, target information, etc. Currently PDS4 uses eXtensible Markup Language (XML) to manage the metadata in the labels. XML is a widely available language for metadata management that is accessible in a variety of publicly available tools. PDS4 is managed through a curated Information Model and is regularly updated.</p>
+                <a class="btn button mb-3" href="https://pds.nasa.gov/datastandards/documents/sr/current/StdRef_1.15.0.pdf">Read more</a>
             </div>
         </div>
-        <!--Grid column-->
+    </section>
 
-        <!--Grid column-->
-        <div class="col-lg-7 mr-auto col-xl-6">
-            <!--Excerpt-->
-            <a href="" class="indigo-text"><h6 class="font-bold pb-1"><i class="fa fa-suitcase"></i> PDS4 Standard</h6></a>
-           <h4 class="mb-4"><strong>Introduction to PDS4.</strong></h4>
-            <p>PDS uses 'labels' describe the associated files by organization of common metadata. Metadata are pieces of information necessary to understand associated files and can include observational parameters, associated other projects, documentation, target information, etc. Currently PDS4 uses eXtensible Markup Language (XML) to manage the metadata in the labels. XML is a widely available language for metadata management that is accessible in a variety of publicly available tools. PDS4 is managed through a curated Information Model and is regularly updated. If you are interested in more information about the PDS4 archiving standard click Read More below.
-</p>
-            <a class="btn btn-indigo mb-3" href="https://pds.nasa.gov/datastandards/documents/sr/current/StdRef_1.15.0.pdf
-">Read more</a>
-        </div>
-        <!--Grid column-->
+    <hr class="mb-3">
 
-    </div>
-    <!--Grid row-->
-
-    <hr class="hr-width mb-5 mt-5 pb-3"/>
-    <!--Grid row-->
-    <div class="row pb-5">
-
-        <!--Grid column-->
-        <div class="col-lg-5 ml-auto col-xl-4 pb-3">
-            <!--Featured image-->
-            <div class="view overlay hm-white-slight z-depth-1-half">
-                <img src="{% static 'images/top-down.png' %}" alt="Arrow pointing from a top going down." class="img-fluid">
-                <a>
-                    <div class="mask"></div>
-                </a>
+    <!--Section: Top-Down Approach-->
+    <section class="text-center text-lg-left section-content">
+        <div class="row">
+            <div class="col-lg-4">
+                <div class="view overlay hm-white-slight z-depth-1-half">
+                    <img src="{% static 'images/top-down.png' %}" style="max-width: 60%" class="img-fluid" alt="Top-Down Approach">
+                </div>
+            </div>
+            <div class="col-lg-8">
+                <h6 class="section-title text-primary"><i class="fa fa-snowflake-o"></i> ELSA</h6>
+                <h4><strong>ELSA Archiving Approach</strong></h4>
+                <p>At Atmospheres, we chose a top-down approach because it gives data providers the big picture of what a Bundle is at the very beginning of their PDS4 journey. A top-down approach allows Logical Identifiers (LIDs) to be created in the natural way (<a href="https://pds.nasa.gov/datastandards/documents/sr/current/StdRef_1.15.0.pdf">Data Provider's Handbook 1.15.0, Section 6D</a>). The PDS4 standard's immense power to archive and organize large data sets revolve around LIDs.</p>
+                <p>When a user begins creating a Bundle, they are asked for the Bundle's name and which Collections their Bundle has. ELSA prevents Bundles of the same name to be created to ensure that Bundles created within ELSA are unique. This provides for an area of improvement within ELSA in which one day we may expand to ensure that the Bundle in creation is unique across all registered products. Until then, data providers should consult their Node to ensure the name is allowed. Once the Bundle name is unique, then regardless of all else that follows, the entire LID is unique.</p>
+                <a class="btn button mb-3" href="https://atmos.nmsu.edu/logs/Welcome_to_Archiving_at_ATM_V1.4.pdf">Read more</a>
             </div>
         </div>
-        <!--Grid column-->
+    </section>
 
-        <!--Grid column-->
-        <div class="col-lg-7 mr-auto col-xl-6">
-            <!--Excerpt-->
-            <a href="" class="green-text"><h6 class="font-bold pb-1"><i class="fa fa-snowflake-o"></i> ELSA</h6></a>
-           <h4 class="mb-4"><strong>We like the Top-Down.</strong></h4>
-            <p>At Atmospheres, we chose a top-down approach because it gives data providers the big picture of what a Bundle is at the very beginning of their PDS4 journey.  A top-down approach allows Logical Identifiers (LIDs) to be created in the natural way (<a href="https://pds.nasa.gov/datastandards/documents/sr/current/StdRef_1.15.0.pdf">Data Provider's Handbook 1.15.0, Section 6D</a>).  The PDS4 standard's immense power to archive and organize large data sets revolve around LIDs.</p>
-            <p>When a user begins creating a Bundle, they are asked for the Bundle's name and which Collections their Bundle has.  ELSA prevents Bundles of the same name to be created to ensure that Bundles created within ELSA are unique.  This provides for an area of improvement within ELSA in which one day we may expand to ensure that the Bundle in creation is unique across all registered products.  Until then, data providers should consult their Node to ensure the name is allowed.  Once the Bundle name is unique, then regardless of all else that follows, the entire LID is unique.</p>
-          
-            <a class="btn btn-indigo mb-3">Read more</a>
-        </div>
-        <!--Grid column-->
+    <hr class="mb-3">
 
-    </div>
-    <!--Grid row-->
-
-    <!--Grid row-->
-    <div class="row pb-5">
-
-        <!--Grid column-->
-        <div class="col-lg-5 ml-auto col-xl-4 pb-3">
-            <!--Featured image-->
-            <div class="view overlay hm-white-slight z-depth-1-half">
-                <img src="{% static 'images/MercEm.jpg' %}" alt="Thrid image in the blog listing." class="img-fluid">
-                <a>
-                    <div class="mask"></div>
-                </a>
+    <!--Section: For Software Developers-->
+    <section class="text-center text-lg-left section-content">
+        <div class="row">
+            <div class="col-lg-4">
+                <div class="view overlay hm-white-slight z-depth-1-half">
+                    <img src="{% static 'images/MercEm.jpg' %}" style="max-width: 80%" class="img-fluid" alt="MercEm">
+                </div>
+            </div>
+            <div class="col-lg-8">
+                <h6 class="section-title text-primary"><i class="fa fa-snowflake-o"></i> ELSA</h6>
+                <h4><strong>ELSA For Software Developers</strong></h4>
+                <p>The ELSA Build app is written in Python using the Django framework. There are some common additional libraries used within the Build app.</p>
+                <a class="btn button mb-3" href="https://atmos.nmsu.edu/elsa/contact/">Contact Us</a>
             </div>
         </div>
-        <!--Grid column-->
-
-        <!--Grid column-->
-        <div class="col-lg-7 mr-auto col-xl-6">
-            <!--Excerpt-->
-            <a href="" class="green-text"><h6 class="font-bold pb-1"><i class="fa fa-snowflake-o"></i> ELSA</h6></a>
-           <h4 class="mb-4"><strong>ELSA: For Software Developers</strong></h4>
-            <p>The ELSA Build app is written in Python using the Django framework.  There are some common additional libraries used within the Build app.</p>
-          
-            <a class="btn btn-indigo mb-3" href="https://atmos.nmsu.edu/elsa/contact/
-" >Contact Us</a>
-        </div>
-        <!--Grid column-->
-
-    </div>
-    <!--Grid row-->
-
-
-</section>
-<!--Section: Blog v.1-->
-            
+    </section>
+    <hr class="mb-2">
+</div>
 
 {% endblock %}
 
-
-{% block footie_block %}    
+{% block footie_block %}
 {% endblock %}
-
