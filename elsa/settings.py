@@ -270,7 +270,7 @@ LOGGING = {
         'file': {
             'level': 'DEBUG',
             'class': 'logging.FileHandler',
-            'filename': '/home/rupakdey/elsa/ELSA-sven/._elsa.log',
+            'filename': '/home/sajomont/Documents/elsaVersions/ELSA-sven/._elsa.log',
         },
     },
     'loggers': {

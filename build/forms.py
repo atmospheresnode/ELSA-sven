@@ -281,6 +281,10 @@ class CollectionsForm(forms.ModelForm):
 
 
 class AdditionalCollectionForm(forms.ModelForm):
+    collection_name = forms.CharField(required=False, max_length=100, widget=forms.TextInput(attrs={
+        'class': 'form-control form-outline',
+        'id': 'col_name'
+    }))
 
     class Meta(object):
         model = AdditionalCollections
@@ -525,21 +529,57 @@ STD_ID = [
 
 
 class ProductDocumentForm(forms.ModelForm):
-    document_name = forms.CharField(required=True)
-    publication_date = forms.CharField(required=True)
+    document_name = forms.CharField(required=True, max_length=100, widget=forms.TextInput(attrs={
+        'class': 'form-control form-outline',
+        'id': 'doc_name'
+    }))
+    publication_date = forms.CharField(required=True, max_length=100, widget=forms.TextInput(attrs={
+        'class': 'form-control form-outline',
+        'id': 'pub_date'
+    }))
     # acknowledgement_text = forms.CharField(required=False)
-    author_list = forms.CharField(required=False)
-    copyright = forms.CharField(required=False)
-    description = forms.CharField(required=False)
-    document_editions = forms.IntegerField(required=False)
+    author_list = forms.CharField(required=False, max_length=100, widget=forms.TextInput(attrs={
+        'class': 'form-control form-outline',
+        'id': 'auth_list'
+    }))
+    copyright = forms.CharField(required=False, max_length=100, widget=forms.TextInput(attrs={
+        'class': 'form-control form-outline',
+        'id': 'copyright'
+    }))
+    description = forms.CharField(required=False, max_length=100, widget=forms.TextInput(attrs={
+        'class': 'form-control form-outline',
+        'id': 'description'
+    }))
+    document_editions = forms.IntegerField(required=False, widget=forms.TextInput(attrs={
+        'class': 'form-control form-outline',
+        'id': 'document_editions'
+    }))
     # doi = forms.CharField(required=False)
     # editor_list = forms.CharField(required=False)
-    revision_id = forms.CharField(required=False)
-    edition_name = forms.CharField(required=False)
-    language = forms.CharField(required=False)
-    files = forms.IntegerField(required=False)
-    file_name = forms.CharField(required=False)
-    local_id = forms.CharField(required=False)
+    revision_id = forms.CharField(required=False, max_length=100, widget=forms.TextInput(attrs={
+        'class': 'form-control form-outline',
+        'id': 'rev_id'
+    }))
+    edition_name = forms.CharField(required=False, max_length=100, widget=forms.TextInput(attrs={
+        'class': 'form-control form-outline',
+        'id': 'edition_name'
+    }))
+    language = forms.CharField(required=False, max_length=100, widget=forms.TextInput(attrs={
+        'class': 'form-control form-outline',
+        'id': 'language'
+    }))
+    files = forms.IntegerField(required=False, widget=forms.TextInput(attrs={
+        'class': 'form-control form-outline',
+        'id': 'files'
+    }))
+    file_name = forms.CharField(required=False, max_length=100, widget=forms.TextInput(attrs={
+        'class': 'form-control form-outline',
+        'id': 'file_name'
+    }))
+    local_id = forms.CharField(required=False, max_length=100, widget=forms.TextInput(attrs={
+        'class': 'form-control form-outline',
+        'id': 'local_id'
+    }))
     document_std_id = forms.ChoiceField(required=False, choices=STD_ID)
 
     class Meta(object):
