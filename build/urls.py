@@ -33,7 +33,7 @@ urlpatterns = [
 
     # Bundle
     re_path(r'^(?P<pk_bundle>\d+)/$', views.bundle, name='bundle'), # Secure
-    re_path(r'^(?P<pk_bundle>\d+)/confirm_delete/$', views.bundle_delete, name='bundle_delete'), # Secure
+    re_path(r'^(?P<pk_bundle>\d+)/confirm_delete/$', views.bundle_delete_new, name='bundle_delete'), # Secure
     re_path(r'^(?P<pk_bundle>\d+)/download/$', views.bundle_download, name='bundle_download'), # Need to secure.
     re_path(r'^success_delete/$', views.success_delete, name='bundle_delete'),
 

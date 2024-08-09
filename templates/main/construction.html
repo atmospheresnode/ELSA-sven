@@ -22,11 +22,7 @@ In Development
     }
 
     .message {
-        border: 1px double #ddd;
         padding: 1.5rem;
-        border-radius: 5px;
-        background-color: #e5e5e5;
-        font-family: Courier New, monospace;
     }
 
     .notification {
@@ -44,7 +40,7 @@ In Development
     }
 
     .image-container img {
-        max-width: 20%;
+        max-width: 22%;
         height: auto;
     }
 </style>
@@ -58,13 +54,13 @@ In Development
 
 <div class="container">
     <div class="message">
-        <h1 style="font-size: 32px;">Sorry, the feature you are trying to access is in development.</h1>
-        <hr style="border: 1.1px dashed #ccc;">
-        <h5>Please try again at a later point in time!</h5>
+        <h1>Sorry, the feature you are trying to access is in development.</h1>
+        <br>
+        <h5 style="font-weight: normal;">Please try again at a later point in time!</h5>
     </div>
 
     <div class="notification">
-        <p>To get back to your prior location, <button onclick="history.back()" style="border-radius: 4px; padding: .1rem .2rem">click here</button> or press the back button on your browser.</p>
+        <p>To get back to your prior location, <button onclick="history.back()" style="border-radius: 5px; padding: .02rem .2rem">click here</button> or press the back button on your browser.</p>
         <hr style="border: 1.1px dashed #ccc; margin: 1px 0">
         <p>If you would like to be notified when this feature is implemented or if you would like to implement this feature yourself, feel free to contact ELSA at <a href="mailto:elsa@atmos.nmsu.edu">elsa@atmos.nmsu.edu</a>.</p>
     </div>
