@@ -2,31 +2,37 @@
 {% load static %}
 
 {% block title_block %}
-Delete
+Delete Confirmation
 {% endblock %}
 
 {% block main_header_block %}
 <br>
-Your bundle was deleted.
 {% endblock %}
-
 
 {% block body_block %}
-<hr>
-<hr>
-<hr>
-<hr>
-<h1>Your bundle was deleted.</h1>
-<!--Row-->
-<div class="row pt-2">
-    <!--Column-->
-    <div class="col-md-12">
-        <ul>
-            <li>Want to make a new bundle? Then go to <a href="{% url 'build:build' %}">Build <i class="fa fa-arrow-right" aria-hidden="true"></i></a></li>
-            <li>Want to see your current bundles?  Then go to <a href="{{ user.userprofile.get_absolute_url }}">your profile <i class="fa fa-arrow-right" aria-hidden="true"></i></a></li>
-        </ul>
+<section style="margin-top:100px" class="text-center py-5">
+    <div class="container">
+        <div class="alert alert-success" role="alert">
+            <h4 class="alert-heading">Your bundle was deleted.</h4>
+            <p class="mb-0">We’ve successfully removed the bundle from your account.</p>
+        </div>
+        <hr class="my-4">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <ul class="list-unstyled">
+                    <li class="mb-2">
+                        <a href="{% url 'build:build' %}" class="btn btn-primary">
+                            Build a New Bundle <i class="fa fa-arrow-right" aria-hidden="true"></i>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ user.userprofile.get_absolute_url }}" class="btn btn-secondary">
+                            View Your Profile <i class="fa fa-arrow-right" aria-hidden="true"></i>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
     </div>
-    <!--/.Column-->
-</div>
+</section>
 {% endblock %}
-

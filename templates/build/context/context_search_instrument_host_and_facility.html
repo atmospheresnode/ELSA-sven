@@ -19,170 +19,110 @@ Add Context: Host Products
 
 
 {% block body_block %}
-<div class="row p-1 m-3 mt-0">
-    <div class="card">
-        <div class="card-header bg-dark text-light text-center h2">Select your Host Product</div>
-        <div class="card-body text-left z-depth-2">
-            {% if investigation.type_of == "Mission" %}
-            <div class="row pt-2">
-                <!--Column-->
-                <div class="col-md-12">
-                    <form class="card-text black-text text-left z-depth-2" id="query01" method="post" action="{% url 'build:context_search_instrument_host_and_facility' bundle.pk investigation.pk %}">
-                        <p>Host products describe the top level of an observing system consisting of the the platform that contains instruments for collecting data. Spacecraft are considered <strong>Instrument Hosts</strong> whereas Observatories or Laboratories would be <strong>Facilities</strong>. Depending on the investigation you chose on the last page you will have associated options here. If your investigation does not use a spacecraft or facility, you should select the No Host option from the selector.</p>
-                        <p>From the drop-down menu, select which type of host you plan to use. The initial selection will be <strong>instrument host</strong>(for mobile hosts) or <strong>facility</strong>(for stationary hosts). After selecting one of these two options you will be given a pull-down menu for the appropriate set. Instrument hosts include mobile platforms like spacecraft, rovers, landers, etc. whereas facilities include laboratories and observatories. If you plan to use telescopes and/or instruments not associated with a host, select the No Host option.</p>
-                        
-                        {% csrf_token %}
+<div class="row mt-5 pt-2">
+    <div class="col-md-8 mx-auto mb-4" style="margin-top: 70px">
+        <div class="card">
+            <div class="card-header text-white text-center" style="padding: 0.5rem 0.5rem; background-color: #2F4F4F">
+                <h3 class="mb-2 mt-2">
+                    Select Your Host Product
+                </h3>
+            </div>
+            <div class="card-body text-center">
+                {% if investigation.type_of == "Mission" %}
+                <form id="query01" method="post" action="{% url 'build:context_search_instrument_host_and_facility' bundle.pk investigation.pk %}" class="d-flex flex-column align-items-center">
+                    <p class="text-left mb-4">Host products describe the top level of an observing system consisting of the platform that contains instruments for collecting data. Spacecraft are considered <strong>Instrument Hosts</strong> whereas Observatories or Laboratories would be <strong>Facilities</strong>. Depending on the investigation you chose on the last page you will have associated options here. If your investigation does not use a spacecraft or facility, you should select the No Host option from the selector.</p>
+                    <p class="text-left mb-4">From the drop-down menu, select which type of host you plan to use. The initial selection will be <strong>instrument host</strong>(for mobile hosts) or <strong>facility</strong>(for stationary hosts). After selecting one of these two options you will be given a pull-down menu for the appropriate set. Instrument hosts include mobile platforms like spacecraft, rovers, landers, etc. whereas facilities include laboratories and observatories. If you plan to use telescopes and/or instruments not associated with a host, select the No Host option.</p>
+                    {% csrf_token %}
+                    <div class="form-group mb-4">
                         {{ form_instrument_host }}
-                        
                         {{ form.errors }}
                         {{ form.non_field_errors }}
-                        
-                        <input type="submit" class="btn btn-light text-light" value="Submit"/>
-                        
-                    </form> 
-                </div>      
-            </div>
-            {% else %}
-            <div class="row pt-2">
-                <!--Column-->
-                <div class="col-md-12">
-                    <form class="card-text black-text text-left z-depth-2" id="query01" method="post" action="{% url 'build:context_search_instrument_host_and_facility' bundle.pk investigation.pk %}">
-                        <p>Host products describe the top level of an observing system consisting of the the platform that contains instruments for collecting data. Spacecraft are considered <strong>Instrument Hosts</strong> whereas Observatories or Laboratories would be <strong>Facilities</strong>. Depending on the investigation you chose on the last page you will have associated options here. If your investigation does not use a spacecraft or facility, you should select the No Host option from the selector.</p>
-                        <p> Facilities are stationary hosts such as laboratories or observatories, and will contain references for lab instruments and/or telescopes with instruments. Please select your facility</p>
-                        {% csrf_token %}
+                    </div>
+                    <input type="submit" class="btn btn-success" value="Submit" style="margin-top: 10px; padding: .2rem .5rem"/>
+                </form>
+                {% else %}
+                <form id="query01" method="post" action="{% url 'build:context_search_instrument_host_and_facility' bundle.pk investigation.pk %}" class="d-flex flex-column align-items-center">
+                    <p class="text-left mb-4">Host products describe the top level of an observing system consisting of the platform that contains instruments for collecting data. Spacecraft are considered <strong>Instrument Hosts</strong> whereas Observatories or Laboratories would be <strong>Facilities</strong>. Depending on the investigation you chose on the last page you will have associated options here. If your investigation does not use a spacecraft or facility, you should select the No Host option from the selector.</p>
+                    <p class="text-left mb-4">Facilities are stationary hosts such as laboratories or observatories, and will contain references for lab instruments and/or telescopes with instruments. Please select your facility</p>
+                    {% csrf_token %}
+                    <div class="form-group mb-4">
                         {{ form_facility }}
                         {{ form.errors }}
                         {{ form.non_field_errors }}
-                        
-                        <input type="submit" class="btn btn-light text-light" value="Submit"/>
-                        
-                    </form> 
-                </div>      
+                    </div>
+                    <input type="submit" class="btn btn-success" value="Submit" style="margin-top: 10px; padding: .2rem .5rem"/>
+                </form>
+                {% endif %}
             </div>
-            {% endif %}
         </div>
     </div>
 </div>
 
-<div class="row p-1 m-3 mt-0">
-<div class="card">
-    <div class="card-title text-center h2">Recently Added Host Product</div>
-    <hr>
-    <div class="card-body text-left z-depth-2">
-        {% if instrument_host %}
-        <h3>Note: {{ instrument_host }} added to {{ bundle }}:</h3>
 
-        <!--/.Column-->
-        <hr>
-        {% for ih in bundle_instrument_host_set %}
-        <div class="card-header black-text text-left z-depth-2">
-            <div class="row">
-                <!--Card-->
-                <div class="col-sm-6 col-md-3">
-                    <ul>
-                        <div class="button">
-                            <!--Link-->
-                            <!-- change the href -->
-                            <a href="{% url 'build:context_search_instrument' bundle.pk ih.investigations.first.pk ih.pk %}">
-                                <!--Card content-->
-                                <div class="card-body">
-                                    <!--Title-->
-                                    <li> <h4 class="card-title">{{ ih.name }}</h4></li>
-                                    <!--/.Title-->
-                                    <!--Text-->
-                                    <p class="card-text">{{ ih.lid }} <br/><br/></p>
-                                    <!--/.Text-->
-                                </div>
-                                <!--/.Card content-->
-                                <!--Image-->
-                            </a>
-                            <!--/.Link-->
+
+<div class="row mt-4">
+    <div class="col-md-10 mx-auto mb-4">
+        <div class="card mb-4">
+            <div class="card-header text-white text-center" style="padding: 1rem 1rem; background-color: #708090">
+                <h3 class="mb-2 mt-2">
+                    Recently Added Host Product
+                </h3>
+            </div>
+            <div class="card-body">
+                <h5 class="text-center mb-4">Update: {{ instrument_host }} added to <i>{{ bundle }}</i></h5>
+                <div class="row">
+                    {% for ih in bundle_instrument_host_set %}
+                        <div class="col-sm-6 col-md-4 mb-4">
+                            <div class="card">
+                                <a href="{% url 'build:context_search_instrument' bundle.pk ih.investigations.first.pk ih.pk %}" class="text-decoration-none">
+                                    <div class="card-body text-center">
+                                        <h4 class="card-title">{{ ih.name }}</h4>
+                                        <p class="card-text">{{ ih.lid }}</p>
+                                    </div>
+                                </a>
+                            </div>
                         </div>
-                    </ul>
+                    {% endfor %}
                 </div>
-                <!--/.Card-->
-            </div>
-        </div>
-        {% endfor %}
-        {% endif %}
-
-        {% if facility %}
-        <h3>Note: {{ facility }} added to {{ bundle }}:</h3>
-
-        <!--/.Column-->
-        <hr>
-        {% for fac in bundle_facility_set %}
-        <div class="card-header black-text text-left z-depth-2">
-            <div class="row">
-                <!--Card-->
-                <div class="col-sm-6 col-md-3">
-                    <ul>
-                        {% if facility.type_of == "Laboratory" %}
-                        <div class="button">
-                            <!--Link-->
-                            <!-- change the href -->
-                            <a href="{% url 'build:context_search_facility_instrument' bundle.pk fac.investigations.first.pk fac.pk %}">
-                                <!--Card content-->
-                                <div class="card-body">
-                                    <!--Title-->
-                                    <li> <h4 class="card-title">{{ fac.name }}</h4></li>
-                                    <!--/.Title-->
-                                    <!--Text-->
-                                    <p class="card-text">{{ fac.lid }} <br/><br/></p>
-                                    <!--/.Text-->
-                                </div>
-                                <!--/.Card content-->
-                                <!--Image-->
-                            </a>
-                            <!--/.Link-->
+                {% if facility %}
+                <h3 class="text-center mb-4">Update: {{ facility }} added to <i>{{ bundle }}</i></h3>
+                <div class="row">
+                    {% for fac in bundle_facility_set %}
+                        <div class="col-sm-6 col-md-4 mb-4">
+                            <div class="card">
+                                {% if facility.type_of == "Laboratory" %}
+                                <a href="{% url 'build:context_search_facility_instrument' bundle.pk fac.investigations.first.pk fac.pk %}" class="text-decoration-none">
+                                {% else %}
+                                <a href="{% url 'build:context_search_telescope' bundle.pk fac.investigations.first.pk fac.pk %}" class="text-decoration-none">
+                                {% endif %}
+                                    <div class="card-body text-center">
+                                        <h4 class="card-title">{{ fac.name }}</h4>
+                                        <p class="card-text">{{ fac.lid }}</p>
+                                    </div>
+                                </a>
+                            </div>
                         </div>
-                        {% else %}
-                        <div class="button">
-                            <!--Link-->
-                            <!-- change the href -->
-                            <a href="{% url 'build:context_search_telescope' bundle.pk fac.investigations.first.pk fac.pk %}">
-                                <!--Card content-->
-                                <div class="card-body">
-                                    <!--Title-->
-                                    <li> <h4 class="card-title">{{ fac.name }}</h4></li>
-                                    <!--/.Title-->
-                                    <!--Text-->
-                                    <p class="card-text">{{ fac.lid }} <br/><br/></p>
-                                    <!--/.Text-->
-                                </div>
-                                <!--/.Card content-->
-                                <!--Image-->
-                            </a>
-                            <!--/.Link-->
-                        </div>
-                        {% endif %}
-                    </ul>
+                    {% endfor %}
                 </div>
-                <!--/.Card-->
+                {% endif %}
             </div>
         </div>
-        {% endfor %}
-        {% endif %}
     </div>
 </div>
-</div>
 
 
-<div class="row pt-2">
-    <div class="col-md-12 text-right">
-        <a href="{% url 'build:bundle' bundle.pk %}">
-            <input type="submit" class="btn btn-light text-light" value="Go Back to Build Page"/>
-        </a>
+
+
+
+
+<!-- Go Back Button Section -->
+<div class="row mt-4">
+    <div class="col-md-12 text-end">
+        <a href="{% url 'build:bundle' bundle.pk %}" class="btn btn-secondary">Go Back to Build Page</a>
     </div>
-    <!--/.Column-->
 </div>
-
-
 
 {% endblock %}
-
-
-
 {% block footie_block %}    
 {% endblock %}
 

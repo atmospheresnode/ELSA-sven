@@ -63,8 +63,7 @@ def check():
 
 # Redirecting accounts/login to elsa/ (taking the user to the new UI)
 def redirect_to_elsa_home(request): 
-    #return redirect('https://atmos.nmsu.edu/elsa/')  # takes to the online ELSA instead of the local
-    return HttpResponseRedirect(reverse('main:index'))  # does not login / not the original login page
+    return HttpResponseRedirect(reverse('main:index'))
 
 
 

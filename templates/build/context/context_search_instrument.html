@@ -18,76 +18,65 @@ Add Context: Instrument
 
 
 {% block body_block %}
-<div class="row p-1 m-3 mt-0">
-    <div class="card">
-        <div class="card-title text-center h2">Select your Instrument</div>
-        <hr>
-        <div class="card-body text-left z-depth-2">
-            <form class="card-header black-text text-left z-depth-2" id="query01" method="post" action="{% url 'build:context_search_instrument' bundle.pk investigation.pk instrument_host.pk %}">
-                <p>Choose an associated instrument from the host product you just selected. Instruments are the pieces of equipment that actually collect the data, and it's important to include these in your observing systems.</p>
+<div class="row mt-5 pt-2">
+    <div class="col-md-8 mx-auto mb-4" style="margin-top: 70px">
+        <div class="card">
+            <div class="card-header text-white text-center" style="padding: 1rem 1rem; background-color: #2F4F4F">
+                <p class="mb-2">
+                    Choose an associated instrument from the host product you just selected. Instruments are the pieces of equipment that actually collect the data, and it's important to include these in your observing systems.
+                </p>
+            </div>
+            <div class="card-body text-center">
+                <form id="query01" method="post" action="{% url 'build:context_search_instrument' bundle.pk investigation.pk instrument_host.pk %}" class="d-flex justify-content-center align-items-center">
                     {% csrf_token %}
-                    {{ form_instrument }}
-                    
-                    {{ form.errors }}
-                    {{ form.non_field_errors }}
-                    
-                    <input type="submit" class="btn btn-light text-light" value="Submit"/>
-            </form>
+                    <div class="form-group mr-2">
+                        {{ form_instrument }}
+                        {{ form.errors }}
+                        {{ form.non_field_errors }}
+                    </div>
+                    <input type="submit" class="btn btn-success" value="Submit" style="margin-left: 15px; padding: .2rem .5rem"/>
+                </form>
+            </div>
         </div>
     </div>
 </div>
 
-<div class="row p-1 m-3 mt-0">
-    <div class="card">
-        <div class="card-title text-center h2">Recently Added Instrument</div>
-        <hr>
-        {% if instrument %}
-        <h3>Note: {{ instrument }} added to {{ bundle }}:</h3>
-        <hr>
-        {%for ins in bundle_instrument_set %}
-                <div class="card-header black-text text-left z-depth-2">
+{% if instrument %}
+<div class="row mt-4">
+    <div class="col-md-10 mx-auto mb-4">
+        <div class="card mb-4">
+            <div class="card-header text-white text-center" style="padding: 1rem 1rem; background-color: #708090">
+                <h3 class="mb-0">Recently Added Instrument</h3>
+            </div>
+            <div class="card-body">
+                {% if instrument %}
+                <h5 class="text-center mb-4">Update: {{ instrument }} added to <i>{{ bundle }}</i></h5>
                 <div class="row">
-                    <!--Card-->
-                    <div class="col-sm-6 col-md-3">
-                        <div class="button">
-                            <!--Link-->
-                            <a href="{% url 'build:context_search_target_investigation' bundle.pk ins.investigations.first.pk %}">
-                                <!--Card content-->
-                                <div class="card-body">
-                                    <!--Title-->
-                                    <h4 class="card-title">{{ ins.name }}</h4>
-                                    <!--/.Title-->
-                                    <!--Text-->
-                                    <p class="card-text">{{ ins.lid }} <br/><br/><br/></p>
-                                    <!--/.Text-->
-                                </div>
-                                <!--/.Card content-->
-                                <!--Image-->
-                            </a>
-                            <!--/.Link-->
+                    {% for ins in bundle_instrument_set %}
+                        <div class="col-sm-6 col-md-4 mb-4">
+                            <div class="card">
+                                <a href="{% url 'build:context_search_target_investigation' bundle.pk ins.investigations.first.pk %}" class="text-decoration-none">
+                                    <div class="card-body text-center">
+                                        <h4 class="card-title">{{ ins.name }}</h4>
+                                        <p class="card-text">{{ ins.lid }}</p>
+                                    </div>
+                                </a>
+                            </div>
                         </div>
-                    </div>
-                    <!--/.Card-->
-                    </br></br>
+                    {% endfor %}
                 </div>
-                </div>
-        {% endfor %}
-        {% endif %}
+                {% endif %}
+            </div>
+        </div>
     </div>
 </div>
+{% endif %}
 
-        
-<!--/.Row-->
-<!--Row-->
-<hr>
-
-<div class="row pt-2">
-    <div class="col-md-12 text-right ">
-        <a href="{% url 'build:bundle' bundle.pk %}">
-            <input type="submit" class="btn btn-light text-light" value="Go Back to Build Page"/>
-        </a>
+<!-- Go Back Button Section -->
+<div class="row mt-4">
+    <div class="col-md-12 text-end" style="margin-top: auto">
+        <a href="{% url 'build:bundle' bundle.pk %}" class="btn btn-secondary">Go Back to Build Page</a>
     </div>
-    <!--/.Column-->
 </div>
 
 {% endblock %}
