@@ -31,7 +31,7 @@
          <button role="button" class="btn btn-red"> Delete {{ bundle }} Bundle </button>
       </a>
    </div>
-   
+
    
    <!-- View XML Files Button -->
    <div class="col-md-3">
@@ -145,7 +145,7 @@
 
                   <div class="col p-1 m-3 mt-0">
                         <a type="button" class="btn btn-info text-light" href="" aria-expanded="true" style="box-shadow: none;">Help</a>
-                        <a type="button" class="btn btn-danger text-light" href="{% url 'build:bundle_delete' bundle.pk %}" aria-expanded="false" style="box-shadow: none;">Delete Bundle</a>
+                        <a type="button" class="btn btn-danger text-light" data-bs-toggle="modal" data-bs-target="#delete_modal" aria-expanded="false" style="box-shadow: none;">Delete Bundle</a>
                         <a type="button" class="btn btn-light text-light" href="{% url 'build:directory_view' bundle.relative_dir %}" aria-expanded="false" style="box-shadow: none;">View Bundle</a>
                         <a type="button" class="btn btn-warning text-light" href="{% url 'build:bundle_download' bundle.pk %}" aria-expanded="false" style="box-shadow: none;">Download Bundle</a>
                   </div>
@@ -364,6 +364,75 @@
 
    <!-- Form Modals -->
    <!-- Figure out how to move these to new file for readability sake - deric -->
+
+   <!-- Delete Bundle Modal -->
+   {% comment %} <div class="modal fade" id="delete_modal">
+      <div class="modal-dialog modal-lg modal-dialog-centered">
+         <div class="modal-content">
+            <!-- Title -->
+            <div class="modal-header">
+               <h3 class="modal-title w-100 text-center">Delete Bundle</h3>
+               <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body"> 
+               <div>
+                  <div class="col text-center">
+                      <h5>Are you sure you want to delete <i>"{{bundle}}"</i>?</h5>
+                      <p><i>Caution: This bundle will be deleted immediately and this action cannot be undone.</i></p>
+                  </div>
+
+                  <div class="d-grid gap-2">
+                     <a href="{% url 'build:bundle_delete' bundle.pk %}"> <button type="submit" class="btn btn-danger">Confirm Delete</button> </a>
+                     <button type="submit" class="btn btn-danger">Cancel</button>
+                 </div>
+              </div>
+            </div>
+         </div>
+      </div>
+   </div> {% endcomment %}
+
+
+   <div class="modal fade" id="delete_modal">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <!-- Title -->
+          <div class="modal-header">
+            <h3 class="modal-title w-100 text-center">Delete Bundle</h3>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+    
+          <!-- Modal Body -->
+          <div class="modal-body">
+            <div class="text-center">
+              <h5>Are you sure you want to delete <i>"{{bundle}}"</i>?</h5>
+              <p class="text-muted"><i>Caution: This bundle will be deleted immediately and this action cannot be undone.</i></p>
+               
+         <div class="container">
+              <div class="row">
+               <div class="col-12 col-md-6 mb-2">
+                 <button type="button" class="btn btn-secondary w-100" data-bs-dismiss="modal">
+                   Cancel
+                 </button>
+               </div>
+               <div class="col-12 col-md-6 mb-2">
+                  <a href="{% url 'build:bundle_delete' bundle.pk %}" class="btn btn-danger w-100">
+                    Confirm Delete
+                  </a>
+                </div>
+             </div>
+            </div>
+          </div>
+         </div>
+
+          
+            
+          
+        </div>
+      </div>
+    </div>
+    
+   
 
    <!-- Context Modal -->
    <div class="modal fade" id="context_modal">

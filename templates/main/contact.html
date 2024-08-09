@@ -1,4 +1,4 @@
-{% extends 'main/base-k.html' %}
+{% extends 'base-derk.html' %}
 {% load static %}
 {% block title_block %}
 Contact Atmospheres Node
@@ -8,162 +8,201 @@ Contact Atmospheres Node
 {% endblock %}
 {% block body_block %}
 
-
 <style>
-.card{
-   box-shadow: 0 4px 8px 0 rgba(0,0,0, 0.2);
-   max-width:300px;
-   margin: auto;
-   text-align: center;
-   font-family: arial;
-}
 
-.title{
-    color:grey;
-    font-size:18px;
-}
-
-button{
-    border:none;
-    outline: 0;
-    display: inline-block;
-    padding: 8px;
-    color: white;
-    background-color: #000;
+.card {
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+    border-radius: 12px;
+    max-width: 300px;
+    margin: auto auto;
     text-align: center;
-    cursor: pointer;
-    width: 100%;
-    font-size: 18px;
+    font-family: 'Roboto', sans-serif;
+    transition: transform 0.3s, box-shadow 0.3s;
+    background: #fff;
 }
-a{
-    text-decoration: none;
-    font-size: 22px;
+.card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+}
+
+.card img {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+.card-content {
+    padding: 15px;
+    margin-bottom: 10px;
+}
+
+.card h2 {
+    margin: 10px 0;
+    font-size: 1.6em;
+    color: #333;
+    font-weight: 600;
+}
+
+.card p.title {
+    color: #888;
+    font-size: 1.1em;
+    margin: 5px 0;
+}
+
+.card p {
+    color: #555;
+    font-size: 1em;
+    line-height: 1.4;
+}
+
+.card button a {
     color: white;
+    text-decoration: none;
+}
+
+.section-heading {
+    font-size: 2.2em;
+    font-weight: 700;
+    margin-top: 120px;
+    margin-bottom: 10px;
+    color: #333;
+    text-align: center;
+}
+
+.section-description {
+    font-size: 1.2em;
+    color: #666;
+    margin-bottom: 40px;
+    text-align: center;
+}
+
+.rgba-indigo {
+    background-color: rgba(63, 81, 181, 0.1);
+    padding: 20px;
+    border-radius: 10px;
+}
+
+h3.h3-responsive {
+    font-size: 1.6em;
+    margin-bottom: 20px;
+    color: #333;
+    text-align: center;
+}
+
+@media (max-width: 768px) {
+    .card {
+        max-width: 100%;
+    }
+    .section-heading {
+        font-size: 1.8em;
+    }
+    .section-description {
+        font-size: 1em;
+    }
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center; 
+    justify-content: center; 
+    color: white;
+    padding: 2x 2px;
+    background-color: #5F9EA0;
+    border-radius: 5px;
+    text-decoration: none; 
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.btn:hover {
+    background-color: #0056b3;
+}
+
+.btn i {
+    font-size: 20px;
 }
 
 .round-button {
-   	      display:inline-block;
-	      height:25px;
-	      width:25px;
-    	      color: white;
-   	      text-align: center;
-   	      margin: 4px 2px;
-    	      background-color: #008080;
-   	      font-size:16px;
-   	      font-weight:bold;
-	      border-color: #000000;
-	      }
-	      
-	      .round-button{border-radius: 50%;}
+    display:inline-block;
+    height:25px;
+    width:25px;
+    color: white;
+    text-align: center;
+    align-items: center; 
+    margin: 4px 2px;
+    background-color: #2E8B57;
+    font-size:12px;
+    border-color: #FFFAFA;
+    border-radius: 50%;
+    font-weight: bold;
+    border: 1px solid #2E8B57;  
+}
+
 </style>
 
 
+<div class="container">
+    <h2 class="section-heading">Planetary Atmospheres Node</h2>
+    <p class="section-description">Below are the top three contacts listed for the PDS Atmospheres Node. If you would like to send a message to the entire team, feel free to use the contact form below or contact them individually using the following platforms available.</p>
 
-
-    <!--Section heading-->
-    <h2 class="section-heading h1 pt-4" style=" text-align:center" >Planetary Atmospheres Node</h2>
-    <p class="section-description">Below are the top three contacts listed for the PDS Atmospheres Node.  If you would like to send a message to the entire team, feel free to use the contact form below or contact them individually using the following platforms availiable.</p>
-  <hr> 
-   <div class="row">
-      <div class="col-md-12">
-         <p class="card-header elegant-color white-text text-center z-depth-2">Profiles</p>
-         <br/>
-      </div>
-   </div>
-<hr>
- <!--Grid row-->
     <div class="row">
-        <!--Grid column-->
         <div class="col-md-4">
-	
-	    <div class="card">
-              <img class="img-fluid" src="{% static 'images/Nancy_elsa.png' %}" style="height:210px">
-            	<h2>Nancy Chanover</h2>
-                <p class="title">ATM Node PI</p> 
-	      <p> PDS ATM Node Lead
-	       </P>
-		<button  style= "margin: 24px 0;">
-		    <a href="http://astro.nmsu.edu/facultydirectory/nancy_chanover.html" data-toggle="tiptool" data-placement="right" title="NMSU_Profile"><i class="fa fa-info-circle"></i></a>
-		</button >
-		
-	    </div>
-       	  </div>
-       
-     
-        <!--Grid column-->
-<hr>
-<hr>
-        <!--Grid column-->
-        <div class="col-md-4">
-	<div class="column">
-           <div class="card">
-               <img class="img-fluid" src="{% static 'images/Lynn_elsa.jpg' %}" style="height:210px">
-            	<h2> Lynn Neakrase</h2>
-                <p class="title">Senior Research Scientist</p> 
-		<p>Lead Designer for ELSA, Derived Data Archive Liaison</P>
-		<button  style= "margin: 24px 0;">
-		    <a href="http://astronomy.nmsu.edu/lneakras/Lynn_Neakrase/About_Me.html" data-toggle="tiptool" data-placement="right" title="NMSU_Profile"><i class="fa fa-info-circle"></i></a>
-		</button >
-		
-	</div>
-        </div>
-	</div>
-        <!--Grid column-->
-<hr>
-<hr>
-        <!--Grid column-->
-        <div class="col-md-4">
-	<div class="column">
-           <div class="card">
-               <img class="img-fluid" src="{% static 'images/Lyle_elsa.jpg' %}" style="height:210px" >
-            	<h2> Lyle Huber</h2>
-                <p class="title"> ATM Data Manager </p> 
-		<p>Archive Data Manager, Mission Data Liaison</P>
-		<button style= "margin: 24px 0;">
-		    <a href="http://astro.nmsu.edu/facultydirectory/lyle-huber.html" data-toggle="tiptool" data-placement="right" title="NMSU_Profile"><i class="fa fa-info-circle"></i></a>
-		</button>
-		
-        </div>
-        <!--Grid column-->
-	</div>
-    </div>
-</div>
-<hr>
-<hr>
-<hr>
-    <!-- Grid row-->
-    <!-- Contact form, uncomment when libraries are installed -->
-<div class="row">
-      <button data-toggle="collapse" href="#contact" role="button">CONTACT</button>
-</div>
-<div class="row">
-	<div class="col-md-12 rgba-indigo">
-	</br>
-	<div class="rgba-indigo">
-          <h3 class="h3-responsive">Send a message to ELSA <i class="fa fa-snowflake-o"></i></h3>
-              <form role="form" action="" method="post">
-                        {% csrf_token %}
-                        {{ contact_form.as_p }}
-                        <button type="submit" class="btn btn-default">Submit</button>
-				<style>
-	     			 .round-button {
-   	  		         display:inline-block;
-	      			 height:25px;
-	      		 	 width:25px;
-    	     			 color: white;
-   	      			 text-align: center;
-   	     			 margin: 4px 2px;
-    	    		 	 background-color: #008080;
-   	      			 font-size:16px;
-   	      			 font-weight:bold;
-	     			 border-color: #000000;
-	      			 }
-	      
-	      			.round-button{border-radius: 50%;}
-	  			</style>
-				 <button class="round-button" data-toggle="tiptool" data-placement="right" title="After submitting the form, please wait 48 hours for us to get back to you.">?</button>
-                    </form>
+            <div class="card">
+                <img src="{% static 'images/Nancy_elsa.png' %}" alt="Nancy Chanover">
+                <div class="card-content">
+                    <h2>Nancy Chanover</h2>
+                    <p class="title">ATM Node PI</p>
+                    <p>PDS ATM Node Lead</p>
+                    <a href="http://astro.nmsu.edu/facultydirectory/nancy_chanover.html" title="NMSU_Profile" class="btn">
+                        <i class="fa fa-info-circle"></i>
+                    </a>
+                </div>
             </div>
-	</div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card">
+                <img src="{% static 'images/Lynn_elsa.jpg' %}" alt="Lynn Neakrase">
+                <div class="card-content">
+                    <h2>Lynn Neakrase</h2>
+                    <p class="title">Senior Research Scientist</p>
+                    <p>Lead Designer for ELSA, Derived Data Archive Liaison</p>
+                    <a href="http://astronomy.nmsu.edu/lneakras/Lynn_Neakrase/About_Me.html" title="NMSU_Profile" class="btn">
+                        <i class="fa fa-info-circle"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card">
+                <img src="{% static 'images/Lyle_elsa.jpg' %}" alt="Lyle Huber">
+                <div class="card-content">
+                    <h2>Lyle Huber</h2>
+                    <p class="title">ATM Data Manager</p>
+                    <p>Archive Data Manager, Mission Data Liaison</p>
+                    <a href="http://astro.nmsu.edu/facultydirectory/lyle-huber.html" title="NMSU_Profile" class="btn">
+                        <i class="fa fa-info-circle"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
     </div>
+    
+    <hr>
+
+    <div class="row mb-3">
+        <div class="col-md-12 rgba-indigo">
+            <h3 class="h3-responsive">Send a message to ELSA <i class="fa fa-snowflake-o"></i></h3>
+            <form role="form" action="" method="post">
+                {% csrf_token %}
+                {{ contact_form.as_p }}
+                <button type="submit" class="btn btn-default">Submit</button>
+                <button class="round-button" data-toggle="tiptool" data-placement="right" title="After submitting the form, please wait 48 hours for us to get back to you.">?</button>
+            </form>
+        </div>
+    </div>
+</div>
 {% endblock %}
+
+
