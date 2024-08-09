@@ -2,53 +2,61 @@
 {% load static %}
 
 {% block title_block %}
-Delete
+Delete Bundle
 {% endblock %}
 
 {% block main_header_block %}
 <br>
 {% endblock %}
 
-
 {% block body_block %}
-<hr>
-<hr>
-<hr>
-<h3>Delete {{ bundle }}</h3>
-<!--First row-->
-<div class="row">
-    <!--First col-->
-    <div class="col-md-12">
-        <form id="delete_bundle" method="post" action="{% url 'build:bundle_delete' bundle.pk %}">
-             {% csrf_token %}
-             Are you sure you want to delete {{ bundle }}?
-             <br/>
-             {{ delete_bundle_form.as_p }}
-             <input class="btn btn-default" type="submit" value="Submit"/>
-        </form>
+<br>
+<div class="container my-4">
+    <!-- Header and Description -->
+    <div class="row mb-4">
+        <div class="col text-center">
+            <h3 style="margin-top:140px">Delete Bundle</h3>
+            <br>
+            <h5>Are you sure you want to delete <i>"{{bundle}}"</i>?</h5>
+            <p><i>Caution: This bundle will be deleted immediately and this action cannot be undone.</i></p>
+        </div>
     </div>
-    <!--/.First col-->
-</div>
-<!--/.First row-->
 
-<!--First row-->
-<div class="row">
-    <!--First col-->
-    <div class="col-md-12">
-        {% if decision == 'was not' %}
-            Your bundle {{ decision }} deleted.
-            <a href="{% url 'build:bundle' bundle.pk %}">Go To Bundle</a>
-        {% elif decision == 'was' %}
-            Your bundle was deleted.
-        <ul>
-            <li>Want to make a new bundle?  Then go to <a href="{% url 'build' %}">Build <i class="fa fa-arrow-right" aria-hidden="true"></i></a></li>
-            <li>Want to see your current bundles?  Then go to <a href="{{ user.userprofile.get_absolute_url }}">your profile <i class="fa fa-arrow-right" aria-hidden="true"></i></a></li>
-        </ul>
-        {% endif %}
+    <!-- Deletion Form -->
+    <div class="row">
+        <div class="col-md-6 offset-md-3">
+            <form id="delete_bundle" method="post" action="{% url 'build:bundle_delete' bundle.pk %}">
+                {% csrf_token %}
+                <div class="form-group">
+                    {{ delete_bundle_form.as_p }}
+                </div>
+                <br>
+                <div class="d-grid gap-2">
+                    <button style="margin-bottom:150px" type="submit" class="btn btn-danger">Submit</button>
+                </div>
+            </form>
+        </div>
     </div>
-    <!--/.First col-->
+    <br>
+
+
+    <!-- Post-Deletion Actions -->
+    <div class="row mt-4">
+        <div class="col text-center">
+            {% if decision == 'was not' %}
+                <div class="alert alert-warning" role="alert">
+                    Your bundle was not deleted. <a href="{% url 'build:bundle' bundle.pk %}" class="alert-link">Go back to the bundle</a>.
+                </div>
+            {% elif decision == 'was' %}
+                <div class="alert alert-success" role="alert">
+                    Your bundle was successfully deleted.
+                </div>
+                <div class="mt-3">
+                    <a href="{% url 'build' %}" class="btn btn-primary me-2">Create a New Bundle <i class="fa fa-arrow-right" aria-hidden="true"></i></a>
+                    <a href="{{ user.userprofile.get_absolute_url }}" class="btn btn-secondary">View Your Bundles <i class="fa fa-arrow-right" aria-hidden="true"></i></a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
 </div>
-<!--/.First row-->
-
-
 {% endblock %}
