@@ -29,6 +29,7 @@ from django.shortcuts import render
 from django.template.loader import get_template
 from .models import Joke
 from .forms import *
+
 # from .forms import ContactForm, UserContactForm, UploadedDocumentForm # I'm not sure uploaded document form should be here (k).
 import random
 import os
@@ -64,7 +65,7 @@ def contact(request):
     if user_contact_form.is_valid():
         print('user contact form is not valid')
            
-    if request.user.is_authenticated():
+    if request.user.is_authenticated:
         context_dict['user_logged_in'] = True
         if user_contact_form.is_valid():
             print('user_contact_form is valid')
@@ -83,6 +84,7 @@ def contact(request):
             )
             email.send()
             context_dict['email_sent'] = True
+
 
     #     #else:
     #      #   logger.error('{}: user_contact_form is not valid'.format(date.today()))

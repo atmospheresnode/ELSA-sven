@@ -1149,6 +1149,35 @@ def bundle_delete(request, pk_bundle):
         return redirect('main:restricted_access')
 
 
+def bundle_delete_new(request, pk_bundle):
+    bundle = Bundle.objects.get(pk=pk_bundle)
+
+    if request.user == bundle.user:
+        print('authorized user: {}'.format(request.user))
+
+        # ELSA's current user is the bundle user so begin view logic
+        print('\n\n')
+        print('---------------------------------------------------------------------------------\n')
+        print('---------------------- Start Bundle Delete --------------------------------------\n')
+        print('---------------------------------------------------------------------------------\n')
+
+        print('\n\n------------------------------- BUNDLE INFO -------------------------------')
+        print('Bundle: {}'.format(bundle))
+        print('User: {}'.format(bundle.user))
+        print('Request: {}'.format(request.user))
+
+        success_status = bundle.remove_bundle()
+        bundle.delete()
+        if success_status:
+            return redirect('../../success_delete/') 
+    else:
+        print('unauthorized user attempting to access a restricted area.')
+        return redirect('main:restricted_access')
+
+
+
+
+
 def success_delete(request):
     return render(request, 'build/bundle/success_delete.html')
 
@@ -1420,10 +1449,6 @@ def context_search_investigation(request, pk_bundle):
 
                 write_into_label(i, product_bundle, product_collections_list)
 
-                # fil.close()
-        
-                
-                i.fill_label(bundle)
 
             messages.success(request, 'Investigation Product Added')
             context_dict['messages'] = messages.get_messages(request)
