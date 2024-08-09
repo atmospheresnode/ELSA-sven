@@ -1421,9 +1421,6 @@ def context_search_investigation(request, pk_bundle):
                 write_into_label(i, product_bundle, product_collections_list)
 
                 # fil.close()
-        
-                
-                i.fill_label(bundle)
 
             messages.success(request, 'Investigation Product Added')
             context_dict['messages'] = messages.get_messages(request)
