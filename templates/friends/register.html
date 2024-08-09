@@ -70,12 +70,17 @@ Register
                             </div>
 
                             <!-- Create Account/Register -->
-                            <button type="submit" class="btn btn-light text-light mt-5">Create Account</button>
-                        </form>
-                        
+                            <div class="d-flex align-items-center mt-5">
+                                <button type="submit" class="btn btn-light text-light">Create Account</button>
+                                <p class="mb-0" style="margin-left: 2rem;">Already have an account? <a href="{% url 'main:index' %}" class="text-decoration-none" style="color:blue; font-weight:500">Log in</a></p>
+                            </div>
+                        </form>                       
                     </div>
                 </div>
             </div>
         </div>
     </div>
+    
+
+
 {% endblock %}
