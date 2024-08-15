@@ -123,8 +123,8 @@
                         </button>
 
                         <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
-                            <a class="dropdown-item" href="{{ user.userprofile.get_absolute_url }}">{{ user.first_name }}'s Profile</a>
-                            <a class="dropdown-item" href="{% url 'friends:settings' user.pk %}">Profile Settings</a>
+                            <a class="dropdown-item" href="{{ user.userprofile.get_absolute_url }}">Bundle Hub</a>
+                            <a class="dropdown-item" href="{% url 'friends:useraccount' %}">Account</a>
                             <a class="dropdown-item" href="{% url 'friends:logout' %}">Logout</a>
                         </div>
                     </li>
