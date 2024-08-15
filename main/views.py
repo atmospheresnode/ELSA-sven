@@ -82,7 +82,7 @@ def contact(request):
                 to = ['elsa@atmos.nmsu.edu', 'sajomont@nmsu.edu'],
                 headers = {'Reply-To': 'atm-elsa@nmsu.edu' }
             )
-            email.send()
+            # email.send()
             context_dict['email_sent'] = True
 
 
