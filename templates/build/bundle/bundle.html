@@ -515,7 +515,7 @@
                                           {% endif %}
 
 
-                                          <a type="button" class="btn btn-danger">Remove</a>
+                                          <a type="button" class="btn btn-danger" href="{% url 'build:delete_investigation' bundle.pk investigation.pk %}">Remove</a>
 
                                     <!-- <p class="card-text"><small class="text-muted">Last updated 3 mins ago</small></p> -->
                                        </div>
@@ -555,7 +555,7 @@
                                        <h5 class="card-title">{{ instrument_host }}</h5>
                                        <p class="card-text">Investigation(s): {{ instrument_host.investigations.last }}</p>
                                        <p class="card-text">{{ instrument_host.lid }}</p>
-                                       <button type="button" class="btn btn-danger">Remove</button>
+                                       <a type="button" class="btn btn-danger" href="{% url 'build:delete_instrument_host' bundle.pk instrument_host.pk %}">Remove</a>
 
                                    <!-- <p class="card-text"><small class="text-muted">Last updated 3 mins ago</small></p> -->
                                     </div>
@@ -609,7 +609,7 @@
                                     <div class="card-body">
                                        <h5 class="card-title">{{ instrument }}</h5>
                                        <p class="card-text">{{ instrument.lid }}</p>
-                                       <button type="button" class="btn btn-danger">Remove</button>
+                                       <a type="button" class="btn btn-danger" href="{% url 'build:delete_instrument' bundle.pk instrument.pk %}">Remove</a>
 
                                    <!-- <p class="card-text"><small class="text-muted">Last updated 3 mins ago</small></p> -->
                                     </div>
@@ -680,7 +680,7 @@
                                           {% endfor %}
                                        </p>
                                        <p class="card-text">{{ target.lid }}</p>
-                                       <button type="button" class="btn btn-danger">Remove</button>
+                                       <a type="button" class="btn btn-danger" href="{% url 'build:delete_target' bundle.pk target.pk %}">Remove</a>
 
                                    <!-- <p class="card-text"><small class="text-muted">Last updated 3 mins ago</small></p> -->
                                     </div>
