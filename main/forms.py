@@ -1,7 +1,8 @@
 from builtins import object
 from django import forms
 from .models import UploadedDocument
-# from captcha.fields import CaptchaField
+from django_recaptcha.fields import ReCaptchaField
+from django_recaptcha.widgets import ReCaptchaV2Checkbox
 
 class ContactForm(forms.Form):
 
@@ -9,15 +10,18 @@ class ContactForm(forms.Form):
     email = forms.CharField()
     agency = forms.CharField()
     message = forms.CharField(widget=forms.Textarea)
-    # captcha = CaptchaField()
+    captcha = ReCaptchaField(widget=ReCaptchaV2Checkbox())
+
 
 
 class UserContactForm(forms.Form):
     message = forms.CharField(widget=forms.Textarea)
-    # captcha = CaptchaField()
+    captcha = ReCaptchaField(widget=ReCaptchaV2Checkbox())
+
 
 
 class UploadedDocumentForm(forms.ModelForm):
+    captcha = ReCaptchaField(widget=ReCaptchaV2Checkbox())
     class Meta(object):
         model = UploadedDocument
         fields = ('description', 'document',)
