@@ -20,13 +20,13 @@ If you said yes to either, then the view belongs in elsa.main.views.
 from __future__ import unicode_literals
 from __future__ import print_function
 
-
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.conf import settings
 from django.core.mail import EmailMessage
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.template.loader import get_template
+from django.http import HttpResponseRedirect, HttpResponse
 from .models import Joke
 from .forms import *
 
@@ -35,6 +35,7 @@ import random
 import os
 import logging  # This document logs errors and is currently not in use in ELSA.  Feel free to develop this (k).
 from datetime import date
+
 
 #logger = loggin.getLogger(__name__)
 
@@ -79,12 +80,16 @@ def contact(request):
                 subject = "{} is contacting ELSA".format(context_dict['name']),
                 body = content,
                 from_email = 'atm-elsa@nmsu.edu',
-                to = ['elsa@atmos.nmsu.edu', 'sajomont@nmsu.edu'],
+                # to = ['elsa@atmos.nmsu.edu', 'sajomont@nmsu.edu'],
+                to = ['rupakdey@nmsu.edu'],
                 headers = {'Reply-To': 'atm-elsa@nmsu.edu' }
             )
-            # email.send()
+            #email.send()
             context_dict['email_sent'] = True
+            return HttpResponseRedirect('/contact') # redirects to the same page to clear the form after submission
 
+            
+            
 
     #     #else:
     #      #   logger.error('{}: user_contact_form is not valid'.format(date.today()))
