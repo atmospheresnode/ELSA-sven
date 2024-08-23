@@ -77,7 +77,7 @@ def index(request):
             body = content,
             from_email = 'atm-elsa@nmsu.edu',
             # to = ['lneakras@nmsu.edu', 'lhuber@nmsu.edu'],
-            to =['sajomont@nmsu.edu'],
+            to =['lneakras@nmsu.edu', 'sajomont@nmsu.edu'],
             headers = {'Reply-To': context_dict['contact_email'] }
         )
         print('before')
