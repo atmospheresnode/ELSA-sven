@@ -8,7 +8,7 @@ class ContactForm(forms.Form):
 
     name = forms.CharField()
     email = forms.CharField()
-    agency = forms.CharField()
+    agency = forms.CharField(label='Agency/Institution')
     message = forms.CharField(widget=forms.Textarea)
     captcha = ReCaptchaField(widget=ReCaptchaV2Checkbox())
 

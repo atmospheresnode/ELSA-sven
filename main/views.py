@@ -80,11 +80,11 @@ def contact(request):
                 subject = "{} is contacting ELSA".format(context_dict['name']),
                 body = content,
                 from_email = 'atm-elsa@nmsu.edu',
-                # to = ['elsa@atmos.nmsu.edu', 'sajomont@nmsu.edu'],
-                to = ['rupakdey@nmsu.edu'],
+                to = ['elsa@atmos.nmsu.edu', 'sajomont@nmsu.edu', 'lneakras@nmsu.edu'],
+                #to = ['rupakdey@nmsu.edu'],
                 headers = {'Reply-To': 'atm-elsa@nmsu.edu' }
             )
-            #email.send()
+            email.send()
             context_dict['email_sent'] = True
             return HttpResponseRedirect('/contact') # redirects to the same page to clear the form after submission
 
