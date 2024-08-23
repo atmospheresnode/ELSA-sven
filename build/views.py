@@ -940,10 +940,10 @@ def bundle(request, pk_bundle):
             context_dict['additional_collections_count'] =  len(additional_collections_set)
 
             # # fixes the refresh duplication issue - deric
-            # return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
+            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
 
             # fixes the refresh duplication issue, use this one for offline testing - deric
-            return HttpResponseRedirect('/build/' + pk_bundle + '/')
+            # return HttpResponseRedirect('/build/' + pk_bundle + '/')
                     
         # After ELSAs friend hits submit, if the forms are completed correctly, we should enter
         # this conditional.  We must do [] things: 1. Create the Document model object, 2. Add a Product_Document label to the Document Collection, 3. Add the Document as an Internal_Reference to the proper labels (like Product_Bundle and Product_Collection).
@@ -1007,10 +1007,10 @@ def bundle(request, pk_bundle):
             context_dict['documents'] = Product_Document.objects.filter(bundle=bundle)
 
             # # fixes the refresh duplication issue - deric
-            # return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
+            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
 
             # fixes the refresh duplication issue, use this one for offline testing - deric
-            return HttpResponseRedirect('/build/' + pk_bundle + '/')
+            # return HttpResponseRedirect('/build/' + pk_bundle + '/')
 
         if form_data.is_valid():
             print('\n\n---------------------- DATA INFO -------------------------------')
@@ -1033,10 +1033,10 @@ def bundle(request, pk_bundle):
             context_dict['data_set'] = Data.objects.filter(bundle=bundle)
 
             # # fixes the refresh duplication issue - deric
-            # return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
+            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
 
             # fixes the refresh duplication issue, use this one for offline testing - deric
-            return HttpResponseRedirect('/build/' + pk_bundle + '/')
+            # return HttpResponseRedirect('/build/' + pk_bundle + '/')
 
         context_dict['messages'] = messages.get_messages(request)
         return render(request, 'build/bundle/bundle.html', context_dict)
@@ -1457,7 +1457,8 @@ def context_search_investigation(request, pk_bundle):
             return HttpResponseRedirect('/build/' + pk_bundle + '/')
         
         context_dict['messages'] = messages.get_messages(request)
-        return render(request, 'build/bundle/bundle.html', context_dict)
+        # return render(request, 'build/bundle/bundle.html', context_dict)
+        return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
         # return HttpResponseRedirect('/build/' + pk_bundle + '/')
         # return render(request, 'build/context/context_search_investigation.html', context_dict)
 

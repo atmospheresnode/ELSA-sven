@@ -170,6 +170,14 @@ def register(request):
     return render(request, 'friends/register.html', {'user_form':user_form, 'profile_form':profile_form, 'registered':registered})
 
 
+# user account page
+@login_required
+def friend_useraccount(request):
+    context_dict = {}
+    context_dict['bundle_count'] = Bundle.objects.filter(user=request.user).count()
+    return render(request, 'friends/useraccount.html', context_dict)
+
+
 # profile_settings NOTE:  It is important to NOT rename this as simply settings.  Since we import django.conf import settings, when our user goes to register, settings.ARCHIVE_DIR does not pull from our settings.py file.  Rather, Django comes to this function (if named settings) and notices there is no ARCHIVE_DIR declared here.  Big boo boo that cost me (k) a couple days to figure out.
 @login_required
 def friend_settings(request, pk_user):

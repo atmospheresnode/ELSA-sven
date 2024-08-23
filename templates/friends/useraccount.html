@@ -1,0 +1,90 @@
+{% extends 'base-derk.html' %}
+{% load static %}
+
+{% block title_block %}
+{{ userprofile }} - Account
+{% endblock %}
+
+{% block main_header_block %}
+User Account
+{% endblock %}
+
+{% block body_block %}
+<br> <br> <br>
+<div class="container my-5">
+    <div class="row g-4">
+        <!-- Left Column -->
+        <div class="col-md-4 d-flex flex-column">
+            <div class="d-flex flex-column align-items-center h-100">
+                <!-- Profile Picture Card -->
+                <div class="card shadow-sm border-0 p-4 mb-4 w-100 text-center">
+                    <div class="mb-3">
+                        <img src="{% static 'images/idea.jpg' %}" alt="Profile Picture" class="img-fluid rounded-circle border" style="width: 180px; height: 180px; object-fit: cover;">
+                    </div>
+                    <h4 class="fw-bold">{{ user.first_name }} {{ user.last_name }}</h4>
+                    <a href="{% url 'friends:settings' user.pk %}" class="btn btn-outline-primary mt-3">Edit Profile</a>
+                </div>
+
+                <!-- Bundle Count Card -->
+                <div class="card shadow-sm border-0 p-4 w-100 text-center rounded-4">
+                    <h5 class="fw-bold text-primary mb-2" style="font-size: 1.25rem;">Bundle Count</h5>
+                    <p class="display-5 fw-bold text-muted" style="font-size: 2.5rem; margin-bottom: 0;">{{ bundle_count }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column -->
+        <div class="col-md-8 d-flex flex-column justify-content-center">
+            <div class="card shadow-sm border-0 p-4">
+                <h3 class="card-title text-muted mb-4">User Information</h3>
+                <div class="row mb-3">
+                    <div class="col-sm-6">
+                        <h6 class="fw-bold">First Name</h6>
+                        <p class="text-muted">{{ user.first_name }}</p>
+                    </div>
+                    <div class="col-sm-6">
+                        <h6 class="fw-bold">Last Name</h6>
+                        <p class="text-muted">{{ user.last_name }}</p>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-sm-6">
+                        <h6 class="fw-bold">Username</h6>
+                        <p class="text-muted">{{ user.username }}</p>
+                    </div>
+                    <div class="col-sm-6">
+                        <h6 class="fw-bold">Email</h6>
+                        <p class="text-muted">{{ user.email }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    body {
+        background-color: #f8f9fc; 
+        color: #444;
+    }
+    .card {
+        border-radius: 16px;
+    }
+    .btn-outline-primary {
+        border-color: #0056b3;
+        color: #0056b3;
+        padding: 6px 16px;
+        font-size: 0.875rem;
+        border-width: 1px;
+    }
+    .btn-outline-primary:hover {
+        background-color: #0056b3;
+        color: #fff;
+    }
+    .col-md-8 {
+        display: flex;
+        justify-content: center;
+    }
+</style>
+{% endblock %}
