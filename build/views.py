@@ -2715,7 +2715,7 @@ def delete_target(request, pk_bundle, pk_target):
     # I'm not convinced this does what I want it to do
     # return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
     # return HttpResponseRedirect('/build/' + pk_bundle + '/')
-    return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/contextsearch/')
+    return HttpResponseRedirect('/elsa/build/' + pk_bundle)
     # return redirect('../../bundle/')
 
 def delete_instrument(request, pk_bundle, pk_instrument):
@@ -2743,7 +2743,7 @@ def delete_instrument(request, pk_bundle, pk_instrument):
     if instrument_host:
         return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/contextsearch/investigation/' + str(investigation.pk) + '/instrument_host/' + str(instrument_host.pk) + '/instrument/')
     else:
-        return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/contextsearch/')
+        return HttpResponseRedirect('/elsa/build/' + pk_bundle)
     # return redirect('../../bundle/')
 
 def delete_instrument_host(request, pk_bundle, pk_instrument_host):
@@ -2772,7 +2772,7 @@ def delete_instrument_host(request, pk_bundle, pk_instrument_host):
     else: 
         # Have user select new host and probably create new html
         # return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/contextsearch/investigation/' + str(investigation.pk) + '/instrument_host_or_facility/')
-        return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/contextsearch/investigation/' + str(investigation.pk) + '/instrument_host_or_facility/')
+        return HttpResponseRedirect('/elsa/build/' + pk_bundle)
 
 def delete_facility(request, pk_bundle, pk_facility):
     bundle = Bundle.objects.get(pk=pk_bundle)
@@ -2798,7 +2798,7 @@ def delete_facility(request, pk_bundle, pk_facility):
         # return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/contextsearch/investigation/' + str(investigation.pk) + '/instrument_host_or_facility/')
         return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/contextsearch/investigation/' + str(investigation.pk) + '/instrument_host_or_facility/')
     else:
-        return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/contextsearch/')
+        return HttpResponseRedirect('/elsa/build/' + pk_bundle)
 
 def delete_investigation(request, pk_bundle, pk_investigation):
     bundle = Bundle.objects.get(pk=pk_bundle)
@@ -2825,7 +2825,7 @@ def delete_investigation(request, pk_bundle, pk_investigation):
 
     # have screen to choose between deleting investigation or choosing new host
     # return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/contextsearch/investigation/')
-    return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/contextsearch/investigation/')
+    return HttpResponseRedirect('/elsa/build/' + pk_bundle)
 
 @login_required
 def delete_citation_information(request, pk_bundle, pk_citation_information):
