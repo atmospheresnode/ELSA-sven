@@ -5,23 +5,56 @@ from django_recaptcha.fields import ReCaptchaField
 from django_recaptcha.widgets import ReCaptchaV2Checkbox
 
 class ContactForm(forms.Form):
+    name = forms.CharField(
+        label='Name',
+        label_suffix = '',
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Enter your full name',
+            'aria-label': 'Name',
+        })
+    )
+    email = forms.EmailField(
+        label='Email',
+        label_suffix = '',
+        widget=forms.EmailInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Enter your email address',
+            'aria-label': 'Email',
+        })
+    )
+    agency = forms.CharField(
+        label='Agency/Institution',
+        label_suffix = '',
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Enter your agency or institution',
+            'aria-label': 'Agency/Institution',
+        })
+    )
+    message = forms.CharField(
+        label='Message',
+        label_suffix = '',
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'placeholder': 'Type your message here...',
+            'rows': 4,
+            'aria-label': 'Message',
+        })
+    )
 
-    name = forms.CharField()
-    email = forms.CharField()
-    agency = forms.CharField(label='Agency/Institution')
-    message = forms.CharField(widget=forms.Textarea)
-    captcha = ReCaptchaField(widget=ReCaptchaV2Checkbox())
+    captcha = ReCaptchaField(widget=ReCaptchaV2Checkbox(), label='')
 
 
 
 class UserContactForm(forms.Form):
     message = forms.CharField(widget=forms.Textarea)
-    captcha = ReCaptchaField(widget=ReCaptchaV2Checkbox())
+    captcha = ReCaptchaField(widget=ReCaptchaV2Checkbox(), label='')
 
 
 
 class UploadedDocumentForm(forms.ModelForm):
-    captcha = ReCaptchaField(widget=ReCaptchaV2Checkbox())
+    captcha = ReCaptchaField(widget=ReCaptchaV2Checkbox(), label='')
     class Meta(object):
         model = UploadedDocument
         fields = ('description', 'document',)

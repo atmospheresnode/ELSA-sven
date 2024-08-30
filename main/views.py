@@ -40,9 +40,6 @@ from datetime import date
 #logger = loggin.getLogger(__name__)
 
 
-
-# Create your views here.
-
 # index is the home page for elsa.
 def index(request):
     return render(request, 'main/index.html', {})

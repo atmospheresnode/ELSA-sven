@@ -9,110 +9,73 @@
 Profile Settings
 {% endblock %}
 
-
-           
-
 {% block body_block %}
-<hr>
-<hr>
-
 <style> 
-	.bg{
-		background-image: url('/static/images/team2.png');
-		background-position:center;
-		opacity:.5;
-	}
-
-	.special-body{ 
-		opacity:1;
-	}
-
-	.main-card{
-		opacity:1;
-	}
+    .profile-settings-container {
+        background-color: rgba(255, 255, 255, 0.85);
+        border-radius: 8px;
+        padding: 40px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
+    
+    .profile-settings-container h3 {
+        font-family: 'Roboto', sans-serif;
+        font-weight: 700;
+        margin-bottom: 25px;
+    }
+    
+    .form-control {
+        margin-bottom: 20px;
+    }
+    
+    .btn-primary {
+        background-color: #007bff;
+        border: none;
+        padding: 10px 20px;
+        font-size: 16px;
+        border-radius: 25px;
+        transition: background-color 0.3s;
+    }
+    
+    .btn-primary:hover {
+        background-color: #0056b3;
+    }
 </style>
 
-<div class="container-fluid justify-content-center align-items-center py-5">
-    <div class="row justify-content-center align-items-center">
-        <div class="col-12 col-lg-9 col-xl-10">
-<!--Row-->
-
-<div class="card">
-<div class="justify-content-center">
-<img class="card-img" src="{% static 'images/team2.png' %}" style="opacity:.25; object-fit:cover; height:750px;">
-</div>
-<div class="card-img-overlay">
-	<div class="card-body special-body p-4 p-md-5">
-		
-
-    <!--Column-->
-    
-        {% comment %} <!--Card-->
-        <div class="card">
-            <!--Card content-->
-            <div class="card-body"> {% endcomment %}
-                <!--Title-->
-                <h3 class="card-title">Profile Settings</h3>
-		<hr >
-                <!--Text-->
-		<h4>Update First Name</h4>
-                <form id="first_form" method="post" action="{% url 'friends:settings' user.pk %}">
-            	    {% csrf_token %}
-            	    New First Name: <input type="text" name="first_name" value="" size="50"/>
-            	    <br/>
-		    <input type="submit" value="submit"/>
-		</form>
-		<hr>
-		<h4>Update Last Name</h4>
-                <form id="last_form" method="post" action="{% url 'friends:settings' user.pk %}">
-            	    {% csrf_token %}
-            	    New Last Name: <input type="text" name="last_name" value="" size="50"/>
-            	    <br/>
-            	    <input type="submit" value="submit"/>
-        	</form> 
-		<hr>  
-		<!--<h4>Update Agency</h4>
-                <form id="agency_form" method="post" action="{% url 'friends:settings' user.pk %}">
-            	    {% csrf_token %}
-            	    New Agency: <input type="text" name="agency" value="" size="50"/>
-            	    <br/>
-            	    <input type="submit" value="submit"/>
-        	</form> 
-		<hr>-->
-		<h4>Update Email</h4>
-                <form id="email_form" method="post" action="{% url 'friends:settings' user.pk %}">
-            	    {% csrf_token %}
-            	    New Email: <input type="text" name="email" value="" size="50"/>
-            	    <br/>
-            	    <input type="submit" value="submit"/>
-        	</form> 
-		<hr>
-		<h4>Update Password</h4>
-                <form id="password_form" method="post" action="{% url 'friends:settings' user.pk %}">
-            	    {% csrf_token %}
-            	    Current Password: <input type="password" name="current_password" value="" size="50"/>
-            	    <br/>
-            	    New Password: <input type="password" name="new_password" value="" size="50"/>
-            	    <br/>
-            	    Confirm New Password: <input type="password" name="confirm_password" value="" size="50"/>
-            	    <br/>
-            	    <input type="submit" value="submit"/>
-        	</form>  
-			</div>
-		</div>           
+<br><br>
+<div class="container-fluid py-5">
+    <div class="row justify-content-center">
+        <div class="col-12 col-md-8 col-lg-6 profile-settings-container">
+            <h3>Profile Settings</h3>
+            <form id="first_form" method="post" action="{% url 'friends:settings' user.pk %}">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="first_name">Update First Name</label>
+                    <input type="text" name="first_name" class="form-control" placeholder="New First Name" value="">
+                </div>
+                <div class="form-group">
+                    <label for="last_name">Update Last Name</label>
+                    <input type="text" name="last_name" class="form-control" placeholder="New Last Name" value="">
+                </div>
+                <div class="form-group">
+                    <label for="email">Update Email</label>
+                    <input type="email" name="email" class="form-control" placeholder="New Email" value="">
+                </div>
+                <div class="form-group">
+                    <label for="current_password">Update Password</label>
+                    <input type="password" name="current_password" class="form-control" placeholder="Current Password">
+                </div>
+                <div class="form-group">
+                    <input type="password" name="new_password" class="form-control" placeholder="New Password">
+                </div>
+                <div class="form-group">
+                    <input type="password" name="confirm_password" class="form-control" placeholder="Confirm New Password">
+                </div>
+                <div class="form-group text-center">
+                    <input type="submit" class="btn btn-primary" value="Save Changes">
+                </div>
+            </form>
         </div>
-
-		{% comment %} <div class="text-center">
-			<img src="{% static 'images/team2.png' %}" class="img-fluid" style="max-width:50%;" align="center">
-		</div> {% endcomment %}
-        <!--/.Card-->
-   
-    <!--/.Column-->
-    <!--Column-->
-    
-    <!--/.Column-->
+    </div>
 </div>
-</div>
-</div>
-
 {% endblock %}
