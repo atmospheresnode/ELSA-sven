@@ -3,10 +3,10 @@
         {{ file }} 
         <i class="fa fa-caret-down"></i>
     </div>
-    <div class="collapse" id="{{ file }}">
+    <div class="collapse" id="{{ file }}" data-bs-parent="#accordion">
         
     {% for f in subfiles %}
-    &nbsp;&nbsp;&nbsp;{{ f }}
+    {{ f }}
     {% endfor %}
             
     </div>
