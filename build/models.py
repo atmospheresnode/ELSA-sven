@@ -2685,14 +2685,29 @@ class Product_Bundle(models.Model):
 
         Reference_List = root.find('{}Reference_List'.format(NAMESPACE))
 
-        Internal_Reference = etree.SubElement(
-            Reference_List, 'Internal_Reference')
+        # Using .append
 
-        lid_reference = etree.SubElement(Internal_Reference, 'lid_reference')
+        Reference_List.append(etree.Element("Internal_Reference"))
+        Internal_Reference = Reference_List.find('{}Internal_Reference'.format(NAMESPACE))
+
+        Internal_Reference.append(etree.Element("lid_reference"))
+        lid_reference = Internal_Reference.find('{}lid_reference'.format(NAMESPACE))
         lid_reference.text = relation.lid()
 
-        reference_type = etree.SubElement(Internal_Reference, 'reference_type')
-        reference_type.text = 'bundle_to_{}'.format(relation.reference_type())
+        Internal_Reference.append(etree.Element("reference_type"))
+        lid_reference = Internal_Reference.find('{}reference_type'.format(NAMESPACE))
+        lid_reference.text = 'bundle_to_{}'.format(relation.reference_type())
+
+        # using .subelement
+
+        # Internal_Reference = etree.SubElement(
+        #     Reference_List, 'Internal_Reference')
+
+        # lid_reference = etree.SubElement(Internal_Reference, 'lid_reference')
+        # lid_reference.text = relation.lid()
+
+        # reference_type = etree.SubElement(Internal_Reference, 'reference_type')
+        # reference_type.text = 'bundle_to_{}'.format(relation.reference_type())
 
         return root
 
@@ -4197,8 +4212,8 @@ class Modification_History(models.Model):
 
         # Double check but I'm pretty sure Modification_History is only added once.
         # if Modification_History is None:
-        Modification_History = etree.SubElement(
-            Identification_Area, 'Modification_History')
+        # Modification_History = etree.SubElement(
+        #     Identification_Area, 'Modification_History')
 
         # Add Modification_History information
         if self.version_id:

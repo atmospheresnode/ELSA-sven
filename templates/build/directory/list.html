@@ -12,8 +12,14 @@
 {% endblock %}
 
 {% block body_block %}
+<style>
+  .vertical_space_A { 
+      height: 120px;
+  }
+</style>
+<div class="vertical_space_A"> </div>
 <div class="col">
-  {% for f in subfiles%}
+  {% for f in subfiles %}
     <div class="col">
     {{ f }}
     </div>

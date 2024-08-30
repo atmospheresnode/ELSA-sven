@@ -122,14 +122,23 @@ def open_label_with_tree(label_path):
 
 # close_label closes an xml label given the label object and the root of the tree.
 # uncomment later
-def close_label(label_path, label_root):
-    label_object = open(label_path, "r")
-    lines = label_object.readlines()
-    label_object.close()
-    label_object = open(label_path, "w")
-    tree = etree.tostring(label_root, pretty_print=True, encoding="unicode", xml_declaration=False)
-    label_object.write(lines[0]+lines[1]+tree)
-    label_object.close() 
+def close_label(label_path, label_root, tree):
+    etree.indent(label_root, space="  ")
+
+    tree.write(label_path, pretty_print=True, encoding="utf-8", xml_declaration=True)
+    # label_object = open(label_path, "r")
+    # lines = label_object.readlines()
+    # print(lines)
+    # label_object.close()
+    # label_object = open(label_path, "w")
+    # formatted_xml = etree.tostring(tree, pretty_print=True, encoding="utf-8", xml_declaration=False)
+    # print(formatted_xml.decode())
+
+    # with open(label_path, "w", encoding='utf-8') as f:
+    #     f.write(formatted_xml.decode())
+    # print(tree)
+    # label_object.write(tree)
+    # label_object.close() 
 
 
 def write_into_label(product, product_bundle, product_collections_list):
@@ -152,7 +161,9 @@ def write_into_label(product, product_bundle, product_collections_list):
 
         # Close appropriate label(s)
         print(' ... Closing Label ... ')
-        close_label(label.label(), label_root)
+        close_label(label.label(), label_root, label_list[2])
+
+        
 
 def remove_from_label(product, product_bundle, product_collections_list):
     all_labels = []
