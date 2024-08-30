@@ -426,7 +426,7 @@ def build(request):
                 label_root)  # Fix for new data collections
             # Close label
             print(' ... Closing Label ... ')
-            close_label(product_bundle.label(), label_root)
+            close_label(product_bundle.label(), label_root, label_list[2])
 
             print(
                 '---------------- End Build Product_Bundle Base Case -------------------------')
@@ -472,7 +472,7 @@ def build(request):
                 print(' ... Adding Bundle Member Entries ... ')
                 label_root = product_bundle.build_bundle_member_entry(
                     label_root, product_collection)
-                close_label(product_bundle.label(), label_root)
+                close_label(product_bundle.label(), label_root, label_list[2])
                 print(' ... Bundle Member Entry Added: {} ...'.format(
                     product_collection.lid))
 
@@ -495,7 +495,7 @@ def build(request):
 
                     # Close label
                     print(' ... Closing Label ... ')
-                    close_label(product_collection.label(), label_root)
+                    close_label(product_collection.label(), label_root, label_list[2])
                     print(
                         '-------------End Build Product_Collection Base Case-----------------')
 
