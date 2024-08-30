@@ -138,12 +138,42 @@ h3.h3-responsive {
     border: 1px solid #2E8B57;  
 }
 
+.fixed-contact-button {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background-color: #5F9EA0;
+    color: white;
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    cursor: pointer;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    transition: background-color 0.3s, transform 0.3s;
+}
+
+.fixed-contact-button:hover {
+    background-color: #0056b3;
+    transform: translateY(-4px);
+}
+
+/* Modal Styling */
+.modal-content {
+    border-radius: 10px;
+    padding: 20px;
+    background-color: #fff;
+}
+
 </style>
 
 
 <div class="container">
     <h2 class="section-heading">Planetary Atmospheres Node</h2>
-    <p class="section-description">Below are the top three contacts listed for the PDS Atmospheres Node. If you would like to send a message to the entire team, feel free to use the contact form below or contact them individually using the following platforms available.</p>
+    <p class="section-description">Below are the top three contacts listed for the PDS Atmospheres Node. If you would like to send a message to the entire team, feel free to click the message button in the bottom-right corner or contact them individually using the following platforms available.</p>
 
     <div class="row">
         <div class="col-md-4">
@@ -188,10 +218,11 @@ h3.h3-responsive {
             </div>
         </div>
     </div>
+</div>
     
-    <hr>
+<br>
 
-    <div class="row mb-3">
+    {% comment %} <div class="row mb-3">
         <div class="col-md-12 rgba-indigo">
             <h3 class="h3-responsive">Send a message to ELSA <i class="fa fa-snowflake-o"></i></h3>
             <form role="form" action="" method="post" autocomplete="off">
@@ -208,6 +239,35 @@ h3.h3-responsive {
                 <button type="submit" class="btn btn-default">Submit</button>
                 <button class="round-button" data-toggle="tiptool" data-placement="right" title="After submitting the form, please wait 48 hours for us to get back to you.">?</button>
             </form>
+        </div>
+    </div> {% endcomment %}
+
+    <!-- Modal Button -->
+<div class="fixed-contact-button" data-bs-toggle="modal" data-bs-target="#contactModal">
+    <i class="fa fa-envelope"></i>
+</div>
+
+<!-- Contact Modal -->
+<div class="modal fade" id="contactModal" tabindex="-1" role="dialog" aria-labelledby="contactModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="contactModalLabel">Send a Message to ELSA</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                    <form role="form" action="" method="post" autocomplete="off">
+                        {% csrf_token %}
+                        {% for field in form %}
+                            <div class="fieldWrapper">
+                                {{ field.errors }}
+                                {{ field.label_tag }} {{ field }}
+                            </div>
+                        {% endfor %}
+                        {{ contact_form.as_p }}
+                        <button type="submit" class="btn btn-default">Send message</button>
+                    </form>
+            </div>
         </div>
     </div>
 </div>

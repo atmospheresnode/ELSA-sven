@@ -5,15 +5,10 @@ from __future__ import print_function
 from django.contrib.auth.decorators import login_required
 from django.core.mail import EmailMessage
 from django.core.mail import send_mail
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, HttpResponseRedirect
 from django.template import Context
 from django.template.loader import get_template
 from .forms import ReviewForm, UserInfoForm
-
-
-
-
-
 
 
 
@@ -78,6 +73,7 @@ def index(request):
             from_email = 'atm-elsa@nmsu.edu',
             # to = ['lneakras@nmsu.edu', 'lhuber@nmsu.edu'],
             to =['lneakras@nmsu.edu', 'sajomont@nmsu.edu'],
+            #to = ['rupakdey@nmsu.edu'],
             headers = {'Reply-To': context_dict['contact_email'] }
         )
         print('before')
@@ -90,7 +86,6 @@ def index(request):
         email.send()
         print('after')
         context_dict['email_sent'] = True
-
         return render(request, 'review/index.html', context_dict)
 
     return render(request, 'review/index.html', context_dict)
