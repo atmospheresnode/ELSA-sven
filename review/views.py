@@ -53,7 +53,7 @@ def index(request):
 
         context_dict['contact_name'] = '{0}'.format(review_form.cleaned_data['user_name'])
         context_dict['contact_email'] = review_form.cleaned_data['user_email']
-        context_dict['agency'] = 'User was not logged in to retrieve extra information.'
+        #context_dict['agency'] = 'User was not logged in to retrieve extra information.'
 
         # Rest of the information not dependent upon user model is listed below
         context_dict['derived_data'] = review_form.cleaned_data['derived_data']
@@ -72,10 +72,19 @@ def index(request):
             body = content,
             from_email = 'atm-elsa@nmsu.edu',
             # to = ['lneakras@nmsu.edu', 'lhuber@nmsu.edu'],
-            to =['lneakras@nmsu.edu', 'sajomont@nmsu.edu'],
+            to =['lneakras@nmsu.edu', 'sajomont@nmsu.edu', 'rupakdey@nmsu.edu'],
             #to = ['rupakdey@nmsu.edu'],
             headers = {'Reply-To': context_dict['contact_email'] }
         )
+
+        # Email confirmation to user
+        email_confirmation = EmailMessage(
+            subject = "Thank you for submitting a Derived Data Peer Review!",
+            body = "Your review for '{}' data set has been received. Your review copy is included for your record: \n {} \n Thank you for using ELSA! \n\nRegards,\nTeam ELSA".format(context_dict['derived_data'], content),
+            from_email = 'atm-elsa@nmsu.edu',
+            to = [context_dict['contact_email']]
+        )
+
         print('before')
         # send_mail("Derived Data Peer Review from {}".format(context_dict['contact_name']),
         #           content,
@@ -84,6 +93,7 @@ def index(request):
         #           fail_silently=False)
         
         email.send()
+        email_confirmation.send()
         print('after')
         context_dict['email_sent'] = True
         return render(request, 'review/index.html', context_dict)

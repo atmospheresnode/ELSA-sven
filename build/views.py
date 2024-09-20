@@ -2297,7 +2297,7 @@ def Table_Creation(request, pk_bundle, pk_data):
             label_root = form.fill_base_case(label_root)
             # Close label    
             print(' ... Closing Label ... ')
-            close_label(label_list[0], label_root, label_list[2])
+            close_label(label_list[0], label_root, label_list[2]) 
 
         return render(request, 'build/data/Table_Creation.html', context_dict)
     else:
