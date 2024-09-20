@@ -154,7 +154,6 @@ def write_into_label(product, product_bundle, product_collections_list):
         print(' ... Opening Label ... ')
         label_list = open_label_with_tree(label.label())
         label_root = label_list[1]
-        # Build Alias
         print(' ... Building Label ... ')
         label_root = product.fill_label(label_root)
         #alias.alias_list.append(label_root)
