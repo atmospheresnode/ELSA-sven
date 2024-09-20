@@ -693,13 +693,13 @@
    
                            <!-- Alternate ID -->
                            <div class="mt-3">
-                              <label for="alt_id" class="required">Alternate ID</label>
+                              <label for="alt_id">Alternate ID</label>
                               {{ form_alias.alternate_id }}
                            </div>
    
                            <!-- Alternate Title -->
                            <div class="mt-3">
-                              <label for="alt_title" class="required">Alternate Title</label>
+                              <label for="alt_title">Alternate Title</label>
                               {{ form_alias.alternate_title }}
                            </div>
    
@@ -825,6 +825,8 @@
                               <label for="mod_desc" class="required">Description</label>
                               {{ form_citation_information.description }}
                            </div>
+
+                           {{ form_citation_information.errors }}
    
                            <!-- Create Citation Information -->
                            <button type="submit" class="btn btn-light text-light my-4">Create Citaiton Information</button>
