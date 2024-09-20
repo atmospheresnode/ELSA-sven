@@ -16,8 +16,6 @@ from django import forms
 from django.forms import modelformset_factory
 from django.views.generic.edit import UpdateView, DeleteView
 from django.contrib import messages
-
-
 # from lxml import etree # debug product obs only
 
 
@@ -28,14 +26,14 @@ from django.contrib import messages
 #
 # -------------------------------------------------------------------------------------------------- #
 @login_required
-def alias(request, pk_bundle):  # DEPRECATED: to be replaced by edit alias
+def alias(request, pk_bundle):  # DEPRECATED: to be replaced by edit alias, **not deprecated**
     print(' \n\n \n\n-------------------------------------------------------------------------')
     print('\n\n---------------------- Add an Alias with ELSA ---------------------------')
     print('------------------------------ DEBUGGER ---------------------------------')
 
     # Get Bundle
     bundle = Bundle.objects.get(pk=pk_bundle)
-#    collections = Collections.objects.get(bundle=bundle)
+    #collections = Collections.objects.get(bundle=bundle)
 
     # Secure ELSA by seeing if the user logged in is the same user associated with the Bundle
     if request.user == bundle.user:
@@ -49,13 +47,13 @@ def alias(request, pk_bundle):  # DEPRECATED: to be replaced by edit alias
         context_dict = {
             'form_alias': form_alias,
             'bundle': bundle,
-
         }
 
         # After ELSAs friend hits submit, if the forms are completed correctly, we should enter
         # this conditional.
         print('\n\n------------------------------- ALIAS INFO --------------------------------')
         print('\nCurrently awaiting user input...\n\n')
+
         if form_alias.is_valid():
             print('form_alias is valid for {}.'.format(bundle.user))
             # Create Alias model object
@@ -69,41 +67,14 @@ def alias(request, pk_bundle):  # DEPRECATED: to be replaced by edit alias
 
             write_into_label(alias, product_bundle, product_collections_list)
 
-            # Find appropriate label(s).
-            # Alias gets added to all Product_Bundle & Product_Collection labels.
-            # We first get all labels of these given types except those in the Data collection which
-            # are handled different from the other collections.
-            # all_labels = []
-            # product_bundle = Product_Bundle.objects.get(bundle=bundle)
-            # product_collections_list = Product_Collection.objects.filter(
-            #     bundle=bundle).exclude(collection='Data')
-            # # We need to check for Product_Collections associated with Data products now.
-
-            # all_labels.append(product_bundle)
-            # all_labels.extend(product_collections_list)
-
-            # for label in all_labels:
-            #     # Open appropriate label(s).
-            #     print('- Label: {}'.format(label))
-            #     print(' ... Opening Label ... ')
-            #     label_list = open_label_with_tree(label.label())
-            #     label_root = label_list
-            #     # Build Alias
-            #     print(' ... Building Label ... ')
-            #     label_root = alias.fill_label(label_root)
-            #     # alias.alias_list.append(label_root)
-
-            #     # Close appropriate label(s)
-            #     print(' ... Closing Label ... ')
-            #     close_label(label.label(), label_root)
-
-            # print alias.print_alias_list()
-
             print('---------------- End Build Alias -----------------------------------')
+            
+            return redirect(reverse('build:modification_history', args=[pk_bundle]))
 
         # Get all current Alias objects associated with the user's Bundle
         alias_list = Alias.objects.filter(bundle=bundle)
         context_dict['alias_list'] = alias_list
+
         return render(request, 'build/alias/alias.html', context_dict)
     else:
         print('unauthorized user attempting to access a restricted area.')
@@ -118,7 +89,7 @@ def alias_edit(request, pk_bundle, pk_alias):  # DEPRECATED: to be replaced by e
 
     # Get Bundle
     bundle = Bundle.objects.get(pk=pk_bundle)
-#    collections = Collections.objects.get(bundle=bundle)
+    #    collections = Collections.objects.get(bundle=bundle)
 
     # Secure ELSA by seeing if the user logged in is the same user associated with the Bundle
     if request.user == bundle.user:
@@ -373,9 +344,7 @@ def build(request):
     # After ELSAs friend hits submit, if the forms are completed correctly, we should enter here
     # this conditional.
     if form_bundle.is_valid() and form_collections.is_valid():
-        print('form_bundle are valid')
-
-        print('form_collections are valid')
+        print('form_bundle & form_collections are valid')
         # Create Collections Model Object and list of Collections, list of Collectables
         # bundle_name = form_bundle['name']
         # bundle_user = request.user
@@ -386,8 +355,8 @@ def build(request):
         # Check Uniqueness  --- GOTTA BE A BETTER WAY (k)
         bundle_name = form_bundle.cleaned_data['name']
         bundle_user = request.user
-        bundle_count = Bundle.objects.filter(
-            name=bundle_name, user=bundle_user).count()
+        bundle_count = Bundle.objects.filter(name=bundle_name, user=bundle_user).count()
+
         if bundle_count == 0:  # If user and bundle name are unique, then...
             print('At the start')
             # Create Bundle model.
@@ -411,8 +380,7 @@ def build(request):
 
             # Build Product_Bundle label using the base case template found in
             # templates/pds4/basecase
-            print(
-                '\n---------------Start Build Product_Bundle Base Case------------------------')
+            print('\n---------------Start Build Product_Bundle Base Case------------------------')
             product_bundle.build_base_case()  # simply copies basecase to user bundle directory
             # Open label - returns a list where index 0 is the label object and 1 is the tree
             print(' ... Opening Label ... ')
@@ -428,8 +396,7 @@ def build(request):
             print(' ... Closing Label ... ')
             close_label(product_bundle.label(), label_root, label_list[2])
 
-            print(
-                '---------------- End Build Product_Bundle Base Case -------------------------')
+            print('---------------- End Build Product_Bundle Base Case -------------------------')
 
             print('before initial save')
             collections = form_collections.save(commit=False)
@@ -473,12 +440,10 @@ def build(request):
                 label_root = product_bundle.build_bundle_member_entry(
                     label_root, product_collection)
                 close_label(product_bundle.label(), label_root, label_list[2])
-                print(' ... Bundle Member Entry Added: {} ...'.format(
-                    product_collection.lid))
+                print(' ... Bundle Member Entry Added: {} ...'.format(product_collection.lid))
 
                 # Build Product_Collection label for all labels other than those found in the data collection.
-                print(
-                    '-------------Start Build Product_Collection Base Case-----------------')
+                print('-------------Start Build Product_Collection Base Case-----------------')
                 if collection != 'data':
                     product_collection.build_base_case()
 
@@ -496,8 +461,7 @@ def build(request):
                     # Close label
                     print(' ... Closing Label ... ')
                     close_label(product_collection.label(), label_root, label_list[2])
-                    print(
-                        '-------------End Build Product_Collection Base Case-----------------')
+                    print('-------------End Build Product_Collection Base Case-----------------')
 
             # Further develop context_dict entries for templates
             context_dict['Bundle'] = bundle
@@ -506,27 +470,11 @@ def build(request):
             context_dict['Product_Collection_Set'] = Product_Collection.objects.filter(
                 bundle=bundle)
 
-            # return redirect('build:build')
+            url = smart_str(bundle.id) + '/' + 'alias' 
 
-            #url = smart_str(bundle.id) +'/data_prep/'
-            url = smart_str(bundle.id) + '/'
-            #url = 'two/'
-
-# <<<<<<< HEAD
-#             # return render(request, 'build/build.html', context_dict)
-
-#             print(url)
-#             print(bundle.id)
-#             print('testing online updating system')
-#             print('please do something')
-#             # return HttpResponseRedirect('/elsa/build/' + bundle.id + '/')
-#             # return redirect("/elsa/")
-#             return redirect(url, request, context_dict)
-# =======
             print('trying to trigger server reset')
             return redirect(url, request, context_dict)
-            # return redirect("/")
-            # return render(request, 'build/two.html', context_dict)
+
 
     return render(request, 'build/build.html', context_dict)
 
@@ -539,13 +487,13 @@ def data_prep(request, bundle, data_enum):
     data_prep_form = DataPrepForm
 
     '''
-The following two lines of code are confusing nonsense garbage that took me at least five weeks to figure
-out, this is what they do as far as I understand. The first line creates a formset object using the data
-prep form and the data prep model. It also prevents the bundle field from showing and makes triple sure
-that it only shows the number of forms we want. The second line actually creates the formset that gets
-displayed and gets the information for us using the formset object we just created. The first input is
-the standard form stuff. The second input uses an object query to get the data_prep object associated
-with the bundle  -J
+    The following two lines of code are confusing nonsense garbage that took me at least five weeks to figure
+    out, this is what they do as far as I understand. The first line creates a formset object using the data
+    prep form and the data prep model. It also prevents the bundle field from showing and makes triple sure
+    that it only shows the number of forms we want. The second line actually creates the formset that gets
+    displayed and gets the information for us using the formset object we just created. The first input is
+    the standard form stuff. The second input uses an object query to get the data_prep object associated
+    with the bundle  -J
     '''
     DataPrepFormSet = modelformset_factory(Data_Prep, data_prep_form, exclude=(
         'bundle',), extra=data.data_enum, max_num=data.data_enum, min_num=data.data_enum)
@@ -626,8 +574,6 @@ def bundle(request, pk_bundle):
                 product_observational_set.extend(Product_Observational.objects.filter(data=data))
 
         # Forms present on bundle detail page
-        #     - Alias Form
-        #     - Data Form 
         form_alias = AliasForm(request.POST or None) 
         form_bundle = BundleForm(request.POST or None) 
         form_citation_information = CitationInformationForm(request.POST or None)
@@ -637,12 +583,9 @@ def bundle(request, pk_bundle):
         form_collections = CollectionsForm(request.POST or None)
         form_product_collection = ProductCollectionForm(request.POST or None)
         form_additional_collections = AdditionalCollectionForm(request.POST or None)
-
         form_investigation = InvestigationForm(request.POST or None)
         form_target = TargetFormAll(request.POST or None)
-        form_instrument_host = InstrumentHostForm(
-            request.POST or None, pk_inv=None)
-        
+        form_instrument_host = InstrumentHostForm(request.POST or None, pk_inv=None)
         form_facility = FacilityForm(request.POST or None)
 
         # Following code is to get xml content of bundle xml files
@@ -735,36 +678,6 @@ def bundle(request, pk_bundle):
 
             write_into_label(alias, product_bundle, product_collections_list)
 
-            # Find appropriate label(s).
-            # Alias gets added to all Product_Bundle & Product_Collection labels.
-            # We first get all labels of these given types except those in the Data collection which
-            # are handled different from the other collections.
-            # all_labels = []
-            # product_bundle = Product_Bundle.objects.get(bundle=bundle)
-            # product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
-            # # We need to check for Product_Collections associated with Data products now.
-                    
-            # all_labels.append(product_bundle)
-            # all_labels.extend(product_collections_list)
-
-            # for label in all_labels:
-            #     # Open appropriate label(s).  
-            #     print('- Label: {}'.format(label))
-            #     print(' ... Opening Label ... ')
-            #     label_list = open_label_with_tree(label.label())
-            #     label_root = label_list[1]
-            #     # Build Alias
-            #     print(' ... Building Label ... ')
-            #     label_root = alias.fill_label(label_root)
-            #     #alias.alias_list.append(label_root)
-
-
-            #     # Close appropriate label(s)
-            #     print(' ... Closing Label ... ')
-            #     close_label(label.label(), label_root)
-
-            #print alias.print_alias_list()
-
             print('---------------- End Build Alias -----------------------------------') 
             # Update alias_set
             alias_set = Alias.objects.filter(bundle=bundle)
@@ -795,32 +708,8 @@ def bundle(request, pk_bundle):
 
             write_into_label(citation_information, product_bundle, product_collections_list)
 
-            # Find appropriate label(s).  Citation_Information gets added to all Product_Bundle and 
-            # Product_Collection labels in a Bundle.  The Data collection is excluded since it is 
-            # handled different from the other collections.
-            # all_labels = []
-            # product_bundle = Product_Bundle.objects.get(bundle=bundle)
-            # product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
-            # all_labels.append(product_bundle)             # Append because a single item
-            # all_labels.extend(product_collections_list)   # Extend because a list
+            print('------------- End Build Citation Information -------------------')     
 
-            # for label in all_labels:
-
-            #     # Open appropriate label(s).  
-            #     print('- Label: {}'.format(label))
-            #     print(' ... Opening Label ... ')
-            #     label_list = open_label_with_tree(label.label())
-            #     label_root = label_list[1]
-        
-            #     # Build Citation Information
-            #     print(' ... Building Label ... ')
-            #     label_root = citation_information.fill_label(label_root)
-
-            #     # Close appropriate label(s)
-            #     print(' ... Closing Label ... ')
-            #     close_label(label.label(), label_root)
-
-            print('------------- End Build Citation Information -------------------')        
             # Update context_dict with the current Citation_Information models associated with the user's bundle
             citation_information_set = Citation_Information.objects.filter(bundle=bundle)
             context_dict['citation_information_set'] = citation_information_set
@@ -840,74 +729,34 @@ def bundle(request, pk_bundle):
             modification_history = form_modification_history.save(commit=False)
             modification_history.bundle = bundle
             modification_history.save()
-            print(' Modification History  model object: {}'.format(
-                modification_history))
+            print(' Modification History  model object: {}'.format(modification_history))
 
             product_bundle = Product_Bundle.objects.get(bundle=bundle)
             product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
 
             write_into_label(modification_history, product_bundle, product_collections_list)
 
-            # Find appropriate label(s).  modification_history gets added to all Product_Bundle and
-            # Product_Collection labels in a Bundle.  The Data collection is excluded since it is
-            # handled different from the other collections.
-            # all_labels = []
-            # product_bundle = Product_Bundle.objects.get(bundle=bundle)
-            # product_collections_list = Product_Collection.objects.filter(
-            #     bundle=bundle).exclude(collection='Data')
-            # # Append because a single item
-            # all_labels.append(product_bundle)
-            # # Extend because a list
-            # all_labels.extend(product_collections_list)
+            print('------------- End Build  Modification History  -------------------')
 
-            # for label in all_labels:
-
-            #     # Open appropriate label(s).
-            #     print('- Label: {}'.format(label))
-            #     print(' ... Opening Label ... ')
-            #     label_list = open_label_with_tree(label.label())
-            #     label_root = label_list[1]
-
-            #     # Build  Modification History
-            #     print(' ... Building Label ... ')
-            #     label_root = modification_history.fill_label(
-            #         label_root)
-
-            #     # Close appropriate label(s)
-            #     print(' ... Closing Label ... ')
-            #     close_label(label.label(), label_root)
-
-            print(
-                    '------------- End Build  Modification History  -------------------')
-        # Update context_dict with the current  Modification History  models associated with the user's bundle
+            # Update context_dict with the current  Modification History  models associated with the user's bundle
             modification_history_set = Modification_History.objects.filter(bundle=bundle)
             context_dict['modification_history_set'] = modification_history_set
             context_dict['modification_history_set_count'] = len(modification_history_set)
 
-            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
+            # # fixes the refresh duplication issue - deric
+            #return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
 
-            #fixes the refresh duplication issue, use this one for offline testing - deric
-            # return HttpResponseRedirect('/build/' + pk_bundle + '/')         
+            # fixes the refresh duplication issue, use this one for offline testing - deric
+            return HttpResponseRedirect('/build/' + pk_bundle + '/')         
 
         additional_collections_list = []
         if form_additional_collections.is_valid():
-            # collections = form_collections.save(commit=False)
-            # collections.bundle = bundle
-            # collections.build_directories()
-
             additional_collections = form_additional_collections.save(commit=False)
             additional_collections.bundle = bundle
             additional_collections.append_list()
             additional_collections.save()
             additional_collections.build_directories()
-            # product_collection = form_product_collection.save(commit=False)
-            # product_collection.bundle = bundle
             additional_collections_list = additional_collections.list()
-            # for collection in additional_collections_list:
-
-            # if collection == 'data':
-            # product_collection.collection = 'Data'
-            # product_collection.save()
 
             product_bundle = Product_Bundle.objects.get(bundle=bundle)
 
@@ -1175,14 +1024,11 @@ def bundle_delete_new(request, pk_bundle):
         return redirect('main:restricted_access')
 
 
-
-
-
 def success_delete(request):
     return render(request, 'build/bundle/success_delete.html')
 
 
-def citation_information(request, pk_bundle, pk_citation_information):
+def citation_information(request, pk_bundle):
     print('\n\n')
     print('-------------------------------------------------------------------------')
     print('\n\n--------------- Add Citation_Information with ELSA -------------------')
@@ -1195,38 +1041,32 @@ def citation_information(request, pk_bundle, pk_citation_information):
         print('authorized user: {}'.format(request.user))
 
         # Get forms
-        citation_information.objects.get(pk=pk_citation_information)
-        initial_citation_information = {
-            'author_list': citation_information.author_list,
-            'editor_list': citation_information.editor_list,
-            'publication_year': citation_information.publication_year,
-            'description': citation_information.description,
-            'keyword': citation_information.keyword,
-        }
-        form_citation_information = CitationInformationForm(
-            request.POST or None, initial=initial_citation_information)
-        if form_citation_information and form_citation_information.has_changed:
-            print('changed: {}', format(form_citation_information.changed_data))
+        # citation_information.objects.get(pk=pk_citation_information)
+        # initial_citation_information = {
+        #     'author_list': citation_information.author_list,
+        #     'editor_list': citation_information.editor_list,
+        #     'publication_year': citation_information.publication_year,
+        #     'description': citation_information.description,
+        #     'keyword': citation_information.keyword,
+        # }
+        form_citation_information = CitationInformationForm(request.POST or None)
+        # if form_citation_information and form_citation_information.has_changed:
+        #     print('changed: {}', format(form_citation_information.changed_data))
 
-            for change in form_citation_information.changed_data:
-                if change == 'author_list':
-                    citation_information.author_list = form_citation_information['author_list'].value(
-                    )
-                elif change == 'editor_list':
-                    citation_information.editor_list = form_citation_information['editor_list'].value(
-                    )
-                elif change == 'publication_year':
-                    citation_information.publication_year = form_citation_information['publication_year'].value(
-                    )
-                elif change == 'description':
-                    citation_information.description = form_citation_information['description'].value(
-                    )
-                elif change == 'keyword':
-                    citation_information.keyword = form_citation_information['keyword'].value(
-                    )
-                citation_information.save()
+        #     for change in form_citation_information.changed_data:
+        #         if change == 'author_list':
+        #             citation_information.author_list = form_citation_information['author_list'].value()
+        #         elif change == 'editor_list':
+        #             citation_information.editor_list = form_citation_information['editor_list'].value()
+        #         elif change == 'publication_year':
+        #             citation_information.publication_year = form_citation_information['publication_year'].value()
+        #         elif change == 'description':
+        #             citation_information.description = form_citation_information['description'].value()
+        #         elif change == 'keyword':
+        #             citation_information.keyword = form_citation_information['keyword'].value()
+        #         citation_information.save()
 
-        citation_information.objects.get(pk=pk_citation_information)
+        #citation_information.objects.get(pk=pk_citation_information)
         # Declare context_dict for template
         context_dict = {
             'form_citation_information': form_citation_information,
@@ -1243,48 +1083,20 @@ def citation_information(request, pk_bundle, pk_citation_information):
             citation_information = form_citation_information.save(commit=False)
             citation_information.bundle = bundle
             citation_information.save()
-            print('Citation Information model object: {}'.format(
-                citation_information))
+            print('Citation Information model object: {}'.format(citation_information))
             
             product_bundle = Product_Bundle.objects.get(bundle=bundle)
             product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
 
             write_into_label(citation_information, product_bundle, product_collections_list)
-
-            # Find appropriate label(s).  Citation_Information gets added to all Product_Bundle and
-            # Product_Collection labels in a Bundle.  The Data collection is excluded since it is
-            # handled different from the other collections.
-            # all_labels = []
-            # product_bundle = Product_Bundle.objects.get(bundle=bundle)
-            # product_collections_list = Product_Collection.objects.filter(
-            #     bundle=bundle).exclude(collection='Data')
-            # # Append because a single item
-            # all_labels.append(product_bundle)
-            # # Extend because a list
-            # all_labels.extend(product_collections_list)
-
-            # for label in all_labels:
-
-            #     # Open appropriate label(s).
-            #     print('- Label: {}'.format(label))
-            #     print(' ... Opening Label ... ')
-            #     label_list = open_label_with_tree(label.label())
-            #     label_root = label_list
-
-            #     # Build Citation Information
-            #     print(' ... Building Label ... ')
-            #     label_root = citation_information.fill_label(
-            #         label_root)
-
-            #     # Close appropriate label(s)
-            #     print(' ... Closing Label ... ')
-            #     close_label(label.label(), label_root)
+           
 
             print('------------- End Build Citation Information -------------------')
+            return redirect(reverse('build:context_search', args=[pk_bundle]))
+            
         # Update context_dict with the current Citation_Information models associated with the user's bundle
-        context_dict['citation_information_set'] = Citation_Information.objects.filter(
-            bundle=bundle)
-        return render(request, 'build/citation/citation_information.html', context_dict)
+        context_dict['citation_information_set'] = Citation_Information.objects.filter(bundle=bundle)
+        return render(request, 'build/citation_information/citation_information.html', context_dict)
 
     # Secure: Current user is not the user associated with the bundle, so...
     else:
@@ -1305,8 +1117,7 @@ def modification_history(request, pk_bundle):
         print('authorized user: {}'.format(request.user))
 
         # Get forms
-        form_modification_history = ModificationHistoryForm(
-            request.POST or None)
+        form_modification_history = ModificationHistoryForm(request.POST or None)
 
         # Declare context_dict for template
         context_dict = {
@@ -1324,49 +1135,21 @@ def modification_history(request, pk_bundle):
             modification_history = form_modification_history.save(commit=False)
             modification_history.bundle = bundle
             modification_history.save()
-            print(' Modification History  model object: {}'.format(
-                modification_history))
+            print(' Modification History  model object: {}'.format(modification_history))
 
             product_bundle = Product_Bundle.objects.get(bundle=bundle)
             product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
 
             write_into_label(modification_history, product_bundle, product_collections_list)
 
-            # Find appropriate label(s).  modification_history gets added to all Product_Bundle and
-            # Product_Collection labels in a Bundle.  The Data collection is excluded since it is
-            # handled different from the other collections.
-            # all_labels = []
-            # product_bundle = Product_Bundle.objects.get(bundle=bundle)
-            # product_collections_list = Product_Collection.objects.filter(
-            #     bundle=bundle).exclude(collection='Data')
-            # # Append because a single item
-            # all_labels.append(product_bundle)
-            # # Extend because a list
-            # all_labels.extend(product_collections_list)
+            print('------------- End Build  Modification History  -------------------')
+            return redirect(reverse('build:citation_information', args=[pk_bundle]))
 
-            # for label in all_labels:
 
-            #     # Open appropriate label(s).
-            #     print('- Label: {}'.format(label))
-            #     print(' ... Opening Label ... ')
-            #     label_list = open_label_with_tree(label.label())
-            #     label_root = label_list
-
-            #     # Build  Modification History
-            #     print(' ... Building Label ... ')
-            #     label_root = modification_history.fill_label(
-            #         label_root)
-
-            #     # Close appropriate label(s)
-            #     print(' ... Closing Label ... ')
-            #     close_label(label.label(), label_root)
-
-            print(
-                    '------------- End Build  Modification History  -------------------')
         # Update context_dict with the current  Modification History  models associated with the user's bundle
-        context_dict['modification_history_set'] = Modification_History .objects.filter(
-            bundle=bundle)
-        return render(request, 'build/modification_history/modification_history.html', context_dict)
+        context_dict['modification_history_set'] = Modification_History.objects.filter(bundle=bundle)
+
+        return render(request, 'build/modification_history/mod_history.html', context_dict)
 
     # Secure: Current user is not the user associated with the bundle, so...
     else:
@@ -1382,15 +1165,20 @@ def context_search(request, pk_bundle):
 
     # Get bundle and collections
     bundle = Bundle.objects.get(pk=pk_bundle)
-#    collections = Collections.objects.get(bundle=bundle)
+    #    collections = Collections.objects.get(bundle=bundle)
 
     # Secure ELSA by seeing if the user logged in is the same user associated with the Bundle
     if request.user == bundle.user:
         print('authorized user: {}'.format(request.user))
 
+        form_investigation = InvestigationForm(request.POST or None)
+        form_target = TargetFormAll(request.POST or None)
+
         # Context Dictionary
         context_dict = {
             'bundle': bundle,
+            'form_investigation': form_investigation,
+            'form_target': form_target,
             'investigation_list': bundle.investigations.all(),
             'instrument_host_list': bundle.instrument_hosts.all(),
             'instrument_list': bundle.instruments.all(),
@@ -2083,7 +1871,7 @@ def display_dictionary(request, pk_bundle, pk_data, pk_display_dictionary):
 
     # Get Bundle
     bundle = Bundle.objects.get(pk=pk_bundle)
-#    collections = Collections.objects.get(bundle=bundle)
+    #    collections = Collections.objects.get(bundle=bundle)
 
     # Secure ELSA by seeing if the user logged in is the same user associated with the Bundle
     if request.user == bundle.user:
