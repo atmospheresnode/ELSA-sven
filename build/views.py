@@ -72,8 +72,8 @@ def alias(request, pk_bundle):  # DEPRECATED: to be replaced by edit alias, **no
             return redirect(reverse('build:modification_history', args=[pk_bundle]))
 
         # Get all current Alias objects associated with the user's Bundle
-        alias_list = Alias.objects.filter(bundle=bundle)
-        context_dict['alias_list'] = alias_list
+        # alias_list = Alias.objects.filter(bundle=bundle)
+        # context_dict['alias_list'] = alias_list
 
         return render(request, 'build/alias/alias.html', context_dict)
     else:
@@ -662,33 +662,6 @@ def bundle(request, pk_bundle):
             'user':request.user,
         }
 
-        print(modification_history_set)
-
-        # satisfy this conditional
-        if form_alias.is_valid():
-            print('form_alias is valid for {}.'.format(bundle.user))
-            # Create Alias model object
-            alias = form_alias.save(commit=False)
-            alias.bundle = bundle
-            alias.save()
-            print('Alias model object: {}'.format(alias))
-
-            product_bundle = Product_Bundle.objects.get(bundle=bundle)
-            product_collections_list = Product_Collection.objects.filter(bundle=bundle)
-
-            write_into_label(alias, product_bundle, product_collections_list)
-
-            print('---------------- End Build Alias -----------------------------------') 
-            # Update alias_set
-            alias_set = Alias.objects.filter(bundle=bundle)
-            context_dict['alias_set'] = alias_set
-            context_dict['alias_set_count'] =  len(alias_set)
-
-            # # fixes the refresh duplication issue - deric
-            # return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
-
-            # fixes the refresh duplication issue, use this one for offline testing - deric
-            return HttpResponseRedirect('/build/' + pk_bundle + '/')
 
         # After ELSAs friend hits submit, if the forms are completed correctly, we should enter
         # this conditional.
@@ -884,10 +857,36 @@ def bundle(request, pk_bundle):
             context_dict['data_set'] = Data.objects.filter(bundle=bundle)
 
             # # fixes the refresh duplication issue - deric
-            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
+            # return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
 
             # fixes the refresh duplication issue, use this one for offline testing - deric
-            # return HttpResponseRedirect('/build/' + pk_bundle + '/')
+            return HttpResponseRedirect('/build/' + pk_bundle + '/')
+        
+        # satisfy this conditional
+        if form_alias.is_valid():
+            print('form_alias is valid for {}.'.format(bundle.user))
+            # Create Alias model object
+            alias = form_alias.save(commit=False)
+            alias.bundle = bundle
+            alias.save()
+            print('Alias model object: {}'.format(alias))
+
+            product_bundle = Product_Bundle.objects.get(bundle=bundle)
+            product_collections_list = Product_Collection.objects.filter(bundle=bundle)
+
+            write_into_label(alias, product_bundle, product_collections_list)
+
+            print('---------------- End Build Alias -----------------------------------') 
+            # Update alias_set
+            alias_set = Alias.objects.filter(bundle=bundle)
+            context_dict['alias_set'] = alias_set
+            context_dict['alias_set_count'] =  len(alias_set)
+
+            # # fixes the refresh duplication issue - deric
+            # return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
+
+            # fixes the refresh duplication issue, use this one for offline testing - deric
+            return HttpResponseRedirect('/build/' + pk_bundle + '/')
 
         context_dict['messages'] = messages.get_messages(request)
         return render(request, 'build/bundle/bundle.html', context_dict)
