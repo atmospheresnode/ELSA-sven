@@ -10,122 +10,206 @@ Product Document Editor
 {% endblock %}
 
 {% block about_header_block %}
-"Documents include any textual or text-based information supplied to assist the user in
-understanding, interpreting, calibrating, or otherwise manipulating the data. Documents may themselves be data products. Frequently documents include graphics and/or images to assist in comprehension." - <a href="https://pds.nasa.gov/pds4/doc/concepts/Concepts_1.8.0_170406_clean.pdf">PDS4 Concepts</a>
+<div class="alert alert-info" role="alert">
+    "Documents include any textual or text-based information supplied to assist the user in understanding, interpreting, calibrating, or otherwise manipulating the data. Documents may themselves be data products. Frequently documents include graphics and/or images to assist in comprehension." 
+    - <a href="https://pds.nasa.gov/pds4/doc/concepts/Concepts_1.8.0_170406_clean.pdf" class="alert-link">PDS4 Concepts</a>
+</div>
 {% endblock %}
 
 {% block body_block %}
+<br> <br> <br>
 
-<!--Row-->
-<div class="row pt-2">
-    <!--Column-->
-    <div class="col-md-12">
-        <h3 class="card-header elegant-color white-text text-center z-depth-2"> {{ product_document.document_name }}</h3><br/>
-    </div>
-    <!--/.Column-->
-</div>
-<!--/.Row-->
-<!--TRow-->
-<div class="row pt-2">
-    <!--Column-->
-    <div class="col-md-6">
-        <form id="form_product_document" method="post" action="">
-            {% csrf_token %}
-            <div id="form_product_document">
-                {{ form_product_document }}
+<style>
+
+    .btn {
+        display: inline-flex;
+        align-items: center; 
+        justify-content: center; 
+        color: white;
+        padding: 2x 2px;
+        background-color: #5F9EA0;
+        border-radius: 5px;
+        text-decoration: none; 
+        cursor: pointer;
+        transition: background-color 0.3s;
+    }
+    
+    .btn:hover {
+        background-color: #0056b3;
+    }
+    
+    .btn i {
+        font-size: 20px;
+    }
+
+</style>
+
+<div class="container my-4">
+    <!-- Document Header -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card text-center" style="background: linear-gradient(135deg, #008B8B, #004d4d); color: white; border-radius: 12px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);">
+                <div class="card-header" style="border-bottom: 1px solid rgba(255, 255, 255, 0.2);">
+                    <h2 class="mb-0">{{ product_document.document_name }}</h2>
+                </div>
             </div>
-            <input class="btn btn-default" type="submit" value="Add"/>
-        </form>
-    </div>
-    <!--/.Column-->
-    <!--Column-->
-    <div class="col-md-4 help">
-        <div class="document">
-            <p>The name of your document is the unique name to be associated with your lid</p>
-            <p>The title of your document can be the same as the name given; however, does not necessarily have to be.</p>
         </div>
     </div>
-    <!--/.Column-->
-</div>
-<!--/.Row-->
-<hr/>
-<!--Row-->
-<div class="row pt-2">
-    <!--Column-->
-    <div class="col-md-12">
-        <h3 class="card-header elegant-color white-text text-center z-depth-2">Current Document Products</h3><br/>
-    </div>
-    <!--/.Column-->
-</div>
-<!--/.Row-->
-<!--Row-->
-<div class="row pt-2">
-    {% if documents %}
-        {% for doc in documents %}
-            <!--Column-->
-            <div class="col-sm-6 col-md-3">
-                <!--Card-->
-                <a href="{% url 'build:product_document' bundle.pk doc.pk %}">
-                <div class="card">
-                    <!--Card image-->
-                    <img class="img-fluid" src="{% static 'images/label.jpg' %}" alt="Label Image">
-                    <!--Card content-->
-                    <div class="card-body">
-                        <!--Title-->
-                        <h4 class="card-title">{{ doc.document_name }}</h4>
-                        <!--Text-->
-                        <p class="card-text">{{ doc.author_list }}</p>
-                        <!--Buttons-->
-                        <a href="{{ document.get_archive_url }}">
-                            <button type="button" class="btn btn-default">View</button>
-                        </a>
-                        <a href="{{ document.get_edit_url }}">
-                            <button type="button" class="btn btn-success">Edit</button>
-                        </a>
-                    </div>
+
+    <!-- Form and Help Section -->
+    <div class="row mb-4">
+        <!-- Form Column -->
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header text-center" style="background-color: #2F4F4F; color: white;">
+                    <h4>Product Document Editor</h4>
                 </div>
-                </a>
-                <!--/.Card-->
-            </div>
-            <!--/.Column-->
-        {% endfor %}
-    {% else %}
-        <!--Column-->
-        <div class="col-md-3">
-            <!--Card-->
-            <div class="card">
-                <!--Card image-->
-                <img class="img-fluid" src="{% static 'images/null.png' %}" alt="An image representing no labels.">
-                <!--Card content-->
                 <div class="card-body">
-                    <!--Title-->
-                    <h4 class="card-title"></h4>
-                    <!--Text-->
-                    <p class="card-text">No Product Document labels</p>
+                    <form id="form_product_document" method="post" action="">
+                        {% csrf_token %}
+                        {{ form_product_document.as_p }}
+                        <button class="btn btn-default btn-md" type="submit">Update Document</button>
+                    </form>
                 </div>
             </div>
-            <!--/.Card-->
-            </p>
         </div>
-        <!--/.Column-->
-    {% endif %}
-</div>
-<!--/.Row-->
-<hr/>
-<!--Row-->
-<div class="row pt-2">
-    <!--Column-->
-    <div class="col-md-12">
-        <a href="{% url 'build:bundle' bundle.pk %}">
-        <button type="button" class="btn btn-default">
-            <i class="fa fa-arrow-circle-left"></i>
-            Back to {{ bundle }}'s Bundle Detail
-        </button>
-        </a>
-    </div>
-    <!--/.Column-->
-</div>
-<!--/.Row-->
-<hr/>
 
+        <!-- Help Column -->
+        <div class="col-md-4">
+            <div class="card bg-light border-primary">
+                <div class="card-header text-center" style="background-color: #2F4F4F; color: white;">
+                    <h4>Document Guidelines</h4>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li><strong>Document Name:</strong> This is the unique identifier for your document.</li> <br>
+                        <li><strong>Document Title:</strong> This is optional and can differ from the document name.</li> <br>
+                        <li><strong>Edit Document:</strong> Click a product document label from the list below and use the form to make updates.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <br> <br>
+    <!-- Document Products Section -->
+    <div class="row mb-3">
+        <div class="col-md-12">
+            <div class="card text-center" style="background-color: #2F4F4F; color: white;">
+                <div class="card-header">
+                    <h3>Current Document Products</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Document Product List Card -->
+<div class="row p-2 pt-4">
+    <div class="col">
+        <div class="card">
+            <div class="row">
+                <!-- Document Carousel -->
+                <div class="carousel" id="document-carousel">
+                    <div class="carousel-inner" role="listbox">
+                        {% if documents %}
+                            {% for doc in documents %}
+                                <div class="carousel-item {% if forloop.first %}active{% endif %}">
+                                    <a href="{% url 'build:product_document' bundle.pk doc.pk %}">
+                                        <div class="card document-card">
+                                            <img class="img-fluid" src="{% static 'images/label.jpg' %}" alt="Document Image">
+                                            <div class="card-body">
+                                                <h4 class="card-title text-center">{{ doc.document_name }}</h4>
+                                                <p class="card-text text-center">{{ doc.author_list }}</p>
+                                            </div>
+                                        </div>
+                                    </a>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="carousel-item active">
+                                <div class="card document-card">
+                                    <img class="img-fluid" src="{% static 'images/null.png' %}" alt="No documents">
+                                    <div class="card-body">
+                                        <h4 class="card-title">No Product Document Labels</h4>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Carousel Controls -->
+                    <button class="carousel-control-prev" type="button" data-bs-target="#document-carousel" data-bs-slide="prev">
+                        <i class="fa fa-chevron-left fa-3x text-dark"></i>
+                    </button>
+                    <button class="carousel-control-next" type="button" data-bs-target="#document-carousel" data-bs-slide="next">
+                        <i class="fa fa-chevron-right fa-3x text-dark"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Document List Stylings -->
+        <style>
+            @media screen and (min-width: 576px) {
+                .carousel-inner {
+                    display: flex;
+                }
+                .carousel-item {
+                    display: block;
+                    margin-right: 0;
+                    flex: 0 0 calc(100% / 4);
+                }
+            }
+            
+            .carousel-inner {
+                padding: 1em;
+            }
+
+            .carousel-item {
+                padding: 1.25em;
+            }
+
+            a {
+                text-decoration: none;
+            }
+        </style>
+
+        <!-- Carousel Movement Script -->
+        <script>
+            var carousel_width = $('.carousel-inner')[0].scrollWidth;
+            var card_width = $('.carousel-item').first().outerWidth(true);
+            var scroll_pos = 0;
+
+            $('.carousel-control-prev').on('click', function() {
+                if (scroll_pos >= 0) {
+                    scroll_pos -= card_width;
+                } else {
+                    scroll_pos = 0;
+                }
+                $('.carousel-inner').animate({ scrollLeft: scroll_pos }, 600);
+            });
+
+            $('.carousel-control-next').on('click', function() {
+                if (scroll_pos < (carousel_width - (card_width * 3))) {
+                    scroll_pos += card_width;
+                } else {
+                    scroll_pos = carousel_width - (card_width * 3);
+                }
+                $('.carousel-inner').animate({ scrollLeft: scroll_pos }, 600);
+            });
+        </script>
+    </div>
+</div>
+
+
+    <!-- Back Button -->
+    <div class="row mt-3 mb-1">
+        <div class="col-md-12 d-flex align-items-center justify-content-center">
+        <!-- Correct URL -->
+        <a href="{% url 'build:bundle' bundle.pk %}" class="btn bi bi-arrow-return-left" style="background-color: #008B8B; color: white;">
+            <i class="fa fa-arrow-circle-left" style="margin-right: 5px;"></i> Bundle Details
+        </a>
+        </div>
+    </div>
+</div>
 {% endblock %}

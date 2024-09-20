@@ -280,7 +280,7 @@ def array(request, pk_bundle, pk_data, pk_product_observational):
 
             # Close appropriate label(s)
             print(' ... Closing Label ... ')
-            close_label(label, label_root)
+            close_label(label, label_root, label_list[2])
 
         else:
             print("Form array is not valid")
@@ -916,7 +916,7 @@ def bundle(request, pk_bundle):
             label_root = label_list[1]
             print(' ... Adding Bundle Member Entries ... ')
             label_root = product_bundle.build_additional_bundle_member_entry(label_root, additional_collections)
-            close_label(product_bundle.label(), label_root)
+            close_label(product_bundle.label(), label_root, label_list[2])
             
             additional_collections.build_base_case()
 
@@ -932,7 +932,7 @@ def bundle(request, pk_bundle):
 
             # Close label
             print(' ... Closing Label ... ')
-            close_label(additional_collections.label(), label_root)
+            close_label(additional_collections.label(), label_root, label_list[2])
             print('-------------End Build Product_Collection Base Case-----------------')
 
             additional_collections_set = AdditionalCollections.objects.filter(bundle=bundle)
@@ -973,7 +973,7 @@ def bundle(request, pk_bundle):
             label_root = product_document.fill_base_case(label_root)
             # Close label    
             print(' ... Closing Label ... ')
-            close_label(label_list[0], label_root)          
+            close_label(label_list[0], label_root, label_list[2])          
             print('---------------- End Build Product_Document Base Case -------')             
 
             # Add Document info to proper labels.  For now, I simply have Product_Bundle and Product_Collection with a correction for the data collection.  The variable all_labels_kill_data means all Product_Collection labels except those associated with data.  Further below, you will see the correction for the data collection where our label set is now data_labels.
@@ -999,7 +999,7 @@ def bundle(request, pk_bundle):
 
                 # Close appropriate label(s)
                 print(' ... Closing Label ... ')
-                close_label(label.label(), label_root)
+                close_label(label.label(), label_root, label_list[2])
             print('\n----------------End Build Internal_Reference for Document-------------------')
 
             form_document = ProductDocumentForm()
@@ -1999,7 +1999,7 @@ def data(request, pk_bundle, pk_data):
 
                     # Close appropriate label(s)
                     print(' ... Closing Label ... ')
-                    close_label(product_observational.label(), label_root)
+                    close_label(product_observational.label(), label_root, label_list[2])
                     # 1. Get root of product_observational label
                 
 
@@ -2240,7 +2240,7 @@ def document(request, pk_bundle):
         label_root = product_document.fill_base_case(label_root)
         # Close label
         print(' ... Closing Label ... ')
-        close_label(label_object, label_root)
+        close_label(label_object, label_root, label_list[2])
         print('---------------- End Build Product_Document Base Case -------------------------')
 
         # Add Document info to proper labels.  For now, I simply have Product_Bundle and Product_Collection.  This list will need to be updated.
@@ -2267,7 +2267,7 @@ def document(request, pk_bundle):
 
             # Close appropriate label(s)
             print(' ... Closing Label ... ')
-            close_label(label_object, label_root)
+            close_label(label_object, label_root, label_list[2])
         print(
             '\n----------------End Build Internal_Reference for Document-------------------')
 
@@ -2380,7 +2380,7 @@ def product_document(request, pk_bundle, pk_product_document):
 
             # Close appropriate label(s)
             print(' ... Closing Label ... ')
-            close_label(product_document.label(), label_root)
+            close_label(product_document.label(), label_root, label_list[2])
 
 
         print('Changed: {}'.format(form_product_document.changed_data))
@@ -2450,7 +2450,7 @@ def product_observational(request, pk_bundle, pk_product_observational):
 
             # Close label
             print(' ... Closing Label ... ')
-            close_label(label_object, label_root)
+            close_label(label_object, label_root, label_list[2])
             print(
                 '-------------End Add Observational to Product_Observational -----------------')
 
@@ -2507,7 +2507,7 @@ def Table_Creation(request, pk_bundle, pk_data):
             label_root = form.fill_base_case(label_root)
             # Close label    
             print(' ... Closing Label ... ')
-            close_label(label_list[0], label_root)
+            close_label(label_list[0], label_root, label_list[2]) 
 
         return render(request, 'build/data/Table_Creation.html', context_dict)
     else:
