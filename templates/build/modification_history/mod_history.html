@@ -1,0 +1,38 @@
+{% extends 'base-derk.html' %}
+{% load static %}
+
+{% block body_block %}
+<div class="container-fluid py-5 mt-5">
+    <div class="card bundle-card">
+        <div class="card-body">
+            <h1>Modification History</h1>
+            <p>We've provided a starting one to add [...]</p>
+            <hr>
+            <form action="{% url 'build:modification_history' bundle.pk %}" method="post" id="form_modification_history">
+                {% csrf_token %}
+
+                <!-- Description-->
+                <div class="mt-3">
+                   <label for="mod_desc" class="required">Description</label>
+                   {{ form_modification_history.description }}
+                </div>
+
+                <!-- Modification Date -->
+                <div class="mt-3">
+                   <label for="mod_date" class="required">Modificaiton Date</label>
+                   {{ form_modification_history.modification_date }}
+                </div>
+
+                <!-- Version ID -->
+                <div class="mt-3">
+                   <label for="version_id">Version ID</label>
+                   {{ form_modification_history.version_id }}
+                </div>
+                
+                <!-- Create Modification History -->
+                <button type="submit" class="btn btn-light text-light my-4">Create Modification History</button>
+             </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

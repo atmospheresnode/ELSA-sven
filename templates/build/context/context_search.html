@@ -5,421 +5,61 @@
 Context
 {% endblock %}
 
-{% block main_header_block %}
-<center>Context Collection</center>
-{% endblock %}
-
-{% block about_header_block %}
-<div class="row">
-    <div class="col-md-12">
-        <p class="card-header black-text text-left z-depth-2">
-            Adding context products to your bundle creates associations tying your work with an investigation (missions
-            or others), hosts (spacecraft and facilities), telescopes, instruments, and targets. The system of context
-            products should describe the observing system involved in the acquisition of your data.</br></br>
-            <strong> Investigation -> Host(s) -> [Telescope(s)] -> Instrument(s) -> Target(s) </strong></p>
-        </br>
-    </br>
-    <button style="float:left" class="btn btn-teal" data-toggle="collapse" href="#context" role="button">How to find context</button>
-    <div  class="col text-center">
-        <a style="float:right" class="btn btn-teal" href="{% url 'build:context_search_investigation' bundle.pk %}">Start with an
-            Investigation</a>
-        </div>
-    </div>
-    <hr>
-    <div id="context" class="collapse col align self center">
-        <div class="col align self end">
-            <div class="card card-body">
-                <strong>Tutoral:</strong>
-            </br>
-            Below Image gives an overview of how to navigate through adding context products. Starting from an Investigation.
-            
-        </div>
-        <!-- fix path for online version -->
-        <img  src="{% static 'images/context_path.PNG' %}" width="400px" height="700px" />
-    </div>
-    
-</div>
-</div>
-
-
-{% endblock %}
-
-
-
 {% block body_block %}
-
-<!--Row-->
-<div class="row pt-2">
-    <!--Column-->
-    <div class="col-md-12">
-        <h3 class="card-header elegant-color white-text text-center z-depth-2">Context Products</h3>
-    </div>
-    <!--/.Column-->
-</div>
-
-<hr>
-
-<div class="row">
-    <div class="col-md-12">
-        
-        <p class="card-header black-text text-left z-depth-2" style="height: 12rem">
-            
-            <img style="float:left" class="img-fluid" src="{% static 'images/investigation.png' %}" width="150"
-            height="150" alt="Instrument Image" data-toggle="tiptool" data-placement="right"
-            title="Investigations">
-            
-            <strong>INVESTIGATION:</strong> </br> Click here to add an Investigation. From the drop-down menu select
-            the investigation you need. Please note that once an investigation is selected you will have to repeat
-            this process for hosts, (telescopes), instruments, and targets. To ensure a complete well-referenced
-            bundle, you’ll want to have the context system as accurate as possible.
-            <a style="float:right" class="btn btn-teal" data-toggle="collapse" href="#displayInvestigations"
-            role="button">View Investigation Products </a>
-        </br></br>
+<div class="container-fluid">
+    <div class="card bundle-card">
+        <h1>Context Products</h1>
         <hr>
-        <div id="displayInvestigations" class="collapse card-header black-text text-left z-depth-2">
-            {% for inv in investigation_list %}
-            <div class="row">
-                <!--Card-->
-                <div class="col-sm-6 col-md-3">
-                    <ul>
-                        <div class="button">
-                            <!-- Link -->
-                            <!-- CHANGE THIS HTML HREF everywhere -->
-                            <a
-                            href="{% url 'build:context_search_instrument_host_and_facility' bundle.pk inv.pk %}">
-                            <!--Card content-->
-                            <div class="card-body">
-                                <!--Title-->
-                                <li>
-                                    <h4 class="card-title">{{ inv.name }}</h4>
-                                </li>
-                                <!--/.Title-->
-                                <!--Text-->
-                                <p class="card-text">{{ inv.lid }} <br /><br /></p>
-                                <!--/.Text-->
-                            </div>
-                            <!--/.Card content-->
-                            <!--Image-->
-                        </a>
-                        <!--/.Link-->
-                    </div>
+        <div class="card-body">
+            <!-- Context Tabs -->
+            <ul class="nav nav-tabs nav-justified" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#con_inv" type="button" role="tab" aria-selected="true">Investigation</button>
+                </li>
+                {% if instrument_hosts %}
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link " data-bs-toggle="tab" data-bs-target="#con_ih" type="button" role="tab" aria-selected="false">Instrument Hosts</button>
+                </li>
+                {% endif %}
+                {% if instruments %}
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link " data-bs-toggle="tab" data-bs-target="#con_ins" type="button" role="tab" aria-selected="false">Instruments</button>
+                </li>
+                {% endif %}
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link " data-bs-toggle="tab" data-bs-target="#con_tar" type="button" role="tab" aria-selected="false">Targets</button>
+                </li>
                 </ul>
-            </div>
-            <!--/.Card-->
-            
-        </div>
-        
-        {% endfor %}
-    </div>
-    
-    
-    <hr>
-    <p class="card-header black-text text-left z-depth-2" style="height: 12rem">
-        
-        
-        <img style="float:left" class="img-fluid" src="{% static 'images/facility.png' %}" width="150"
-        height="150" alt="Instrument Image" data-toggle="tiptool" data-placement="right" title="Facillity">
-        <strong>FACILITIES:</strong> </br> Facilities are stationary hosts such as laboratories or
-        observatories, and will contain references for lab instruments and/or telescopes with instruments.
-    </br></br>
-</br>
-<a style="float: right;" class="btn btn-teal" data-toggle="collapse" href="#displayFacilities"
-role="button">View Facilities</a>
-</br></br>
-<hr>
-<div id="displayFacilities" class="collapse card-header black-text text-left z-depth-2">
-    {% for facility in facility_list %}
-    <div class="row">
-        <!--Card-->
-        <div class="col-sm-6 col-md-3">
-            <ul>
-                {% if facility.type_of == "Laboratory" %}
-                <div class="button">
-                    <!--Link-->
-                    <!-- change the href -->
-                    <a
-                    href="{% url 'build:context_search_facility_instrument' bundle.pk facility.investigations.first.pk facility.pk %}">
-                    <!--Card content-->
-                    <div class="card-body">
-                        <!--Title-->
-                        <li>
-                            <h4 class="card-title">{{ facility.name }}</h4>
-                        </li>
-                        <!--/.Title-->
-                        <!--Text-->
-                        <p class="card-text">{{ facility.lid }} <br /><br /></p>
-                        <!--/.Text-->
-                    </div>
-                    <!--/.Card content-->
-                    <!--Image-->
-                </a>
-                <!--/.Link-->
-            </div>
-            {% else %}
-            <div class="button">
-                <!--Link-->
-                <!-- change the href -->
-                <a
-                href="{% url 'build:context_search_telescope' bundle.pk facility.investigations.first.pk facility.pk %}">
-                <!--Card content-->
-                <div class="card-body">
-                    <!--Title-->
-                    <li>
-                        <h4 class="card-title">{{ facility.name }}</h4>
-                    </li>
-                    <!--/.Title-->
-                    <!--Text-->
-                    <p class="card-text">{{ facility.lid }} <br /><br /></p>
-                    <!--/.Text-->
+
+                <!-- Investigation Tab -->
+                <div class="col-md-12 tab-pane fade show active" id="con_inv" role="tabpanel">
+                    <p> To begin, select an investigation product below to associate with your bundle. Investigations serve as the top level of the context system and will associate your bundle with a larger project.</br> <strong>Investigations are categorized as:</strong> Individual Investigations, Missions, Field Campaigns, Observing Campaigns, or Other Investigations. Selecting an investigation will pare down the list of components to the ones that go with that investigation (i.e., associated instruments, targets, etc.) </p>
+                    
+                    <form class="card-body" id="form_investigation" method="post" action="{% url 'build:context_search_investigation' bundle.pk  %}">
+                        {% csrf_token %}
+                        {{ form_investigation }}
+                        {{ form.errors }}
+                        {{ form.non_field_errors }}
+
+                        <input type="submit" class="btn btn-light text-light mt-4" value="Submit"/>
+                    </form> 
                 </div>
-                <!--/.Card content-->
-                <!--Image-->
-            </a>
-            <!--/.Link-->
-        </div>
-        {% endif %}
-    </ul>
-</div>
-<!--/.Card-->
 
-</div>
-
-{% endfor %}
-</div>
-
-<hr>
-<p class="card-header black-text text-left z-depth-2" style="height: 17rem">
-    
-    
-    <img style="float:left" class="img-fluid" src="{% static 'images/host.png' %}" width="150" height="150"
-    alt="Instrument Image" data-toggle="tiptool" data-placement="right" title="Hosts">
-    
-    <strong>INSTRUMENT HOST:</strong> </br> Host context products describe the platform from which your data
-    were collected. There are two types of hosts: instrument host (for mobile hosts) or facility (for
-    stationary hosts). After selecting one of these two options you will be given a pull-down menu for the
-    appropriate set. Instrument hosts include mobile platforms like spacecraft, rovers, landers, etc.
-    whereas facilities include laboratories and observatories. If you plan to use telescopes and/or
-    instruments not associated with a host, select the No Host option.</br><strong> Instrument
-        Host:</strong> Mobile platforms on which are mounted instruments for the collection of data. Most
-        commonly, these will be spacecraft, but could also include other mobile platforms like aircraft,
-        balloons, trucks, etc.
-    </br>
-    <a style="float: right;" class="btn btn-teal" data-toggle="collapse" href="#displayInstrumentHosts"
-    role="button">View Instrument Hosts</a>
-</br></br>
-<hr>
-<div id="displayInstrumentHosts" class="collapse card-header black-text text-left z-depth-2">
-    {% for ih in instrument_host_list %}
-    <div class="row">
-        <!--Card-->
-        <div class="col-sm-6 col-md-3">
-            <ul>
-                <div class="button">
-                    <!-- Link -->
-                    <!-- CHANGE THIS HTML HREF everywhere -->
-                    <a href="{% url 'build:context_search_instrument' bundle.pk ih.investigations.first.pk ih.pk %}">
-                        <!--Card content-->
-                        <div class="card-body">
-                            <!--Title-->
-                            <li>
-                                <h4 class="card-title">{{ ih.name }}</h4>
-                            </li>
-                            <!--/.Title-->
-                            <!--Text-->
-                            <p class="card-text">{{ ih.lid }} <br /><br /></p>
-                            <!--/.Text-->
-                        </div>
-                        <!--/.Card content-->
-                        <!--Image-->
-                    </a>
-                    <!--/.Link-->
+                <!-- Target Tab -->
+                <div class="col-md-12 tab-pane fade" id="con_tar" role="tabpanel">
+                    <p>Choose the target(s) you wish to add to your bundle. This is a complete list of availabe targets, independent of any investigations chosen.</p>
+                    
+                    <form class="card-body" id="form_target" method="post" action="{% url 'build:context_search_target' bundle.pk %}">
+                        {% csrf_token %}
+                        {{ form_target }}
+                        {{ form.errors }}
+                        {{ form.non_field_errors }}
+                        
+                        <input type="submit" class="btn btn-light text-light" value="Submit"/>
+                    </form> 
                 </div>
-            </ul>
         </div>
-        <!--/.Card-->
-        
     </div>
-    
-    {% endfor %}
 </div>
-
-<hr>
-
-<p class="card-header black-text text-left z-depth-2" style="height: 12rem">
-    
-    
-    <img style="float:left" class="img-fluid" src="{% static 'images/instrument.png' %}" width="150"
-    height="150" alt="Instrument Image" data-toggle="tiptool" data-placement="right"
-    title="Instruments">
-    
-    <strong>INSTRUMENT:</strong> </br> Instrument lists will be displayed that directly result to the Host
-    or Telescope products you selected above.</br>
-    If you have a no-host instrument and plan to use a stand-alone instrument the pull-down menu should
-    provide you a list of those in the system by designating the No-Host option.
-</br>
-</br>
-<a style="float: right;" class="btn btn-teal" data-toggle="collapse" href="#displayInstruments"
-role="button">View Instruments</a>
-</br></br>
-<hr>
-
-<div id="displayInstruments" class="collapse card-header black-text text-left z-depth-2">
-    {% for ins in instrument_list %}
-    <div class="row">
-        <!--Card-->
-        <div class="col-sm-6 col-md-3">
-            <ul>
-                <div class="button">
-                    <!-- Link -->
-                    <!-- CHANGE THIS HTML HREF everywhere -->
-                    <a href="{% url 'build:context_search_target_investigation' bundle.pk ins.investigations.first.pk %}">
-                        <!--Card content-->
-                        <div class="card-body">
-                            <!--Title-->
-                            <li>
-                                <h4 class="card-title">{{ ins.name }}</h4>
-                            </li>
-                            <!--/.Title-->
-                            <!--Text-->
-                            <p class="card-text">{{ ins.lid }} <br /><br /></p>
-                            <!--/.Text-->
-                        </div>
-                        <!--/.Card content-->
-                        <!--Image-->
-                    </a>
-                    <!--/.Link-->
-                </div>
-            </ul>
-        </div>
-        <!--/.Card-->
-        
-    </div>
-    
-    {% endfor %}
-</div>
-
-<hr>
-
-<p class="card-header black-text text-left z-depth-2" style="height: 12rem">
-    
-    
-    <img style="float:left" class="img-fluid" src="{% static 'images/telescope.png' %}" width="150"
-    height="150" alt="Instrument Image" data-toggle="tiptool" data-placement="right" title="Telescopes">
-    
-    <strong>TELESCOPE:</strong> </br> If you selected a facility that is an observatory you will need to
-    select an associated telescope from the list associated with that observatory.</br>
-    If you selected the ‘No Host’ option above you may select a non-affiliated telescope from the list.
-</br>
-<a style="float: right;" class="btn btn-teal" data-toggle="collapse" href="#displayTelescopes"
-role="button">View Telescopes</a>
-</br></br>
-
-<hr>
-
-<div id="displayTelescopes" class="collapse card-header black-text text-left z-depth-2">
-    {% for tel in telescope_list %}
-    <div class="row">
-        <!--Card-->
-        <div class="col-sm-6 col-md-3">
-            <ul>
-                <div class="button">
-                    <!-- Link -->
-                    <!-- CHANGE THIS HTML HREF everywhere -->
-                    <a href="{% url 'build:context_search_target_and_instrument' bundle.pk tel.investigations.first.pk tel.facilities.first.pk %}">
-                        <!--Card content-->
-                        <div class="card-body">
-                            <!--Title-->
-                            <li>
-                                <h4 class="card-title">{{ tel.name }}</h4>
-                            </li>
-                            <!--/.Title-->
-                            <!--Text-->
-                            <p class="card-text">{{ tel.lid }} <br /><br /></p>
-                            <!--/.Text-->
-                        </div>
-                        <!--/.Card content-->
-                        <!--Image-->
-                    </a>
-                    <!--/.Link-->
-                </div>
-            </ul>
-        </div>
-        <!--/.Card-->
-        
-    </div>
-    
-    {% endfor %}
-</div>
-
-<hr>
-
-<p class="card-header black-text text-left z-depth-2" style="height: 12rem">
-    
-    
-    
-    <img style="float:left" class="img-fluid" src="{% static 'images/target.png' %}" width="150"
-    height="150" alt="Instrument Image" data-toggle="tiptool" data-placement="right" title="Targets">
-    
-    <strong>TARGET:</strong> </br> Targets are often provided by the combinations of context above, and a
-    pull-down menu of available targets may be provided especially if you’ve selected Mission context
-    products.</br>
-    If you have more general purpose observing systems or non-affiliated instruments you may need to select
-    a target from the entire list of available targets.
-</br>
-<a style="float: left;" class="btn btn-teal" href="{% url 'build:context_search_target' bundle.pk %}"
-role="button">Add Target +</a>
-<a style="float: right;" class="btn btn-teal" data-toggle="collapse" href="#displayTargets"
-role="button">View Targets</a>
-</br></br>
-
-<hr>
-<div id="displayTargets" class="collapse card-header black-text text-left z-depth-2">
-    {% for tar in target_list %}
-    <div class="row">
-        <!--Card-->
-        <div class="col-sm-6 col-md-3">
-            <ul>
-                <div class="button">
-                    <!-- Link -->
-                    <!-- CHANGE THIS HTML HREF everywhere -->
-                        <!--Card content-->
-                        <div class="card-body">
-                            <!--Title-->
-                            <li>
-                                <h4 class="card-title">{{ tar.name }}</h4>
-                            </li>
-                            <!--/.Title-->
-                            <!--Text-->
-                            <p class="card-text">{{ tar.lid }} <br /><br /></p>
-                            <!--/.Text-->
-                        </div>
-                        <!--/.Card content-->
-                        <!--Image-->
-                    <!--/.Link-->
-                </div>
-            </ul>
-        </div>
-        <!--/.Card-->
-        
-    </div>
-    
-    {% endfor %}
-</div>
-<hr>
-</br>
-<!--/.Card-->
-</div>
-
-    <div >
-       <p class="text-left">
- Use this to go back to previous page:
-            <a href="{% url 'build:bundle' bundle.pk %}">
-                <input type="submit" class="btn btn-teal" value="Go Back to Build Page"/>
-            </a>
-              <!-- <button class="btn btn-teal" data-toggle= "collapse" href="{% url 'build:bundle' bundle.pk %}" role="button" >Go back to Build Page  </button> -->
-       </p>
-     
-       </div> 
-<!--/.Third row-->
 {% endblock %}
 
