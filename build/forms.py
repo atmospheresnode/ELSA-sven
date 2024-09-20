@@ -529,60 +529,124 @@ STD_ID = [
 
 
 class ProductDocumentForm(forms.ModelForm):
-    document_name = forms.CharField(required=True, max_length=100, widget=forms.TextInput(attrs={
-        'class': 'form-control form-outline',
-        'id': 'doc_name'
-    }))
-    publication_date = forms.CharField(required=True, max_length=100, widget=forms.TextInput(attrs={
-        'class': 'form-control form-outline',
-        'id': 'pub_date'
-    }))
-    # acknowledgement_text = forms.CharField(required=False)
-    author_list = forms.CharField(required=False, max_length=100, widget=forms.TextInput(attrs={
-        'class': 'form-control form-outline',
-        'id': 'auth_list'
-    }))
-    copyright = forms.CharField(required=False, max_length=100, widget=forms.TextInput(attrs={
-        'class': 'form-control form-outline',
-        'id': 'copyright'
-    }))
-    description = forms.CharField(required=False, max_length=100, widget=forms.TextInput(attrs={
-        'class': 'form-control form-outline',
-        'id': 'description'
-    }))
-    document_editions = forms.IntegerField(required=False, widget=forms.TextInput(attrs={
-        'class': 'form-control form-outline',
-        'id': 'document_editions'
-    }))
-    # doi = forms.CharField(required=False)
-    # editor_list = forms.CharField(required=False)
-    revision_id = forms.CharField(required=False, max_length=100, widget=forms.TextInput(attrs={
-        'class': 'form-control form-outline',
-        'id': 'rev_id'
-    }))
-    edition_name = forms.CharField(required=False, max_length=100, widget=forms.TextInput(attrs={
-        'class': 'form-control form-outline',
-        'id': 'edition_name'
-    }))
-    language = forms.CharField(required=False, max_length=100, widget=forms.TextInput(attrs={
-        'class': 'form-control form-outline',
-        'id': 'language'
-    }))
-    files = forms.IntegerField(required=False, widget=forms.TextInput(attrs={
-        'class': 'form-control form-outline',
-        'id': 'files'
-    }))
-    file_name = forms.CharField(required=False, max_length=100, widget=forms.TextInput(attrs={
-        'class': 'form-control form-outline',
-        'id': 'file_name'
-    }))
-    local_id = forms.CharField(required=False, max_length=100, widget=forms.TextInput(attrs={
-        'class': 'form-control form-outline',
-        'id': 'local_id'
-    }))
-    document_std_id = forms.ChoiceField(required=False, choices=STD_ID)
+    document_name = forms.CharField(
+        required=True,
+        max_length=100,
+        label_suffix = '',
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            # 'placeholder': 'Document Name'
+        })
+        
+    )
+    publication_date = forms.CharField(
+        required=True,
+        max_length=100,
+        label_suffix = '',
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+           # 'placeholder': 'Publication Date'
+        })
+    )
+    author_list = forms.CharField(
+        required=False,
+        max_length=100,
+        label_suffix = '',
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+          #  'placeholder': 'Author List'
+        })
+    )
+    copyright = forms.CharField(
+        required=False,
+        max_length=100,
+        label_suffix = '',
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+          #  'placeholder': 'Copyright'
+        })
+    )
+    description = forms.CharField(
+        required=False,
+        max_length=100,
+        label_suffix = '',
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+          #  'placeholder': 'Description',
+            'rows': 3
+        })
+    )
+    document_editions = forms.IntegerField(
+        required=False,
+        label_suffix = '',
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+           # 'placeholder': 'Document Editions'
+        })
+    )
+    revision_id = forms.CharField(
+        required=False,
+        max_length=100,
+        label_suffix = '',
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+           # 'placeholder': 'Revision ID'
+        })
+    )
+    edition_name = forms.CharField(
+        required=False,
+        max_length=100,
+        label_suffix = '',
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            #'placeholder': 'Edition Name'
+        })
+    )
+    language = forms.CharField(
+        required=False,
+        max_length=100,
+        label_suffix = '',
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            #'placeholder': 'Language'
+        })
+    )
+    files = forms.IntegerField(
+        required=False,
+        label_suffix = '',
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+           # 'placeholder': 'Number of Files'
+        })
+    )
+    file_name = forms.CharField(
+        required=False,
+        max_length=100,
+        label_suffix = '',
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            #'placeholder': 'File Name'
+        })
+    )
+    local_id = forms.CharField(
+        required=False,
+        max_length=100,
+        label_suffix = '',
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            #'placeholder': 'Local ID'
+        })
+    )
+    document_std_id = forms.ChoiceField(
+        required=False,
+        choices=STD_ID,
+        label_suffix = '',
+        widget=forms.Select(attrs={
+            'class': 'form-control custom-select'
+        })
+    )
 
-    class Meta(object):
+    class Meta:
         model = Product_Document
         exclude = ('bundle',)
 
