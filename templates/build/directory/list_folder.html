@@ -1,12 +1,14 @@
 
-    <div class="btn btn-teal" data-toggle="collapse" href="#{{ file }}" type="button">
+    <button type="button" class="btn btn-light text-light" data-bs-toggle="collapse" data-bs-target="#{{ file }}" aria-expanded="false" style="box-shadow: none;">
+        <i class="fa fa-folder"></i>
         {{ file }} 
         <i class="fa fa-caret-down"></i>
-    </div>
-    <div class="collapse" id="{{ file }}" data-bs-parent="#accordion">
+    </button>
+    <div class="collapse" id="{{ file }}">
         
     {% for f in subfiles %}
-    {{ f }}
+    <div class="vertical_space_C"> </div>
+    &nbsp;&nbsp;&nbsp;{{ f }}
     {% endfor %}
             
     </div>

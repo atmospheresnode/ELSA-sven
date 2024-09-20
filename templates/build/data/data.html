@@ -128,18 +128,18 @@ Data
          <p class="card-header black-text text-left z-depth-2">
             Create Table
             </br>
-            <button class="btn btn-teal" data-toggle="collapse" href="#displayProductObservational" role="button"> + Add Table</button>
+            <button class="btn btn-teal" data-bs-toggle="collapse" data-bs-target="#displayProductObservational" role="button"> + Add Table</button>
          </p>
       </div>
       <!--/.Column-->
       <!--Column-->
-      <div id="displayProductObservational" class="collapsible col-md-12 rgba-indigo-slight" >
+      <div id="displayProductObservational" class="collapse" >
          </br>
          
             <form id="form_ProductObservational" method="post" action="{% url 'build:data' bundle.pk data.pk %}">
                {% csrf_token %}
                <div id="form_data">
-                  {{ form_data_object.as_p }}
+                  {{ form_product_observational.as_p }}
                </div>
                <input class="btn btn-teal" type="submit" value="Submit"/>
             </form>
