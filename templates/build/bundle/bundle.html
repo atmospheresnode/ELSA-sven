@@ -921,28 +921,28 @@
                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
 
-            <div class="modal-body pt-0">
+            <div class="modal-body ">
                <!-- Tabs -->
                <ul class="nav nav-tabs nav-justified" role="tablist">
-                  <li class="bundle-nav-item nav-item" role="presentation">
-                     <button class="bundle-nav-link nav-link active" data-bs-toggle="tab" data-bs-target="#doc_collection" type="button" role="tab" aria-selected="false">Document Collection</button>
+                  <li class="nav-item" role="presentation">
+                     <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#doc_collection" type="button" role="tab" aria-selected="true">Document Collection</button>
                   </li>
 
                   {% for add_collection in additional_collections_set %}
-                  <li class="bundle-nav-item nav-item" role="presentation">
-                     <button class="bundle-nav-link nav-link" data-bs-toggle="tab" data-bs-target="#additional_{{ add_collection.collection_name }}_collection" type="button" role="tab" aria-selected="true">{{ add_collection.collection_name }}</button>
+                  <li class="nav-item" role="presentation">
+                     <button class="nav-link" data-bs-toggle="tab" data-bs-target="#additional_{{ add_collection.collection_name }}_collection" type="button" role="tab" aria-selected="false">{{ add_collection.collection_name }}</button>
                   </li>
                   {% endfor %}
                   
-                  <li class="bundle-nav-item nav-item" role="presentation">
-                     <button class="bundle-nav-link nav-link btn-light text-light" data-bs-toggle="tab" data-bs-target="#add_a_collection" type="button" role="tab" aria-selected="true">+ Add New Collection</button>
+                  <li class="nav-item" role="presentation">
+                     <button class="nav-link btn-light text-light" data-bs-toggle="tab" data-bs-target="#add_a_collection" type="button" role="tab" aria-selected="false">+ Add New Collection</button>
                   </li>
                </ul>
 
                <!-- Content -->
                <div class="tab-content">
                   <!-- Document Collection -->
-                  <div class="tab-pane fade" id="doc_collection" role="tabpanel">
+                  <div class="tab-pane fade show active" id="doc_collection" role="tabpanel">
                      <br>
                      <div class="col-md-12">
                         <div class="card">
@@ -1006,7 +1006,7 @@
                               <h5 class="card-title">{{ data.name }}</h5>
                               <p class="card-text">Processing Level: {{ data.processing_level }}</p>
                               <p class="card-text">Data Type: {{ data.data_type }}</p>
-                              <a href="{%  url 'build:data' bundle.pk data.pk %}" class="btn btn-light text-light d-flex justify-content-center">Edit</a>
+                              <a href="{%  url 'build:table_creation' bundle.pk data.pk %}" class="btn btn-light text-light d-flex justify-content-center">Edit</a>
                            </div>
                         </div>
                         {% endfor %}

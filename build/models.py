@@ -23,6 +23,7 @@ from shutil import *
 import datetime
 import shutil
 import os
+import copy
 
 
 
@@ -3937,6 +3938,11 @@ class Product_Document(models.Model):
             document_std_id = Files.find(
                 '{}document_standard_id'.format(NAMESPACE))
             document_std_id.text = self.document_std_id
+
+        for i in range(int(self.files) - 1):
+            cloned_file = copy.deepcopy(Files)
+            Document_Edition.append(cloned_file)
+        
         return root
 
     def build_internal_reference(self, root, relation):
