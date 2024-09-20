@@ -73,15 +73,28 @@ def contact(request):
             context_dict['agency'] = request.user.userprofile.agency
             context_dict['message'] = user_contact_form.cleaned_data['message']
             content = template.render(context_dict)
+
+            #Email to ELSA from user
             email = EmailMessage(
                 subject = "{} is contacting ELSA".format(context_dict['name']),
                 body = content,
                 from_email = 'atm-elsa@nmsu.edu',
-                to = ['elsa@atmos.nmsu.edu', 'sajomont@nmsu.edu', 'lneakras@nmsu.edu'],
-                #to = ['rupakdey@nmsu.edu'],
+                #to = ['elsa@atmos.nmsu.edu', 'sajomont@nmsu.edu', 'lneakras@nmsu.edu'],
+                to = ['rupakdey@nmsu.edu'],
                 headers = {'Reply-To': 'atm-elsa@nmsu.edu' }
             )
+
+            #Email confirmation to user
+            email_confirmation = EmailMessage(
+                subject = "Thank you for contacting ELSA!",
+                body = "Your message has been received. Please allow 24-48 hours to receive a response. Thank you for using ELSA! \n\nRegards,\nTeam ELSA",
+                from_email = 'atm-elsa@nmsu.edu',
+                to = [context_dict['email']]
+            )
+
             email.send()
+            email_confirmation.send()
+            
             context_dict['email_sent'] = True
             return HttpResponseRedirect('/contact') # redirects to the same page to clear the form after submission
 
