@@ -13,7 +13,7 @@ from . import views
 app_name='build'
 urlpatterns = [
     # Alias
-#    url(r'^(?P<pk_bundle>\d+)/alias/$', views.alias, name='alias'),
+    re_path(r'^(?P<pk_bundle>\d+)/alias/$', views.alias, name='alias'),
     re_path(r'^(?P<pk_bundle>\d+)/alias_edit/(?P<pk_alias>[-\w]+)/$', views.alias_edit, name='alias_edit'),
 
     re_path(r'^(?P<pk_bundle>\d+)/alias_delete/(?P<pk_alias>[-\w]+)/$', views.alias_delete, name='alias_delete'),
@@ -40,13 +40,13 @@ urlpatterns = [
     # Citation_Information
     re_path(r'^(?P<pk_bundle>\d+)/citation_information/$', views.citation_information, name='citation_information'),
     # Modification_History
-    re_path(r'^(?P<pk_bundle>\d+)/modification_story/$', views.modification_history, name='modification_history'),
+    re_path(r'^(?P<pk_bundle>\d+)/modification_history/$', views.modification_history, name='modification_history'),
     # Collections
 
 
     # Context
-    re_path(r'^$', views.context, name='context'),
-    re_path(r'^(?P<pk_bundle>\d+)/contextsearch/$', views.context_search, name='context_search'),
+    # re_path(r'^$', views.context, name='context'),        
+    re_path(r'^(?P<pk_bundle>\d+)/context_search/$', views.context_search, name='context_search'),
     re_path(r'^(?P<pk_bundle>\d+)/contextsearch/investigation/$', views.context_search_investigation, name='context_search_investigation'),
     re_path(r'^(?P<pk_bundle>\d+)/contextsearch/investigation/(?P<pk_investigation>\d+)/instrument_host_or_facility/$', views.context_search_instrument_host_and_facility, name='context_search_instrument_host_and_facility'),
     re_path(r'^(?P<pk_bundle>\d+)/contextsearch/investigation/(?P<pk_investigation>\d+)/target/$', views.context_search_target_inv, name='context_search_target_investigation'),

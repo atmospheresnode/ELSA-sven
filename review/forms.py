@@ -17,7 +17,7 @@ class ReviewForm(forms.Form):
         label_suffix = '',
         widget=forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'Enter your email address'})
     )
-    
+
     derived_data = forms.CharField(
         required=True,
         label='Reviewed PDS Data Set',

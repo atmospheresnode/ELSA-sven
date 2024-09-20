@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 from __future__ import print_function
+from email.message import EmailMessage
 
+from django.core.mail import EmailMessage
 from django.conf import settings 
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -181,6 +183,8 @@ def friend_useraccount(request):
 # profile_settings NOTE:  It is important to NOT rename this as simply settings.  Since we import django.conf import settings, when our user goes to register, settings.ARCHIVE_DIR does not pull from our settings.py file.  Rather, Django comes to this function (if named settings) and notices there is no ARCHIVE_DIR declared here.  Big boo boo that cost me (k) a couple days to figure out.
 @login_required
 def friend_settings(request, pk_user):
+
+    updated = False # This is a flag to determine if the user has updated their profile.
     context_dict = {}
     context_dict['userprofile'] = UserProfile.objects.get(pk=pk_user)
     context_dict['user'] = User.objects.get(userprofile=context_dict['userprofile'])
@@ -198,16 +202,19 @@ def friend_settings(request, pk_user):
         nameF = first_form.save()
         user.first_name = nameF.first_name
         user.save()
+        updated = True
 
     if last_form.is_valid():
         nameL = last_form.save()
         user.last_name = nameL.last_name
         user.save()
+        updated = True
 
     if email_form.is_valid():
         email = email_form.save()
         user.email = email.email
         user.save()
+        updated = True
 
     if password_form.is_valid():
         pwdForm = password_form.save()
@@ -217,10 +224,21 @@ def friend_settings(request, pk_user):
                 print("Valid")
                 user.set_password(pwdForm.new_password)
                 user.save()
+                updated = True
+
             else:
                     return render(request, 'friends/settings/mismatched_password.html', context_dict)
         else:
             return render(request, 'friends/settings/wrong_password.html', context_dict)
+
+    if updated == True:
+        email_user = EmailMessage(
+            subject = "ELSA User Profile Updated",
+            body = 'Your ELSA user profile has been updated. If you did not make this change, please visit https://atmos.nmsu.edu/elsa/contact/ to report this incident. Thank you for using ELSA! \n\nRegards,\nTeam ELSA',
+            from_email = 'atm-elsa@nmsu.edu',
+            to=[user.email]
+        )
+        email_user.send()
 
     if request.user == context_dict['user']:
         return render(request, 'friends/settings.html', context_dict)
