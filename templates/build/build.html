@@ -1,70 +1,23 @@
 {% extends 'base-derk.html' %}
 {% load static %}
 
-
-
-
-<!-- {% block title_block %}
-Build A Bundle
-{% endblock %} -->
-
-
-
-<!-- Figure out if we need to delete this portion -->
-<!-- {% block main_header_block %}
-<br/>
-So you want to build a bundle?
-{% endblock %}
-
-{% block about_header_block %}
-
-ELSA helps you to build PDS4 compliant labels for your data by building your bundle all at once and will provide a downloadable template package partially filled-out for you to work with your node representative. 
-To begin, ELSA needs some basic information about your bundle. 
-Please provide a title for your bundle and select the version of the PDS4 IM you want to use (new users should choose the top-most selection for version). 
-NOTE: Once the bundle is named, you will be directed to a 'Bundle View' that will prompt you for various parts of the bundles including the ability to add collections. 
-Some collections are required by the ATM node and will be automatically generated for your use. 
-Namely you will be expected to provide documentation for your bundle - a document collection has been generated for that purpose. 
-XML_Schema and Context collections will also be generated for you. 
-These serve as system augmentations for the PDS and will be completely handled by ELSA. 
-
-{% endblock %}
-
-{% block standards_reference_block %}
-
-A bundle is a logical construct that can be used to archive to archive digital data within PDS. 
-Bundles have a hierarchical structure that allow it to contain digial products within collections. 
-PDS uses bundles as a way to provide a simple package to organize related data products as a data set. 
-Each bundle contains a document collection and data collections. 
-Your bundle may also contain other collections if needed (e.g., geometry, browse, calibration, etc.). 
-Context and xml_schema collections are system collections that will be added by the Atmospheres Node (ATM) after your bundle is complete.   
-
-{% endblock %} -->
-<!-- Figure out if we need to delete this portion -->
-
-
 {% block body_block %}
-
-<style>
-    .vertical_space_A { 
-        height: 60px;
-    }
-</style>
-
-<div class="vertical_space_A"> </div>
 <div class="container-fluid justify-content-center align-items-center py-5">
     <div class="row justify-content-center align-items-center">
         <div class="col-12 col-lg-9 col-xl-10">
             <div class="card">
                 <div class="card-body p-4 p-md-5">
                     <h2 class="mb-5 pb-2 pb-md-0 mb-md-4">Building a Bundle?</h2>
+                    <p>
                         ELSA helps you to build PDS4 compliant labels for your data by building your bundle all at once and will provide a downloadable template package partially filled-out for you to work with your node representative. 
-To begin, ELSA needs some basic information about your bundle. 
-Please provide a title for your bundle and select the version of the PDS4 IM you want to use (new users should choose the top-most selection for version). 
-NOTE: Once the bundle is named, you will be directed to a 'Bundle View' that will prompt you for various parts of the bundles including the ability to add collections. 
-Some collections are required by the ATM node and will be automatically generated for your use. 
-Namely you will be expected to provide documentation for your bundle - a document collection has been generated for that purpose. 
-XML_Schema and Context collections will also be generated for you. 
-These serve as system augmentations for the PDS and will be completely handled by ELSA. 
+                        To begin, ELSA needs some basic information about your bundle. 
+                        Please provide a title for your bundle and select the version of the PDS4 IM you want to use (new users should choose the top-most selection for version). 
+                        NOTE: Once the bundle is named, you will be directed to a 'Bundle View' that will prompt you for various parts of the bundles including the ability to add collections. 
+                        Some collections are required by the ATM node and will be automatically generated for your use. 
+                        Namely you will be expected to provide documentation for your bundle - a document collection has been generated for that purpose. 
+                        XML_Schema and Context collections will also be generated for you. 
+                        These serve as system augmentations for the PDS and will be completely handled by ELSA. 
+                    </p>
                 </div>
             </div>
             <br>
@@ -81,7 +34,16 @@ These serve as system augmentations for the PDS and will be completely handled b
                             {{ form_bundle.name }}
 
                             <!-- Bundle Name Guideline Tooltip -->
-                            <span tabindex="0" data-toggle="tooltip" title="The name of your bundle is the unique name you would like your bundle to be archived as. The version of your bundle should be the most up-to-date version unless otherwise noted by your node personnel. The type of bundle depends on your data. If your bundle is meant to be archived, choose archive. This option is what most bundle types are. If your bundle contains supplemental data to an already archived bundle, choose supplemental. Each bundle contains a document, context, and xml_schema collection. All other collections contained in your bundle will be decided between you, {{ user.first_name }}, and your node personnel. If you are working directly with ATM and are unsure of which collections are in your bundle, send a message to ELSA and someone from ATM will get back to you shortly. If you are working with another node, please contact your node.">
+                            <span tabindex="0" data-toggle="tooltip" 
+                                title="The name of your bundle is the unique name you would like your bundle to be archived as. 
+                                The version of your bundle should be the most up-to-date version unless otherwise noted by your node personnel. 
+                                The type of bundle depends on your data. If your bundle is meant to be archived, choose archive. 
+                                This option is what most bundle types are. If your bundle contains supplemental data to an already archived bundle, choose supplemental. 
+                                Each bundle contains a document, context, and xml_schema collection. 
+                                All other collections contained in your bundle will be decided between you, {{ user.first_name }}, and your node personnel. 
+                                If you are working directly with ATM and are unsure of which collections are in your bundle, send a message to ELSA and someone from ATM will get back to you shortly. 
+                                If you are working with another node, please contact your node.">
+
                                 <button type="button" class="btn btn-block" style="pointer-events: none; border: none;" disabled>
                                     <i class="fa fa-question"></i>
                                 </button>

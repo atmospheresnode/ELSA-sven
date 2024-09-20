@@ -48,13 +48,13 @@ class ConfirmForm(forms.Form):
 
 
 class AliasForm(forms.ModelForm):
-    alternate_id = forms.CharField(required=True, max_length=100, widget = forms.TextInput(attrs={
+    alternate_id = forms.CharField(required=False, max_length=100, widget = forms.TextInput(attrs={
             'class': 'form-control form-outline',
             'id': 'alt_id'
         })
     )
 
-    alternate_title = forms.CharField(required=True, max_length=100, widget = forms.TextInput(attrs={
+    alternate_title = forms.CharField(required=False, max_length=100, widget = forms.TextInput(attrs={
             'class': 'form-control form-outline',
             'id': 'alt_title'
         })
@@ -175,6 +175,9 @@ class BundleForm(forms.ModelForm):
 
 
 class CitationInformationForm(forms.ModelForm):
+    # modify author and editor list for future to format like 
+    # last name, first name; last name, f; etc (both versions work)
+
     author_list = forms.CharField(required=False, widget = forms.TextInput(attrs={
         'class': 'form-control form-outline',
         'id': 'author_list'
@@ -225,6 +228,7 @@ Test
 
 
 class ModificationHistoryForm(forms.ModelForm):
+    # figure out how to add defaults
 
     description = forms.CharField(required=True, widget = forms.TextInput(attrs={
         'class': 'form-control form-outline',

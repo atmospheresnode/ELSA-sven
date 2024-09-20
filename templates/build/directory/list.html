@@ -16,13 +16,27 @@
   .vertical_space_A { 
       height: 120px;
   }
+  .vertical_space_B {
+    height: 20px;
+  }
+  .vertical_space_C {
+    height: 5px;
+  }
 </style>
 <div class="vertical_space_A"> </div>
+<div class="card card-body">	
+  <h1 class="text-center">Index of {{directory_name}}</h1>
+  </br>
+  This page displays your bundle's directory structure including the collections that have been added up to the time you’ve viewed this.
+  </br>
+</div>
+<div class="vertical_space_B"> </div>
 <div class="col">
   {% for f in subfiles %}
     <div class="col">
     {{ f }}
     </div>
+    <div class="vertical_space_C"> </div>
   {% endfor %}
 </div>
 
