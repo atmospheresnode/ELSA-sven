@@ -32,7 +32,6 @@
       </a>
    </div>
 
-   
    <!-- View XML Files Button -->
    <div class="col-md-3">
       <a href="{% url 'build:directory_view' bundle.relative_dir %}">
@@ -78,43 +77,7 @@
 <!-- New Body Block -->
 {% block body_block %}
 
-<!-- Stylings -->
-<style>
-   a:hover{
-      cursor: pointer;
-   }
-
-   a:hover .modal-card {
-      transform: scale(1.025);
-      transition: transform 0.3s ease;
-   }
-
-   /* Tabs Styling */
-   .bundle-nav-tabs .bundle-nav-item.show .bundle-nav-link .bundle-nav-link.active {
-      background-color: transparent;
-      border-color: transparent transparent white;
-      border-bottom: 2px solid;
-   }
-
-   .bundle-nav-tabs .bundle-nav-link {
-      border: 1px solid transparent;
-      border-top-left-radius: .25rem;
-      border-top-right-radius: .25rem;
-   }
-
-   .bundle-nav-link {
-      text-decoration: none;
-      color: black;
-   }
-
-   /* Required Form Fields */
-   label.required::after {
-      content: ' *';
-      color: red;
-   }
-</style>
-
-<div class="container-fluid vh-100 pt-5 mt-5">
+<div class="container-fluid pt-5">
    <div class="row">
       <!-- Fill Out Forms Side -->
       <div class="col-md-6">
@@ -213,11 +176,11 @@
                         <div class="card-body black-text pt-1 text-left">
                            <p>
                               In this section you should be able to manage your
-               bundle's collections.You can edit exsiting collection (label metadata, adding files to the collection), and
-               add new colections.The Context and XML Schema collections are used for system managemetn and will be
-               generated automatically and therefore are not neccessary to edit. You may add multiple document and data
-               collections as needed. ATM requires that you have at least one document collection to ensure your fianl
-               bundle will have adequate background documentation.
+                              bundle's collections. You can edit existing collection (label metadata, adding files to the collection), and
+                              add new collections. The Context and XML Schema collections are used for system management and will be
+                              generated automatically and therefore are not neccessary to edit. You may add multiple document and data
+                              collections as needed. ATM requires that you have at least one document collection to ensure your final
+                              bundle will have adequate background documentation.
                            </p>
                         </div>
                      </div>
@@ -239,20 +202,6 @@
                      <button type="button" class="btn btn-light text-light" data-bs-toggle="collapse" data-bs-target="#xml_schema" aria-expanded="false" style="box-shadow: none;">XML Schema</button>
                   </div>
                </div>
-               <style>
-                  .xml-card {
-                     height: 500px;
-                  }
-
-                  .xml-container {
-                     color:black;
-                     white-space: pre;
-                     font-family: monospace;
-                     font-size: small;
-                     text-align: left;
-                     overflow-y: auto;
-                  }
-               </style>
 
                <div id="bundle_xml" class="collapse show" data-bs-parent="#accordion2">
                   <div class="row p-1 m-3 mt-1">
@@ -472,7 +421,7 @@
                         <div class="card-header">
                            <p> To begin, select an investigation product below to associate with your bundle. Investigations serve as the top level of the context system and will associate your bundle with a larger project.</br> <strong>Investigations are categorized as:</strong> Individual Investigations, Missions, Field Campaigns, Observing Campaigns, or Other Investigations. Selecting an investigation will pare down the list of components to the ones that go with that investigation (i.e., associated instruments, targets, etc.) </p>
                         </div>
-                        <form class="card-body black-text text-left z-depth-2" id="query01" method="post" action="{% url 'build:context_search_investigation' bundle.pk  %}">
+                        <form class="card-body black-text text-left z-depth-2" id="form_investigation" method="post" action="{% url 'build:context_search_investigation' bundle.pk  %}">
                               {% csrf_token %}
                               {{ form_investigation }}
                               {{ form.errors }}
