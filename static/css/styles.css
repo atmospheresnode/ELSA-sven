@@ -1,0 +1,122 @@
+:root {
+    /* Colors */
+    --elsa-green: #2bbbad;
+    --elsa-dark-green: #26a498;
+    --elsa-black: black;
+    --elsa-required: red;
+
+    /* Typography */
+
+    /* Misc. */
+    --box-shadow: 0.25em 0.25em 0.75em rgba(0,0,0,0.5), 0.125em 0.125em 0.25em rgba(0,0,0,0.25);
+}
+
+/* Default */
+a {
+    text-decoration: none;
+}
+
+a:hover {
+    cursor: pointer;
+}
+
+a:hover .modal-card {
+    transform: scale(1.025);
+    transition: transform 0.3s ease;
+}
+
+ /* Tabs Styling */
+ .bundle-nav-tabs .bundle-nav-item.show .bundle-nav-link .bundle-nav-link.active {
+    background-color: transparent;
+    border-color: transparent transparent white;
+    border-bottom: 2px solid;
+ }
+
+ .bundle-nav-tabs .bundle-nav-link {
+    border: 1px solid transparent;
+    border-top-left-radius: .25rem;
+    border-top-right-radius: .25rem;
+ }
+
+.bundle-nav-link {
+    text-decoration: none;
+    color: var(--elsa-black);
+}
+
+ /* Required Form Fields */
+ label.required::after {
+    content: ' *';
+    color: var(--elsa-required);
+ }
+
+/* Buttons */
+.btn-light {
+    background-color: var(--elsa-green); 
+    box-shadow: var(--box-shadow);
+    border-color: var(--elsa-green);
+}
+
+.btn-light:hover {
+    background-color: var(--elsa-dark-green);
+    border-color: var(--elsa-dark-green);
+}
+
+/* Cards */
+.card {
+    box-shadow: var(--box-shadow);
+    border-radius: 15px;
+    overflow: hidden;
+}
+
+.card-header {
+    border-top-left-radius: inherit;
+    border-top-right-radius: inherit;
+}
+
+/* Forms */
+.form-outline {
+    position: relative;
+}
+
+/* Info tooltip tag */
+.form-outline span {
+    position: absolute;
+    top: 50%;
+    right: 5px;
+    transform: translateY(-50%);
+}
+
+/* XML */
+.xml-card {
+    height: 500px;
+}
+
+.xml-container {
+    color: var(--elsa-black);
+    white-space: pre;
+    font-family: monospace;
+    font-size: small;
+    text-align: left;
+    overflow-y: auto;
+}
+
+/* Bundle Carousel Stuff */
+@media screen and (min-width: 576px) {
+    .carousel-inner {
+        display: flex;
+    } 
+    
+    .carousel-item {
+        display: block;
+        margin-right: 0;
+        flex: 0 0 calc(100% / 3);
+    }
+}
+
+.carousel-inner {
+    padding: 1em;
+}
+
+.carousel-item {
+    padding: 1.25em;
+}
