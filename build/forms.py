@@ -772,6 +772,7 @@ class TableForm(forms.ModelForm):
         model = Table
         exclude = ('product_observational',
                    'observational_type', 'local_identifier')
+                   
 
 
 """
