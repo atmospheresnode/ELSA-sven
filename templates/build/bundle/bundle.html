@@ -19,6 +19,8 @@
 <div class="row center">
    <br>
    
+   
+   
    <!-- Help Button -->
    <div class="col-md-2">
       <button class="btn btn-teal" data-toggle="bundle-collapse" href="#content" role="button"> What is a bundle? </button>
@@ -77,6 +79,34 @@
 <!-- New Body Block -->
 {% block body_block %}
 
+<!-- Adding style -->
+
+<style>
+.row {
+  display: flex;
+}
+
+.xml-card-try {
+   height: auto;
+   max-height: calc(100vh - 50px);
+   overflow: hidden;
+   padding: 1rem;
+   margin-bottom: 1.5rem;
+}
+
+.xml-container-try {
+   color: var(--elsa-black);
+   white-space: pre;
+   font-family: monospace;
+   font-size: small;
+   text-align: left;
+   overflow-x: visible;
+   overflow-y: auto;
+   max-height: 100%;
+ }
+
+</style>
+
 <div class="container-fluid pt-5">
    <div class="row">
       <!-- Fill Out Forms Side -->
@@ -84,7 +114,7 @@
          <!-- Info Card -->
          <div class="row p-1 m-3 mt-0">
             <div class="card d-flex">
-               <h3 class="card-title text-center mt-3">{{ bundle.name }}</h3>
+               <h3 class="card-title text-center mt-3"> <strong>{{ bundle.name }} </strong> </h3>
                <p class="card-body text-left z-depth-2">
                   <!-- LID -->
                   <strong>LID:</strong> {{ bundle.lid }}
@@ -106,8 +136,10 @@
                   Collections section will allow you to add, view, and edit collections that you would like to include in your
                   bundle.
 
-                  <div class="col p-1 m-3 mt-0">
-                        <a type="button" class="btn btn-info text-light" href="" aria-expanded="true" style="box-shadow: none;">Help</a>
+                  <div class="col p-1 m-3 mt-0 text-center">
+
+                        <!--'Help' is removed as it does not serve any required functionality -->
+                        {% comment %} <a type="button" class="btn btn-info text-light" href="" aria-expanded="true" style="box-shadow: none;">Help</a> {% endcomment %}
                         <a type="button" class="btn btn-danger text-light" data-bs-toggle="modal" data-bs-target="#delete_modal" aria-expanded="false" style="box-shadow: none;">Delete Bundle</a>
                         <a type="button" class="btn btn-light text-light" href="{% url 'build:directory_view' bundle.relative_dir %}" aria-expanded="false" style="box-shadow: none;">View Bundle</a>
                         <a type="button" class="btn btn-warning text-light" href="{% url 'build:bundle_download' bundle.pk %}" aria-expanded="false" style="box-shadow: none;">Download Bundle</a>
@@ -204,13 +236,13 @@
                </div>
 
                <div id="bundle_xml" class="collapse show" data-bs-parent="#accordion2">
-                  <div class="row p-1 m-3 mt-1">
+                  <div class="row px-1 mx-3 mt-1">
                      <!-- <div class="col-sm-6"> -->
                         <!-- <a data-bs-toggle="modal" data-bs-target="#bundle_xml_modal"> -->
-                        <div class="card modal-card">
+                        <div class="card xml-card-try">
                            <h5 class="card-title black-text mt-3 text-center"><strong>Bundle XML</strong></h5>
                            <hr>
-                           <div class="xml-container">
+                           <div class="xml-container-try">
                               <pre><code>{{ xml_content_set.0 }}</code></pre>
                            </div>
                         </div>
@@ -232,39 +264,44 @@
                      </a>
                   </div>
                </div> -->
+
+               
                <div id="context_xml" class="collapse" data-bs-parent="#accordion2">
                   <div class="row p-1 m-3 mt-1">
                      <a data-bs-toggle="modal" data-bs-target="">
-                        <div class="card modal-card">
+                        <div class="card xml-card-try">
                            <h5 class="card-title black-text mt-3 text-center"><strong>Context XML</strong></h5>
                            <hr>
-                           <div class="xml-container">
+                           <div class="xml-container-try">
                               <pre><code>{{ xml_content_set.1 }}</code></pre>
                            </div>
                         </div>
                      </a>
                   </div>
                </div>
+
+
                <div id="document_xml" class="collapse" data-bs-parent="#accordion2">
                   <div class="row p-1 m-3 mt-1">
                      <a data-bs-toggle="modal" data-bs-target="">
-                        <div class="card modal-card">
+                        <div class="card xml-card-try">
                            <h5 class="card-title black-text mt-3 text-center"><strong>Document XML</strong></h5>
                            <hr>
-                           <div class="xml-container">
+                           <div class="xml-container-try">
                               <pre><code>{{ xml_content_set.2 }}</code></pre>
                            </div>
                         </div>
                      </a>
                   </div>
                </div>
+
                <div id="xml_schema" class="collapse" data-bs-parent="#accordion2">
                   <div class="row p-1 m-3 mt-1">
                      <a data-bs-toggle="modal" data-bs-target="">
-                        <div class="card modal-card">
+                        <div class="card xml-card-try">
                            <h5 class="card-title black-text mt-3 text-center"><strong>XML Schema</strong></h5>
                            <hr>
-                           <div class="xml-container">
+                           <div class="xml-container-try">
                               <pre><code>{{ xml_content_set.3 }}</code></pre>
                            </div>
                         </div>
@@ -886,7 +923,7 @@
                   {% endfor %}
                   
                   <li class="nav-item" role="presentation">
-                     <button class="nav-link btn-light text-light" data-bs-toggle="tab" data-bs-target="#add_a_collection" type="button" role="tab" aria-selected="false">+ Add New Collection</button>
+                     <button class="nav-link btn-light text-dark" data-bs-toggle="tab" data-bs-target="#add_a_collection" type="button" role="tab" aria-selected="false">+ Add New Collection</button>
                   </li>
                </ul>
 
