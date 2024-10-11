@@ -691,10 +691,10 @@ def bundle(request, pk_bundle):
             context_dict['form_citation_information'] = form_citation_information
 
             # # fixes the refresh duplication issue - deric
-            # return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
+            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
 
             # fixes the refresh duplication issue, use this one for offline testing - deric
-            return HttpResponseRedirect('/build/' + pk_bundle + '/')
+            # return HttpResponseRedirect('/build/' + pk_bundle + '/')
 
         if form_modification_history.is_valid():
             print('form_modification_history is valid')
@@ -717,10 +717,10 @@ def bundle(request, pk_bundle):
             context_dict['modification_history_set_count'] = len(modification_history_set)
 
             # # fixes the refresh duplication issue - deric
-            #return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
+            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
 
             # fixes the refresh duplication issue, use this one for offline testing - deric
-            return HttpResponseRedirect('/build/' + pk_bundle + '/')         
+            # return HttpResponseRedirect('/build/' + pk_bundle + '/')         
 
         additional_collections_list = []
         if form_additional_collections.is_valid():
@@ -857,10 +857,10 @@ def bundle(request, pk_bundle):
             context_dict['data_set'] = Data.objects.filter(bundle=bundle)
 
             # # fixes the refresh duplication issue - deric
-            # return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
+            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
 
             # fixes the refresh duplication issue, use this one for offline testing - deric
-            return HttpResponseRedirect('/build/' + pk_bundle + '/')
+            # return HttpResponseRedirect('/build/' + pk_bundle + '/')
         
         # satisfy this conditional
         if form_alias.is_valid():
@@ -883,10 +883,10 @@ def bundle(request, pk_bundle):
             context_dict['alias_set_count'] =  len(alias_set)
 
             # # fixes the refresh duplication issue - deric
-            # return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
+            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
 
             # fixes the refresh duplication issue, use this one for offline testing - deric
-            return HttpResponseRedirect('/build/' + pk_bundle + '/')
+            # return HttpResponseRedirect('/build/' + pk_bundle + '/')
 
         context_dict['messages'] = messages.get_messages(request)
         return render(request, 'build/bundle/bundle.html', context_dict)
@@ -2504,9 +2504,9 @@ def delete_target(request, pk_bundle, pk_target):
     # target.delete()
 
     # I'm not convinced this does what I want it to do
-    # return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
+    return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
     # return HttpResponseRedirect('/build/' + pk_bundle + '/')
-    return HttpResponseRedirect('/elsa/build/' + pk_bundle)
+    # return HttpResponseRedirect('/elsa/build/' + pk_bundle)
     # return redirect('../../bundle/')
 
 def delete_instrument(request, pk_bundle, pk_instrument):
