@@ -5,6 +5,7 @@ from __future__ import print_function
 from builtins import str
 from .forms import *
 from .models import *
+from itertools import chain
 # from context.models import *
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ObjectDoesNotExist
@@ -757,6 +758,26 @@ def bundle(request, pk_bundle):
             close_label(additional_collections.label(), label_root, label_list[2])
             print('-------------End Build Product_Collection Base Case-----------------')
 
+            # Fill out context products in new additional collection
+            # Also there should be a better way to do this, probably make a function in choclate.py, have to refactor
+            context_products = []
+            context_products.extend(bundle.investigations.all())
+            context_products.extend(bundle.instrument_hosts.all())
+            context_products.extend(bundle.facilities.all())
+            context_products.extend(bundle.instruments.all())
+            context_products.extend(bundle.telescopes.all())
+            context_products.extend(bundle.targets.all())
+            for context_product in context_products:
+                write_into_label(context_product, additional_collections, None)
+
+            # write investigation products - Said
+            for citation_information in citation_information_set:
+                write_into_label(citation_information, additional_collections, None)
+            for alias in alias_set:
+                write_into_label(alias, additional_collections, None)
+            for modification_history in modification_history_set:
+                write_into_label(modification_history, additional_collections, None)
+
             additional_collections_set = AdditionalCollections.objects.filter(bundle=bundle)
             context_dict['additional_collections_set'] = additional_collections_set
             context_dict['additional_collections_count'] =  len(additional_collections_set)
@@ -805,8 +826,9 @@ def bundle(request, pk_bundle):
             product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
 
             all_labels.append(product_bundle)
-            all_labels.extend(product_collections_list)  
-
+            all_labels.extend(product_collections_list)
+            # I think this works -Said
+            all_labels.extend(Data.objects.filter(bundle=bundle))
 
             for label in all_labels:
                 
@@ -850,7 +872,7 @@ def bundle(request, pk_bundle):
             all_labels.append(product_bundle)
             all_labels.extend(product_collections_list)  
 
-            data.build_directory()
+            # data.build_directory()
 
             form_data = DataForm()
             context_dict['form_data'] = form_data
@@ -1234,10 +1256,12 @@ def context_search_investigation(request, pk_bundle):
 
                 # Label Fix for context products - Said
                 product_bundle = Product_Bundle.objects.get(bundle=bundle)
-                product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+                # Ok this gets confusing, and will add documentation later. Let me briefly explain here. - Said
+                # Querying DB for product_collection objects such as document, context, and so on. Need a separate query for additional collections, so I do that query.
+                # Chain(query1, query2), creates a pseudo-union of both queries, then allows write_into_label to write into all necessary labels.
+                product_collections_list = chain(Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data'), AdditionalCollections.objects.filter(bundle=bundle))
 
                 write_into_label(i, product_bundle, product_collections_list)
-
 
             messages.success(request, 'Investigation Product Added')
             context_dict['messages'] = messages.get_messages(request)
@@ -1302,7 +1326,10 @@ def context_search_instrument_host_and_facility(request, pk_bundle, pk_investiga
 
                 # Label Fix for context products - Said
                 product_bundle = Product_Bundle.objects.get(bundle=bundle)
-                product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+                # Ok this gets confusing, and will add documentation later. Let me briefly explain here. - Said
+                # Querying DB for product_collection objects such as document, context, and so on. Need a separate query for additional collections, so I do that query.
+                # Chain(query1, query2), creates a pseudo-union of both queries, then allows write_into_label to write into all necessary labels.
+                product_collections_list = chain(Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data'), AdditionalCollections.objects.filter(bundle=bundle))
 
                 write_into_label(i, product_bundle, product_collections_list)
             if form_facility.is_valid():
@@ -1317,7 +1344,10 @@ def context_search_instrument_host_and_facility(request, pk_bundle, pk_investiga
 
                 # Label Fix for context products - Said
                 product_bundle = Product_Bundle.objects.get(bundle=bundle)
-                product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+                # Ok this gets confusing, and will add documentation later. Let me briefly explain here. - Said
+                # Querying DB for product_collection objects such as document, context, and so on. Need a separate query for additional collections, so I do that query.
+                # Chain(query1, query2), creates a pseudo-union of both queries, then allows write_into_label to write into all necessary labels.
+                product_collections_list = chain(Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data'), AdditionalCollections.objects.filter(bundle=bundle))
 
                 write_into_label(i, product_bundle, product_collections_list)
 
@@ -1366,7 +1396,10 @@ def context_search_target(request, pk_bundle):
 
                 # Label Fix for context products - Said
                 product_bundle = Product_Bundle.objects.get(bundle=bundle)
-                product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+                # Ok this gets confusing, and will add documentation later. Let me briefly explain here. - Said
+                # Querying DB for product_collection objects such as document, context, and so on. Need a separate query for additional collections, so I do that query.
+                # Chain(query1, query2), creates a pseudo-union of both queries, then allows write_into_label to write into all necessary labels.
+                product_collections_list = chain(Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data'), AdditionalCollections.objects.filter(bundle=bundle))
 
                 write_into_label(i, product_bundle, product_collections_list)
 
@@ -1418,7 +1451,10 @@ def context_search_target_inv(request, pk_bundle, pk_investigation):
 
                 # Label Fix for context products - Said
                 product_bundle = Product_Bundle.objects.get(bundle=bundle)
-                product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+                # Ok this gets confusing, and will add documentation later. Let me briefly explain here. - Said
+                # Querying DB for product_collection objects such as document, context, and so on. Need a separate query for additional collections, so I do that query.
+                # Chain(query1, query2), creates a pseudo-union of both queries, then allows write_into_label to write into all necessary labels.
+                product_collections_list = chain(Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data'), AdditionalCollections.objects.filter(bundle=bundle))
 
                 write_into_label(i, product_bundle, product_collections_list)
 
@@ -1474,7 +1510,10 @@ def context_search_instrument(request, pk_bundle, pk_investigation, pk_instrumen
 
                 # Label Fix for context products - Said
                 product_bundle = Product_Bundle.objects.get(bundle=bundle)
-                product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+                # Ok this gets confusing, and will add documentation later. Let me briefly explain here. - Said
+                # Querying DB for product_collection objects such as document, context, and so on. Need a separate query for additional collections, so I do that query.
+                # Chain(query1, query2), creates a pseudo-union of both queries, then allows write_into_label to write into all necessary labels.
+                product_collections_list = chain(Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data'), AdditionalCollections.objects.filter(bundle=bundle))
 
                 write_into_label(i, product_bundle, product_collections_list)
 
@@ -1525,7 +1564,10 @@ def context_search_facility(request, pk_bundle):
 
                 # Label Fix for context products - Said
                 product_bundle = Product_Bundle.objects.get(bundle=bundle)
-                product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+                # Ok this gets confusing, and will add documentation later. Let me briefly explain here. - Said
+                # Querying DB for product_collection objects such as document, context, and so on. Need a separate query for additional collections, so I do that query.
+                # Chain(query1, query2), creates a pseudo-union of both queries, then allows write_into_label to write into all necessary labels.
+                product_collections_list = chain(Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data'), AdditionalCollections.objects.filter(bundle=bundle))
 
                 write_into_label(i, product_bundle, product_collections_list)
 
@@ -1579,7 +1621,10 @@ def context_search_facility_instrument(request, pk_bundle, pk_investigation, pk_
 
                 # Label Fix for context products - Said
                 product_bundle = Product_Bundle.objects.get(bundle=bundle)
-                product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+                # Ok this gets confusing, and will add documentation later. Let me briefly explain here. - Said
+                # Querying DB for product_collection objects such as document, context, and so on. Need a separate query for additional collections, so I do that query.
+                # Chain(query1, query2), creates a pseudo-union of both queries, then allows write_into_label to write into all necessary labels.
+                product_collections_list = chain(Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data'), AdditionalCollections.objects.filter(bundle=bundle))
 
                 write_into_label(i, product_bundle, product_collections_list)
 
@@ -1636,7 +1681,10 @@ def context_search_telescope(request, pk_bundle, pk_investigation, pk_facility):
                 # i.fill_label(bundle)
                 # Label Fix for context products - Said
                 product_bundle = Product_Bundle.objects.get(bundle=bundle)
-                product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+                # Ok this gets confusing, and will add documentation later. Let me briefly explain here. - Said
+                # Querying DB for product_collection objects such as document, context, and so on. Need a separate query for additional collections, so I do that query.
+                # Chain(query1, query2), creates a pseudo-union of both queries, then allows write_into_label to write into all necessary labels.
+                product_collections_list = chain(Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data'), AdditionalCollections.objects.filter(bundle=bundle))
 
                 write_into_label(i, product_bundle, product_collections_list)
 
@@ -1696,7 +1744,10 @@ def context_search_target_and_instrument(request, pk_bundle, pk_investigation, p
 
                 # Label Fix for context products - Said
                 product_bundle = Product_Bundle.objects.get(bundle=bundle)
-                product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+                # Ok this gets confusing, and will add documentation later. Let me briefly explain here. - Said
+                # Querying DB for product_collection objects such as document, context, and so on. Need a separate query for additional collections, so I do that query.
+                # Chain(query1, query2), creates a pseudo-union of both queries, then allows write_into_label to write into all necessary labels.
+                product_collections_list = chain(Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data'), AdditionalCollections.objects.filter(bundle=bundle))
 
                 write_into_label(i, product_bundle, product_collections_list)
             if form_instrument.is_valid():
@@ -1710,7 +1761,10 @@ def context_search_target_and_instrument(request, pk_bundle, pk_investigation, p
                 
                 # Label Fix for context products - Said
                 product_bundle = Product_Bundle.objects.get(bundle=bundle)
-                product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+                # Ok this gets confusing, and will add documentation later. Let me briefly explain here. - Said
+                # Querying DB for product_collection objects such as document, context, and so on. Need a separate query for additional collections, so I do that query.
+                # Chain(query1, query2), creates a pseudo-union of both queries, then allows write_into_label to write into all necessary labels.
+                product_collections_list = chain(Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data'), AdditionalCollections.objects.filter(bundle=bundle))
 
                 write_into_label(i, product_bundle, product_collections_list)
 
@@ -2289,6 +2343,11 @@ def Table_Creation(request, pk_bundle, pk_data):
 
             form.build_data_file()
 
+            # product_bundle = Product_Bundle.objects.get(bundle=bundle)
+            # product_collections_list = Product_Collection.objects.filter(bundle=bundle)
+
+            # write_into_label(form, product_bundle, product_collections_list)
+
             label_list = open_label_with_tree(form.label())
             label_root = label_list[1]
             # Fill label - fills 
@@ -2298,6 +2357,16 @@ def Table_Creation(request, pk_bundle, pk_data):
             # Close label    
             print(' ... Closing Label ... ')
             close_label(label_list[0], label_root, label_list[2]) 
+
+            context_products = []
+            context_products.extend(bundle.investigations.all())
+            context_products.extend(bundle.instrument_hosts.all())
+            context_products.extend(bundle.facilities.all())
+            context_products.extend(bundle.instruments.all())
+            context_products.extend(bundle.telescopes.all())
+            context_products.extend(bundle.targets.all())
+            for context_product in context_products:
+                write_into_label(context_product, form, None)
 
         return render(request, 'build/data/Table_Creation.html', context_dict)
     else:

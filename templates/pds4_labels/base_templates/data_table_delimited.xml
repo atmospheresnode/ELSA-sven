@@ -31,23 +31,7 @@
             </Internal_Reference>
         </Investigation_Area>
         <Observing_System>
-            <name>_________</name>
-            <Observing_System_Component>
-                <name>_________</name>
-                <type>_________</type>
-                <description>
-                    _________
-                </description>
-            </Observing_System_Component>
         </Observing_System>
-        <Target_Identification>
-            <name>_________</name>
-            <type>_________</type>
-            <Internal_Reference>
-                <lid_reference>urn:nasa:pds:context:target:_________</lid_reference>
-                <reference_type>data_to_target</reference_type>
-            </Internal_Reference>
-        </Target_Identification>
     </Observation_Area>
     <Reference_List>
         <Internal_Reference>
