@@ -87,8 +87,8 @@
 }
 
 .xml-card-try {
-   height: 100%;
-   max-height: calc(100vh - 170px);
+   height: auto;
+   max-height: calc(100vh - 50px);
    overflow: hidden;
    padding: 1rem;
    margin-bottom: 1.5rem;
@@ -100,8 +100,9 @@
    font-family: monospace;
    font-size: small;
    text-align: left;
+   overflow-x: visible;
    overflow-y: auto;
-   max-height: 100%; 
+   max-height: 100%;
  }
 
 </style>
@@ -109,7 +110,7 @@
 <div class="container-fluid pt-5">
    <div class="row">
       <!-- Fill Out Forms Side -->
-      <div class="col-md-6 left-column">
+      <div class="col-md-6">
          <!-- Info Card -->
          <div class="row p-1 m-3 mt-0">
             <div class="card d-flex">
@@ -221,7 +222,7 @@
          </div>
       </div>
 
-      <div class="col-md-6 right-column">
+      <div class="col-md-6">
          <div id="accordion2">
             <!-- View XML Side -->
             <div class="text-center text-light">
@@ -235,7 +236,7 @@
                </div>
 
                <div id="bundle_xml" class="collapse show" data-bs-parent="#accordion2">
-                  <div class="row p-1 m-3 mt-1">
+                  <div class="row px-1 mx-3 mt-1">
                      <!-- <div class="col-sm-6"> -->
                         <!-- <a data-bs-toggle="modal" data-bs-target="#bundle_xml_modal"> -->
                         <div class="card xml-card-try">
@@ -729,13 +730,13 @@
    
                            <!-- Alternate ID -->
                            <div class="mt-3">
-                              <label for="alt_id" class="required">Alternate ID</label>
+                              <label for="alt_id">Alternate ID</label>
                               {{ form_alias.alternate_id }}
                            </div>
    
                            <!-- Alternate Title -->
                            <div class="mt-3">
-                              <label for="alt_title" class="required">Alternate Title</label>
+                              <label for="alt_title">Alternate Title</label>
                               {{ form_alias.alternate_title }}
                            </div>
    
@@ -861,6 +862,8 @@
                               <label for="mod_desc" class="required">Description</label>
                               {{ form_citation_information.description }}
                            </div>
+
+                           {{ form_citation_information.errors }}
    
                            <!-- Create Citation Information -->
                            <button type="submit" class="btn btn-light text-light my-4">Create Citaiton Information</button>
