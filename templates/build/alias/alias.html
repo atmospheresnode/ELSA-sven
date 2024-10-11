@@ -2,20 +2,70 @@
 {% load static %}
 
 {% block body_block %}
-<div class="container-fluid py-5 mt-5">
-    <div class="card bundle-card">
-        <div class="card-body">
-            <h1>Do you want to add an Alias?</h1>
-            <p>if not hit next to move on [...]</p>
-            <hr>
-            <form id="form_alias" method="post" action="{% url 'build:alias' bundle.pk %}">
-                {% csrf_token %}
-                {{ form_alias }}
-                <div class="pt-3">
-                    <input type="submit" class="btn btn-light text-light" value="Add Alias"/>
-                    <a href="{% url 'build:modification_history' bundle.pk %}" class="btn btn-light text-light my-4">Next ></a>
+<div class="container-fluid">
+    <div class="row justify-content-center align-items-center py-4">
+        <div class="col-12 col-lg-9 col-xl-10">
+            <div class="card">
+                <div class="card-body m-4">
+                    <h2 class="mb-5 pb-2 pb-md-0 mb-md-4">Do you want to add an Alias?</h2>
+                    <p>
+                        PDS4 allows providers to add alternative names and/or identifiers as ‘Aliases’. 
+                        These are optional and can be added later. 
+                        If you know you will have an alternate name you can add it now if you like. 
+                        If you don’t have alternate names/ids you can skip this for now, by clicking the skip button at the bottom.
+                    </p>
+
+                    <hr>
+
+                    <form id="form_alias" method="post" action="{% url 'build:alias' bundle.pk %}" class="pt-3">
+                        {% csrf_token %}
+
+                        <!-- Alternate ID -->
+                        <div class="mb-4 form-outline">
+                            <div class="row">
+                                <div class="col-md-2 mt-2">
+                                    <h6>Alternate ID</h6>
+                                </div>
+
+                                <div class="col-md-10"">
+                                    {{ form_alias.alternate_id }}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Alternate Title -->
+                        <div class="mb-4 form-outline"></div>
+                            <div class="row">
+                                <div class="col-md-2 mt-2">
+                                    <h6>Alternate Title</h6>
+                                </div>
+
+                                <div class="col-md-10"">
+                                    {{ form_alias.alternate_title }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Comment -->
+                        <div class="form-outline mx-3 mb-4 px-3">
+                            <div class="row justify-content-center align-items-center">
+                                <div class="col-md-12">
+                                    {{ form_alias.comment }}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Button Row -->
+                        <div class="mb-4 ms-3 px-3 pt-3">
+                            <input type="submit" class="btn btn-light text-light" value="Add Alias"/>
+                            <a href="{% url 'build:modification_history' bundle.pk %}" class="btn btn-light text-light ms-3">
+                                Skip
+                                <i class="fa fa-arrow-right ms-2"></i>
+                            </a>
+                        </div>
+                    </form> 
                 </div>
-            </form> 
+            </div>
         </div>
     </div>
 </div>
