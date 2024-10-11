@@ -838,7 +838,10 @@ class Investigation(models.Model):
         return self.name
 
     def fill_label(self, label_root):
-        Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE))
+        if label_root.find('{}Context_Area'.format(NAMESPACE)):
+            Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE))
+        else:
+            Context_Area = label_root.find('{}Observation_Area'.format(NAMESPACE))
 
         Investigation_Area = Context_Area.find('{}Investigation_Area'.format(NAMESPACE))
 
@@ -1162,7 +1165,10 @@ class Instrument(models.Model):
         self.save()
 
     def fill_label(self, label_root):
-        Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE))
+        if label_root.find('{}Context_Area'.format(NAMESPACE)):
+            Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE))
+        else:
+            Context_Area = label_root.find('{}Observation_Area'.format(NAMESPACE))
 
         Observing_System = Context_Area.find('{}Observing_System'.format(NAMESPACE))
         
@@ -1378,13 +1384,16 @@ class Target(models.Model):
         self.save()
 
     def fill_label(self, label_root):
-        Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE))
+        if label_root.find('{}Context_Area'.format(NAMESPACE)):
+            Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE))
+        else:
+            Context_Area = label_root.find('{}Observation_Area'.format(NAMESPACE))
 
-        Observing_System = Context_Area.find('{}Observing_System'.format(NAMESPACE))
+        # Observing_System = Context_Area.find('{}Observing_System'.format(NAMESPACE))
 
         # Add Facility to Observing System
         Observing_System_Component = etree.SubElement(
-            Observing_System, 'Target_Identification')
+            Context_Area, 'Target_Identification')
         name = etree.SubElement(Observing_System_Component, 'name')
         name.text = self.name.title()
         facility_type = etree.SubElement(
@@ -1552,7 +1561,10 @@ class Instrument_Host(models.Model):
         self.save()
 
     def fill_label(self, label_root):
-        Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE))
+        if label_root.find('{}Context_Area'.format(NAMESPACE)):
+            Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE))
+        else:
+            Context_Area = label_root.find('{}Observation_Area'.format(NAMESPACE))
 
         Observing_System = Context_Area.find('{}Observing_System'.format(NAMESPACE))
 
@@ -1890,7 +1902,10 @@ class Telescope(models.Model):
         self.save()
 
     def fill_label(self, label_root):
-        Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE))
+        if label_root.find('{}Context_Area'.format(NAMESPACE)):
+            Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE))
+        else:
+            Context_Area = label_root.find('{}Observation_Area'.format(NAMESPACE))
 
         Observing_System = Context_Area.find('{}Observing_System'.format(NAMESPACE))
 
@@ -3019,7 +3034,7 @@ class Data(models.Model):
     )
     
     DATA_TYPES = (
-        # ('Array', 'Array'),
+        #('Array', 'Array'),
         ('Table Binary','Table Binary'),
         ('Table Character','Table Character'),
         ('Table Delimited','Table Delimited'),
@@ -4203,7 +4218,11 @@ class Modification_History(models.Model):
     description = models.CharField(max_length=MAX_TEXT_FIELD)
 
     version_id = models.CharField(max_length=MAX_CHAR_FIELD, blank=True)
-    modification_date = models.CharField(max_length=MAX_CHAR_FIELD)
+
+    def mod_date_default():
+        return datetime.date.today().strftime('%Y-%m-%d')
+
+    modification_date = models.CharField(default=mod_date_default, max_length=100)
 
     # Builders
     def fill_label(self, label_root):
@@ -4228,8 +4247,7 @@ class Modification_History(models.Model):
 
         description = etree.SubElement(Modification_History, 'description')
         description.text = self.description
-        modification_date = etree.SubElement(
-            Modification_History, 'modification_date')
+        modification_date = etree.SubElement(Modification_History, 'modification_date')
         modification_date.text = self.modification_date
         return label_root
 

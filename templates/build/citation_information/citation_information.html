@@ -2,20 +2,31 @@
 {% load static %}
 
 {% block body_block %}
-<div class="container-fluid py-5 mt-5">
-    <div class="card bundle-card">
-        <div class="card-body">
-            <h1>Citation Information</h1>
-            <p>Add citation information [...]</p>
-            <hr>
-            <form action="{% url 'build:citation_information' bundle.pk %}" method="post" id="form_citation_information">
-                {% csrf_token %}
+<div class="container-fluid">
+    <div class="row justify-content-center align-items-center py-4">
+        <div class="col-12 col-lg-9 col-xl-10">
+            <div class="card">
+                <div class="card-body m-4">
+                    <h2 class="mb-5 pb-2 pb-md-0 mb-md-4">Citation Information</h2>
+                    <p>
+                        Anyone creating labels should be able to get credit for their work. 
+                        Citation Information portion of the labels allows authors and editors to be added to a project. 
+                        For this version of PDS4 authors and editors can be listed following the pattern, Last Name, First Initial, 
+                        with multiples separated by a semi-colon. (e.g., Sanchez, R.; Smith, M.)
+                    </p>
 
-                {{ form_citation_information }}
-                
-                <!-- Create Cite Info -->
-                <button type="submit" class="btn btn-light text-light my-4">Create Citation Information</button>
-             </form>
+                    <hr>
+
+                    <form action="{% url 'build:citation_information' bundle.pk %}" method="post" id="form_citation_information" class="pt-3">
+                        {% csrf_token %}
+        
+                        {{ form_citation_information }}
+                        
+                        <!-- Create Cite Info -->
+                        <button type="submit" class="btn btn-light text-light my-4">Create Citation Information</button>
+                     </form>
+                </div>
+            </div>
         </div>
     </div>
 </div>

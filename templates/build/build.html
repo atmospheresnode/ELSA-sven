@@ -2,13 +2,13 @@
 {% load static %}
 
 {% block body_block %}
-<div class="container-fluid justify-content-center align-items-center py-5">
-    <div class="row justify-content-center align-items-center">
+<div class="container-fluid">
+    <div class="row justify-content-center align-items-center py-4">
         <div class="col-12 col-lg-9 col-xl-10">
             <div class="card">
-                <div class="card-body p-4 p-md-5">
+                <div class="card-body m-4">
                     <h2 class="mb-5 pb-2 pb-md-0 mb-md-4">Building a Bundle?</h2>
-                    <p>
+                    <p class="pb-4">
                         ELSA helps you to build PDS4 compliant labels for your data by building your bundle all at once and will provide a downloadable template package partially filled-out for you to work with your node representative. 
                         To begin, ELSA needs some basic information about your bundle. 
                         Please provide a title for your bundle and select the version of the PDS4 IM you want to use (new users should choose the top-most selection for version). 
@@ -18,32 +18,23 @@
                         XML_Schema and Context collections will also be generated for you. 
                         These serve as system augmentations for the PDS and will be completely handled by ELSA. 
                     </p>
-                </div>
-            </div>
-            <br>
-            <div class="card">
-                <div class="card-body p-4 p-md-5">
+
+                    <hr>
+
                     <!-- Bundle Info Header -->
-                    <h2 class="mb-5 pb-2 pb-md-0 mb-md-4">Provide Bundle Information</h2>
+                    <h2 class="mb-5 py-2 pb-md-0 mb-md-4">Provide Bundle Information</h2>
 
                     <!-- Bundle Creator -->
                     <form id="form_bundle" method="post" action="{% url 'build:build' %}">
                         {% csrf_token %}
+                        
                         <!-- Bundle Name -->
                         <div class="mb-4 form-outline">
                             {{ form_bundle.name }}
 
                             <!-- Bundle Name Guideline Tooltip -->
                             <span tabindex="0" data-toggle="tooltip" 
-                                title="The name of your bundle is the unique name you would like your bundle to be archived as. 
-                                The version of your bundle should be the most up-to-date version unless otherwise noted by your node personnel. 
-                                The type of bundle depends on your data. If your bundle is meant to be archived, choose archive. 
-                                This option is what most bundle types are. If your bundle contains supplemental data to an already archived bundle, choose supplemental. 
-                                Each bundle contains a document, context, and xml_schema collection. 
-                                All other collections contained in your bundle will be decided between you, {{ user.first_name }}, and your node personnel. 
-                                If you are working directly with ATM and are unsure of which collections are in your bundle, send a message to ELSA and someone from ATM will get back to you shortly. 
-                                If you are working with another node, please contact your node.">
-
+                                title="The name of your bundle is the unique name you would like your bundle to be archived as. The version of your bundle should be the most up-to-date version unless otherwise noted by your node personnel. The type of bundle depends on your data. If your bundle is meant to be archived, choose archive. This option is what most bundle types are. If your bundle contains supplemental data to an already archived bundle, choose supplemental. Each bundle contains a document, context, and xml_schema collection. All other collections contained in your bundle will be decided between you, {{ user.first_name }}, and your node personnel. If you are working directly with ATM and are unsure of which collections are in your bundle, send a message to ELSA and someone from ATM will get back to you shortly. If you are working with another node, please contact your node.">
                                 <button type="button" class="btn btn-block" style="pointer-events: none; border: none;" disabled>
                                     <i class="fa fa-question"></i>
                                 </button>
@@ -51,33 +42,41 @@
                         </div>
 
                         <!-- Bundle Type -->
-                        <div class="mb-4">
+                        <div class="mb-4 form-outline">
                             <div class="row">
                                 <div class="col-md-2 mt-2">
                                     <h6>Bundle Type</h6>
                                 </div>
 
-                                <div class="col-md-10">
+                                <div class="col-md-10" style="pointer-events: auto; cursor: pointer;">
                                     {{ form_bundle.bundle_type }}
+
+                                    <span class="me-2" tabindex="0">
+                                        <i class="fa fa-chevron-down text-muted"></i>
+                                    </span>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Bundle Version -->
-                        <div class="mb-4">
+                        <div class="mb-4 form-outline">
                             <div class="row">
                                 <div class="col-md-2 mt-2">
                                     <h6>Bundle Version</h6>
                                 </div>
 
-                                <div class="col-md-10">
+                                <div class="col-md-10" style="pointer-events: auto; cursor: pointer;">
                                     {{ form_bundle.version }}
+
+                                    <span class="me-2" tabindex="0">
+                                        <i class="fa fa-chevron-down text-muted"></i>
+                                    </span>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Create Bundle -->
-                        <button type="submit" class="btn btn-light text-light mt-4">Submit</button>
+                        <button type="submit" class="btn btn-light text-light">Submit</button>
                     </form>
                 </div>
             </div>

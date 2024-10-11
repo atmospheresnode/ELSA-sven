@@ -11,24 +11,31 @@
 {% endblock %}
 
 {% block body_block %}
-<div class="container-fluid justify-content-center align-items-center p-5">
+<div class="container-fluid justify-content-center align-items-center">
     <!-- Welcome Card -->
     <div class="row">
         <div class="col">
             <div class="card">
                 <div class="card-body ms-1">
-                    <h4 class="card-title">Welcome to your Bundle Hub</h4>
+                    <h4 class="card-title text-center">Welcome to your Bundle Hub</h4>
                     <p class="card-text">
                         Your bundle hub is where you can do the following:
                         <ul>
                             <li>Add new bundles</li>
-                            <li>View/Edit existing bundles</li>
-                            <li>Download bundle templates</li>
+                            <li>View existing bundles</li>
                         </ul>
                     </p>
+                    <p class="card-text">
+                        <i>Note: To make changes to your existing bundles and to download the bundle templates, click on the bundle name below.</i>
+                    </p>
+
                 </div>
             </div>
         </div>
+    </div>
+
+    <div class="row justify-content-center align-items-center mt-4 mx-5 px-5">
+        <a href="{% url 'build:build' %}" class="btn btn-light text-light"> Add Bundle <i class="fa fa-plus ms-2"></i></a>
     </div>
 
     <!-- Bundle List Card -->
@@ -37,7 +44,7 @@
             <div class="card">
                 <!-- Add Bundle -->
                 <div class="card-header bg-dark text-light h2 d-flex justify-content-between align-items-center">
-                    <a href="{% url 'build:build' %}" class="text-light"> Add Bundle <i class="fa fa-plus"></i></a>
+                    <h1>Bundles</h1>
                 </div>
 
                 <!-- Bundle List -->
@@ -83,5 +90,6 @@
             </div>
         </div>
     </div>
+
 </div>
 {% endblock %}
