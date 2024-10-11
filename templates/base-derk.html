@@ -100,13 +100,13 @@
         {% endif %}
 
         <!-- Main Content -->
-        <main class="row">
+        <main class="row py-4">
             <div class="col">{% block body_block %}{% endblock %}</div>
         </main>
 
         <!-- Footer -->
         {% if user.is_authenticated %}
-        <footer class="row bg-dark text-light mt-2">
+        <footer class="row bg-dark text-light mt-4">
             <ul class="nav justify-content-center border-bottom border-secondary py-1 mb-1">
                 <li class="nav-item">
                     <a href="{% url 'main:index' %}" class="nav-link px-2 text-light" style="text-decoration: none;">

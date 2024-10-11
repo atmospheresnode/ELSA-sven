@@ -11,7 +11,7 @@
 {% endblock %}
 
 {% block body_block %}
-<div class="container-fluid justify-content-center align-items-center p-5">
+<div class="container-fluid justify-content-center align-items-center">
     <!-- Welcome Card -->
     <div class="row">
         <div class="col">
@@ -31,13 +31,17 @@
         </div>
     </div>
 
+    <div class="row justify-content-center align-items-center mt-4 mx-5 px-5">
+        <a href="{% url 'build:build' %}" class="btn btn-light text-light"> Add Bundle <i class="fa fa-plus ms-2"></i></a>
+    </div>
+
     <!-- Bundle List Card -->
     <div class="row mt-4">
         <div class="col">
             <div class="card">
                 <!-- Add Bundle -->
                 <div class="card-header bg-dark text-light h2 d-flex justify-content-between align-items-center">
-                    <a href="{% url 'build:build' %}" class="text-light"> Add Bundle <i class="fa fa-plus"></i></a>
+                    <h1>Bundles</h1>
                 </div>
 
                 <!-- Bundle List -->
@@ -83,5 +87,6 @@
             </div>
         </div>
     </div>
+
 </div>
 {% endblock %}
