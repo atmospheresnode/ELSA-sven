@@ -3019,7 +3019,7 @@ class Data(models.Model):
     )
     
     DATA_TYPES = (
-        # ('Array', 'Array'),
+        #('Array', 'Array'),
         ('Table Binary','Table Binary'),
         ('Table Character','Table Character'),
         ('Table Delimited','Table Delimited'),
