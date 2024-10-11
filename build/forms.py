@@ -48,20 +48,21 @@ class ConfirmForm(forms.Form):
 
 
 class AliasForm(forms.ModelForm):
-    alternate_id = forms.CharField(required=False, max_length=100, widget = forms.TextInput(attrs={
-            'class': 'form-control form-outline',
+    alternate_id = forms.CharField(required=False, max_length=100, widget=forms.TextInput(attrs={
+            'class': 'form-control',
             'id': 'alt_id'
         })
     )
 
-    alternate_title = forms.CharField(required=False, max_length=100, widget = forms.TextInput(attrs={
-            'class': 'form-control form-outline',
+    alternate_title = forms.CharField(required=False, max_length=100, widget=forms.TextInput(attrs={
+            'class': 'form-control',
             'id': 'alt_title'
         })
     )
 
-    comment = forms.CharField(required=False, widget = forms.Textarea(attrs={
-            'class': 'form-control form-outline',
+    comment = forms.CharField(required=False, widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'placeholder': 'Comment',
             'id': 'comment',
             'rows': '1'
         })
@@ -114,19 +115,22 @@ VERSION_CHOICES = (
 
 class BundleForm(forms.ModelForm):
     name = forms.CharField(required=True, max_length=50, widget = forms.TextInput(attrs={
-            'class': 'form-control form-outline',
+            'class': 'form-control',
+            'id': 'bundle_name',
             'placeholder': 'Bundle Name'
         })
     )
 
     bundle_type = forms.ChoiceField(required=True, choices=BUNDLE_TYPE_CHOICES, widget = forms.Select(attrs={
-            'class': 'form-control form-outline',
+            'class': 'form-control',
+            'id': 'bundle_type',
             'placeholder': 'Bundle Type'
         })
     )
 
     version = forms.ChoiceField(required=True, choices=VERSION_CHOICES, widget = forms.Select(attrs={
-            'class': 'form-control form-outline',
+            'class': 'form-control',
+            'id': 'bundle_version',
             'placeholder': 'Bundle Version'
         })
     )
@@ -229,19 +233,23 @@ Test
 
 class ModificationHistoryForm(forms.ModelForm):
     # figure out how to add defaults
-
-    description = forms.CharField(required=True, widget = forms.TextInput(attrs={
-        'class': 'form-control form-outline',
+    description = forms.CharField(required=False, widget=forms.TextInput(attrs={
+        'class': 'form-control',
         'id': 'mod_desc'
     }))
 
-    modification_date = forms.CharField(required=True, widget = forms.TextInput(attrs={
-        'class': 'form-control form-outline',
-        'id': 'mod_date'
+    modification_date = forms.DateField(
+        required=True,
+        initial=datetime.date.today().strftime('%Y-%m-%d'),
+        input_formats=['%Y-%m-%d'],
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'id': 'mod_date',
+            'placeholder': 'YYYY-MM-DD'
     }))
 
-    version_id = forms.CharField(required=False, widget = forms.TextInput(attrs={
-        'class': 'form-control form-outline',
+    version_id = forms.CharField(required=True, initial='1.0', widget=forms.TextInput(attrs={
+        'class': 'form-control',
         'id': 'version_id'
     }))
 
@@ -772,6 +780,7 @@ class TableForm(forms.ModelForm):
         model = Table
         exclude = ('product_observational',
                    'observational_type', 'local_identifier')
+                   
 
 
 """

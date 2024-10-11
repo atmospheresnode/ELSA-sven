@@ -12,43 +12,82 @@ Edit Alias: {{ alias.alternate_title }}
 Edit the details of your currently selected alias below. All changed fields will be updated.
 Delete the alias if you no longer want it associated with your bundle.
 {% endblock %}
+
 {% block body_block %}
-<div class="row">
-   <div class="col-sm-8">
+<div class="d-flex justify-content-center align-items-center mt-4">
+   <div class="col-md-6">
+      <br>
       <!--Alias Form-->
-      <div id="displayAliasForm">
-         <form id="form_data" method="post" action="{% url 'build:alias_edit' bundle.pk alias.pk %}">
-            {% csrf_token %}
-            <div id="form_data">
-               {{ form_alias.as_p }}
+      <div id="displayAliasForm" class="card shadow-sm">
+         <div class="card-header text-white text-center" style="padding: 0.5rem 0.5rem; background-color: #2F4F4F">
+            <h4 class="mb-2 mt-2">
+                Edit Alias
+            </h4>
+        </div>
+         <div class="card-body p-4">
+            <form id="form_data" method="post" action="{% url 'build:alias_edit' bundle.pk alias.pk %}">
+               {% csrf_token %}
+               <div class="mb-3">
+                  {{ form_alias.as_p }}
+               </div>
+               <div class="d-flex justify-content-start gap-2 mt-3">
+                  <button class="btn btn-success btn-sm" type="submit">Update</button>
             </div>
-            <input class="btn btn-teal" type="submit" value="Edit Alias"/>
-         </form>
-         </br>
+            </form>
+         
+               <button class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#delete_modal" aria-expanded="false" style="box-shadow: none;">Delete Alias</button>
+         </div>
       </div>
       <!--/.Alias Form-->
    </div>
-   <div class="col-sm-4">
-      <a href="{% url 'main:construction' %}">
-      <input class="btn btn-danger" type="submit" value="Delete Alias"/>
-      </a>
-   </div>
 </div>
-<hr/>
-<!--Sixth row-->
-<div class="row pt-2">
-   <!--First column-->
-   <div class="col-md-12">
-      <a href="{% url 'build:bundle' bundle.pk %}">
-      <button type="button" class="btn btn-default">
-      <i class="fa fa-arrow-circle-left"></i>
-      Back to {{ bundle }}'s Bundle Detail
-      </button>
-      </a>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="delete_modal" tabindex="-1" aria-labelledby="delete_modalLabel" aria-hidden="true">
+   <div class="modal-dialog modal-dialog-centered">
+     <div class="modal-content">
+       <!-- Title -->
+       <div class="modal-header">
+         <h3 class="modal-title w-100 text-center" id="delete_modalLabel">Delete Alias</h3>
+         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+       </div>
+ 
+       <!-- Modal Body -->
+       <div class="modal-body">
+         <div class="text-center">
+           <h5>Are you sure you want to delete the alias?</h5>
+            <div class="container">
+               <div class="row">
+                  <div class="col-12 col-md-6 mb-2">
+                     <button type="button" class="btn btn-secondary w-100" data-bs-dismiss="modal">
+                     Cancel
+                     </button>
+                  </div>
+                  <div class="col-12 col-md-6 mb-2">
+                     <a href="{% url 'build:alias_delete' bundle.pk alias.pk %}" class="btn btn-danger">
+                     Confirm Delete
+                     </a>
+                  </div>
+               </div>
+            </div>
+         </div>
+         </div>
+     </div>
    </div>
-   <!--/.First column-->
-</div>
-<!--/.Sixth row-->
+ </div>
+
+
+
+<!-- Go back to build bundle page -->
+<div class="row mt-5 mb-2">
+   <div class="col-md-12 d-flex align-items-center justify-content-center">
+   <!-- Correct URL -->
+   <a href="{% url 'build:bundle' bundle.pk %}" class="btn bi bi-arrow-return-left" style="background-color: #008B8B; color: white;">
+       <i class="fa fa-arrow-circle-left"></i> Bundle Details
+   </a>
+   </div>
+</div> 
+
 {% endblock %}
 
 
