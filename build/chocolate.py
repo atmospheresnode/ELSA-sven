@@ -144,9 +144,12 @@ def close_label(label_path, label_root, tree):
 def write_into_label(product, product_bundle, product_collections_list):
     all_labels = []
     # We need to check for Product_Collections associated with Data products now.
-            
-    all_labels.append(product_bundle)
-    all_labels.extend(product_collections_list)
+
+    if product_bundle:        
+        all_labels.append(product_bundle)
+
+    if product_collections_list:
+        all_labels.extend(product_collections_list)
     
     for label in all_labels:
     # Open appropriate label(s).  
