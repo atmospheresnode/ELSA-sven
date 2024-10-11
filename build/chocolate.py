@@ -187,7 +187,7 @@ def remove_from_label(product, product_bundle, product_collections_list):
 
         # Close appropriate label(s)
         print(' ... Closing Label ... ')
-        close_label(label.label(), label_root)
+        close_label(label.label(), label_root, label_list[2])
 
 
 #    Tests

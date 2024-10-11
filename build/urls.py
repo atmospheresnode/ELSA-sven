@@ -16,7 +16,7 @@ urlpatterns = [
     re_path(r'^(?P<pk_bundle>\d+)/alias/$', views.alias, name='alias'),
     re_path(r'^(?P<pk_bundle>\d+)/alias_edit/(?P<pk_alias>[-\w]+)/$', views.alias_edit, name='alias_edit'),
 
-    re_path(r'^(?P<pk_bundle>\d+)/alias_delete/(?P<pk_alias>[-\w]+)/$', views.alias_delete, name='alias_delete'),
+    #re_path(r'^(?P<pk_bundle>\d+)/alias_delete/(?P<pk_alias>[-\w]+)/$', views.alias_delete, name='alias_delete'),
 
     # Alias_Delete
     re_path(r'^(?P<pk_bundle>\d+)/(?P<pk_alias>[-\w]+)/alias_delete/$', views.alias_delete, name='alias_delete'),

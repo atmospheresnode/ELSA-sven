@@ -3034,7 +3034,7 @@ class Data(models.Model):
     )
     
     DATA_TYPES = (
-        # ('Array', 'Array'),
+        #('Array', 'Array'),
         ('Table Binary','Table Binary'),
         ('Table Character','Table Character'),
         ('Table Delimited','Table Delimited'),
@@ -4218,7 +4218,11 @@ class Modification_History(models.Model):
     description = models.CharField(max_length=MAX_TEXT_FIELD)
 
     version_id = models.CharField(max_length=MAX_CHAR_FIELD, blank=True)
-    modification_date = models.CharField(max_length=MAX_CHAR_FIELD)
+
+    def mod_date_default():
+        return datetime.date.today().strftime('%Y-%m-%d')
+
+    modification_date = models.CharField(default=mod_date_default, max_length=100)
 
     # Builders
     def fill_label(self, label_root):
@@ -4243,8 +4247,7 @@ class Modification_History(models.Model):
 
         description = etree.SubElement(Modification_History, 'description')
         description.text = self.description
-        modification_date = etree.SubElement(
-            Modification_History, 'modification_date')
+        modification_date = etree.SubElement(Modification_History, 'modification_date')
         modification_date.text = self.modification_date
         return label_root
 
