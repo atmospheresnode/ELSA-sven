@@ -1267,7 +1267,7 @@ def context_search_investigation(request, pk_bundle):
             context_dict['messages'] = messages.get_messages(request)
             # return render(request, 'build/context/context_search_investigation.html', context_dict)
             # return render(request, 'build/bundle/bundle.html', context_dict)
-            return HttpResponseRedirect('/build/' + pk_bundle + '/')
+            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
         
         context_dict['messages'] = messages.get_messages(request)
         # return render(request, 'build/bundle/bundle.html', context_dict)
