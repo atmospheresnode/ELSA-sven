@@ -421,9 +421,9 @@
       <div class="modal-dialog modal-xl">
          <div class="modal-content">
             <!-- Title -->
-            <div class="modal-header">
+            <div class="modal-header d-flex justify-content-center position-relative">
                <h5 class="modal-title">Context</h5>
-               <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+               <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="position: absolute; right: 1.5rem;"></button>
             </div>
 
             <div class="modal-body">
@@ -700,9 +700,9 @@
       <div class="modal-dialog modal-xl">
          <div class="modal-content">
             <!-- Title -->
-            <div class="modal-header">
+            <div class="modal-header d-flex justify-content-center position-relative">
                <h5 class="modal-title">Investigation Area</h5>
-               <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+               <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="position: absolute; right: 1rem;"></button>
             </div>
 
             <div class="modal-body pt-0">
@@ -904,9 +904,9 @@
       <div class="modal-dialog modal-xl">
          <div class="modal-content">
             <!-- Title -->
-            <div class="modal-header">
+            <div class="modal-header d-flex justify-content-center position-relative">
                <h5 class="modal-title">Collections Area</h5>
-               <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+               <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="position: absolute; right: 1.5rem;"></button>
             </div>
 
             <div class="modal-body ">
@@ -980,7 +980,14 @@
                         <div class="card-header">
                            <p> This is a data collection. In this collection, you will build labels for data products. Data products are also 
                               known as Product_Observational and include things like tables of data, image files, etc. Currently ELSA 
-                              will help you build tempaltes for data tables. Types of tables ELSA knows how to label are:</p>
+                              will help you build tempaltes for data tables. Types of tables ELSA knows how to label are:
+                              
+                              <ul>
+                                 <li>Table Binary</li>
+                                 <li>Table Character</li>
+                                 <li>Table Delimited</li>
+
+                           </p>
                         </div>
                         <button type="button" class="btn btn-light text-light" data-bs-toggle="modal" data-bs-target="#data_product_modal">Add Data Products</button>
                         </div>

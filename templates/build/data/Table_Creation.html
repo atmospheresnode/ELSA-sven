@@ -61,7 +61,6 @@ Specify Some Data
 
     /* Submit Button */
     .btn-submit {
-        background-color: #5F9EA0;
         color: white;
         padding: 7px 10px;
         border: none;
@@ -94,7 +93,7 @@ Specify Some Data
                         {% csrf_token %}
                         {{ data_form.as_p }}
                         <div class="text-center mt-3">
-                            <button type="submit" class="btn-submit btn-submit-lg">Submit</button>
+                            <button type="submit" class="btn btn-success btn-md">Submit</button>
                         </div>
                     </form>
                 </div>

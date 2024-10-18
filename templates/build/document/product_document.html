@@ -27,7 +27,6 @@ Product Document Editor
         justify-content: center; 
         color: white;
         padding: 2x 2px;
-        background-color: #5F9EA0;
         border-radius: 5px;
         text-decoration: none; 
         cursor: pointer;
@@ -68,7 +67,7 @@ Product Document Editor
                     <form id="form_product_document" method="post" action="">
                         {% csrf_token %}
                         {{ form_product_document.as_p }}
-                        <button class="btn btn-default btn-md" type="submit">Update Document</button>
+                        <button class="btn btn-success btn-md" type="submit">Update Document</button>
                     </form>
                 </div>
             </div>

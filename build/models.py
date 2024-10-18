@@ -4080,7 +4080,7 @@ class Alias(models.Model):
         Alias_List = Identification_Area.find('{}Alias_List'.format(NAMESPACE))
 
         for alias in Alias_List:
-            if(alias[0].text.title() == self.alternate_id.title()):
+            if alias and alias[0].text and alias[0].text.title() == self.alternate_id.title():
                 alias.getparent().remove(alias)
 
         return label_root
