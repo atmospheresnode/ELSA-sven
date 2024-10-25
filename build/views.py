@@ -692,10 +692,10 @@ def bundle(request, pk_bundle):
             context_dict['form_citation_information'] = form_citation_information
 
             # # fixes the refresh duplication issue - deric
-            # return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
+            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
 
             # fixes the refresh duplication issue, use this one for offline testing - deric
-            return HttpResponseRedirect('/build/' + pk_bundle + '/')
+            # return HttpResponseRedirect('/build/' + pk_bundle + '/')
 
         if form_modification_history.is_valid():
             print('form_modification_history is valid')
@@ -718,10 +718,10 @@ def bundle(request, pk_bundle):
             context_dict['modification_history_set_count'] = len(modification_history_set)
 
             # # fixes the refresh duplication issue - deric
-            #return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
+            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
 
             # fixes the refresh duplication issue, use this one for offline testing - deric
-            return HttpResponseRedirect('/build/' + pk_bundle + '/')         
+            # return HttpResponseRedirect('/build/' + pk_bundle + '/')         
 
         additional_collections_list = []
         if form_additional_collections.is_valid():
@@ -881,10 +881,10 @@ def bundle(request, pk_bundle):
             context_dict['data_set'] = Data.objects.filter(bundle=bundle)
 
             # # fixes the refresh duplication issue - deric
-            # return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
+            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
 
             # fixes the refresh duplication issue, use this one for offline testing - deric
-            return HttpResponseRedirect('/build/' + pk_bundle + '/')
+            # return HttpResponseRedirect('/build/' + pk_bundle + '/')
         
         # satisfy this conditional
         if form_alias.is_valid():
@@ -907,10 +907,10 @@ def bundle(request, pk_bundle):
             context_dict['alias_set_count'] =  len(alias_set)
 
             # # fixes the refresh duplication issue - deric
-            # return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
+            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
 
             # fixes the refresh duplication issue, use this one for offline testing - deric
-            return HttpResponseRedirect('/build/' + pk_bundle + '/')
+            # return HttpResponseRedirect('/build/' + pk_bundle + '/')
 
         context_dict['messages'] = messages.get_messages(request)
         return render(request, 'build/bundle/bundle.html', context_dict)
@@ -1269,7 +1269,7 @@ def context_search_investigation(request, pk_bundle):
             context_dict['messages'] = messages.get_messages(request)
             # return render(request, 'build/context/context_search_investigation.html', context_dict)
             # return render(request, 'build/bundle/bundle.html', context_dict)
-            return HttpResponseRedirect('/build/' + pk_bundle + '/')
+            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
         
         context_dict['messages'] = messages.get_messages(request)
         # return render(request, 'build/bundle/bundle.html', context_dict)
@@ -2246,6 +2246,33 @@ def product_document(request, pk_bundle, pk_product_document):
         print('unauthorized user attempting to access a restricted area.')
         return redirect('main:restricted_access')
 
+# implement delete function for product_document
+def delete_product_document(request, pk_bundle, pk_product_document):
+    print('\n\n')
+    print('-------------------------------------------------------------------------')
+    print('\n\n------------------ Delete Product_Document with ELSA -------------------')
+    print('------------------------------ DEBUGGER ---------------------------------')
+    # Get bundle
+    bundle = Bundle.objects.get(pk=pk_bundle)
+
+    # Secure ELSA by seeing if the user logged in is the same user associated with the Bundle
+    if request.user == bundle.user:
+        print('authorized user')
+
+        product_document = Product_Document.objects.get(pk=pk_product_document)
+        product_bundle = Product_Bundle.objects.get(bundle=bundle)
+        product_collections_list = Product_Collection.objects.filter(bundle=bundle)
+        
+        remove_from_label(product_document, product_bundle, product_collections_list)
+        # Delete the product_document
+        product_document.delete()
+
+        return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
+
+    # Secure: Current user is not the user associated with the bundle, so...
+    else:
+        print('unauthorized user attempting to access a restricted area.')
+        return redirect('main:restricted_access')
 
 def product_observational(request, pk_bundle, pk_product_observational):
     print('\n\n')
@@ -2575,9 +2602,9 @@ def delete_target(request, pk_bundle, pk_target):
     # target.delete()
 
     # I'm not convinced this does what I want it to do
-    # return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
+    return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
     # return HttpResponseRedirect('/build/' + pk_bundle + '/')
-    return HttpResponseRedirect('/elsa/build/' + pk_bundle)
+    # return HttpResponseRedirect('/elsa/build/' + pk_bundle)
     # return redirect('../../bundle/')
 
 def delete_instrument(request, pk_bundle, pk_instrument):

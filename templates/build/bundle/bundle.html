@@ -421,9 +421,9 @@
       <div class="modal-dialog modal-xl">
          <div class="modal-content">
             <!-- Title -->
-            <div class="modal-header">
+            <div class="modal-header d-flex justify-content-center position-relative">
                <h5 class="modal-title">Context</h5>
-               <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+               <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="position: absolute; right: 1.5rem;"></button>
             </div>
 
             <div class="modal-body">
@@ -700,9 +700,9 @@
       <div class="modal-dialog modal-xl">
          <div class="modal-content">
             <!-- Title -->
-            <div class="modal-header">
+            <div class="modal-header d-flex justify-content-center position-relative">
                <h5 class="modal-title">Investigation Area</h5>
-               <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+               <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="position: absolute; right: 1rem;"></button>
             </div>
 
             <div class="modal-body pt-0">
@@ -813,12 +813,18 @@
                         
                         <!-- Display Modification History Snippets -->
                         {% else %}
-                        {% for mofification_history in modification_history_set %}
+                        {% for modification_history in modification_history_set %}
                         <div class="card snippet-card ms-0 me-3">
                            <div class="card-body">
-                              <p class="card-text">Description: {{ mofification_history.description }}</p>
-                              <p class="card-text">Version ID: {{ mofification_history.version_id}}</p>
-                              <p class="card-text">Modification date: {{ mofification_history.modification_date }}</p>
+                              <p class="card-text">Description: {{ modification_history.description }}</p>
+                              <p class="card-text">Version ID: {{ modification_history.version_id}}</p>
+                              <p class="card-text">Modification date: {{ modification_history.modification_date }}</p>
+                           
+                              <form action="{% url 'build:modification_history_delete' bundle.pk modification_history.pk %}" method="post" style="display:inline;">
+                                 {% csrf_token %}
+                                 <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                             </form>
+                           
                            </div>
                         </div>
                         {% endfor %}
@@ -886,6 +892,12 @@
                               <p class="card-text">Keyword(s): {{ citation_information.editor_list }}</p>
                               <p class="card-text">Publication Year: {{ citation_information.publication_year }}</p>
                               <p class="card-text">Description: {{ citation_information.description }}</p>
+                           
+                           <!--implementing citation delete-->
+                           <form action="{% url 'build:citation_information_delete' bundle.pk citation_information.pk %}" method="post" style="display:inline;">
+                              {% csrf_token %}
+                              <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                           </form>
                            </div>
                         </div>
                         {% endfor %}
@@ -904,9 +916,9 @@
       <div class="modal-dialog modal-xl">
          <div class="modal-content">
             <!-- Title -->
-            <div class="modal-header">
+            <div class="modal-header d-flex justify-content-center position-relative">
                <h5 class="modal-title">Collections Area</h5>
-               <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+               <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="position: absolute; right: 1.5rem;"></button>
             </div>
 
             <div class="modal-body ">
@@ -980,7 +992,14 @@
                         <div class="card-header">
                            <p> This is a data collection. In this collection, you will build labels for data products. Data products are also 
                               known as Product_Observational and include things like tables of data, image files, etc. Currently ELSA 
-                              will help you build tempaltes for data tables. Types of tables ELSA knows how to label are:</p>
+                              will help you build tempaltes for data tables. Types of tables ELSA knows how to label are:
+                              
+                              <ul>
+                                 <li>Table Binary</li>
+                                 <li>Table Character</li>
+                                 <li>Table Delimited</li>
+
+                           </p>
                         </div>
                         <button type="button" class="btn btn-light text-light" data-bs-toggle="modal" data-bs-target="#data_product_modal">Add Data Products</button>
                         </div>

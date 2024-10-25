@@ -3985,12 +3985,34 @@ class Product_Document(models.Model):
             Document_Edition.append(cloned_file)
         
         return root
-
+    
     def build_internal_reference(self, root, relation):
         """
             build_internal_reference needs to be completed
         """
         pass
+
+    def remove_xml(self, label_root):
+    # Find the Document element
+        Document = label_root.find('{}Document'.format(NAMESPACE))
+
+        if Document is not None:
+        # Remove the entire Document element
+            Document.getparent().remove(Document)
+
+    # Find and remove the logical_identifier that matches this document
+        Identification_Area = label_root.find('{}Identification_Area'.format(NAMESPACE))
+        if Identification_Area is not None:
+            logical_identifier = Identification_Area.find('{}logical_identifier'.format(NAMESPACE))
+            if logical_identifier is not None and logical_identifier.text == self.lid():
+                Identification_Area.remove(logical_identifier)
+
+    # Remove the title if it matches the document_name
+        title = Identification_Area.find('{}title'.format(NAMESPACE))
+        if title is not None and title.text == self.document_name:
+            Identification_Area.remove(title)
+
+        return label_root
 
 
 """
@@ -4106,7 +4128,7 @@ class Alias(models.Model):
         Alias_List = Identification_Area.find('{}Alias_List'.format(NAMESPACE))
 
         for alias in Alias_List:
-            if(alias[0].text.title() == self.alternate_id.title()):
+            if alias and alias[0].text and alias[0].text.title() == self.alternate_id.title():
                 alias.getparent().remove(alias)
 
         return label_root
