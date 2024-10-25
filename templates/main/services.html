@@ -1,101 +1,108 @@
 {% extends 'base-derk.html' %}
 {% load static %}
 
-
-
-
-<!-- {% block title_block %}
-App Archive
-{% endblock %}
-
-
-{% block main_header_block %}
-Archive of ELSA's Apps
-{% endblock %} -->
-
-
-
-
 {% block body_block %}
     {% if user.is_authenticated %}
+    <style>
+        .hover-card {
+            width: 90%;
+            margin: auto;
+            margin-bottom: 15px;
+        }
+        .hover-card:hover {
+            transform: scale(1.05);
+            transition: transform 0.2s ease-in-out, box-shadow 0.3s ease-in-out;
+        }
+    </style>
+
     <div class="container-fluid justify-content-center align-items-center py-5">
-        <div class="row px-4 pt-5">
-            <div class="col">
-              <a href="{% url 'build:build' %}">
-              <div class="card w-100 d-flex flex-column">
-                <img class="img-fluid" src="{% static 'images/build.png' %}" alt="Card image cap">
-                <div class="card-body d-flex flex-column">
-                    <div class="card-title h3">BUILD</div>
-                    <br>
-                    <div class="card-text">Create PDS4 compliant labels for new missions.</div>
+        <!-- First Container for the Cards -->
+        <div class="container">
+            <div class="row gx-1">
+                <div class="col-md-4">
+                    <div class="card h-100 hover-card">
+                        <a href="{% url 'build:build' %}" class="text-decoration-none">
+                            <div class="position-relative">
+                                <img class="card-img-top img-fluid rounded-top" src="{% static 'images/build.png' %}" alt="Build">
+                            </div>
+                            <div class="card-body text-center">
+                                <h5 class="card-title fw-bold mb-3" style="color: black;">BUILD</h5>
+                                <p class="card-text text-muted">Create PDS4 compliant labels for new missions.</p>
+                            </div>
+                        </a>
+                    </div>
                 </div>
-              </div>
-              </a>
-            </div>
 
-            <div class="col">
-              <a href="{% url 'review:index' %}">
-              <div class="card w-100 d-flex flex-column">
-                <img class="img-fluid" src="{% static 'images/review.png' %}" alt="Card image cap">
-                <div class="card-body d-flex flex-column">
-                    <div class="card-title h4">#REVIEW</div>
-                    <br>
-                    <div class="card-text">Submit a peer review form to critique derived data.</div>
+                <div class="col-md-4">
+                    <div class="card h-100 hover-card">
+                        <a href="{% url 'review:index' %}" class="text-decoration-none">
+                            <div class="position-relative">
+                                <img class="card-img-top img-fluid rounded-top" src="{% static 'images/review.png' %}" alt="Review">
+                            </div>
+                            <div class="card-body text-center">
+                                <h5 class="card-title fw-bold mb-3" style="color: black;">REVIEW</h5>
+                                <p class="card-text text-muted">Submit a peer review form to critique derived data.</p>
+                            </div>
+                        </a>
+                    </div>
                 </div>
-              </div>
-              </a>
-            </div>
 
-            <div class="col">
-                <a href="{% url 'main:construction' %}">
-                <div class="card w-100 d-flex flex-column">
-                  <img class="img-fluid" src="{% static 'images/submit.png' %}" alt="Card image cap">
-                  <div class="card-body d-flex flex-column">
-                      <div class="card-title h4">#SUBMIT</div>
-                      <br>
-                      <div class="card-text">Current functionality is not on ELSA.</div>
+                <div class="col-md-4">
+                    <div class="card h-100 hover-card">
+                        <a href="{% url 'main:construction' %}" class="text-decoration-none">
+                            <div class="position-relative">
+                                <img class="card-img-top img-fluid rounded-top" src="{% static 'images/submit.png' %}" alt="Submit">
+                            </div>
+                            <div class="card-body text-center">
+                                <h5 class="card-title fw-bold mb-3" style="color: black;">SUBMIT</h5>
+                                <p class="card-text text-muted">Current functionality is not on ELSA.</p>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+
+                <!--Separate tutorial is no longer needed as educational texts are provided in each step-->
+
+                {% comment %} <div class="col">
+                  <a href="{% url 'main:construction' %}">
+                  <div class="card w-100 d-flex flex-column">
+                    <img class="img-fluid" src="{% static 'images/search.png' %}" alt="Card image cap">
+                    <div class="card-body d-flex flex-column">
+                        <div class="card-title h4">#Tutorial</div>
+                        <br>
+                        <div class="card-text">Walk through ELSA with a tutorial.</div>
+                    </div>
                   </div>
-                </div>
-                </a>
-              </div>
+                  </a>
+              </div> {% endcomment %}
 
-              <div class="col">
-                <a href="{% url 'main:construction' %}">
-                <div class="card w-100 d-flex flex-column">
-                  <img class="img-fluid" src="{% static 'images/search.png' %}" alt="Card image cap">
-                  <div class="card-body d-flex flex-column">
-                      <div class="card-title h4">#Tutorial</div>
-                      <br>
-                      <div class="card-text">Walk through ELSA with a tutorial.</div>
-                  </div>
-                </div>
-                </a>
             </div>
         </div>
 
-        <div class="row px-4 pt-5">
-            <div class="col mt-3">
-              <div class="card h-100 d-flex flex-column">
-                <div class="card-header bg-dark text-center text-light h2">Migrations</div>
-                <div class="card-body d-flex flex-column">
-                  <!-- <div class="card-title h4">Migrations</div> -->
-                  <!-- <br> -->
-                  <div class="card-text">
-                    Would you like to see a tool like ELSA to handle all of your PDS3 to PDS4 Bundle Migrations?  Here at atmos, we are hoping to develop an interface just for you.  <a href="{% url 'main:contact' %}">Contact ELSA</a> and let us know so we can push it up our list of items to-do!
+        <!-- Second Container for the Migrations Card -->
+        <div class="container-fluid mt-5" style="padding: 0;">
+          <div class="row justify-content-center">
+              <div class="col-11">
+                  <div class="card h-100 d-flex flex-column">
+                      <div class="card-header bg-dark text-center text-light h2">Migrations</div>
+                      <div class="card-body d-flex flex-column">
+                          <div class="card-text text-center">
+                              Would you like to see a tool like ELSA to handle all of your PDS3 to PDS4 Bundle Migrations? Here at atmos, we are hoping to develop an interface just for you. <a href="{% url 'main:contact' %}">Contact ELSA</a> and let us know so we can push it up our list of items to-do!
+                          </div>
+                      </div>
+                      <!-- To Bundle Button -->
+                      <a href="{{ user.userprofile.get_absolute_url }}" class="btn btn-light text-light m-4">Bundle Hub</a>
                   </div>
-                </div>
-                <!-- To Bundle Button -->
-                <a href="{{ user.userprofile.get_absolute_url }}" class="btn btn-light text-light m-4">Bundle Hub</a>
               </div>
-            </div>
           </div>
+      </div>
     </div>
     {% else %}
-    If you see this message, you are not signed in.  You should not be able to access this message either.  Please contact the Atmospheres Node.
+    <div class="alert alert-warning text-center mt-5">
+        If you see this message, you are not signed in. You should not be able to access this message either. Please contact the Atmospheres Node.
+    </div>
     {% endif %}
 {% endblock %}
 
-
 {% block footie_block %}    
 {% endblock %}
-

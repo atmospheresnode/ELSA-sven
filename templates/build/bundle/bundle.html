@@ -813,12 +813,18 @@
                         
                         <!-- Display Modification History Snippets -->
                         {% else %}
-                        {% for mofification_history in modification_history_set %}
+                        {% for modification_history in modification_history_set %}
                         <div class="card snippet-card ms-0 me-3">
                            <div class="card-body">
-                              <p class="card-text">Description: {{ mofification_history.description }}</p>
-                              <p class="card-text">Version ID: {{ mofification_history.version_id}}</p>
-                              <p class="card-text">Modification date: {{ mofification_history.modification_date }}</p>
+                              <p class="card-text">Description: {{ modification_history.description }}</p>
+                              <p class="card-text">Version ID: {{ modification_history.version_id}}</p>
+                              <p class="card-text">Modification date: {{ modification_history.modification_date }}</p>
+                           
+                              <form action="{% url 'build:modification_history_delete' bundle.pk modification_history.pk %}" method="post" style="display:inline;">
+                                 {% csrf_token %}
+                                 <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                             </form>
+                           
                            </div>
                         </div>
                         {% endfor %}
@@ -886,6 +892,12 @@
                               <p class="card-text">Keyword(s): {{ citation_information.editor_list }}</p>
                               <p class="card-text">Publication Year: {{ citation_information.publication_year }}</p>
                               <p class="card-text">Description: {{ citation_information.description }}</p>
+                           
+                           <!--implementing citation delete-->
+                           <form action="{% url 'build:citation_information_delete' bundle.pk citation_information.pk %}" method="post" style="display:inline;">
+                              {% csrf_token %}
+                              <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                           </form>
                            </div>
                         </div>
                         {% endfor %}
