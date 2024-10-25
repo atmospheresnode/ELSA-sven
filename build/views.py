@@ -579,7 +579,7 @@ def bundle(request, pk_bundle):
         form_bundle = BundleForm(request.POST or None) 
         form_citation_information = CitationInformationForm(request.POST or None)
         form_modification_history = ModificationHistoryForm(request.POST or None)     
-        form_data = DataForm(request.POST or None)
+        form_data = DataForm(request.POST or None, pk_bun=pk_bundle)
         form_document = ProductDocumentForm(request.POST or None)
         form_collections = CollectionsForm(request.POST or None)
         form_product_collection = ProductCollectionForm(request.POST or None)
@@ -863,6 +863,8 @@ def bundle(request, pk_bundle):
             # Create Data Object
             data = form_data.save(commit=False)
             data.bundle = bundle
+            print(form_data.cleaned_data['collection'])
+            data.collection = AdditionalCollections.objects.get(id=form_data.data['collection'])
             data.save()
 
             all_labels = []
@@ -872,9 +874,9 @@ def bundle(request, pk_bundle):
             all_labels.append(product_bundle)
             all_labels.extend(product_collections_list)  
 
-            # data.build_directory()
+            data.build_directory()
 
-            form_data = DataForm()
+            form_data = DataForm(request.POST or None, pk_bun=pk_bundle)
             context_dict['form_data'] = form_data
             context_dict['data_set'] = Data.objects.filter(bundle=bundle)
 
@@ -2244,6 +2246,33 @@ def product_document(request, pk_bundle, pk_product_document):
         print('unauthorized user attempting to access a restricted area.')
         return redirect('main:restricted_access')
 
+# implement delete function for product_document
+def delete_product_document(request, pk_bundle, pk_product_document):
+    print('\n\n')
+    print('-------------------------------------------------------------------------')
+    print('\n\n------------------ Delete Product_Document with ELSA -------------------')
+    print('------------------------------ DEBUGGER ---------------------------------')
+    # Get bundle
+    bundle = Bundle.objects.get(pk=pk_bundle)
+
+    # Secure ELSA by seeing if the user logged in is the same user associated with the Bundle
+    if request.user == bundle.user:
+        print('authorized user')
+
+        product_document = Product_Document.objects.get(pk=pk_product_document)
+        product_bundle = Product_Bundle.objects.get(bundle=bundle)
+        product_collections_list = Product_Collection.objects.filter(bundle=bundle)
+        
+        remove_from_label(product_document, product_bundle, product_collections_list)
+        # Delete the product_document
+        product_document.delete()
+
+        return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
+
+    # Secure: Current user is not the user associated with the bundle, so...
+    else:
+        print('unauthorized user attempting to access a restricted area.')
+        return redirect('main:restricted_access')
 
 def product_observational(request, pk_bundle, pk_product_observational):
     print('\n\n')

@@ -813,12 +813,18 @@
                         
                         <!-- Display Modification History Snippets -->
                         {% else %}
-                        {% for mofification_history in modification_history_set %}
+                        {% for modification_history in modification_history_set %}
                         <div class="card snippet-card ms-0 me-3">
                            <div class="card-body">
-                              <p class="card-text">Description: {{ mofification_history.description }}</p>
-                              <p class="card-text">Version ID: {{ mofification_history.version_id}}</p>
-                              <p class="card-text">Modification date: {{ mofification_history.modification_date }}</p>
+                              <p class="card-text">Description: {{ modification_history.description }}</p>
+                              <p class="card-text">Version ID: {{ modification_history.version_id}}</p>
+                              <p class="card-text">Modification date: {{ modification_history.modification_date }}</p>
+                           
+                              <form action="{% url 'build:modification_history_delete' bundle.pk modification_history.pk %}" method="post" style="display:inline;">
+                                 {% csrf_token %}
+                                 <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                             </form>
+                           
                            </div>
                         </div>
                         {% endfor %}
@@ -886,6 +892,12 @@
                               <p class="card-text">Keyword(s): {{ citation_information.editor_list }}</p>
                               <p class="card-text">Publication Year: {{ citation_information.publication_year }}</p>
                               <p class="card-text">Description: {{ citation_information.description }}</p>
+                           
+                           <!--implementing citation delete-->
+                           <form action="{% url 'build:citation_information_delete' bundle.pk citation_information.pk %}" method="post" style="display:inline;">
+                              {% csrf_token %}
+                              <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                           </form>
                            </div>
                         </div>
                         {% endfor %}
@@ -996,6 +1008,7 @@
                      <!-- List of Collections -->
                      <div class="modal-footer justify-content-start">
                         {% for data in data_set %}
+                        {% if data.collection == add_collection %}
                         <div class="card snippet-card ms-0 me-3">
                            <div class="card-body">
                               <h5 class="card-title">{{ data.name }}</h5>
@@ -1004,6 +1017,7 @@
                               <a href="{%  url 'build:table_creation' bundle.pk data.pk %}" class="btn btn-light text-light d-flex justify-content-center">Edit</a>
                            </div>
                         </div>
+                        {% endif %}
                         {% endfor %}
                      </div>
                   </div>
@@ -1181,20 +1195,26 @@
 
                      <!-- Name-->
                      <div class="mt-3">
-                        <label for="doc_name" class="required">Name</label>
+                        <label for="data_name" class="required">Name</label>
                         {{ form_data.name }}
                      </div>
 
                      <!-- Processing Level -->
                      <div class="mt-3">
-                        <label for="pub_date" class="required">Processing Level</label>
+                        <label for="processing_level" class="required">Processing Level</label>
                         {{ form_data.processing_level }}
                      </div>
 
                      <!-- Data Type -->
                      <div class="mt-3">
-                        <label for="auth_list">Data Type</label>
+                        <label for="data_type">Data Type</label>
                         {{ form_data.data_type }}
+                     </div>
+
+                     <!-- Collection -->
+                     <div class="mt-3">
+                        <label for="collection">Collection</label>
+                        {{ form_data.collection }}
                      </div>
 
                      <!-- Create Product Document -->

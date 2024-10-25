@@ -96,7 +96,9 @@ urlpatterns = [
     # Document
     re_path(r'^(?P<pk_bundle>\d+)/document/$', views.document, name='document'),
     re_path(r'^(?P<pk_bundle>\d+)/document/product_document/(?P<pk_product_document>\d+)/$', views.product_document, name='product_document'),
-    
+
+    #delete product document
+    re_path(r'^(?P<pk_bundle>\d+)/document/product_document/(?P<pk_product_document>\d+)/delete/$', views.delete_product_document, name='delete_product_document'),    
     # Directory 
     re_path(r'^(?P<path>.*)/$', views.index, name='directory_view'),
 
