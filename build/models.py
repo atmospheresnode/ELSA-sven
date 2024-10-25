@@ -2253,8 +2253,6 @@ class AdditionalCollections(models.Model):
     collection_name = models.CharField(max_length=MAX_CHAR_FIELD)
     collection_type = models.CharField(max_length=MAX_CHAR_FIELD, choices=ADDITIONAL_COLLECTION_CHOICES, default='Data')
     collections_list = []
-    
-
 
     def list(self):
         return self.collections_list
@@ -3045,10 +3043,13 @@ class Data(models.Model):
     processing_level = models.CharField(max_length=30, choices=PROCESSING_LEVEL_CHOICES, default='Raw')
     data_type = models.CharField(max_length=256,choices=DATA_TYPES, default = '')
 
+    collection = models.ForeignKey(AdditionalCollections, on_delete = models.CASCADE, default='',)
+
     class Meta(object):
         verbose_name_plural = 'Data'
 
     def __str__(self):
+
         return self.name  # Better this once we work on data more
 
     # get_directory_name returns the name of the directory for this data object.
@@ -3063,11 +3064,13 @@ class Data(models.Model):
     # of a directory before creating the directory.
 
     def build_directory(self):
-        data_directory = os.path.join(self.bundle.directory(), self.name)
+        data_name = self.name.lower()
+        data_name = replace_all(data_name, ' ', '_')
+        data_directory = os.path.join(self.collection.directory(), data_name)
         make_directory(data_directory)
 
     def label(self):
-        return os.path.join(self.bundle.directory(), self.name)
+        return os.path.join(self.collection.directory(), self.name)
 
     def build_base_case(self):
         pass
@@ -3095,7 +3098,7 @@ class Table_Delimited(models.Model):
     )
 
     name = models.CharField(max_length=256, blank=True)
-    offset = models.IntegerField(default=1)
+    offset = models.IntegerField(default=0)
     object_length = models.IntegerField(default=1)
     description = models.CharField(max_length=5000, default="unset")
     records = models.IntegerField(default=1)
@@ -3123,9 +3126,11 @@ class Table_Delimited(models.Model):
 
         # directory returns the file path associated with the given model.
     def directory(self):
-        data_collection_name = self.collection.collection_name.lower()
-        data_directory = os.path.join(self.data.bundle.directory(), data_collection_name)
-        return data_directory  
+        # data_collection_name = self.collection.collection_name.lower()
+        data_name = self.data.name.lower()
+        data_name = replace_all(data_name, ' ', '_')
+        data_directory = os.path.join(self.collection.directory(), data_name)
+        return data_directory
 
     def build_data_file(self):
         # Locate base case Product_Bundle template found in templates/pds4_labels/base_case/product_bundle
@@ -3142,6 +3147,7 @@ class Table_Delimited(models.Model):
         update = Version()
         bundle = Bundle()
         print (source_file + "<<<<<<<<")
+        print(out_file)
 
         update.version_update_old(self.data.bundle.version, source_file,out_file)
         
@@ -3176,6 +3182,10 @@ class Table_Delimited(models.Model):
             name = td.find('{}name'.format(NAMESPACE))
             name.text = self.name
 
+        # Probably change this to have it be part of a form
+        local_identifier = td.find('{}local_identifier'.format(NAMESPACE))
+        local_identifier.text = 'table'
+
         if self.offset:
             offset = td.find('{}offset'.format(NAMESPACE))
             offset.text = str(self.offset)
@@ -3195,6 +3205,21 @@ class Table_Delimited(models.Model):
         if self.field_delimiter:
             field_delimiter = td.find('{}field_delimiter'.format(NAMESPACE))
             field_delimiter.text = self.field_delimiter
+
+        rd = td.find('{}Record_Delimited'.format(NAMESPACE))
+
+        fields = rd.find('{}fields'.format())
+        fields.text = str(self.fields)
+
+        # should create a form to ask for this, but will default to 0
+        groups = rd.find('{}fields'.format())
+        groups.text = '0'
+
+        field_delimited = rd.find('{}Field_Delimited'.format(NAMESPACE))
+
+        for i in range(int(self.fields) - 1):
+            cloned_file = copy.deepcopy(field_delimited)
+            rd.append(cloned_file)
         
         return root
 
@@ -3222,9 +3247,10 @@ class Table_Binary(models.Model):
         return os.path.join(self.directory(), self.name_label_case())
 
     def directory(self):
-        data_collection_name = self.collection.collection_name.lower()
-        data_directory = os.path.join(self.data.bundle.directory(), data_collection_name)
-        return data_directory  
+        data_name = self.data.name.lower()
+        data_name = replace_all(data_name, ' ', '_')
+        data_directory = os.path.join(self.collection.directory(), data_name)
+        return data_directory 
 
     def build_data_file(self):
         # Locate base case Product_Bundle template found in templates/pds4_labels/base_case/product_bundle
@@ -3959,12 +3985,34 @@ class Product_Document(models.Model):
             Document_Edition.append(cloned_file)
         
         return root
-
+    
     def build_internal_reference(self, root, relation):
         """
             build_internal_reference needs to be completed
         """
         pass
+
+    def remove_xml(self, label_root):
+    # Find the Document element
+        Document = label_root.find('{}Document'.format(NAMESPACE))
+
+        if Document is not None:
+        # Remove the entire Document element
+            Document.getparent().remove(Document)
+
+    # Find and remove the logical_identifier that matches this document
+        Identification_Area = label_root.find('{}Identification_Area'.format(NAMESPACE))
+        if Identification_Area is not None:
+            logical_identifier = Identification_Area.find('{}logical_identifier'.format(NAMESPACE))
+            if logical_identifier is not None and logical_identifier.text == self.lid():
+                Identification_Area.remove(logical_identifier)
+
+    # Remove the title if it matches the document_name
+        title = Identification_Area.find('{}title'.format(NAMESPACE))
+        if title is not None and title.text == self.document_name:
+            Identification_Area.remove(title)
+
+        return label_root
 
 
 """

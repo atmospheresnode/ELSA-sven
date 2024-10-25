@@ -70,15 +70,6 @@
                         _________
                     </description>
                 </Field_Delimited>
-                <Field_Delimited>
-                    <name>_________</name>
-                    <field_number>_________</field_number>
-                    <data_type>_________</data_type>
-                    <unit>_________</unit>
-                    <description>
-                        _________
-                    </description>
-                </Field_Delimited>
             </Record_Delimited>
         </Table_Delimited>
     </File_Area_Observational>
