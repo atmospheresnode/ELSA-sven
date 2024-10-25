@@ -46,9 +46,23 @@
             <record_delimiter>Carriage-Return Line-Feed</record_delimiter>
             <field_delimiter>Comma</field_delimiter>
             <Record_Delimited>
-                <fields></fields>
-                <groups></groups>
-                <maximum_record_length unit="byte">77</maximum_record_length>
+                <fields>2</fields>
+                <groups>0</groups>
+                <maximum_record_length unit="byte">105</maximum_record_length>
+                <Field_Delimited>
+                    <name>Member Status</name>
+                    <field_number>1</field_number>
+                    <data_type>ASCII_String</data_type>
+                    <maximum_field_length unit="byte">1</maximum_field_length>
+                    <description>This column specifies the Member Status of the files that comprise the collection; Either 'P' for primary (first time archived) or 'S' for secondary (archived elsewhere in the system).</description>
+                </Field_Delimited>
+                <Field_Delimited>
+                    <name>LIDVID_LID</name>
+                    <field_number>2</field_number>
+                    <data_type>ASCII_LIDVID_LID</data_type>
+                    <maximum_field_length unit="byte">255</maximum_field_length>
+                    <description>This column specifies the LID::VID of the files that comprise the collection.</description>
+                </Field_Delimited>
             </Record_Delimited>
             <reference_type>inventory_has_member_product</reference_type>
         </Inventory>
