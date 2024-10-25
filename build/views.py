@@ -579,7 +579,7 @@ def bundle(request, pk_bundle):
         form_bundle = BundleForm(request.POST or None) 
         form_citation_information = CitationInformationForm(request.POST or None)
         form_modification_history = ModificationHistoryForm(request.POST or None)     
-        form_data = DataForm(request.POST or None)
+        form_data = DataForm(request.POST or None, pk_bun=pk_bundle)
         form_document = ProductDocumentForm(request.POST or None)
         form_collections = CollectionsForm(request.POST or None)
         form_product_collection = ProductCollectionForm(request.POST or None)
@@ -863,6 +863,8 @@ def bundle(request, pk_bundle):
             # Create Data Object
             data = form_data.save(commit=False)
             data.bundle = bundle
+            print(form_data.cleaned_data['collection'])
+            data.collection = AdditionalCollections.objects.get(id=form_data.data['collection'])
             data.save()
 
             all_labels = []
@@ -872,9 +874,9 @@ def bundle(request, pk_bundle):
             all_labels.append(product_bundle)
             all_labels.extend(product_collections_list)  
 
-            # data.build_directory()
+            data.build_directory()
 
-            form_data = DataForm()
+            form_data = DataForm(request.POST or None, pk_bun=pk_bundle)
             context_dict['form_data'] = form_data
             context_dict['data_set'] = Data.objects.filter(bundle=bundle)
 
