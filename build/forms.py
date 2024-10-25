@@ -338,6 +338,11 @@ class DataForm(forms.ModelForm):
         exclude = ('bundle','collection')
         #exclude = ('bundle','data_enum',)
 
+    def __init__(self, *args, **kwargs):
+        self.pk_bun = kwargs.pop('pk_bun')
+        super(DataForm, self).__init__(*args, **kwargs)
+        self.fields['collection'] = forms.ModelChoiceField(queryset=AdditionalCollections.objects.filter(bundle=self.pk_bun), required = True)
+
 """
     Facility
 """
