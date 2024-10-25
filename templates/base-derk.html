@@ -16,6 +16,7 @@
 
     <!-- SCRIPTS -->
     <script type="text/javascript" src="{% static 'js/bootstrap/jquery-3.1.1.min.js' %}"></script>
+    <script type="text/javascript" src="{% static 'js/elsa.js' %}"></script>
     <script type="text/javascript" src="{% static 'js/bootstrap/mdb.min.js' %}"></script>
     <script type="text/javascript" src="{% static 'js/elsa.js' %}"></script>
 
@@ -63,13 +64,16 @@
                                 Bundle Apps 
                             </a>
                         </li>
-
-                        <li class="nav-item">
+                        
+                        <!-- Blog removed from the navbar for now.
+                        Maybe will be added a "news" or "updates" section in the future. !-->
+                        
+                        {% comment %} <li class="nav-item">
                             <a class="nav-link" href="{% url 'main:construction' %}">
                                 <i class="fa fa-newspaper-o"></i>
                                 Blog
                             </a>
-                        </li>
+                        </li> {% endcomment %}
                         
 
                         <li class="nav-item">
