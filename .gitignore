@@ -8,3 +8,4 @@ Scratch\ code/*
 /db.sqlite3
 /elsa/*
 *.pyc
+__pycache__/
