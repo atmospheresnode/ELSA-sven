@@ -30,12 +30,12 @@
       <button class="navbar-toggler navbar-toggler-right hidden-lg-up" type="button" data-toggle="collapse" data-target="#navbarsExampleDefault" aria-controls="navbarsExampleDefault" aria-expanded="false" aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>
       </button>
-      <a class="navbar-brand" href="{% url 'elsa:index' %}">ELSA: Educational Labeling System @Atmospheres</a>
+      <a class="navbar-brand" href="{% url 'main:index' %}">ELSA: Educational Labeling System @Atmospheres</a>
 
       <div class="collapse navbar-collapse" id="navbarsExampleDefault">
         <ul class="navbar-nav mr-auto">
           <li class="nav-item active">
-            <a class="nav-link" href="{% url 'elsa:index' %}">Home</a>
+            <a class="nav-link" href="{% url 'main:index' %}">Home</a>
           </li>
           {% if user.is_authenticated %}
           <li class="nav-item">
@@ -46,33 +46,33 @@
           </li>
           <!--
           <li role="presentation" class="dropdown">              
-              <a class="dropdown-toggle" data-toggle="dropdown" href="{% url 'elsa:build' %}" role="baria-haspopup="true" aria-expanded="false">Bundle</a><span class="caret"></span>
+              <a class="dropdown-toggle" data-toggle="dropdown" href="{% url 'main:build' %}" role="baria-haspopup="true" aria-expanded="false">Bundle</a><span class="caret"></span>
               </a>
               <ul class="dropdown-menu">
                 <li><a href="{% url 'build_a_bundle:index' %}">Build</a></li>
                 <li><a href="{% url 'search_a_bundle:index' %}">Search</a></li>
-                <li><a href="{% url 'elsa:error' %}">Review</a></li>
-                <li><a href="{% url 'elsa:error' %}">Submit</a></li>
+                <li><a href="{% url 'main:error' %}">Review</a></li>
+                <li><a href="{% url 'main:error' %}">Submit</a></li>
                 <li role="separator" class="divider"></li>
-                <li><a href="{% url 'elsa:error' %}">Tutorial</a></li>
+                <li><a href="{% url 'main:error' %}">Tutorial</a></li>
               </ul>
           </li>
           -->
           <li class="nav-item">
-            <a class="nav-link" href="{% url 'elsa:contact' %}">Contact</a> <!-- EVENTUALLY DELETE -->
+            <a class="nav-link" href="{% url 'main:contact' %}">Contact</a> <!-- EVENTUALLY DELETE -->
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="{% url 'elsa:logout' %}">Logout</a>
+            <a class="nav-link" href="{% url 'main:logout' %}">Logout</a>
           </li>
           {% else %}
           <li class="nav-item">
-            <a class="nav-link" href="{% url 'elsa:register' %}">Sign Up</a> <!-- EVENTUALLY DELETE -->
+            <a class="nav-link" href="{% url 'friends:register' %}">Sign Up</a> <!-- EVENTUALLY DELETE -->
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="{% url 'elsa:login' %}">Log In</a> <!-- EVENTUALLY DELETE -->
+            <a class="nav-link" href="{% url 'friends:login' %}">Log In</a> <!-- EVENTUALLY DELETE -->
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="{% url 'elsa:contact' %}">Contact</a> <!-- EVENTUALLY DELETE -->
+            <a class="nav-link" href="{% url 'main:contact' %}">Contact</a> <!-- EVENTUALLY DELETE -->
           </li>
           {% endif %}
 
