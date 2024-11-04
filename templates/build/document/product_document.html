@@ -68,9 +68,7 @@ Product Document Editor
                         {% csrf_token %}
                         {{ form_product_document.as_p }}
                         <div class="d-flex justify-content-start align-items-center">
-                            <button class="btn btn-success btn-md me-2" type="submit">Update
-                                
-                            </button>
+                            <button class="btn btn-success btn-md me-2" type="submit">Update</button>
                     </form>
                     <form action="{% url 'build:delete_product_document' bundle.pk product_document.pk %}" method="post" class="mb-0">
                         {% csrf_token %}
