@@ -3816,6 +3816,8 @@ class Product_Document(models.Model):
     local_id = models.CharField(max_length=MAX_CHAR_FIELD, default='')
     document_std_id = models.CharField(max_length=MAX_CHAR_FIELD, default='PDF/A')
 
+    #
+
     # Meta
 
     def __str__(self):
