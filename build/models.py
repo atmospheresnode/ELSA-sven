@@ -3208,11 +3208,11 @@ class Table_Delimited(models.Model):
 
         rd = td.find('{}Record_Delimited'.format(NAMESPACE))
 
-        fields = rd.find('{}fields'.format())
+        fields = rd.find('{}fields'.format(NAMESPACE))
         fields.text = str(self.fields)
 
         # should create a form to ask for this, but will default to 0
-        groups = rd.find('{}fields'.format())
+        groups = rd.find('{}fields'.format(NAMESPACE))
         groups.text = '0'
 
         field_delimited = rd.find('{}Field_Delimited'.format(NAMESPACE))
