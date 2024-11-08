@@ -246,4 +246,3 @@ def friend_settings(request, pk_user):
     else:
         return redirect('main:restricted_access')
     
-
