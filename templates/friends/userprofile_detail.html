@@ -12,39 +12,48 @@
 
 {% block body_block %}
 <div class="container-fluid justify-content-center align-items-center">
-    <!-- Welcome Card -->
-    <div class="row">
-        <div class="col">
+    <div class="row justify-content-center align-items-center mt-4">
+        <div class="col-md-9">
             <div class="card">
-                <div class="card-body ms-1">
-                    <h3 class="card-title text-center">Welcome to your Bundle Hub</h3>
+                <div class="card-body text-center">
+                    <h3 class="card-title text-center mb-4">Welcome to Your Bundle Hub</h3>
                     <p class="card-text">
-                        Your bundle hub is where you can do the following:
-                        <ul>
-                            <li>Add new bundles</li>
-                            <li>View existing bundles</li>
-                        </ul>
+                        Your bundle hub is where you can perform the following tasks:
                     </p>
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <i class="fa fa-check-circle text-success me-2"></i>Add new bundles
+                        </li>
+                        <li class="mb-2">
+                            <i class="fa fa-check-circle text-success me-2"></i>View existing bundles
+                        </li>
+                    </ul>
                     <p class="card-text">
-                        <i>Note: To make changes to your existing bundles and to download the bundle templates, click on the bundle name below.</i>
+                        <small class="text-muted">
+                            <i>Note: Click on the bundle name to modify or download the bundle.
+                        </small>
                     </p>
-
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="row justify-content-center align-items-center mt-4 mx-5 px-5">
-        <a href="{% url 'build:build' %}" class="btn btn-light text-light"> Add Bundle <i class="fa fa-plus ms-2"></i></a>
+    <div class="row justify-content-center align-items-center mt-4 mx-8 px-8">
+        <div class="col-md-9">
+            <a href="{% url 'build:build' %}" class="btn btn-light text-light w-100" style="font-style: normal;"> 
+                Add Bundle <i class="fa fa-plus ms-2"></i>
+            </a>
+        </div>
     </div>
 
     <!-- Bundle List Card -->
-    <div class="row mt-4">
-        <div class="col">
+    <div class="row mt-5 justify-content-center align-items-center">
+        <div class="col-md-11">
             <div class="card">
-                <!-- Add Bundle -->
-                <div class="card-header bg-dark text-light h2 d-flex justify-content-between align-items-center">
-                    <h1>Bundles</h1>
+                <div class="card-header bg-dark text-light h2">
+                    <div class="text-center" style="font-style: normal;">
+                        <h2>Bundles</h2>
+                    </div>
                 </div>
 
                 <!-- Bundle List -->
@@ -58,7 +67,7 @@
                                             <div class="card bundle-card">
                                                 <img class="img-fluid" src="{% static 'images/bundle.jpg' %}" alt="Bundle Image">
                                                 <div class="card-body">
-                                                    <h4 class="card-title"> {{ bundle }} </h4>
+                                                    <h4 class="card-title" style="font-style: normal;"> {{ bundle }} </h4>
                                                     <p class="card-text"> {{ bundle.lid }} </p>                        
                                                 </div>
                                             </div>

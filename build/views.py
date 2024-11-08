@@ -2269,10 +2269,11 @@ def delete_product_document(request, pk_bundle, pk_product_document):
 
         return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
 
-    # Secure: Current user is not the user associated with the bundle, so...
+    # Secure: Current user is not the user associated with the bundle
     else:
         print('unauthorized user attempting to access a restricted area.')
         return redirect('main:restricted_access')
+
 
 def product_observational(request, pk_bundle, pk_product_observational):
     print('\n\n')
