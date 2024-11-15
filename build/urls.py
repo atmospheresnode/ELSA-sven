@@ -96,17 +96,6 @@ urlpatterns = [
     # Document
     re_path(r'^(?P<pk_bundle>\d+)/document/$', views.document, name='document'),
     re_path(r'^(?P<pk_bundle>\d+)/document/product_document/(?P<pk_product_document>\d+)/$', views.product_document, name='product_document'),
-    
-    # Directory 
-    re_path(r'^(?P<path>.*)/$', views.index, name='directory_view'),
-
-
-    # XML_Schema --> A view that no one sees.  So no xml_schema url.  This might even be removed 
-    # completely from PDS4
-
-
-
-
 
     # TEST
 ]
