@@ -828,11 +828,13 @@ def bundle(request, pk_bundle):
             all_labels.append(product_bundle)
             all_labels.extend(product_collections_list)
             # I think this works -Said
-            all_labels.extend(Data.objects.filter(bundle=bundle))
+            all_labels.extend(Table_Delimited.objects.filter(bundle=bundle))
+            all_labels.extend(Table_Binary.objects.filter(bundle=bundle))
+            all_labels.extend(Table_Fixed_Width.objects.filter(bundle=bundle))
 
             for label in all_labels:
                 
-                print('- Label: {}'.format(label))
+                print('- Label: {}'.format(label.label()))
                 print(' ... Opening Label ... ')
                 label_list = open_label_with_tree(label.label())
                 label_root = label_list[1]
@@ -845,6 +847,13 @@ def bundle(request, pk_bundle):
                 print(' ... Closing Label ... ')
                 close_label(label.label(), label_root, label_list[2])
             print('\n----------------End Build Internal_Reference for Document-------------------')
+
+            for citation_information in citation_information_set:
+                write_into_label(citation_information, product_document, None)
+            for alias in alias_set:
+                write_into_label(alias, product_document, None)
+            for modification_history in modification_history_set:
+                write_into_label(modification_history, product_document, None)
 
             form_document = ProductDocumentForm()
             context_dict['form_document'] = form_document
@@ -2910,6 +2919,19 @@ def index(request, path):
                 
 
         return _index(eventual_path)
+    
+    def retrieve_content(inpath):
+        contents = os.listdir(inpath)
+        for mfile in contents:
+            t = os.path.join(inpath, mfile)
+            results = []
+            if os.path.isfile(t):
+                link_target = os.path.relpath(t, start=os.path.join(
+                    _get_abs_virtual_root(), 'archive/'))
+                results.append([mfile, link_target])
+
+            return results
+
 
     directory_name = os.path.basename(path)
 
@@ -2919,6 +2941,10 @@ def index(request, path):
         return HttpResponse(open(eventual_path).read(), content_type='text/xml')
 
     c = index_maker()
+    file_context = retrieve_content(eventual_path)
+
+    for file in c:
+        print(file.file)
     data = {
         'directory_name': directory_name,
         'subfiles': c
