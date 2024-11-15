@@ -76,808 +76,592 @@
 </div>
 {% endblock %}
 
-<!-- New Body Block -->
 {% block body_block %}
-
-<!-- Adding style -->
-
-<style>
-.row {
-  display: flex;
-}
-
-.xml-card-try {
-   height: auto;
-   max-height: calc(100vh - 50px);
-   overflow: hidden;
-   padding: 1rem;
-   margin-bottom: 1.5rem;
-}
-
-.xml-container-try {
-   color: var(--elsa-black);
-   white-space: pre;
-   font-family: monospace;
-   font-size: small;
-   text-align: left;
-   overflow-x: visible;
-   overflow-y: auto;
-   max-height: 100%;
- }
-
-</style>
-
-<div class="container-fluid pt-5">
+<div class="container-fluid pt-3">
+   <!-- Info Card -->
    <div class="row">
-      <!-- Fill Out Forms Side -->
-      <div class="col-md-6">
-         <!-- Info Card -->
-         <div class="row p-1 m-3 mt-0">
-            <div class="card d-flex">
-               <h3 class="card-title text-center mt-3"> <strong>{{ bundle.name }} </strong> </h3>
-               <p class="card-body text-left z-depth-2">
-                  <!-- LID -->
-                  <strong>LID:</strong> {{ bundle.lid }}
-                  <br>
-         
-                  <!-- Status -->
-                  <strong>Status:</strong>
-                  {% if bundle.status == 'b' %} Build <br>
-                  {% elif bundle.status == 'r' %} Review <br>
-                  {% else %} Submit <br>
-                  {% endif %}
-         
-                  <!-- Creator -->
-                  <strong>Creator:</strong> {{bundle.user}}<br>
-                  
-                  <br>
-                  Below are several sections that ELSA needs you to fill out to make your templates as complete as possible.
-                  Several sections are used universally throughout your bundle (e.g., Investigation Area and Context). The
-                  Collections section will allow you to add, view, and edit collections that you would like to include in your
-                  bundle.
-
-                  <div class="col p-1 m-3 mt-0 text-center">
-
-                        <!--'Help' is removed as it does not serve any required functionality -->
-                        {% comment %} <a type="button" class="btn btn-info text-light" href="" aria-expanded="true" style="box-shadow: none;">Help</a> {% endcomment %}
-                        <a type="button" class="btn btn-danger text-light" data-bs-toggle="modal" data-bs-target="#delete_modal" aria-expanded="false" style="box-shadow: none;">Delete Bundle</a>
-                        <a type="button" class="btn btn-light text-light" href="{% url 'build:directory_view' bundle.relative_dir %}" aria-expanded="false" style="box-shadow: none;">View Bundle</a>
-                        <a type="button" class="btn btn-warning text-light" href="{% url 'build:bundle_download' bundle.pk %}" aria-expanded="false" style="box-shadow: none;">Download Bundle</a>
-                  </div>
-
-                  
-               </p>
-            </div>
-         </div>
-
-         <div id="accordion" class="mb-5">
-            <!-- Buttons -->
-            <div class="row p-1 m-3 mt-0">
-               <div class="btn-group" role="group">
-                  <button type="button" class="btn btn-light text-light" data-bs-toggle="collapse" data-bs-target="#context" aria-expanded="true" style="box-shadow: none;">Context</button>
-                  <button type="button" class="btn btn-light text-light" data-bs-toggle="collapse" data-bs-target="#investigation" aria-expanded="false" style="box-shadow: none;">Investigation Area</button>
-                  <button type="button" class="btn btn-light text-light" data-bs-toggle="collapse" data-bs-target="#collections" aria-expanded="false" style="box-shadow: none;">Collections</button>
-               </div>
-            </div>
-
-            <!-- Context -->
-            <div id="context" class="collapse show" data-bs-parent="#accordion">
-               <div class="row p-1 m-3 mt-1">
-                  <a data-bs-toggle="modal" data-bs-target="#context_modal">
-                     <div class="card modal-card">
-                        <h5 class="card-title black-text mt-3 text-center"><strong>CONTEXT</strong></h5>
-                        <hr>
-                        <div class="card-body black-text pt-1 text-left">
-                           <p>
-                              Adding context products entails associating your bundle
-                              with the missions, facilities, telescopes, instruments, the hosts of those instruments, targets, and the
-                              like that relate to the data within your bundle.
-                           </p>
-                        </div>
-                     </div>
-                  </a>
-               </div>
-            </div>
-
-            <!-- Investigation Area -->
-            <div id="investigation" class="collapse" data-bs-parent="#accordion">
-               <div class="row p-1 m-3 mt-1">
-                  <a data-bs-toggle="modal" data-bs-target="#invest_area_modal">
-                     <div class="card modal-card">
-                        <h5 class="card-title black-text mt-3 text-center"><strong>INVESTIGATION AREA</strong></h5>
-                        <hr>
-                        <div class="card-body black-text pt-1 text-left">
-                           <p>
-                              The <strong> INVESTIGATION AREA </strong> provides references for your bundle including alternative names for
-               your dataset <strong>(Alias)</strong>, citation information for giving credit to those working on your data
-               <strong>(Citation Information)</strong>, and updates to the editing of the bundle <strong>(Modification History)</strong>.
-                           </p>
-                        </div>
-                     </div>
-                  </a>
-               </div>
-            </div>
-            
-            <!-- Collections -->
-            <div id="collections" class="collapse" data-bs-parent="#accordion">
-               <div class="row p-1 m-3 mt-1">
-                  <a data-bs-toggle="modal" data-bs-target="#collections_modal">
-                     <div class="card modal-card">
-                        <h5 class="card-title black-text mt-3 text-center"><strong>COLLECTIONS</strong></h5>
-                        <hr>
-                        <div class="card-body black-text pt-1 text-left">
-                           <p>
-                              In this section you should be able to manage your
-                              bundle's collections. You can edit existing collection (label metadata, adding files to the collection), and
-                              add new collections. The Context and XML Schema collections are used for system management and will be
-                              generated automatically and therefore are not neccessary to edit. You may add multiple document and data
-                              collections as needed. ATM requires that you have at least one document collection to ensure your final
-                              bundle will have adequate background documentation.
-                           </p>
-                        </div>
-                     </div>
-                  </a>
-               </div>
-            </div>
-         </div>
-      </div>
-
-      <div class="col-md-6">
-         <div id="accordion2">
-            <!-- View XML Side -->
-            <div class="text-center text-light">
-               <div class="row p-1 m-3 mt-0">
-                  <div class="btn-group" role="group">
-                     <button type="button" class="btn btn-light text-light" data-bs-toggle="collapse" data-bs-target="#bundle_xml" aria-expanded="true" style="box-shadow: none;">Bundle</button>
-                     <button type="button" class="btn btn-light text-light" data-bs-toggle="collapse" data-bs-target="#context_xml" aria-expanded="false" style="box-shadow: none;">Context</button>
-                     <button type="button" class="btn btn-light text-light" data-bs-toggle="collapse" data-bs-target="#document_xml" aria-expanded="false" style="box-shadow: none;">Document</button>
-                     <button type="button" class="btn btn-light text-light" data-bs-toggle="collapse" data-bs-target="#xml_schema" aria-expanded="false" style="box-shadow: none;">XML Schema</button>
-                  </div>
-               </div>
-
-               <div id="bundle_xml" class="collapse show" data-bs-parent="#accordion2">
-                  <div class="row px-1 mx-3 mt-1">
-                     <!-- <div class="col-sm-6"> -->
-                        <!-- <a data-bs-toggle="modal" data-bs-target="#bundle_xml_modal"> -->
-                        <div class="card xml-card-try">
-                           <h5 class="card-title black-text mt-3 text-center"><strong>Bundle XML</strong></h5>
-                           <hr>
-                           <div class="xml-container-try">
-                              <pre><code>{{ xml_content_set.0 }}</code></pre>
-                           </div>
-                        </div>
-                        <!-- </a> -->
-                     <!-- </div> -->
-                  </div>
-               </div>
-
-               <!-- <div id="bundle_xml" class="bundle-collapse">
-                  <div class="row p-1 m-3 mt-1">
-                     <a data-bs-toggle="modal" data-bs-target="#bundle_xml_modal">
-                        <div class="card h-100">
-                           <h5 class="card-title black-text mt-3 text-center"><strong>Bundle XML</strong></h5>
-                           <hr>
-                           <div class="xml-container">
-                              <pre><code>{{ xml_content_set.0 }}</code></pre>
-                           </div>
-                        </div>
-                     </a>
-                  </div>
-               </div> -->
-
+      <div class="col">
+         <div class="card d-flex">
+            <h2 class="card-title text-center mt-3"> <strong>{{ bundle.name }} </strong> </h2>
+            <p class="card-body text-left z-depth-2">
+               <!-- LID -->
+               <strong>LID:</strong> {{ bundle.lid }}
+               <br>
+   
+               <!-- Status -->
+               <strong>Status:</strong>
+               {% if bundle.status == 'b' %} Build <br>
+               {% elif bundle.status == 'r' %} Review <br>
+               {% else %} Submit <br>
+               {% endif %}
+   
+               <!-- Creator -->
+               <strong>Creator:</strong> {{bundle.user}}<br>
                
-               <div id="context_xml" class="collapse" data-bs-parent="#accordion2">
-                  <div class="row p-1 m-3 mt-1">
-                     <a data-bs-toggle="modal" data-bs-target="">
-                        <div class="card xml-card-try">
-                           <h5 class="card-title black-text mt-3 text-center"><strong>Context XML</strong></h5>
-                           <hr>
-                           <div class="xml-container-try">
-                              <pre><code>{{ xml_content_set.1 }}</code></pre>
-                           </div>
-                        </div>
-                     </a>
-                  </div>
+               <br>
+               Below are several sections that ELSA needs you to fill out to make your templates as complete as possible.
+               Several sections are used universally throughout your bundle (e.g., Investigation Area and Context). The
+               Collections section will allow you to add, view, and edit collections that you would like to include in your
+               bundle.
+   
+               <div class="col p-1 m-3 mt-0 text-center">
+                     <!--'Help' is removed as it does not serve any required functionality -->
+                     {% comment %} <a type="button" class="btn btn-info text-light" href="" aria-expanded="true" style="box-shadow: none;">Help</a> {% endcomment %}
+                     <a type="button" class="btn btn-danger text-light" data-bs-toggle="modal" data-bs-target="#delete_modal" aria-expanded="false" style="box-shadow: none;">Delete Bundle</a>
+                     <a type="button" class="btn btn-warning text-light" href="{% url 'build:bundle_download' bundle.pk %}" aria-expanded="false" style="box-shadow: none;">Download Bundle</a>
+                     <a type="button" class="btn btn-light text-light" data-bs-toggle="modal" data-bs-target="#investigation_modal" aria-expanded="false" style="box-shadow: none;">Edit Investigation Area</a>
+                     <a type="button" class="btn btn-light text-light" data-bs-toggle="modal" data-bs-target="#context_modal" aria-expanded="false" style="box-shadow: none;">Edit Context Products</a>
+                     <a type="button" class="btn btn-light text-light" data-bs-toggle="modal" data-bs-target="#collections_modal" aria-expanded="false" style="box-shadow: none;">Edit Collections</a>
                </div>
-
-
-               <div id="document_xml" class="collapse" data-bs-parent="#accordion2">
-                  <div class="row p-1 m-3 mt-1">
-                     <a data-bs-toggle="modal" data-bs-target="">
-                        <div class="card xml-card-try">
-                           <h5 class="card-title black-text mt-3 text-center"><strong>Document XML</strong></h5>
-                           <hr>
-                           <div class="xml-container-try">
-                              <pre><code>{{ xml_content_set.2 }}</code></pre>
-                           </div>
-                        </div>
-                     </a>
-                  </div>
-               </div>
-
-               <div id="xml_schema" class="collapse" data-bs-parent="#accordion2">
-                  <div class="row p-1 m-3 mt-1">
-                     <a data-bs-toggle="modal" data-bs-target="">
-                        <div class="card xml-card-try">
-                           <h5 class="card-title black-text mt-3 text-center"><strong>XML Schema</strong></h5>
-                           <hr>
-                           <div class="xml-container-try">
-                              <pre><code>{{ xml_content_set.3 }}</code></pre>
-                           </div>
-                        </div>
-                     </a>
-                  </div>
-               </div>
-            </div>
-         </div>
-   </div>
-   </div>
-
-      <!-- Collapse Functionality -->
-      <!-- <script>
-         $(document).ready(function() {
-            $('.btn-collapse').on('click', function(){
-               var target = $(this).data('bs-target');
-
-               // Toggle display between none and flex
-               $(target).css('display', function(i, display) {
-                  return display === 'none' ? 'flex' : 'none';
-               });
-            });
-         });
-      </script> -->
-
-      {% block toast_block %}
-      {% if messages %}
-         <div class="toast position-fixed bottom-0" role="alert" aria-live="assertive" aria-atomic="true" data-delay="5000">
-            <div class="toast-header">
-                  <strong class="mr-auto">Notification</strong>
-                  <button type="button" class="ml-2 mb-1 close" data-dismiss="toast" aria-label="Close">
-                     <span aria-hidden="true">&times;</span>
-                  </button>
-            </div>
-            <div class="toast-body">
-                  {% for message in messages %}
-                     {{ message }}
-                  {% endfor %}
-            </div>
-         </div>
-      {% endif %}
-      {% endblock %}
-
-
-
-
-   <!-- Form Modals -->
-   <!-- Figure out how to move these to new file for readability sake - deric -->
-
-   <!-- Delete Bundle Modal -->
-   {% comment %} <div class="modal fade" id="delete_modal">
-      <div class="modal-dialog modal-lg modal-dialog-centered">
-         <div class="modal-content">
-            <!-- Title -->
-            <div class="modal-header">
-               <h3 class="modal-title w-100 text-center">Delete Bundle</h3>
-               <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-
-            <div class="modal-body"> 
-               <div>
-                  <div class="col text-center">
-                      <h5>Are you sure you want to delete <i>"{{bundle}}"</i>?</h5>
-                      <p><i>Caution: This bundle will be deleted immediately and this action cannot be undone.</i></p>
-                  </div>
-
-                  <div class="d-grid gap-2">
-                     <a href="{% url 'build:bundle_delete' bundle.pk %}"> <button type="submit" class="btn btn-danger">Confirm Delete</button> </a>
-                     <button type="submit" class="btn btn-danger">Cancel</button>
-                 </div>
-              </div>
-            </div>
+            </p>
          </div>
       </div>
-   </div> {% endcomment %}
+   </div>
 
+   <!-- The Rest -->
+   <div class="row py-4">
+      <div class="col">
+          <div class="card d-flex">
+              <h2 class="card-title text-center mt-3">Files</h2>
+              <div class="card_body m-4">
+                  <div class="col">
+                      {% for f in file_context %}
+                          <div class="col py-2">
+                              <!-- Pass file name and content as data attributes -->
+                              <button type="button" class="btn btn-light text-light" onclick="showFileContent('{{ f.0 }}', `{{ f.1 }}`)">
+                                 {{ f.0 }}
+                             </button>
+                          </div>
+                      {% endfor %}
+                  </div>
+              </div>
+          </div>
+      </div>
+  
+      <div class="col-md-6">
+          <div class="card d-flex">
+              <h2 class="card-title text-center mt-3" id="fileName">File Content</h2>
+              <div class="card-body m-3 mt-1"><pre><code id="fileContent"></code></pre></div>
+          </div>
+      </div>
 
-   <div class="modal fade" id="delete_modal">
-      <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-          <!-- Title -->
-          <div class="modal-header">
+      <!-- Only works here, idk why it doesnt work when moved to elsa.js - deric -->
+      <script>
+         showFileContent = function(filename, content) {
+            document.getElementById('fileName').textContent = filename;
+            document.getElementById('fileContent').textContent = content;
+         };
+      </script>
+   </div>
+</div>
+
+<!-- Form Modals -->
+<!-- Figure out how to move these to new file for readability sake - deric -->
+
+<!-- Delete Bundle Modal -->
+<div class="modal fade" id="delete_modal">
+   <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+         <!-- Title -->
+         <div class="modal-header">
             <h3 class="modal-title w-100 text-center">Delete Bundle</h3>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-          </div>
-    
-          <!-- Modal Body -->
-          <div class="modal-body">
-            <div class="text-center">
-              <h5>Are you sure you want to delete <i>"{{bundle}}"</i>?</h5>
-              <p class="text-muted"><i>Caution: This bundle will be deleted immediately and this action cannot be undone.</i></p>
-               
-               <div class="container">
-                  <div class="row">
-                     <div class="col-12 col-md-6 mb-2">
-                        <button type="button" class="btn btn-secondary w-100" data-bs-dismiss="modal">
-                        Cancel
-                        </button>
-                     </div>
-                     <div class="col-12 col-md-6 mb-2">
-                        <a href="{% url 'build:bundle_delete' bundle.pk %}" class="btn btn-danger w-100">
-                        Confirm Delete
-                        </a>
-                     </div>
-                  </div>
-               </div>
-            </div>
-            </div>
-        </div>
+         </div>
       </div>
-    </div>
-    
-   
-
-   <!-- Context Modal -->
-   <div class="modal fade" id="context_modal">
-      <div class="modal-dialog modal-xl">
-         <div class="modal-content">
-            <!-- Title -->
-            <div class="modal-header">
-               <h5 class="modal-title">Context</h5>
-               <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-
-            <div class="modal-body">
-               <!-- Tabs -->
-               <ul class="nav nav-tabs nav-justified" role="tablist">
-                  <li class="nav-item" role="presentation">
-                     <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#con_inv" type="button" role="tab" aria-selected="true">Investigation</button>
-                  </li>
-                  {% if instrument_hosts %}
-                  <li class="nav-item" role="presentation">
-                     <button class="nav-link " data-bs-toggle="tab" data-bs-target="#con_ih" type="button" role="tab" aria-selected="false">Instrument Hosts</button>
-                  </li>
-                  {% endif %}
-                  {% if instruments %}
-                  <li class="nav-item" role="presentation">
-                     <button class="nav-link " data-bs-toggle="tab" data-bs-target="#con_ins" type="button" role="tab" aria-selected="false">Instruments</button>
-                  </li>
-                  {% endif %}
-                  <li class="nav-item" role="presentation">
-                     <button class="nav-link " data-bs-toggle="tab" data-bs-target="#con_tar" type="button" role="tab" aria-selected="false">Targets</button>
-                  </li>
-               </ul>
-
-               <!-- Content -->
-               <div class="tab-content">
-                  <!-- Investigation Tab -->
-                  <div class="tab-pane fade show active" id="con_inv" role="tabpanel" >
-                     <br>
-
-                     <div class="col-md-12">
-                        <div class="card">
-                        <div class="card-header">
-                           <p> To begin, select an investigation product below to associate with your bundle. Investigations serve as the top level of the context system and will associate your bundle with a larger project.</br> <strong>Investigations are categorized as:</strong> Individual Investigations, Missions, Field Campaigns, Observing Campaigns, or Other Investigations. Selecting an investigation will pare down the list of components to the ones that go with that investigation (i.e., associated instruments, targets, etc.) </p>
-                        </div>
-                        <form class="card-body black-text text-left z-depth-2" id="form_investigation" method="post" action="{% url 'build:context_search_investigation' bundle.pk  %}">
-                              {% csrf_token %}
-                              {{ form_investigation }}
-                              {{ form.errors }}
-                              {{ form.non_field_errors }}
-                    
-                              <input type="submit" class="btn btn-light text-light mt-4" value="Submit"/>
-                        </form> 
-                        </br>
-                        </div>
-                     </div>
-
-                     <br>
-
-                     {% if investigations %}
-                        {% for investigation in investigations %}
-                           <div class="container mt-2">
-                              <div class="card">
-                                 <div class="row no-gutters">
-                                    <div class="col-md-2">
-                                       <img class="img-fluid" src="{% static 'images/investigation.png' %}" alt="Investigation Image" style="max-width: 65%;">
-                                    </div>
-                                    <div class="col-md-8">
-                                       <div class="card-body">
-                                          <h5 class="card-title">{{ investigation }}</h5>
-                                          <p class="card-text">{{ investigation.lid }}</p>
-
-                                          {% if investigation in instrument_host_investigations %}
-                                             {% for instrument_host in instrument_hosts %}
-                                                {% if instrument_host.investigations.last == investigation %}
-                                                   <a type="button" class="btn btn-light text-light" href="{% url 'build:context_search_instrument' bundle.pk investigation.pk instrument_host.pk %}">Add Instrument</a>
-                                                {% endif %}
-                                             {% endfor %}
-                                             <a type="button" class="btn btn-light text-light" href="{% url 'build:context_search_target_investigation' bundle.pk investigation.pk %}">Add Target</a>
-                                          {% else %}
-                                             <a type="button" class="btn btn-light text-light" href="{% url 'build:context_search_instrument_host_and_facility' bundle.pk investigation.pk %}">Add Host</a>
-                                          {% endif %}
-
-
-                                          <a type="button" class="btn btn-danger" href="{% url 'build:delete_investigation' bundle.pk investigation.pk %}">Remove</a>
-
-                                    <!-- <p class="card-text"><small class="text-muted">Last updated 3 mins ago</small></p> -->
-                                       </div>
-                                    </div>
-                                 </div>
-                              </div>
-                           </div>
-                        {% endfor %}
-                     {% else %}
-                     {% endif %}
+ 
+       <!-- Modal Body -->
+      <div class="modal-body">
+         <div class="text-center">
+            <h5>Are you sure you want to delete <i>"{{bundle}}"</i>?</h5>
+            <p class="text-muted"><i>Caution: This bundle will be deleted immediately and this action cannot be undone.</i></p>
+            
+            <div class="container">
+               <div class="row">
+                  <div class="col-12 col-md-6 mb-2">
+                     <button type="button" class="btn btn-secondary w-100" data-bs-dismiss="modal">
+                     Cancel
+                     </button>
                   </div>
-                  <!-- Instrument Hosts -->
-                  <div class="tab-pane fade" id="con_ih" role="tabpanel">
-                     <br>
-
-                     <div class="col-md-12">
-                        <div class="card">
-                        <div class="card-header">
-                           <p>Here you can view the Instrument Hosts tied to the current Bundle.</p>
-                        </div> 
-                        </br>
-                        </div>
-                     </div>
-
-                     <br>
-
-                     {% if instrument_hosts %}
-                        {% for instrument_host in instrument_hosts %}
-                        <div class="container mt-3">
-                           <div class="card">
-                              <div class="row no-gutters">
-                                 <div class="col-md-2">
-                                    <img class="img-fluid" src="{% static 'images/host.png' %}" alt="Target Image" style="max-width: 65%;">
-                                 </div>
-                                 <div class="col-md-8">
-                                    <div class="card-body">
-                                       <h5 class="card-title">{{ instrument_host }}</h5>
-                                       <p class="card-text">Investigation(s): {{ instrument_host.investigations.last }}</p>
-                                       <p class="card-text">{{ instrument_host.lid }}</p>
-                                       <a type="button" class="btn btn-danger" href="{% url 'build:delete_instrument_host' bundle.pk instrument_host.pk %}">Remove</a>
-
-                                   <!-- <p class="card-text"><small class="text-muted">Last updated 3 mins ago</small></p> -->
-                                    </div>
-                                 </div>
-                              </div>
-                           </div>
-                        </div>
-                        {% endfor %}
-                     {% else %}
-                     <div class="container mt-2">
-                        <div class="sub-card card">
-                           <div class="row no-gutters">
-                              <div class="col-md-2">
-                                 <img class="img-fluid" src="{% static 'images/null.png' %}" alt="Null" style="max-width: 65%;">
-                              </div>
-                              <div class="col-md-8">
-                                 <div class="card-body">
-                                    <h4 class="card-title">No Instrument Hosts</h5>
-                                    <!-- <p class="card-text">Add a Instrument Host</p> -->
-                                 </div>
-                              </div>
-                           </div>
-                        </div>
-                     </div>
-                     {% endif %}
+                  <div class="col-12 col-md-6 mb-2">
+                     <a href="{% url 'build:bundle_delete' bundle.pk %}" class="btn btn-danger w-100">
+                     Confirm Delete
+                     </a>
                   </div>
-                  <!-- Instruments -->
-                  <div class="tab-pane fade" id="con_ins" role="tabpanel">
-                     <br>
-
-                     <div class="col-md-12">
-                        <div class="card">
-                        <div class="card-header">
-                           <p>Here you can view the Instrument Hosts tied to the current Bundle.</p>
-                        </div> 
-                        </br>
-                        </div>
-                     </div>
-
-                     <br>
-
-                     {% if instruments %}
-                        {% for instrument in instruments %}
-                        <div class="container mt-3">
-                           <div class="card">
-                              <div class="row no-gutters">
-                                 <div class="col-md-2">
-                                    <img class="img-fluid" src="{% static 'images/host.png' %}" alt="Target Image" style="max-width: 65%;">
-                                 </div>
-                                 <div class="col-md-8">
-                                    <div class="card-body">
-                                       <h5 class="card-title">{{ instrument }}</h5>
-                                       <p class="card-text">{{ instrument.lid }}</p>
-                                       <a type="button" class="btn btn-danger" href="{% url 'build:delete_instrument' bundle.pk instrument.pk %}">Remove</a>
-
-                                   <!-- <p class="card-text"><small class="text-muted">Last updated 3 mins ago</small></p> -->
-                                    </div>
-                                 </div>
-                              </div>
-                           </div>
-                        </div>
-                        {% endfor %}
-                     {% else %}
-                     <div class="container mt-2">
-                        <div class="sub-card card">
-                           <div class="row no-gutters">
-                              <div class="col-md-2">
-                                 <img class="img-fluid" src="{% static 'images/null.png' %}" alt="Null" style="max-width: 65%;">
-                              </div>
-                              <div class="col-md-8">
-                                 <div class="card-body">
-                                    <h4 class="card-title">No Instruments</h5>
-                                    <!-- <p class="card-text">Add a Instrument Host</p> -->
-                                 </div>
-                              </div>
-                           </div>
-                        </div>
-                     </div>
-                     {% endif %}
-                  </div>
-                  <!-- Other Products -->
-                  <div class="tab-pane fade" id="con_tar" role="tabpanel">
-                     <br>
-
-                     <div class="col-md-12">
-                        <div class="card">
-                        <div class="card-header">
-                           <p>Choose the target(s) you wish to add to your bundle. This is a complete list of availabe targets, independent of any investigations chosen.</p>
-                        </div>
-                        <form class="card-header black-text text-left z-depth-2"id="query01" method="post" action="{% url 'build:context_search_target' bundle.pk %}">
-                           
-                                {% csrf_token %}
-                                {{ form_target }}
-                                {{ form.errors }}
-                                {{ form.non_field_errors }}
-                                
-                                <input type="submit" class="btn btn-light text-light" value="Submit"/>
-                                
-                            </form>  
-                        </br>
-                        </div>
-                     </div>
-
-                     <br>
-
-                     {% if targets %}
-                        {% for target in targets %}
-                        <div class="container mt-3">
-                           <div class="card">
-                              <div class="row no-gutters">
-                                 <div class="col-md-2">
-                                    <img class="img-fluid" src="{% static 'images/target.png' %}" alt="Target Image" style="max-width: 65%;">
-                                 </div>
-                                 <div class="col-md-8">
-                                    <div class="card-body">
-                                       <h5 class="card-title">{{ target }}</h5>
-                                       <p class="card-text">Investigation(s):
-                                          {% for investigation in target.investigations.all %} 
-                                          <span>
-                                             {{ investigation.name }}
-                                          </span>
-                                          {% endfor %}
-                                       </p>
-                                       <p class="card-text">{{ target.lid }}</p>
-                                       <a type="button" class="btn btn-danger" href="{% url 'build:delete_target' bundle.pk target.pk %}">Remove</a>
-
-                                   <!-- <p class="card-text"><small class="text-muted">Last updated 3 mins ago</small></p> -->
-                                    </div>
-                                 </div>
-                              </div>
-                           </div>
-                        </div>
-                        {% endfor %}
-                     {% else %}
-                     <div class="container mt-2">
-                        <div class="sub-card card">
-                           <div class="row no-gutters">
-                              <div class="col-md-2">
-                                 <img class="img-fluid" src="{% static 'images/null.png' %}" alt="Null" style="max-width: 65%;">
-                              </div>
-                              <div class="col-md-8">
-                                 <div class="card-body">
-                                    <h4 class="card-title">No Targets</h5>
-                                    <!-- <p class="card-text">Add a Instrument Host</p> -->
-                                 </div>
-                              </div>
-                           </div>
-                        </div>
-                     </div>
-                     {% endif %}
-                  </div>   
                </div>
             </div>
          </div>
       </div>
    </div>
+</div>
 
-   <!-- Investigation Area Modal -->
-   <div class="modal fade" id="invest_area_modal">
-      <div class="modal-dialog modal-xl">
-         <div class="modal-content">
-            <!-- Title -->
-            <div class="modal-header">
-               <h5 class="modal-title">Investigation Area</h5>
-               <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
+<!-- Context Modal -->
+<div class="modal fade" id="context_modal">
+   <div class="modal-dialog modal-xl">
+      <div class="modal-content">
+         <!-- Title -->
+         <div class="modal-header d-flex justify-content-center position-relative">
+            <h5 class="modal-title">Context</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="position: absolute; right: 1.5rem;"></button>
+         </div>
 
-            <div class="modal-body pt-0">
-               <!-- Tabs -->
-               <ul class="nav nav-tabs nav-justified" role="tablist">
-                  <li class="bundle-nav-item nav-item" role="presentation">
-                     <button class="bundle-nav-link nav-link" data-bs-toggle="tab" data-bs-target="#inv_alias" type="button" role="tab" aria-selected="true">Alias</button>
-                  </li>
-                  <li class="bundle-nav-item nav-item" role="presentation">
-                     <button class="bundle-nav-link nav-link" data-bs-toggle="tab" data-bs-target="#inv_mod" type="button" role="tab" aria-selected="false">Modification History</button>
-                  </li>
-                  <li class="bundle-nav-item nav-item" role="presentation">
-                     <button class="bundle-nav-link nav-link active" data-bs-toggle="tab" data-bs-target="#inv_cite" type="button" role="tab" aria-selected="false">Citation Information</button>
-                  </li>
-               </ul>
+         <div class="modal-body">
+            <!-- Tabs -->
+            <ul class="nav nav-tabs nav-justified" role="tablist">
+               <li class="nav-item" role="presentation">
+                  <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#con_inv" type="button" role="tab" aria-selected="true">Investigation</button>
+               </li>
+               {% if instrument_hosts %}
+               <li class="nav-item" role="presentation">
+                  <button class="nav-link " data-bs-toggle="tab" data-bs-target="#con_ih" type="button" role="tab" aria-selected="false">Instrument Hosts</button>
+               </li>
+               {% endif %}
+               {% if instruments %}
+               <li class="nav-item" role="presentation">
+                  <button class="nav-link " data-bs-toggle="tab" data-bs-target="#con_ins" type="button" role="tab" aria-selected="false">Instruments</button>
+               </li>
+               {% endif %}
+               <li class="nav-item" role="presentation">
+                  <button class="nav-link " data-bs-toggle="tab" data-bs-target="#con_tar" type="button" role="tab" aria-selected="false">Targets</button>
+               </li>
+            </ul>
 
-               <!-- Content -->
-               <div class="tab-content">
-                  <!-- Alias -->
-                  <div class="tab-pane fade" id="inv_alias" role="tabpanel">
-                     <!-- Form -->
-                     <div class="row px-2">
-                        <form action="{% url 'build:bundle' bundle.pk %}" method="post" id="form_alias" >
-                           {% csrf_token %}
-   
-                           <!-- Alternate ID -->
-                           <div class="mt-3">
-                              <label for="alt_id">Alternate ID</label>
-                              {{ form_alias.alternate_id }}
-                           </div>
-   
-                           <!-- Alternate Title -->
-                           <div class="mt-3">
-                              <label for="alt_title">Alternate Title</label>
-                              {{ form_alias.alternate_title }}
-                           </div>
-   
-                           <!-- Comment -->
-                           <div class="mt-3">
-                              <label for="comment">Comment</label>
-                              {{ form_alias.comment }}
-                           </div>
-                           
-                           <!-- Create Alias -->
-                           <button type="submit" class="btn btn-light text-light my-4">Create Alias</button>
-                        </form>
+            <!-- Content -->
+            <div class="tab-content">
+               <!-- Investigation Tab -->
+               <div class="tab-pane fade show active" id="con_inv" role="tabpanel" >
+                  <br>
+
+                  <div class="col-md-12">
+                     <div class="card">
+                     <div class="card-header">
+                        <p> To begin, select an investigation product below to associate with your bundle. Investigations serve as the top level of the context system and will associate your bundle with a larger project.</br> <strong>Investigations are categorized as:</strong> Individual Investigations, Missions, Field Campaigns, Observing Campaigns, or Other Investigations. Selecting an investigation will pare down the list of components to the ones that go with that investigation (i.e., associated instruments, targets, etc.) </p>
                      </div>
-
-                     <!-- List of Aliases -->
-                     <div class="modal-footer justify-content-start">
-                        <!-- No Aliases Exist -->
-                        {% if alias_set_count == 0 %}
-                           <p>No Aliases Found</p>
-                        
-                        <!-- Display Aliases -->
-                        {% else %}
-                           {% for alias in alias_set %}
-                           <a href="{% url 'build:alias_edit' bundle.pk alias.pk %}" style="text-decoration: none;" data-toggle="tiptool" data-placement="right" title="Click me to edit this Alias Form">
-                           </a>
-
-                           <div class="card snippet-card ms-0 me-3">
-                              <div class="card-body">
-                                 <h5 class="card-title">{{ alias.alternate_title }}</h5>
-                                 <h6 class="card-subtitle text-muted mb-2">Alternate ID: {{ alias.alternate_id }}</h6>
-                                 <p class="card-text">{{ alias.comment }}</p>
-                                 <a href="{% url 'build:alias_edit' bundle.pk alias.pk %}" class="btn btn-light text-light d-flex justify-content-center">Edit</a>
-                              </div>
-                           </div>
-                           {% endfor %}
-                        {% endif %}
+                     <form class="card-body black-text text-left z-depth-2" id="form_investigation" method="post" action="{% url 'build:context_search_investigation' bundle.pk  %}">
+                           {% csrf_token %}
+                           {{ form_investigation }}
+                           {{ form.errors }}
+                           {{ form.non_field_errors }}
+                 
+                           <input type="submit" class="btn btn-light text-light mt-4" value="Submit"/>
+                     </form> 
+                     </br>
                      </div>
                   </div>
 
-                  <!-- Modification History -->
-                  <div class="tab-pane fade" id="inv_mod" role="tabpanel">
-                     <div class="row px-2">
-                        <form action="{% url 'build:bundle' bundle.pk %}" method="post" id="form_modification_history">
-                           {% csrf_token %}
-   
-                           <!-- Description-->
-                           <div class="mt-3">
-                              <label for="mod_desc" class="required">Description</label>
-                              {{ form_modification_history.description }}
-                           </div>
-   
-                           <!-- Modification Date -->
-                           <div class="mt-3">
-                              <label for="mod_date" class="required">Modificaiton Date</label>
-                              {{ form_modification_history.modification_date }}
-                           </div>
-   
-                           <!-- Version ID -->
-                           <div class="mt-3">
-                              <label for="version_id">Version ID</label>
-                              {{ form_modification_history.version_id }}
-                           </div>
-                           
-                           <!-- Create Modification History -->
-                           <button type="submit" class="btn btn-light text-light my-4">Create Modification History</button>
-                        </form>
-                     </div>
+                  <br>
 
-                     <!-- List of Modification History Snippets -->
-                     <div class="modal-footer justify-content-start">
-                        <!-- No Modificaiton History Snippets Exist -->
-                        {% if modification_history_set_count == 0 %}
-                           <p>No Modification History Found</p>
+                  {% if investigations %}
+                     {% for investigation in investigations %}
+                        <div class="container mt-2">
+                           <div class="card">
+                              <div class="row no-gutters">
+                                 <div class="col-md-2">
+                                    <img class="img-fluid" src="{% static 'images/investigation.png' %}" alt="Investigation Image" style="max-width: 65%;">
+                                 </div>
+                                 <div class="col-md-8">
+                                    <div class="card-body">
+                                       <h5 class="card-title">{{ investigation }}</h5>
+                                       <p class="card-text">{{ investigation.lid }}</p>
+
+                                       {% if investigation in instrument_host_investigations %}
+                                          {% for instrument_host in instrument_hosts %}
+                                             {% if instrument_host.investigations.last == investigation %}
+                                                <a type="button" class="btn btn-light text-light" href="{% url 'build:context_search_instrument' bundle.pk investigation.pk instrument_host.pk %}">Add Instrument</a>
+                                             {% endif %}
+                                          {% endfor %}
+                                          <a type="button" class="btn btn-light text-light" href="{% url 'build:context_search_target_investigation' bundle.pk investigation.pk %}">Add Target</a>
+                                       {% else %}
+                                          <a type="button" class="btn btn-light text-light" href="{% url 'build:context_search_instrument_host_and_facility' bundle.pk investigation.pk %}">Add Host</a>
+                                       {% endif %}
+
+
+                                       <a type="button" class="btn btn-danger" href="{% url 'build:delete_investigation' bundle.pk investigation.pk %}">Remove</a>
+
+                                 <!-- <p class="card-text"><small class="text-muted">Last updated 3 mins ago</small></p> -->
+                                    </div>
+                                 </div>
+                              </div>
+                           </div>
+                        </div>
+                     {% endfor %}
+                  {% else %}
+                  {% endif %}
+               </div>
+               <!-- Instrument Hosts -->
+               <div class="tab-pane fade" id="con_ih" role="tabpanel">
+                  <br>
+
+                  <div class="col-md-12">
+                     <div class="card">
+                     <div class="card-header">
+                        <p>Here you can view the Instrument Hosts tied to the current Bundle.</p>
+                     </div> 
+                     </br>
+                     </div>
+                  </div>
+
+                  <br>
+
+                  {% if instrument_hosts %}
+                     {% for instrument_host in instrument_hosts %}
+                     <div class="container mt-3">
+                        <div class="card">
+                           <div class="row no-gutters">
+                              <div class="col-md-2">
+                                 <img class="img-fluid" src="{% static 'images/host.png' %}" alt="Target Image" style="max-width: 65%;">
+                              </div>
+                              <div class="col-md-8">
+                                 <div class="card-body">
+                                    <h5 class="card-title">{{ instrument_host }}</h5>
+                                    <p class="card-text">Investigation(s): {{ instrument_host.investigations.last }}</p>
+                                    <p class="card-text">{{ instrument_host.lid }}</p>
+                                    <a type="button" class="btn btn-danger" href="{% url 'build:delete_instrument_host' bundle.pk instrument_host.pk %}">Remove</a>
+
+                                <!-- <p class="card-text"><small class="text-muted">Last updated 3 mins ago</small></p> -->
+                                 </div>
+                              </div>
+                           </div>
+                        </div>
+                     </div>
+                     {% endfor %}
+                  {% else %}
+                  <div class="container mt-2">
+                     <div class="sub-card card">
+                        <div class="row no-gutters">
+                           <div class="col-md-2">
+                              <img class="img-fluid" src="{% static 'images/null.png' %}" alt="Null" style="max-width: 65%;">
+                           </div>
+                           <div class="col-md-8">
+                              <div class="card-body">
+                                 <h4 class="card-title">No Instrument Hosts</h5>
+                                 <!-- <p class="card-text">Add a Instrument Host</p> -->
+                              </div>
+                           </div>
+                        </div>
+                     </div>
+                  </div>
+                  {% endif %}
+               </div>
+               <!-- Instruments -->
+               <div class="tab-pane fade" id="con_ins" role="tabpanel">
+                  <br>
+
+                  <div class="col-md-12">
+                     <div class="card">
+                     <div class="card-header">
+                        <p>Here you can view the Instrument Hosts tied to the current Bundle.</p>
+                     </div> 
+                     </br>
+                     </div>
+                  </div>
+
+                  <br>
+
+                  {% if instruments %}
+                     {% for instrument in instruments %}
+                     <div class="container mt-3">
+                        <div class="card">
+                           <div class="row no-gutters">
+                              <div class="col-md-2">
+                                 <img class="img-fluid" src="{% static 'images/host.png' %}" alt="Target Image" style="max-width: 65%;">
+                              </div>
+                              <div class="col-md-8">
+                                 <div class="card-body">
+                                    <h5 class="card-title">{{ instrument }}</h5>
+                                    <p class="card-text">{{ instrument.lid }}</p>
+                                    <a type="button" class="btn btn-danger" href="{% url 'build:delete_instrument' bundle.pk instrument.pk %}">Remove</a>
+
+                                <!-- <p class="card-text"><small class="text-muted">Last updated 3 mins ago</small></p> -->
+                                 </div>
+                              </div>
+                           </div>
+                        </div>
+                     </div>
+                     {% endfor %}
+                  {% else %}
+                  <div class="container mt-2">
+                     <div class="sub-card card">
+                        <div class="row no-gutters">
+                           <div class="col-md-2">
+                              <img class="img-fluid" src="{% static 'images/null.png' %}" alt="Null" style="max-width: 65%;">
+                           </div>
+                           <div class="col-md-8">
+                              <div class="card-body">
+                                 <h4 class="card-title">No Instruments</h5>
+                                 <!-- <p class="card-text">Add a Instrument Host</p> -->
+                              </div>
+                           </div>
+                        </div>
+                     </div>
+                  </div>
+                  {% endif %}
+               </div>
+               <!-- Other Products -->
+               <div class="tab-pane fade" id="con_tar" role="tabpanel">
+                  <br>
+
+                  <div class="col-md-12">
+                     <div class="card">
+                     <div class="card-header">
+                        <p>Choose the target(s) you wish to add to your bundle. This is a complete list of availabe targets, independent of any investigations chosen.</p>
+                     </div>
+                     <form class="card-header black-text text-left z-depth-2"id="query01" method="post" action="{% url 'build:context_search_target' bundle.pk %}">
                         
-                        <!-- Display Modification History Snippets -->
-                        {% else %}
-                        {% for mofification_history in modification_history_set %}
+                             {% csrf_token %}
+                             {{ form_target }}
+                             {{ form.errors }}
+                             {{ form.non_field_errors }}
+                             
+                             <input type="submit" class="btn btn-light text-light" value="Submit"/>
+                             
+                         </form>  
+                     </br>
+                     </div>
+                  </div>
+
+                  <br>
+
+                  {% if targets %}
+                     {% for target in targets %}
+                     <div class="container mt-3">
+                        <div class="card">
+                           <div class="row no-gutters">
+                              <div class="col-md-2">
+                                 <img class="img-fluid" src="{% static 'images/target.png' %}" alt="Target Image" style="max-width: 65%;">
+                              </div>
+                              <div class="col-md-8">
+                                 <div class="card-body">
+                                    <h5 class="card-title">{{ target }}</h5>
+                                    <p class="card-text">Investigation(s):
+                                       {% for investigation in target.investigations.all %} 
+                                       <span>
+                                          {{ investigation.name }}
+                                       </span>
+                                       {% endfor %}
+                                    </p>
+                                    <p class="card-text">{{ target.lid }}</p>
+                                    <a type="button" class="btn btn-danger" href="{% url 'build:delete_target' bundle.pk target.pk %}">Remove</a>
+
+                                <!-- <p class="card-text"><small class="text-muted">Last updated 3 mins ago</small></p> -->
+                                 </div>
+                              </div>
+                           </div>
+                        </div>
+                     </div>
+                     {% endfor %}
+                  {% else %}
+                  <div class="container mt-2">
+                     <div class="sub-card card">
+                        <div class="row no-gutters">
+                           <div class="col-md-2">
+                              <img class="img-fluid" src="{% static 'images/null.png' %}" alt="Null" style="max-width: 65%;">
+                           </div>
+                           <div class="col-md-8">
+                              <div class="card-body">
+                                 <h4 class="card-title">No Targets</h5>
+                                 <!-- <p class="card-text">Add a Instrument Host</p> -->
+                              </div>
+                           </div>
+                        </div>
+                     </div>
+                  </div>
+                  {% endif %}
+               </div>   
+            </div>
+         </div>
+      </div>
+   </div>
+</div>
+
+<!-- Investigation Area Modal -->
+<div class="modal fade" id="investigation_modal">
+   <div class="modal-dialog modal-xl">
+      <div class="modal-content">
+         <!-- Title -->
+         <div class="modal-header d-flex justify-content-center position-relative">
+            <h5 class="modal-title">Investigation Area</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="position: absolute; right: 1rem;"></button>
+         </div>
+
+         <div class="modal-body pt-0">
+            <!-- Tabs -->
+            <ul class="nav nav-tabs nav-justified" role="tablist">
+               <li class="bundle-nav-item nav-item" role="presentation">
+                  <button class="bundle-nav-link nav-link" data-bs-toggle="tab" data-bs-target="#inv_alias" type="button" role="tab" aria-selected="true">Alias</button>
+               </li>
+               <li class="bundle-nav-item nav-item" role="presentation">
+                  <button class="bundle-nav-link nav-link" data-bs-toggle="tab" data-bs-target="#inv_mod" type="button" role="tab" aria-selected="false">Modification History</button>
+               </li>
+               <li class="bundle-nav-item nav-item" role="presentation">
+                  <button class="bundle-nav-link nav-link active" data-bs-toggle="tab" data-bs-target="#inv_cite" type="button" role="tab" aria-selected="false">Citation Information</button>
+               </li>
+            </ul>
+
+            <!-- Content -->
+            <div class="tab-content">
+               <!-- Alias -->
+               <div class="tab-pane fade" id="inv_alias" role="tabpanel">
+                  <!-- Form -->
+                  <div class="row px-2">
+                     <form action="{% url 'build:bundle' bundle.pk %}" method="post" id="form_alias" >
+                        {% csrf_token %}
+
+                        <!-- Alternate ID -->
+                        <div class="mt-3">
+                           <label for="alt_id">Alternate ID</label>
+                           {{ form_alias.alternate_id }}
+                        </div>
+
+                        <!-- Alternate Title -->
+                        <div class="mt-3">
+                           <label for="alt_title">Alternate Title</label>
+                           {{ form_alias.alternate_title }}
+                        </div>
+
+                        <!-- Comment -->
+                        <div class="mt-3">
+                           <label for="comment">Comment</label>
+                           {{ form_alias.comment }}
+                        </div>
+                        
+                        <!-- Create Alias -->
+                        <button type="submit" class="btn btn-light text-light my-4">Create Alias</button>
+                     </form>
+                  </div>
+
+                  <!-- List of Aliases -->
+                  <div class="modal-footer justify-content-start">
+                     <!-- No Aliases Exist -->
+                     {% if alias_set_count == 0 %}
+                        <p>No Aliases Found</p>
+                     
+                     <!-- Display Aliases -->
+                     {% else %}
+                        {% for alias in alias_set %}
+                        <a href="{% url 'build:alias_edit' bundle.pk alias.pk %}" style="text-decoration: none;" data-toggle="tiptool" data-placement="right" title="Click me to edit this Alias Form">
+                        </a>
+
                         <div class="card snippet-card ms-0 me-3">
                            <div class="card-body">
-                              <p class="card-text">Description: {{ mofification_history.description }}</p>
-                              <p class="card-text">Version ID: {{ mofification_history.version_id}}</p>
-                              <p class="card-text">Modification date: {{ mofification_history.modification_date }}</p>
+                              <h5 class="card-title">{{ alias.alternate_title }}</h5>
+                              <h6 class="card-subtitle text-muted mb-2">Alternate ID: {{ alias.alternate_id }}</h6>
+                              <p class="card-text">{{ alias.comment }}</p>
+                              <a href="{% url 'build:alias_edit' bundle.pk alias.pk %}" class="btn btn-light text-light d-flex justify-content-center">Edit</a>
                            </div>
                         </div>
                         {% endfor %}
-                        {% endif %}
-                     </div>
+                     {% endif %}
+                  </div>
+               </div>
+
+               <!-- Modification History -->
+               <div class="tab-pane fade" id="inv_mod" role="tabpanel">
+                  <div class="row px-2">
+                     <form action="{% url 'build:bundle' bundle.pk %}" method="post" id="form_modification_history">
+                        {% csrf_token %}
+
+                        <!-- Description-->
+                        <div class="mt-3">
+                           <label for="mod_desc" class="required">Description</label>
+                           {{ form_modification_history.description }}
+                        </div>
+
+                        <!-- Modification Date -->
+                        <div class="mt-3">
+                           <label for="mod_date" class="required">Modificaiton Date</label>
+                           {{ form_modification_history.modification_date }}
+                        </div>
+
+                        <!-- Version ID -->
+                        <div class="mt-3">
+                           <label for="version_id">Version ID</label>
+                           {{ form_modification_history.version_id }}
+                        </div>
+                        
+                        <!-- Create Modification History -->
+                        <button type="submit" class="btn btn-light text-light my-4">Create Modification History</button>
+                     </form>
                   </div>
 
-                  <!-- Citation Information -->
-                  <div class="tab-pane fade show active" id="inv_cite" role="tabpanel">
-                     <!-- Form -->
-                     <div class="row px-2">
-                        <form action="{% url 'build:bundle' bundle.pk %}" method="post" id="form_citation_information">
-                           {% csrf_token %}
-   
-                           <!-- Author List -->
-                           <div class="mt-3">
-                              <label for="author_list">Author List</label>
-                              {{ form_citation_information.author_list }}
-                           </div>
-   
-                           <!-- Editor List -->
-                           <div class="mt-3">
-                              <label for="editor_list">Editor List</label>
-                              {{ form_citation_information.editor_list }}
-                           </div>
-   
-                           <!-- Keyword -->
-                           <div class="mt-3">
-                              <label for="keyword">Keyword</label>
-                              {{ form_citation_information.keyword }}
-                           </div>
-   
-                           <!-- Publication Year -->
-                           <div class="mt-3">
-                              <label for="publication_year" class="required">Publication Year</label>
-                              {{ form_citation_information.publication_year }}
-                           </div>
-   
-                           <!-- Description -->
-                           <div class="mt-3">
-                              <label for="mod_desc" class="required">Description</label>
-                              {{ form_citation_information.description }}
-                           </div>
-
-                           {{ form_citation_information.errors }}
-   
-                           <!-- Create Citation Information -->
-                           <button type="submit" class="btn btn-light text-light my-4">Create Citaiton Information</button>
-                        </form>
-                     </div>
-   
-                     <!-- List of Citation Information Snippets -->
-                     <div class="modal-footer justify-content-start">
-                        <!-- No Citation Information Snippets Exist -->
-                        {% if citation_information_set_count == 0 %}
-                           <p>No Citation Information Found</p>
+                  <!-- List of Modification History Snippets -->
+                  <div class="modal-footer justify-content-start">
+                     <!-- No Modificaiton History Snippets Exist -->
+                     {% if modification_history_set_count == 0 %}
+                        <p>No Modification History Found</p>
+                     
+                     <!-- Display Modification History Snippets -->
+                     {% else %}
+                     {% for modification_history in modification_history_set %}
+                     <div class="card snippet-card ms-0 me-3">
+                        <div class="card-body">
+                           <p class="card-text">Description: {{ modification_history.description }}</p>
+                           <p class="card-text">Version ID: {{ modification_history.version_id}}</p>
+                           <p class="card-text">Modification date: {{ modification_history.modification_date }}</p>
                         
-                        <!-- Display Citation Information Snippets -->
-                        {% else %}
+                           <form action="{% url 'build:modification_history_delete' bundle.pk modification_history.pk %}" method="post" style="display:inline;">
+                              {% csrf_token %}
+                              <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                          </form>
+                        
+                        </div>
+                     </div>
+                     {% endfor %}
+                     {% endif %}
+                  </div>
+               </div>
+
+               <!-- Citation Information -->
+               <div class="tab-pane fade show active" id="inv_cite" role="tabpanel">
+                  <!-- Form -->
+                  <div class="row px-2">
+                     <form action="{% url 'build:bundle' bundle.pk %}" method="post" id="form_citation_information">
+                        {% csrf_token %}
+
+                        <!-- Author List -->
+                        <div class="mt-3">
+                           <label for="author_list">Author List</label>
+                           {{ form_citation_information.author_list }}
+                        </div>
+
+                        <!-- Editor List -->
+                        <div class="mt-3">
+                           <label for="editor_list">Editor List</label>
+                           {{ form_citation_information.editor_list }}
+                        </div>
+
+                        <!-- Keyword -->
+                        <div class="mt-3">
+                           <label for="keyword">Keyword</label>
+                           {{ form_citation_information.keyword }}
+                        </div>
+
+                        <!-- Publication Year -->
+                        <div class="mt-3">
+                           <label for="publication_year" class="required">Publication Year</label>
+                           {{ form_citation_information.publication_year }}
+                        </div>
+
+                        <!-- Description -->
+                        <div class="mt-3">
+                           <label for="mod_desc" class="required">Description</label>
+                           {{ form_citation_information.description }}
+                        </div>
+
+                        {{ form_citation_information.errors }}
+
+                        <!-- Create Citation Information -->
+                        <button type="submit" class="btn btn-light text-light my-4">Create Citaiton Information</button>
+                     </form>
+                  </div>
+
+                  <!-- List of Citation Information Snippets -->
+                  <div class="modal-footer justify-content-start">
+                     <!-- No Citation Information Snippets Exist -->
+                     {% if citation_information_set_count == 0 %}
+                        <p>No Citation Information Found</p>
+                     
+                     <!-- Display Citation Information Snippets -->
+                     {% else %}
                         {% for citation_information in citation_information_set %}
                         <div class="card snippet-card ms-0 me-3">
                            <div class="card-body">
@@ -886,315 +670,184 @@
                               <p class="card-text">Keyword(s): {{ citation_information.editor_list }}</p>
                               <p class="card-text">Publication Year: {{ citation_information.publication_year }}</p>
                               <p class="card-text">Description: {{ citation_information.description }}</p>
+                           
+                           <!--implementing citation delete-->
+                           <form action="{% url 'build:citation_information_delete' bundle.pk citation_information.pk %}" method="post" style="display:inline;">
+                              {% csrf_token %}
+                              <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                           </form>
                            </div>
                         </div>
                         {% endfor %}
-                        {% endif %}
-                     </div>
+                     {% endif %}
                   </div>
                </div>
-
             </div>
          </div>
       </div>
    </div>
+</div>
 
-   <!-- Collections Modal -->
-   <div class="modal fade" id="collections_modal">
-      <div class="modal-dialog modal-xl">
-         <div class="modal-content">
-            <!-- Title -->
-            <div class="modal-header">
-               <h5 class="modal-title">Collections Area</h5>
-               <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
+<!-- Collections Modal -->
+<div class="modal fade" id="collections_modal">
+   <div class="modal-dialog modal-xl">
+      <div class="modal-content">
+         <!-- Title -->
+         <div class="modal-header d-flex justify-content-center position-relative">
+            <h5 class="modal-title">Collections Area</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="position: absolute; right: 1.5rem;"></button>
+         </div>
 
-            <div class="modal-body ">
-               <!-- Tabs -->
-               <ul class="nav nav-tabs nav-justified" role="tablist">
-                  <li class="nav-item" role="presentation">
-                     <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#doc_collection" type="button" role="tab" aria-selected="true">Document Collection</button>
-                  </li>
+         <div class="modal-body ">
+            <!-- Tabs -->
+            <ul class="nav nav-tabs nav-justified" role="tablist">
+               <li class="nav-item" role="presentation">
+                  <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#doc_collection" type="button" role="tab" aria-selected="true">Document Collection</button>
+               </li>
 
-                  {% for add_collection in additional_collections_set %}
-                  <li class="nav-item" role="presentation">
-                     <button class="nav-link" data-bs-toggle="tab" data-bs-target="#additional_{{ add_collection.collection_name }}_collection" type="button" role="tab" aria-selected="false">{{ add_collection.collection_name }}</button>
-                  </li>
-                  {% endfor %}
-                  
-                  <li class="nav-item" role="presentation">
-                     <button class="nav-link btn-light text-dark" data-bs-toggle="tab" data-bs-target="#add_a_collection" type="button" role="tab" aria-selected="false">+ Add New Collection</button>
-                  </li>
-               </ul>
+               {% for add_collection in additional_collections_set %}
+               <li class="nav-item" role="presentation">
+                  <button class="nav-link" data-bs-toggle="tab" data-bs-target="#additional_{{ add_collection.collection_name }}_collection" type="button" role="tab" aria-selected="false">{{ add_collection.collection_name }}</button>
+               </li>
+               {% endfor %}
+               
+               <li class="nav-item" role="presentation">
+                  <button class="nav-link btn-light text-dark" data-bs-toggle="tab" data-bs-target="#add_a_collection" type="button" role="tab" aria-selected="false">+ Add New Collection</button>
+               </li>
+            </ul>
 
-               <!-- Content -->
-               <div class="tab-content">
-                  <!-- Document Collection -->
-                  <div class="tab-pane fade show active" id="doc_collection" role="tabpanel">
-                     <br>
-                     <div class="col-md-12">
-                        <div class="card">
-                        <div class="card-header">
-                           <p> This is your document collection. In this collection, you should plan to put any documentation you 
-                              think users of your data might need to understand and use your data. Typically users would expect to 
-                              find a user guide and/or supporting documentation in this collection. Helpful movies, graphics, or 
-                              other non-standard archive formats could also be here if they helpful for documenting your bundle.</p>
-                        </div>
-                        <button type="button" class="btn btn-light text-light" data-bs-toggle="modal" data-bs-target="#document_modal">Add Document Products</button>
-                        </div>
+            <!-- Content -->
+            <div class="tab-content">
+               <!-- Document Collection -->
+               <div class="tab-pane fade show active" id="doc_collection" role="tabpanel">
+                  <br>
+                  <div class="col-md-12">
+                     <div class="card">
+                     <div class="card-header">
+                        <p> This is your document collection. In this collection, you should plan to put any documentation you 
+                           think users of your data might need to understand and use your data. Typically users would expect to 
+                           find a user guide and/or supporting documentation in this collection. Helpful movies, graphics, or 
+                           other non-standard archive formats could also be here if they helpful for documenting your bundle.</p>
                      </div>
-
-                     <!-- List of Product Documents -->
-                     <div class="modal-footer justify-content-start">
-                        {% if documents %}
-                           {% for document in documents %}
-                           <div class="card snippet-card ms-0 me-3">
-                              <div class="card-body">
-                                 <h5 class="card-title">{{ document.document_name }}</h5>
-                                 <p class="card-text">Acknowledgment list: {{ document.acknowledgement_text }}</p>
-                                 <p class="card-text">Author list: {{ document.author_list }}</p>
-                                 <p class="card-text">Copyright: {{ document.copyright }}</p>
-                                 <p class="card-text">Description: {{ document.description }}</p>
-                                 <p class="card-text">Document editions: {{ document.document_editions }}</p>
-                                 <p class="card-text">DOI: {{ document.doi }}</p>
-                                 <p class="card-text">Editor list {{ document.editor_list }}</p>
-                                 <p class="card-text">Publication date: {{ document.publication_date }}</p>
-                                 <p class="card-text">revision ID: {{ document.revision_id }}</p>
-                                 <a href="{%  url 'build:product_document' bundle.pk document.pk %}" class="btn btn-light text-light d-flex justify-content-center">Edit</a>
-                              </div>
-                           </div>
-                           {% endfor%}
-                        {% else %}
-                        <p>No Documents Found</p>
-                        {% endif %}
+                     <button type="button" class="btn btn-light text-light" data-bs-toggle="modal" data-bs-target="#document_modal">Add Document Products</button>
                      </div>
                   </div>
 
-
-                  <!-- Additional Collections -->
-                  {% for add_collection in additional_collections_set %}
-                  <div class="tab-pane fade" id="additional_{{ add_collection.collection_name }}_collection" role="tabpanel">
-                     <br>
-                     <div class="col-md-12">
-                        <div class="card">
-                        <div class="card-header">
-                           <p> This is a data collection. In this collection, you will build labels for data products. Data products are also 
-                              known as Product_Observational and include things like tables of data, image files, etc. Currently ELSA 
-                              will help you build tempaltes for data tables. Types of tables ELSA knows how to label are:</p>
-                        </div>
-                        <button type="button" class="btn btn-light text-light" data-bs-toggle="modal" data-bs-target="#data_product_modal">Add Data Products</button>
-                        </div>
-                     </div>
-
-                     <!-- List of Collections -->
-                     <div class="modal-footer justify-content-start">
-                        {% for data in data_set %}
+                  <!-- List of Product Documents -->
+                  <div class="modal-footer justify-content-start">
+                     {% if documents %}
+                        {% for document in documents %}
                         <div class="card snippet-card ms-0 me-3">
                            <div class="card-body">
-                              <h5 class="card-title">{{ data.name }}</h5>
-                              <p class="card-text">Processing Level: {{ data.processing_level }}</p>
-                              <p class="card-text">Data Type: {{ data.data_type }}</p>
-                              <a href="{%  url 'build:table_creation' bundle.pk data.pk %}" class="btn btn-light text-light d-flex justify-content-center">Edit</a>
+                              <h5 class="card-title">{{ document.document_name }}</h5>
+                              <p class="card-text">Acknowledgment list: {{ document.acknowledgement_text }}</p>
+                              <p class="card-text">Author list: {{ document.author_list }}</p>
+                              <p class="card-text">Copyright: {{ document.copyright }}</p>
+                              <p class="card-text">Description: {{ document.description }}</p>
+                              <p class="card-text">Document editions: {{ document.document_editions }}</p>
+                              <p class="card-text">DOI: {{ document.doi }}</p>
+                              <p class="card-text">Editor list {{ document.editor_list }}</p>
+                              <p class="card-text">Publication date: {{ document.publication_date }}</p>
+                              <p class="card-text">revision ID: {{ document.revision_id }}</p>
+                              <a href="{%  url 'build:product_document' bundle.pk document.pk %}" class="btn btn-light text-light d-flex justify-content-center">Edit</a>
                            </div>
                         </div>
-                        {% endfor %}
+                        {% endfor%}
+                     {% else %}
+                     <p>No Documents Found</p>
+                     {% endif %}
+                  </div>
+               </div>
+
+
+               <!-- Additional Collections -->
+               {% for add_collection in additional_collections_set %}
+               <div class="tab-pane fade" id="additional_{{ add_collection.collection_name }}_collection" role="tabpanel">
+                  <br>
+                  <div class="col-md-12">
+                     <div class="card">
+                     <div class="card-header">
+                        <p> This is a data collection. In this collection, you will build labels for data products. Data products are also 
+                           known as Product_Observational and include things like tables of data, image files, etc. Currently ELSA 
+                           will help you build tempaltes for data tables. Types of tables ELSA knows how to label are:
+                           
+                           <ul>
+                              <li>Table Binary</li>
+                              <li>Table Character</li>
+                              <li>Table Delimited</li>
+
+                        </p>
+                     </div>
+                     <button type="button" class="btn btn-light text-light" data-bs-toggle="modal" data-bs-target="#data_product_modal">Add Data Products</button>
                      </div>
                   </div>
-                  {% endfor %}
 
-                  <!-- Add s Collections -->
-                  <div class="tab-pane fade" id="add_a_collection" role="tabpanel">
-                     <!-- Form -->
-                     <div class="row px-2">
-                        <form action="{% url 'build:bundle' bundle.pk %}" method="post" id="form_collections" >
-                           {% csrf_token %}
-   
-                           <!-- Collection Name -->
-                           <div class="mt-3">
-                              <label for="col_name" class="required">Collection Name</label>
-                              {{ form_additional_collections.collection_name }}
-                           </div>
-   
-                           <!-- Alternate Title -->
-                           <div class="mt-3">
-                              <label for="col_type" class="required">Collection Type</label>
-                              {{ form_additional_collections.collection_type }}
-                           </div>
-   
-                           <!-- Create Collection -->
-                           <button type="submit" class="btn btn-light text-light my-4">Create Collection</button>
-                        </form>
+                  <!-- List of Collections -->
+                  <div class="modal-footer justify-content-start">
+                     {% for data in data_set %}
+                     {% if data.collection == add_collection %}
+                     <div class="card snippet-card ms-0 me-3">
+                        <div class="card-body">
+                           <h5 class="card-title">{{ data.name }}</h5>
+                           <p class="card-text">Processing Level: {{ data.processing_level }}</p>
+                           <p class="card-text">Data Type: {{ data.data_type }}</p>
+                           <a href="{%  url 'build:table_creation' bundle.pk data.pk %}" class="btn btn-light text-light d-flex justify-content-center">Edit</a>
+                        </div>
                      </div>
+                     {% endif %}
+                     {% endfor %}
+                  </div>
+               </div>
+               {% endfor %}
 
-                     <!-- List of Collections -->
-                     <div class="modal-footer justify-content-start">
-                        {% if additional_collections_count != 0 %}
-                           {% for additional_collection in additional_collections_set %}
-                              {% for collection in additional_collection.collections_list %}
-                              <div class="card snippet-card ms-0 me-3">
-                                 <div class="card-body">
-                                    <h5 class="card-title">{{ collection.0}} Collection</h5>
-                                    {% if collection.1 == 'Data' %}
-                                    <h6 class="card-subtitle">In here is where you will be able to add your data products that belong to this collection. You may choose from different processing levels for each data product.</h6>
-                                    <a href="" class="btn btn-light text-light d-flex justify-content-center">Add DATA</a>
-                                    {% endif %}
-                                 </div>
+               <!-- Add s Collections -->
+               <div class="tab-pane fade" id="add_a_collection" role="tabpanel">
+                  <!-- Form -->
+                  <div class="row px-2">
+                     <form action="{% url 'build:bundle' bundle.pk %}" method="post" id="form_collections" >
+                        {% csrf_token %}
+
+                        <!-- Collection Name -->
+                        <div class="mt-3">
+                           <label for="col_name" class="required">Collection Name</label>
+                           {{ form_additional_collections.collection_name }}
+                        </div>
+
+                        <!-- Alternate Title -->
+                        <div class="mt-3">
+                           <label for="col_type" class="required">Collection Type</label>
+                           {{ form_additional_collections.collection_type }}
+                        </div>
+
+                        <!-- Create Collection -->
+                        <button type="submit" class="btn btn-light text-light my-4">Create Collection</button>
+                     </form>
+                  </div>
+
+                  <!-- List of Collections -->
+                  <div class="modal-footer justify-content-start">
+                     {% if additional_collections_count != 0 %}
+                        {% for additional_collection in additional_collections_set %}
+                           {% for collection in additional_collection.collections_list %}
+                           <div class="card snippet-card ms-0 me-3">
+                              <div class="card-body">
+                                 <h5 class="card-title">{{ collection.0}} Collection</h5>
+                                 {% if collection.1 == 'Data' %}
+                                 <h6 class="card-subtitle">In here is where you will be able to add your data products that belong to this collection. You may choose from different processing levels for each data product.</h6>
+                                 <a href="" class="btn btn-light text-light d-flex justify-content-center">Add DATA</a>
+                                 {% endif %}
                               </div>
-                              {% endfor %}
+                           </div>
                            {% endfor %}
-                        {% else %}
-                           <p>No Collections Found</p>
-                        {% endif %}
-                     </div>
+                        {% endfor %}
+                     {% else %}
+                        <p>No Collections Found</p>
+                     {% endif %}
                   </div>
-
                </div>
 
             </div>
-         </div>
-      </div>
-   </div>
 
-   <!-- Document Product Modal -->
-   <div class="modal fade" id="document_modal">
-      <div class="modal-dialog modal-xl">
-         <div class="modal-content">
-            <!-- Title -->
-            <div class="modal-header">
-               <h5 class="modal-title">Add Document Product</h5>
-               <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-
-            <div class="modal-body pt-0">
-               <div class="row px-2">
-                  <form action="{% url 'build:bundle' bundle.pk %}" method="post" id="form_document">
-                     {% csrf_token %}
-
-                     <!-- Name-->
-                     <div class="mt-3">
-                        <label for="doc_name" class="required">Document Name</label>
-                        {{ form_document.document_name }}
-                     </div>
-
-                     <!-- Publication Date -->
-                     <div class="mt-3">
-                        <label for="pub_date" class="required">Publication Date</label>
-                        {{ form_document.publication_date }}
-                     </div>
-
-                     <!-- Author List -->
-                     <div class="mt-3">
-                        <label for="auth_list">Author List</label>
-                        {{ form_document.author_list }}
-                     </div>
-
-                     <!-- Copyright-->
-                     <div class="mt-3">
-                        <label for="copyright">Copyright</label>
-                        {{ form_document.copyright }}
-                     </div>
-
-                     <!-- Description -->
-                     <div class="mt-3">
-                        <label for="description">Description</label>
-                        {{ form_document.description }}
-                     </div>
-
-                     <!-- document_editions -->
-                     <div class="mt-3">
-                        <label for="doc_editions">Document Editions</label>
-                        {{ form_document.document_editions }}
-                     </div>
-
-                     <!-- Revision ID-->
-                     <div class="mt-3">
-                        <label for="rev_id">Revision ID</label>
-                        {{ form_document.revision_id }}
-                     </div>
-
-                     <!-- edition name -->
-                     <div class="mt-3">
-                        <label for="edition_name">Edition Name</label>
-                        {{ form_document.edition_name }}
-                     </div>
-
-                     <!-- Language -->
-                     <div class="mt-3">
-                        <label for="language">Language</label>
-                        {{ form_document.language }}
-                     </div>
-
-                     <!-- Files-->
-                     <div class="mt-3">
-                        <label for="files">Files</label>
-                        {{ form_document.files }}
-                     </div>
-
-                     <!-- file_name -->
-                     <div class="mt-3">
-                        <label for="file_name">File Name</label>
-                        {{ form_document.file_name }}
-                     </div>
-
-                     <!-- Local ID -->
-                     <div class="mt-3">
-                        <label for="local_id">Local ID</label>
-                        {{ form_document.local_id }}
-                     </div>
-                     
-                     <!-- Document SSTD ID -->
-                     <div class="mt-3">
-                        <label for="doc_std_id">Document STD ID</label>
-                        {{ form_document.document_std_id }}
-                     </div>
-
-                     <!-- Create Product Document -->
-                     <button type="submit" class="btn btn-light text-light my-4">Create Document</button>
-                  </form>
-               </div>
-            </div>
-         </div>
-      </div>
-   </div>
-
-   <!-- Data Product Modal -->
-   <div class="modal fade" id="data_product_modal">
-      <div class="modal-dialog modal-xl">
-         <div class="modal-content">
-            <!-- Title -->
-            <div class="modal-header">
-               <h5 class="modal-title">Add Data Product</h5>
-               <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-
-            <div class="modal-body pt-0">
-               <div class="row px-2">
-                  <form action="{% url 'build:bundle' bundle.pk %}" method="post" id="form_data">
-                     {% csrf_token %}
-
-                     <!-- Name-->
-                     <div class="mt-3">
-                        <label for="doc_name" class="required">Name</label>
-                        {{ form_data.name }}
-                     </div>
-
-                     <!-- Processing Level -->
-                     <div class="mt-3">
-                        <label for="pub_date" class="required">Processing Level</label>
-                        {{ form_data.processing_level }}
-                     </div>
-
-                     <!-- Data Type -->
-                     <div class="mt-3">
-                        <label for="auth_list">Data Type</label>
-                        {{ form_data.data_type }}
-                     </div>
-
-                     <!-- Create Product Document -->
-                     <button type="submit" class="btn btn-light text-light my-4">Add Data</button>
-                  </form>
-               </div>
-            </div>
          </div>
       </div>
    </div>

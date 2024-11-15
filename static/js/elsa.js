@@ -1,4 +1,5 @@
 $(document).ready(function() {
+    // bundle carousel
     var carousel_width = $('.carousel-inner')[0].scrollWidth;
     var card_width = $('.carousel-item').first().outerWidth(true);
     var scroll_pos = 0;
