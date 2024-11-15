@@ -786,6 +786,7 @@
                   <div class="modal-footer justify-content-start">
                      {% for data in data_set %}
                      {% if data.collection == add_collection %}
+                        {% if data.collection == add_collection %}
                      <div class="card snippet-card ms-0 me-3">
                         <div class="card-body">
                            <h5 class="card-title">{{ data.name }}</h5>
@@ -795,6 +796,7 @@
                         </div>
                      </div>
                      {% endif %}
+                        {% endif %}
                      {% endfor %}
                   </div>
                </div>
