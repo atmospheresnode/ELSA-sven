@@ -621,6 +621,8 @@ def bundle(request, pk_bundle):
         for telescope in bundle.telescopes.all():
             telescope_investigations.append(telescope.investigations.last())
 
+        directory_name, c, file_context = index(request, bundle.relative_dir())
+
         # Context dictionary for template
         context_dict = {
             'xml_content_set': xml_content_set,
@@ -663,6 +665,9 @@ def bundle(request, pk_bundle):
             'user':request.user,
         }
 
+        context_dict['directory_name'] = directory_name
+        context_dict['subfiles'] = c 
+        context_dict['file_context'] = file_context
 
         # After ELSAs friend hits submit, if the forms are completed correctly, we should enter
         # this conditional.
@@ -828,11 +833,13 @@ def bundle(request, pk_bundle):
             all_labels.append(product_bundle)
             all_labels.extend(product_collections_list)
             # I think this works -Said
-            all_labels.extend(Data.objects.filter(bundle=bundle))
+            all_labels.extend(Table_Delimited.objects.filter(bundle=bundle))
+            all_labels.extend(Table_Binary.objects.filter(bundle=bundle))
+            all_labels.extend(Table_Fixed_Width.objects.filter(bundle=bundle))
 
             for label in all_labels:
                 
-                print('- Label: {}'.format(label))
+                print('- Label: {}'.format(label.label()))
                 print(' ... Opening Label ... ')
                 label_list = open_label_with_tree(label.label())
                 label_root = label_list[1]
@@ -845,6 +852,13 @@ def bundle(request, pk_bundle):
                 print(' ... Closing Label ... ')
                 close_label(label.label(), label_root, label_list[2])
             print('\n----------------End Build Internal_Reference for Document-------------------')
+
+            for citation_information in citation_information_set:
+                write_into_label(citation_information, product_document, None)
+            for alias in alias_set:
+                write_into_label(alias, product_document, None)
+            for modification_history in modification_history_set:
+                write_into_label(modification_history, product_document, None)
 
             form_document = ProductDocumentForm()
             context_dict['form_document'] = form_document
@@ -1269,7 +1283,7 @@ def context_search_investigation(request, pk_bundle):
             context_dict['messages'] = messages.get_messages(request)
             # return render(request, 'build/context/context_search_investigation.html', context_dict)
             # return render(request, 'build/bundle/bundle.html', context_dict)
-            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
+            return HttpResponseRedirect('/build/' + pk_bundle + '/')
         
         context_dict['messages'] = messages.get_messages(request)
         # return render(request, 'build/bundle/bundle.html', context_dict)
@@ -2608,6 +2622,18 @@ def delete_target(request, pk_bundle, pk_target):
     # return HttpResponseRedirect('/elsa/build/' + pk_bundle)
     # return redirect('../../bundle/')
 
+def delete_modification_history(request, pk_bundle, pk_modification_history):
+    bundle = Bundle.objects.get(pk=pk_bundle)
+    modification_history = Modification_History.objects.get(pk=pk_modification_history)
+
+    product_bundle = Product_Bundle.objects.get(bundle=bundle)
+    product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+
+    remove_from_label(modification_history, product_bundle, product_collections_list)
+    bundle.modification_history.remove(modification_history)
+
+    return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
+
 def delete_instrument(request, pk_bundle, pk_instrument):
     bundle = Bundle.objects.get(pk=pk_bundle)
     instrument = Instrument.objects.get(pk=pk_instrument)
@@ -2880,17 +2906,12 @@ def delete_investigation(request, pk_bundle, pk_investigation):
     # return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/contextsearch/investigation/')
     return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/contextsearch/investigation/')
 
-# Directory View Functions
-# utils functions
-
-
+# Directory View
 def _get_abs_virtual_root():
     return _eventual_path(settings.BASE_DIR)
 
-
 def _eventual_path(path):
     return os.path.abspath(os.path.realpath(path))
-
 
 def index(request, path):
     def index_maker():
@@ -2901,26 +2922,44 @@ def index(request, path):
                 if os.path.isfile(t):
                     link_target = os.path.relpath(t, start=os.path.join(
                         _get_abs_virtual_root(), 'archive/'))
-                    yield loader.render_to_string('build/directory/list_file.html', {'file': mfile, 'link': link_target})
+                    yield loader.render_to_string('build/bundle/list_file.html', {'file': mfile, 'link': link_target})
                 if os.path.isdir(t):
                     link_target = os.path.relpath(t, start=os.path.join(
                         _get_abs_virtual_root(), 'archive/'))
-                    yield loader.render_to_string('build/directory/list_folder.html', {'file': mfile, 'subfiles': _index(os.path.join(inpath, t)), 'link': link_target})
+                    yield loader.render_to_string('build/bundle/list_folder.html', {'file': mfile, 'subfiles': _index(os.path.join(inpath, t)), 'link': link_target})
                     continue
-                
-
+               
+ 
         return _index(eventual_path)
+   
+    def retrieve_content(inpath):
+        contents = os.listdir(inpath)
+        results = []
+        for mfile in contents:
+            t = os.path.join(inpath, mfile)
+            if os.path.isfile(t):
+                link_target = os.path.relpath(t, start=os.path.join(
+                    _get_abs_virtual_root(), 'archive/'))
+                
+                tree = etree.parse('archive/' + link_target)
+                xml_content = etree.tostring(tree, pretty_print=True, encoding='unicode')
 
+                results.append([mfile, xml_content])
+            if os.path.isdir(t):
+                link_target = os.path.relpath(t, start=os.path.join(
+                    _get_abs_virtual_root(), 'archive/'))
+                results.extend(retrieve_content(os.path.join(inpath, t)))
+ 
+        return results
+ 
+ 
     directory_name = os.path.basename(path)
-
+ 
     eventual_path = _eventual_path(os.path.join(settings.ARCHIVE_DIR, path))
     if os.path.isfile(eventual_path):
         print(path)
         return HttpResponse(open(eventual_path).read(), content_type='text/xml')
-
+ 
     c = index_maker()
-    data = {
-        'directory_name': directory_name,
-        'subfiles': c
-    }
-    return render(request, 'build/directory/list.html', data)
+    file_context = retrieve_content(eventual_path)
+    return directory_name, c, file_context
