@@ -7,59 +7,64 @@ Context
 
 {% block body_block %}
 <div class="container-fluid">
-    <div class="card bundle-card">
-        <h1>Context Products</h1>
-        <hr>
-        <div class="card-body">
-            <!-- Context Tabs -->
-            <ul class="nav nav-tabs nav-justified" role="tablist">
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#con_inv" type="button" role="tab" aria-selected="true">Investigation</button>
-                </li>
-                {% if instrument_hosts %}
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link " data-bs-toggle="tab" data-bs-target="#con_ih" type="button" role="tab" aria-selected="false">Instrument Hosts</button>
-                </li>
-                {% endif %}
-                {% if instruments %}
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link " data-bs-toggle="tab" data-bs-target="#con_ins" type="button" role="tab" aria-selected="false">Instruments</button>
-                </li>
-                {% endif %}
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link " data-bs-toggle="tab" data-bs-target="#con_tar" type="button" role="tab" aria-selected="false">Targets</button>
-                </li>
-                </ul>
+    <div class="row justify-content-center align-items-center py-4">
+        <div class="col-12 col-lg-9 col-xl-10">
+            <div class="card">
+                <div class="card-body m-4">
+                    <h2 class="mb-5 pb-2 pb-md-0 mb-md-4">Context Products</h2>
 
-                <!-- Investigation Tab -->
-                <div class="col-md-12 tab-pane fade show active" id="con_inv" role="tabpanel">
-                    <p> To begin, select an investigation product below to associate with your bundle. Investigations serve as the top level of the context system and will associate your bundle with a larger project.</br> <strong>Investigations are categorized as:</strong> Individual Investigations, Missions, Field Campaigns, Observing Campaigns, or Other Investigations. Selecting an investigation will pare down the list of components to the ones that go with that investigation (i.e., associated instruments, targets, etc.) </p>
-                    
-                    <form class="card-body" id="form_investigation" method="post" action="{% url 'build:context_search_investigation' bundle.pk  %}">
-                        {% csrf_token %}
-                        {{ form_investigation }}
-                        {{ form.errors }}
-                        {{ form.non_field_errors }}
+                    <hr>
 
-                        <input type="submit" class="btn btn-light text-light mt-4" value="Submit"/>
-                    </form> 
-                </div>
+                    <!-- Context Tabs -->
+                    <ul class="nav nav-tabs nav-justified" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#con_inv" type="button" role="tab" aria-selected="true">Investigation</button>
+                        </li>
+                        {% if instrument_hosts %}
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link " data-bs-toggle="tab" data-bs-target="#con_ih" type="button" role="tab" aria-selected="false">Instrument Hosts</button>
+                        </li>
+                        {% endif %}
+                        {% if instruments %}
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link " data-bs-toggle="tab" data-bs-target="#con_ins" type="button" role="tab" aria-selected="false">Instruments</button>
+                        </li>
+                        {% endif %}
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link " data-bs-toggle="tab" data-bs-target="#con_tar" type="button" role="tab" aria-selected="false">Targets</button>
+                        </li>
+                    </ul>
 
-                <!-- Target Tab -->
-                <div class="col-md-12 tab-pane fade" id="con_tar" role="tabpanel">
-                    <p>Choose the target(s) you wish to add to your bundle. This is a complete list of availabe targets, independent of any investigations chosen.</p>
-                    
-                    <form class="card-body" id="form_target" method="post" action="{% url 'build:context_search_target' bundle.pk %}">
-                        {% csrf_token %}
-                        {{ form_target }}
-                        {{ form.errors }}
-                        {{ form.non_field_errors }}
+                    <!-- Investigation Tab -->
+                    <div class="col-md-12 tab-pane fade show active" id="con_inv" role="tabpanel">
+                        <p> To begin, select an investigation product below to associate with your bundle. Investigations serve as the top level of the context system and will associate your bundle with a larger project.</br> <strong>Investigations are categorized as:</strong> Individual Investigations, Missions, Field Campaigns, Observing Campaigns, or Other Investigations. Selecting an investigation will pare down the list of components to the ones that go with that investigation (i.e., associated instruments, targets, etc.) </p>
                         
-                        <input type="submit" class="btn btn-light text-light" value="Submit"/>
-                    </form> 
+                        <form class="card-body" id="form_investigation" method="post" action="{% url 'build:context_search_investigation' bundle.pk  %}">
+                            {% csrf_token %}
+                            {{ form_investigation }}
+                            {{ form.errors }}
+                            {{ form.non_field_errors }}
+
+                            <input type="submit" class="btn btn-light text-light mt-4" value="Submit"/>
+                        </form> 
+                    </div>
+
+                    <!-- Target Tab -->
+                    <div class="col-md-12 tab-pane fade" id="con_tar" role="tabpanel">
+                        <p>Choose the target(s) you wish to add to your bundle. This is a complete list of availabe targets, independent of any investigations chosen.</p>
+                        
+                        <form class="card-body" id="form_target" method="post" action="{% url 'build:context_search_target' bundle.pk %}">
+                            {% csrf_token %}
+                            {{ form_target }}
+                            {{ form.errors }}
+                            {{ form.non_field_errors }}
+                            
+                            <input type="submit" class="btn btn-light text-light" value="Submit"/>
+                        </form> 
+                    </div>
                 </div>
+            </div>
         </div>
     </div>
 </div>
 {% endblock %}
-
