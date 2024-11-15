@@ -2608,6 +2608,18 @@ def delete_target(request, pk_bundle, pk_target):
     # return HttpResponseRedirect('/elsa/build/' + pk_bundle)
     # return redirect('../../bundle/')
 
+def delete_modification_history(request, pk_bundle, pk_modification_history):
+    bundle = Bundle.objects.get(pk=pk_bundle)
+    modification_history = Modification_History.objects.get(pk=pk_modification_history)
+
+    product_bundle = Product_Bundle.objects.get(bundle=bundle)
+    product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+
+    remove_from_label(modification_history, product_bundle, product_collections_list)
+    bundle.modification_history.remove(modification_history)
+
+    return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
+
 def delete_instrument(request, pk_bundle, pk_instrument):
     bundle = Bundle.objects.get(pk=pk_bundle)
     instrument = Instrument.objects.get(pk=pk_instrument)

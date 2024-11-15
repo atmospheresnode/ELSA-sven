@@ -4084,7 +4084,7 @@ class Alias(models.Model):
         # Find Alias_List.  If no Alias_List is found, make one.
         Alias_List = Identification_Area.find('{}Alias_List'.format(NAMESPACE))
         if Alias_List is None:
-            Alias_List = etree.SubElement(Identification_Area, 'Alias_List')
+            Alias_List = etree.Element('Alias_List')
 
         # Add Alias information
         Alias = etree.SubElement(Alias_List, 'Alias')
@@ -4098,7 +4098,23 @@ class Alias(models.Model):
             comment = etree.SubElement(Alias, 'comment')
             comment.text = self.comment
 
+        # find Modification_History
+        Modification_History = Identification_Area.find('{}Modification_History'.format(NAMESPACE))
+
+        # find citation_information
+        Citation_Information = Identification_Area.find('{}Citation_Information'.format(NAMESPACE))
+        if Citation_Information is not None:
+            current_Alias_List = Identification_Area.find('{}Alias_List'.format(NAMESPACE))
+            if current_Alias_List is not None:
+                Identification_Area.remove(current_Alias_List)
+
+            Identification_Area.insert(Identification_Area.index(Citation_Information), Alias_List)
+
+        else:
+            Identification_Area.insert(Identification_Area.index(Modification_History), Alias_List)
+
         return label_root
+
 
     # added for edit alias fixing purposes - deric
     def find_alias(self, label_root):
@@ -4204,10 +4220,11 @@ class Citation_Information(models.Model):
 
     bundle = models.ForeignKey(Bundle, on_delete=models.CASCADE)
     author_list = models.CharField(max_length=MAX_CHAR_FIELD, blank=True)
-    description = models.CharField(max_length=MAX_TEXT_FIELD)
     editor_list = models.CharField(max_length=MAX_CHAR_FIELD, blank=True)
-    keyword = models.CharField(max_length=MAX_CHAR_FIELD, blank=True)
     publication_year = models.CharField(max_length=MAX_CHAR_FIELD)
+    description = models.CharField(max_length=MAX_TEXT_FIELD)
+    keyword = models.CharField(max_length=MAX_CHAR_FIELD, blank=True)
+    
 
     # Builders
     def fill_label(self, label_root):
@@ -4216,14 +4233,27 @@ class Citation_Information(models.Model):
         Identification_Area = label_root.find(
             '{}Identification_Area'.format(NAMESPACE))
 
-        # Find Alias_List.  If no Alias_List is found, make one.
-        Citation_Information = Identification_Area.find(
-            '{}Citation_Information'.format(NAMESPACE))
+        # Locate Modification_History within Identification_Area
+        Modification_History = Identification_Area.find(
+            '{}Modification_History'.format(NAMESPACE))
 
-        # Double check but I'm pretty sure Citation_Information is only added once.
-        # if Citation_Information is None:
-        Citation_Information = etree.SubElement(
-            Identification_Area, 'Citation_Information')
+        # Find Alias_List.  If no Alias_List is found, make one.
+        Citation_Information = etree.Element(
+            '{}Citation_Information'.format(NAMESPACE))
+        
+        # Add Citation_Information information
+        if Modification_History is not None:
+            Identification_Area.insert(Identification_Area.index(Modification_History), Citation_Information)
+
+        else:
+            Identification_Area.append(Citation_Information)
+
+
+        # # Double check but I'm pretty sure Citation_Information is only added once.
+        # # if Citation_Information is None:
+        # Citation_Information = etree.SubElement(
+        #     Identification_Area, 'Citation_Information')
+        # Identification_Area.insert(0, Citation_Information)
 
         # Add Citation_Information information
         if self.author_list:
@@ -4232,15 +4262,16 @@ class Citation_Information(models.Model):
         if self.editor_list:
             editor_list = etree.SubElement(Citation_Information, 'editor_list')
             editor_list.text = self.editor_list
+        publication_year = etree.SubElement(
+            Citation_Information, 'publication_year')
+        publication_year.text = self.publication_year
         if self.keyword:
             # Ask how keywords are saved #
             keyword = etree.SubElement(Citation_Information, 'keyword')
             keyword.text = self.keyword
-        publication_year = etree.SubElement(
-            Citation_Information, 'publication_year')
-        publication_year.text = self.publication_year
         description = etree.SubElement(Citation_Information, 'description')
         description.text = self.description
+        
         return label_root
     
     def remove_xml(self, label_root):
@@ -4290,27 +4321,40 @@ class Modification_History(models.Model):
         # Modification_History = etree.SubElement(
         #     Identification_Area, 'Modification_History')
 
+        # Add Modification_Detail information
+        Modification_Detail = etree.SubElement(
+            Modification_History, '{}Modification_Detail'.format(NAMESPACE))
+        
         # Add Modification_History information
-        if self.version_id:
-            version_id = etree.SubElement(Modification_History, 'version_id')
-            version_id.text = self.version_id
-
-        description = etree.SubElement(Modification_History, 'description')
-        description.text = self.description
-        modification_date = etree.SubElement(Modification_History, 'modification_date')
+        modification_date = etree.SubElement(Modification_Detail, 'modification_date')
         modification_date.text = self.modification_date
+        if self.version_id:
+            version_id = etree.SubElement(Modification_Detail, 'version_id')
+            version_id.text = self.version_id
+        description = etree.SubElement(Modification_Detail, 'description')
+        description.text = self.description
+        
         return label_root
 
     def remove_xml(self, label_root):
         Identification_Area = label_root.find('{}Identification_Area'.format(NAMESPACE))
 
-        Modification_History = Identification_Area.findall('{}Modification_History'.format(NAMESPACE))
+        Modification_History = Identification_Area.find('{}Modification_History'.format(NAMESPACE))
 
         # Modification_History.getparent().remove(Modification_History)
 
-        for tag in Modification_History:
-            if(tag[0].text.title() == self.version_id.title()):
-                tag.getparent().remove(tag)
+        # for tag in Modification_History.iter():
+        #     modification_detail = Modification_History.find('{}Modification_Detail'.format(NAMESPACE))
+        #     if tag == modification_detail:
+        #         print(tag[2].text.title())
+        #         print(self.description.title())
+        #         print(tag)
+        #         if(tag[2].text.title() == self.description.title()):
+        #             tag.getparent().remove(tag)
+
+        for modification_detail in Modification_History:
+            if modification_detail[2].text.title() == self.description.title():
+                modification_detail.getparent().remove(modification_detail)
 
         return label_root
 
