@@ -52,8 +52,8 @@ a:hover .modal-card {
 /* Buttons */
 .btn-light {
     background-color: var(--elsa-green); 
-    box-shadow: var(--box-shadow);
     border-color: var(--elsa-green);
+    box-shadow: none;
 }
 
 .btn-light:hover {
