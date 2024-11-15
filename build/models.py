@@ -852,7 +852,12 @@ class Investigation(models.Model):
 
         Internal_Reference = Investigation_Area.find('{}Internal_Reference'.format(NAMESPACE))
         Internal_Reference.find('{}lid_reference'.format(NAMESPACE)).text = self.lid
-        Internal_Reference.find('{}reference_type'.format(NAMESPACE)).text = 'is_investigation'
+        if label_root.tag == '{http://pds.nasa.gov/pds4/pds/v1}Product_Bundle':
+            Internal_Reference.find('{}reference_type'.format(NAMESPACE)).text = 'bundle_to_investigation'
+        elif label_root.tag == '{http://pds.nasa.gov/pds4/pds/v1}Product_Observational':
+            Internal_Reference.find('{}reference_type'.format(NAMESPACE)).text = 'data_to_investigation'
+        else:
+            Internal_Reference.find('{}reference_type'.format(NAMESPACE)).text = 'collection_to_investigation'
         # Internal_Reference.lid_reference.text = self.lid
         # Internal_Reference.reference_type.text = 'is_investigation'
 
@@ -1183,7 +1188,7 @@ class Instrument(models.Model):
         name.text = self.name.title()
         facility_type = etree.SubElement(
             Observing_System_Component, 'type')
-        facility_type.text = self.type_of
+        facility_type.text = 'Instrument'
         Internal_Reference = etree.SubElement(
             Observing_System_Component, 'Internal_Reference')
         lid_reference = etree.SubElement(
@@ -1404,9 +1409,15 @@ class Target(models.Model):
         lid_reference = etree.SubElement(
             Internal_Reference, 'lid_reference')
         lid_reference.text = self.lid
-        reference_type = etree.SubElement(
-            Internal_Reference, 'reference_type')
-        reference_type.text = 'is_target'
+
+        if label_root.tag == '{http://pds.nasa.gov/pds4/pds/v1}Product_Observational':
+            reference_type = etree.SubElement(
+                Internal_Reference, 'reference_type')
+            reference_type.text = 'data_to_target'
+        else:
+            reference_type = etree.SubElement(
+                Internal_Reference, 'reference_type')
+            reference_type.text = 'is_target'
 
         return label_root
 
@@ -1578,7 +1589,7 @@ class Instrument_Host(models.Model):
         name.text = self.name.title()
         facility_type = etree.SubElement(
             Observing_System_Component, 'type')
-        facility_type.text = self.type_of
+        facility_type.text = 'Host'
         Internal_Reference = etree.SubElement(
             Observing_System_Component, 'Internal_Reference')
         lid_reference = etree.SubElement(
@@ -2972,7 +2983,7 @@ class Product_Collection(models.Model):
         logical_identifier = Identification_Area.find(
             '{}logical_identifier'.format(NAMESPACE))
         logical_identifier.text = 'urn:{0}:{1}:{2}'.format(self.bundle.user.userprofile.agency, self.bundle.name_lid_case(
-        ), self.collection)  # where agency is something like nasa:pds
+        ), self.collection.lower())  # where agency is something like nasa:pds
 
         #     version_id --> Note:  Can be changed to be more dynamic once we implement bundle versions (which is different from PDS4 versions)
         version_id = Identification_Area.find('{}version_id'.format(NAMESPACE))
@@ -3096,6 +3107,10 @@ class Table_Delimited(models.Model):
         ('Semicolon', 'Semicolon'),
         ('Vertical Bar', 'Vertical Bar'),
     )
+    PRIMARY_RESULTS_SUMMARY_FACET_CHOICES = (
+        ('Meteorology', 'Meteorology'),
+        ('Structure', 'Structure')
+    )
 
     name = models.CharField(max_length=256, blank=True)
     offset = models.IntegerField(default=0)
@@ -3104,6 +3119,7 @@ class Table_Delimited(models.Model):
     records = models.IntegerField(default=1)
     field_delimiter = models.CharField(max_length=256, choices=DELIMITER_CHOICES, default="Comma", blank=True)
     fields = models.IntegerField(default=1)
+    facet1 = models.CharField(max_length=256, choices=PRIMARY_RESULTS_SUMMARY_FACET_CHOICES, default="Meteorology", blank=True)
     data = models.ForeignKey(Data, on_delete=models.CASCADE, null=True)
     collection = models.ForeignKey(AdditionalCollections, on_delete = models.CASCADE, default='',)
     bundle = models.ForeignKey(Bundle, on_delete=models.CASCADE, null=True)
@@ -3122,6 +3138,7 @@ class Table_Delimited(models.Model):
         """
             label returns the physical label location in ELSAs archive
         """
+        print(os.path.join(self.directory(), self.name_label_case()))
         return os.path.join(self.directory(), self.name_label_case())
 
         # directory returns the file path associated with the given model.
@@ -3161,7 +3178,7 @@ class Table_Delimited(models.Model):
 
         # lid
         logical_identifier = Identification_Area.find('{}logical_identifier'.format(NAMESPACE))
-        logical_identifier.text = 'urn:{0}:{1}:{2}'.format(self.data.bundle.user.userprofile.agency, self.data.bundle.name_lid_case(), self.name) # where agency is something like nasa:pds
+        logical_identifier.text = 'urn:{0}:{1}:{2}:{3}'.format(self.data.bundle.user.userprofile.agency, self.data.bundle.name_lid_case(), self.collection.collection_name.lower(), replace_all(self.name.lower(), ' ', '_')) # where agency is something like nasa:pds
 
         print("version")
         version_id = Identification_Area.find('{}version_id'.format(NAMESPACE))
@@ -3174,6 +3191,12 @@ class Table_Delimited(models.Model):
         print("info model")
         information_model_version = Identification_Area.find('information_model_version')
         #information_model_version.text = self.bundle.version.with_dots()
+
+        Observation_Area = Table_Delimited.find('{}Observation_Area'.format(NAMESPACE))
+        Primary_Result_Summary = Observation_Area.find('{}Primary_Result_Summary'.format(NAMESPACE))
+        Science_Facets = Primary_Result_Summary.find('{}Science_Facets'.format(NAMESPACE))
+        science_facet1 = Science_Facets.find('{}facet1'.format(NAMESPACE))
+        science_facet1.text = self.facet1
 
         f = Table_Delimited.find('{}File_Area_Observational'.format(NAMESPACE))
         td = f.find('{}Table_Delimited'.format(NAMESPACE))
@@ -3212,7 +3235,7 @@ class Table_Delimited(models.Model):
         fields.text = str(self.fields)
 
         # should create a form to ask for this, but will default to 0
-        groups = rd.find('{}fields'.format(NAMESPACE))
+        groups = rd.find('{}groups'.format(NAMESPACE))
         groups.text = '0'
 
         field_delimited = rd.find('{}Field_Delimited'.format(NAMESPACE))
@@ -3229,10 +3252,16 @@ class Table_Delimited(models.Model):
 
 # @python_2_unicode_compatible
 class Table_Binary(models.Model):
+    PRIMARY_RESULTS_SUMMARY_FACET_CHOICES = (
+        ('Meteorology', 'Meteorology'),
+        ('Structure', 'Structure')
+    )
+
     name = models.CharField(max_length=256, blank=True)
     offset = models.IntegerField(default=1)
     records = models.IntegerField(default=1)
     fields = models.IntegerField(default=1)
+    facet1 = models.CharField(max_length=256, choices=PRIMARY_RESULTS_SUMMARY_FACET_CHOICES, default="Meteorology", blank=True)
     data = models.ForeignKey(Data, on_delete=models.CASCADE, null=True)
     collection = models.ForeignKey(AdditionalCollections, on_delete = models.CASCADE, default='',)
     bundle = models.ForeignKey(Bundle, on_delete=models.CASCADE, null=True,)
@@ -3278,7 +3307,7 @@ class Table_Binary(models.Model):
 
         # lid
         logical_identifier = Identification_Area.find('{}logical_identifier'.format(NAMESPACE))
-        logical_identifier.text = 'urn:{0}:{1}:{2}'.format(self.data.bundle.user.userprofile.agency, self.data.bundle.name_lid_case(), self.data.name) # where agency is something like nasa:pds
+        logical_identifier.text = 'urn:{0}:{1}:{2}:{3}'.format(self.data.bundle.user.userprofile.agency, self.data.bundle.name_lid_case(), self.collection.collection_name.lower(), replace_all(self.name.lower(), ' ', '_')) # where agency is something like nasa:pds
 
         print("version")
         version_id = Identification_Area.find('{}version_id'.format(NAMESPACE))
@@ -3291,6 +3320,12 @@ class Table_Binary(models.Model):
         print("info model")
         information_model_version = Identification_Area.find('information_model_version')
         #information_model_version.text = self.bundle.version.with_dots()
+
+        Observation_Area = Table_Delimited.find('{}Observation_Area'.format(NAMESPACE))
+        Primary_Result_Summary = Observation_Area.find('{}Primary_Result_Summary'.format(NAMESPACE))
+        Science_Facets = Primary_Result_Summary.find('{}Science_Facets'.format(NAMESPACE))
+        science_facet1 = Science_Facets.find('{}facet1'.format(NAMESPACE))
+        science_facet1.text = self.facet1
 
         f = Table_Binary.find('{}File_Area_Observational'.format(NAMESPACE))
         tb = f.find('{}Table_Binary'.format(NAMESPACE))
@@ -3310,6 +3345,9 @@ class Table_Binary(models.Model):
         if self.fields:
             fields = rb.find('{}fields'.format(NAMESPACE))
             fields.text = str(self.fields)
+
+        groups = rb.find('{}groups'.format(NAMESPACE))
+        groups.text = '0'
         
         return root
 
@@ -3322,6 +3360,11 @@ class Table_Fixed_Width(models.Model):
     RECORD_CHOICES = (
         ('Sample Choice', 'Sample Choice'),
     )
+
+    PRIMARY_RESULTS_SUMMARY_FACET_CHOICES = (
+        ('Meteorology', 'Meteorology'),
+        ('Structure', 'Structure')
+    )
     
     name = models.CharField(max_length=256, blank=True)
     offset = models.IntegerField(default=1)
@@ -3329,6 +3372,7 @@ class Table_Fixed_Width(models.Model):
     description = models.CharField(max_length=5000, default="unset")
     records = models.IntegerField(default=1)
     fields = models.IntegerField(default=1)
+    facet1 = models.CharField(max_length=256, choices=PRIMARY_RESULTS_SUMMARY_FACET_CHOICES, default="Meteorology", blank=True)
     data = models.ForeignKey(Data, on_delete=models.CASCADE, null=True)
     collection = models.ForeignKey(AdditionalCollections, on_delete = models.CASCADE, default='',)
     bundle = models.ForeignKey(Bundle, on_delete=models.CASCADE, null=True)
@@ -3375,7 +3419,7 @@ class Table_Fixed_Width(models.Model):
 
         # lid
         logical_identifier = Identification_Area.find('{}logical_identifier'.format(NAMESPACE))
-        logical_identifier.text = 'urn:{0}:{1}:{2}'.format(self.data.bundle.user.userprofile.agency, self.data.bundle.name_lid_case(), self.data.name) # where agency is something like nasa:pds
+        logical_identifier.text = 'urn:{0}:{1}:{2}:{3}'.format(self.data.bundle.user.userprofile.agency, self.data.bundle.name_lid_case(), self.collection.collection_name.lower(), replace_all(self.name.lower(), ' ', '_')) # where agency is something like nasa:pds
 
         print("version")
         version_id = Identification_Area.find('{}version_id'.format(NAMESPACE))
@@ -3388,6 +3432,12 @@ class Table_Fixed_Width(models.Model):
         print("info model")
         information_model_version = Identification_Area.find('information_model_version')
         #information_model_version.text = self.bundle.version.with_dots()
+
+        Observation_Area = Table_Delimited.find('{}Observation_Area'.format(NAMESPACE))
+        Primary_Result_Summary = Observation_Area.find('{}Primary_Result_Summary'.format(NAMESPACE))
+        Science_Facets = Primary_Result_Summary.find('{}Science_Facets'.format(NAMESPACE))
+        science_facet1 = Science_Facets.find('{}facet1'.format(NAMESPACE))
+        science_facet1.text = self.facet1
 
         f = Table_Character.find('{}File_Area_Observational'.format(NAMESPACE))
         tc = f.find('{}Table_Character'.format(NAMESPACE))
@@ -3416,6 +3466,9 @@ class Table_Fixed_Width(models.Model):
         if self.fields:
             fields = rc.find('{}fields'.format(NAMESPACE))
             fields.text = str(self.fields)
+
+        groups = rc.find('{}groups'.format(NAMESPACE))
+        groups.text = '0'
         
         return root
 
@@ -3856,7 +3909,7 @@ class Product_Document(models.Model):
         """
             label returns the physical label location in ELSAs archive
         """
-        return os.path.join(self.directory(), self.name_label_case())
+        return os.path.join(self.directory(), '{}.xml'.format(self.name_label_case()))
 
     def lid(self):
         return '{0}:document:{1}'.format(self.bundle.lid(), self.name_label_case())
@@ -3873,8 +3926,7 @@ class Product_Document(models.Model):
         source_file = os.path.join(source_file, 'product_document.xml')
 
         # Locate collection directory and create path for new label
-        label_file = os.path.join(self.directory(), self.name_label_case())
-
+        label_file = os.path.join(self.directory(), '{}.xml'.format(self.name_label_case()))
         # set selected version
         update = Version()
         bundle = Bundle()
@@ -4084,7 +4136,7 @@ class Alias(models.Model):
         # Find Alias_List.  If no Alias_List is found, make one.
         Alias_List = Identification_Area.find('{}Alias_List'.format(NAMESPACE))
         if Alias_List is None:
-            Alias_List = etree.SubElement(Identification_Area, 'Alias_List')
+            Alias_List = etree.Element('Alias_List')
 
         # Add Alias information
         Alias = etree.SubElement(Alias_List, 'Alias')
@@ -4098,7 +4150,23 @@ class Alias(models.Model):
             comment = etree.SubElement(Alias, 'comment')
             comment.text = self.comment
 
+        # find Modification_History
+        Modification_History = Identification_Area.find('{}Modification_History'.format(NAMESPACE))
+
+        # find citation_information
+        Citation_Information = Identification_Area.find('{}Citation_Information'.format(NAMESPACE))
+        if Citation_Information is not None:
+            current_Alias_List = Identification_Area.find('{}Alias_List'.format(NAMESPACE))
+            if current_Alias_List is not None:
+                Identification_Area.remove(current_Alias_List)
+
+            Identification_Area.insert(Identification_Area.index(Citation_Information), Alias_List)
+
+        else:
+            Identification_Area.insert(Identification_Area.index(Modification_History), Alias_List)
+
         return label_root
+
 
     # added for edit alias fixing purposes - deric
     def find_alias(self, label_root):
@@ -4204,10 +4272,11 @@ class Citation_Information(models.Model):
 
     bundle = models.ForeignKey(Bundle, on_delete=models.CASCADE)
     author_list = models.CharField(max_length=MAX_CHAR_FIELD, blank=True)
-    description = models.CharField(max_length=MAX_TEXT_FIELD)
     editor_list = models.CharField(max_length=MAX_CHAR_FIELD, blank=True)
-    keyword = models.CharField(max_length=MAX_CHAR_FIELD, blank=True)
     publication_year = models.CharField(max_length=MAX_CHAR_FIELD)
+    description = models.CharField(max_length=MAX_TEXT_FIELD)
+    keyword = models.CharField(max_length=MAX_CHAR_FIELD, blank=True)
+    
 
     # Builders
     def fill_label(self, label_root):
@@ -4216,14 +4285,27 @@ class Citation_Information(models.Model):
         Identification_Area = label_root.find(
             '{}Identification_Area'.format(NAMESPACE))
 
-        # Find Alias_List.  If no Alias_List is found, make one.
-        Citation_Information = Identification_Area.find(
-            '{}Citation_Information'.format(NAMESPACE))
+        # Locate Modification_History within Identification_Area
+        Modification_History = Identification_Area.find(
+            '{}Modification_History'.format(NAMESPACE))
 
-        # Double check but I'm pretty sure Citation_Information is only added once.
-        # if Citation_Information is None:
-        Citation_Information = etree.SubElement(
-            Identification_Area, 'Citation_Information')
+        # Find Alias_List.  If no Alias_List is found, make one.
+        Citation_Information = etree.Element(
+            '{}Citation_Information'.format(NAMESPACE))
+        
+        # Add Citation_Information information
+        if Modification_History is not None:
+            Identification_Area.insert(Identification_Area.index(Modification_History), Citation_Information)
+
+        else:
+            Identification_Area.append(Citation_Information)
+
+
+        # # Double check but I'm pretty sure Citation_Information is only added once.
+        # # if Citation_Information is None:
+        # Citation_Information = etree.SubElement(
+        #     Identification_Area, 'Citation_Information')
+        # Identification_Area.insert(0, Citation_Information)
 
         # Add Citation_Information information
         if self.author_list:
@@ -4232,15 +4314,16 @@ class Citation_Information(models.Model):
         if self.editor_list:
             editor_list = etree.SubElement(Citation_Information, 'editor_list')
             editor_list.text = self.editor_list
+        publication_year = etree.SubElement(
+            Citation_Information, 'publication_year')
+        publication_year.text = self.publication_year
         if self.keyword:
             # Ask how keywords are saved #
             keyword = etree.SubElement(Citation_Information, 'keyword')
             keyword.text = self.keyword
-        publication_year = etree.SubElement(
-            Citation_Information, 'publication_year')
-        publication_year.text = self.publication_year
         description = etree.SubElement(Citation_Information, 'description')
         description.text = self.description
+        
         return label_root
     
     def remove_xml(self, label_root):
@@ -4290,27 +4373,40 @@ class Modification_History(models.Model):
         # Modification_History = etree.SubElement(
         #     Identification_Area, 'Modification_History')
 
+        # Add Modification_Detail information
+        Modification_Detail = etree.SubElement(
+            Modification_History, '{}Modification_Detail'.format(NAMESPACE))
+        
         # Add Modification_History information
-        if self.version_id:
-            version_id = etree.SubElement(Modification_History, 'version_id')
-            version_id.text = self.version_id
-
-        description = etree.SubElement(Modification_History, 'description')
-        description.text = self.description
-        modification_date = etree.SubElement(Modification_History, 'modification_date')
+        modification_date = etree.SubElement(Modification_Detail, 'modification_date')
         modification_date.text = self.modification_date
+        if self.version_id:
+            version_id = etree.SubElement(Modification_Detail, 'version_id')
+            version_id.text = self.version_id
+        description = etree.SubElement(Modification_Detail, 'description')
+        description.text = self.description
+        
         return label_root
 
     def remove_xml(self, label_root):
         Identification_Area = label_root.find('{}Identification_Area'.format(NAMESPACE))
 
-        Modification_History = Identification_Area.findall('{}Modification_History'.format(NAMESPACE))
+        Modification_History = Identification_Area.find('{}Modification_History'.format(NAMESPACE))
 
         # Modification_History.getparent().remove(Modification_History)
 
-        for tag in Modification_History:
-            if(tag[0].text.title() == self.version_id.title()):
-                tag.getparent().remove(tag)
+        # for tag in Modification_History.iter():
+        #     modification_detail = Modification_History.find('{}Modification_Detail'.format(NAMESPACE))
+        #     if tag == modification_detail:
+        #         print(tag[2].text.title())
+        #         print(self.description.title())
+        #         print(tag)
+        #         if(tag[2].text.title() == self.description.title()):
+        #             tag.getparent().remove(tag)
+
+        for modification_detail in Modification_History:
+            if modification_detail[2].text.title() == self.description.title():
+                modification_detail.getparent().remove(modification_detail)
 
         return label_root
 
