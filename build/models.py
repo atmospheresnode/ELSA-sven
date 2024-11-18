@@ -2689,6 +2689,10 @@ class Product_Bundle(models.Model):
         title = Identification_Area.find('{}title'.format(NAMESPACE))
         title.text = self.bundle.name_title_case()
 
+        bundle_area = Product_Bundle.find('{}Bundle'.format(NAMESPACE))
+        bundle_type = bundle_area.find('{}bundle_type'.format(NAMESPACE))
+        bundle_type.text = self.bundle.bundle_type
+
         #     information_model_version
         #information_model_version = Identification_Area.find('{}information_model_version'.format(NAMESPACE))
         #information_model_version = self.bundle.version.name_with_dots()
@@ -2763,7 +2767,10 @@ class Product_Bundle(models.Model):
 
 
         reference_type = etree.SubElement(Bundle_Member_Entry, 'reference_type')
-        reference_type.text = 'bundle_has_{}_collection'.format(collection.collection.lower())   
+        if collection.collection.lower() == 'xml_schema':
+            reference_type.text = 'bundle_has_schema_collection'  
+        else:
+            reference_type.text = 'bundle_has_{}_collection'.format(collection.collection.lower())   
 
         return root
 
@@ -2788,7 +2795,7 @@ class Product_Bundle(models.Model):
         member_status.text = 'Primary'
 
         reference_type = etree.SubElement(Bundle_Member_Entry, 'reference_type')
-        reference_type.text = 'bundle_has_{}_collection'.format(collection.collection_name.lower())   
+        reference_type.text = 'bundle_has_{}_collection'.format(collection.collection_type.lower())   
 
         return root
 
