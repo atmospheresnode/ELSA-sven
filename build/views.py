@@ -2637,7 +2637,6 @@ def delete_modification_history(request, pk_bundle, pk_modification_history):
 def delete_citation_information(request, pk_bundle, pk_citation_information):
     bundle = Bundle.objects.get(pk=pk_bundle)
     citation_information = Citation_Information.objects.get(pk=pk_citation_information)
-<<<<<<< HEAD
 
     product_bundle = Product_Bundle.objects.get(bundle=bundle)
     product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
@@ -2648,17 +2647,6 @@ def delete_citation_information(request, pk_bundle, pk_citation_information):
     return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
 
 
-=======
- 
-    product_bundle = Product_Bundle.objects.get(bundle=bundle)
-    product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
- 
-    remove_from_label(citation_information, product_bundle, product_collections_list)
-    bundle.citation_information.remove(citation_information)
- 
-    return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
-
->>>>>>> ffc44f407b01d720f7ff627366bc87e6513385b3
 def delete_instrument(request, pk_bundle, pk_instrument):
     bundle = Bundle.objects.get(pk=pk_bundle)
     instrument = Instrument.objects.get(pk=pk_instrument)
