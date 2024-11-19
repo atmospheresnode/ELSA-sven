@@ -79,9 +79,9 @@
 {% block body_block %}
 <div class="container-fluid pt-3">
    <!-- Info Card -->
-   <div class="row">
-      <div class="col">
-         <div class="card d-flex">
+   <div class="row justify-content-center align-items-center">
+      <div class="col-md-12">
+         <div class="card d-flex p-2">
             <h2 class="card-title text-center mt-3"> <strong>{{ bundle.name }} </strong> </h2>
             <p class="card-body text-left z-depth-2">
                <!-- LID -->
@@ -108,7 +108,7 @@
                      <!--'Help' is removed as it does not serve any required functionality -->
                      {% comment %} <a type="button" class="btn btn-info text-light" href="" aria-expanded="true" style="box-shadow: none;">Help</a> {% endcomment %}
                      <a type="button" class="btn btn-danger text-light" data-bs-toggle="modal" data-bs-target="#delete_modal" aria-expanded="false" style="box-shadow: none;">Delete Bundle</a>
-                     <a type="button" class="btn btn-warning text-light" href="{% url 'build:bundle_download' bundle.pk %}" aria-expanded="false" style="box-shadow: none;">Download Bundle</a>
+                     <a type="button" class="btn btn-success text-light" href="{% url 'build:bundle_download' bundle.pk %}" aria-expanded="false" style="box-shadow: none;">Download Bundle</a>
                      <a type="button" class="btn btn-light text-light" data-bs-toggle="modal" data-bs-target="#investigation_modal" aria-expanded="false" style="box-shadow: none;">Edit Investigation Area</a>
                      <a type="button" class="btn btn-light text-light" data-bs-toggle="modal" data-bs-target="#context_modal" aria-expanded="false" style="box-shadow: none;">Edit Context Products</a>
                      <a type="button" class="btn btn-light text-light" data-bs-toggle="modal" data-bs-target="#collections_modal" aria-expanded="false" style="box-shadow: none;">Edit Collections</a>
@@ -120,46 +120,71 @@
 
    <!-- The Rest -->
    <div class="row py-4">
-      <div class="col">
-          <div class="card d-flex">
-              <h2 class="card-title text-center mt-3">Files</h2>
-              <div class="card_body m-4">
-                  <div class="col">
-                      {% for f in file_context %}
-                          <div class="col py-2">
-                              <!-- Pass file name and content as data attributes -->
-                              <button type="button" class="btn btn-light text-light" onclick="showFileContent('{{ f.0 }}', `{{ f.1 }}`)">
-                                 {{ f.0 }}
-                             </button>
-                          </div>
-                      {% endfor %}
+      <div class="col-md-5">
+        <div class="card d-flex">
+           <h2 class="card-title text-center mt-3">Files</h2>
+           <div class="card_body m-4">
+               <div class="col">
+                  {% for f in file_context %}
+                  <div class="col py-2">                  
+                    <button 
+                        type="button" 
+                        class="btn btn-light text-light file-button" 
+                        data-filename="{{ f.0 }}" 
+                        data-content="{{ f.1 }}"
+                        {% if forloop.first %} id="defaultFile" {% endif %}>
+                            {{ f.0 }}
+                     </button>
                   </div>
-              </div>
-          </div>
+                  {% endfor %}
+            </div>
+         </div>
       </div>
-  
-      <div class="col-md-6">
-          <div class="card d-flex">
-              <h2 class="card-title text-center mt-3" id="fileName">File Content</h2>
-              <div class="card-body m-3 mt-1"><pre><code id="fileContent"></code></pre></div>
-          </div>
-      </div>
-
-      <!-- Only works here, idk why it doesnt work when moved to elsa.js - deric -->
-      <script>
-         showFileContent = function(filename, content) {
-            document.getElementById('fileName').textContent = filename;
-            document.getElementById('fileContent').textContent = content;
-         };
-      </script>
    </div>
+
+   <div class="col-md-7">
+      <div class="card d-flex">
+         <h2 class="card-title text-center mt-3" id="fileName">File Content</h2>
+         <div class="card-body m-3 mt-1">
+            <pre><code id="fileContent"></code></pre>
+         </div>
+      </div>
+   </div>
+
+   <!-- Only works here, idk why it doesnt work when moved to elsa.js - deric -->
+   <script>
+      
+      const showFileContent = function(filename, content) {
+         document.getElementById('fileName').textContent = filename;
+         document.getElementById('fileContent').textContent = content;
+      };
+
+      
+      window.onload = function() {
+         const defaultFileButton = document.getElementById('defaultFile');
+         if (defaultFileButton) {
+            const filename = defaultFileButton.getAttribute('data-filename');
+            const content = defaultFileButton.getAttribute('data-content'); 
+            showFileContent(filename, content); 
+         }
+      };
+
+      
+      document.querySelectorAll('.file-button').forEach(button => {
+         button.addEventListener('click', function() {
+            const filename = this.getAttribute('data-filename');
+            const content = this.getAttribute('data-content');
+            showFileContent(filename, content);
+         });
+      });
+   </script>
 </div>
 
 <!-- Form Modals -->
 <!-- Figure out how to move these to new file for readability sake - deric -->
 
 <!-- Delete Bundle Modal -->
-<div class="modal fade" id="delete_modal">
+<div class="modal fade" id="delete_modal" tabindex="-1" aria-hidden="true">
    <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
          <!-- Title -->
@@ -167,25 +192,27 @@
             <h3 class="modal-title w-100 text-center">Delete Bundle</h3>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
          </div>
-      </div>
- 
-       <!-- Modal Body -->
-      <div class="modal-body">
-         <div class="text-center">
-            <h5>Are you sure you want to delete <i>"{{bundle}}"</i>?</h5>
-            <p class="text-muted"><i>Caution: This bundle will be deleted immediately and this action cannot be undone.</i></p>
-            
-            <div class="container">
-               <div class="row">
-                  <div class="col-12 col-md-6 mb-2">
-                     <button type="button" class="btn btn-secondary w-100" data-bs-dismiss="modal">
-                     Cancel
-                     </button>
-                  </div>
-                  <div class="col-12 col-md-6 mb-2">
-                     <a href="{% url 'build:bundle_delete' bundle.pk %}" class="btn btn-danger w-100">
-                     Confirm Delete
-                     </a>
+
+         <!-- Modal Body -->
+         <div class="modal-body">
+            <div class="text-center">
+               <h5>Are you sure you want to delete <i>"{{ bundle }}"</i>?</h5>
+               <p class="text-muted">
+                  <i>Caution: This bundle will be deleted immediately and this action cannot be undone.</i>
+               </p>
+
+               <div class="container">
+                  <div class="row">
+                     <div class="col-12 col-md-6 mb-2">
+                        <button type="button" class="btn btn-secondary w-100" data-bs-dismiss="modal">
+                           Cancel
+                        </button>
+                     </div>
+                     <div class="col-12 col-md-6 mb-2">
+                        <a href="{% url 'build:bundle_delete' bundle.pk %}" class="btn btn-danger w-100">
+                           Confirm Delete
+                        </a>
+                     </div>
                   </div>
                </div>
             </div>
