@@ -1283,7 +1283,7 @@ def context_search_investigation(request, pk_bundle):
             context_dict['messages'] = messages.get_messages(request)
             # return render(request, 'build/context/context_search_investigation.html', context_dict)
             # return render(request, 'build/bundle/bundle.html', context_dict)
-            return HttpResponseRedirect('/build/' + pk_bundle + '/')
+            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
         
         context_dict['messages'] = messages.get_messages(request)
         # return render(request, 'build/bundle/bundle.html', context_dict)
@@ -2637,6 +2637,7 @@ def delete_modification_history(request, pk_bundle, pk_modification_history):
 def delete_citation_information(request, pk_bundle, pk_citation_information):
     bundle = Bundle.objects.get(pk=pk_bundle)
     citation_information = Citation_Information.objects.get(pk=pk_citation_information)
+<<<<<<< HEAD
 
     product_bundle = Product_Bundle.objects.get(bundle=bundle)
     product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
@@ -2647,6 +2648,17 @@ def delete_citation_information(request, pk_bundle, pk_citation_information):
     return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
 
 
+=======
+ 
+    product_bundle = Product_Bundle.objects.get(bundle=bundle)
+    product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+ 
+    remove_from_label(citation_information, product_bundle, product_collections_list)
+    bundle.citation_information.remove(citation_information)
+ 
+    return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
+
+>>>>>>> ffc44f407b01d720f7ff627366bc87e6513385b3
 def delete_instrument(request, pk_bundle, pk_instrument):
     bundle = Bundle.objects.get(pk=pk_bundle)
     instrument = Instrument.objects.get(pk=pk_instrument)
@@ -2954,7 +2966,7 @@ def index(request, path):
                 link_target = os.path.relpath(t, start=os.path.join(
                     _get_abs_virtual_root(), 'archive/'))
                 
-                tree = etree.parse('archive/' + link_target)
+                tree = etree.parse(os.path.join(settings.ARCHIVE_DIR, link_target))
                 xml_content = etree.tostring(tree, pretty_print=True, encoding='unicode')
 
                 results.append([mfile, xml_content])
