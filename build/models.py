@@ -3328,7 +3328,7 @@ class Table_Binary(models.Model):
         information_model_version = Identification_Area.find('information_model_version')
         #information_model_version.text = self.bundle.version.with_dots()
 
-        Observation_Area = Table_Delimited.find('{}Observation_Area'.format(NAMESPACE))
+        Observation_Area = Table_Binary.find('{}Observation_Area'.format(NAMESPACE))
         Primary_Result_Summary = Observation_Area.find('{}Primary_Result_Summary'.format(NAMESPACE))
         Science_Facets = Primary_Result_Summary.find('{}Science_Facets'.format(NAMESPACE))
         science_facet1 = Science_Facets.find('{}facet1'.format(NAMESPACE))
