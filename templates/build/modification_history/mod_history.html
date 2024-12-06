@@ -19,17 +19,16 @@
                
                <form action="{% url 'build:modification_history' bundle.pk %}" method="post" id="form_modification_history" class="pt-3">
                   {% csrf_token %}
-                  
-                  <!-- Modification Date -->
+                  <!-- Version ID -->
                   <div class="mb-4 form-outline">
                      <div class="row">
-                         <div class="col-md-2 mt-2">
-                             <h6>Modification Date</h6>
-                         </div>
+                           <div class="col-md-2 mt-2">
+                              <h6>Version ID</h6>
+                           </div>
 
-                         <div class="col-md-10"">
-                             {{ form_modification_history.modification_date }}
-                         </div>
+                           <div class="col-md-10"">
+                              {{ form_modification_history.version_id }}
+                           </div>
                      </div>
                   </div>
 
@@ -45,16 +44,16 @@
                          </div>
                      </div>
                   </div>
-
-                  <!-- Version ID -->
+                  
+                  <!-- Modification Date -->
                   <div class="mb-4 form-outline">
                      <div class="row">
                          <div class="col-md-2 mt-2">
-                             <h6>Version ID</h6>
+                             <h6>Modification Date</h6>
                          </div>
 
                          <div class="col-md-10"">
-                             {{ form_modification_history.version_id }}
+                             {{ form_modification_history.modification_date }}
                          </div>
                      </div>
                   </div>
