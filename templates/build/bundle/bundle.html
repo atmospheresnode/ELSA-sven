@@ -120,7 +120,7 @@
 
    <!-- The Rest -->
    <div class="row py-4">
-      <div class="col-md-5">
+      <div class="col-md-3">
         <div class="card d-flex">
            <h2 class="card-title text-center mt-3">Files</h2>
            <div class="card_body m-4">
@@ -142,7 +142,7 @@
       </div>
    </div>
 
-   <div class="col-md-7">
+   <div class="col-md-9">
       <div class="card d-flex">
          <h2 class="card-title text-center mt-3" id="fileName">File Content</h2>
          <div class="card-body m-3 mt-1">
@@ -153,7 +153,6 @@
 
    <!-- Only works here, idk why it doesnt work when moved to elsa.js - deric -->
    <script>
-      
       const showFileContent = function(filename, content) {
          document.getElementById('fileName').textContent = filename;
          document.getElementById('fileContent').textContent = content;
@@ -233,7 +232,7 @@
 
          <div class="modal-body">
             <!-- Tabs -->
-            <ul class="nav nav-tabs nav-justified" role="tablist">
+            <ul class="nav nav-fill nav-underline nav-justified" role="tablist">
                <li class="nav-item" role="presentation">
                   <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#con_inv" type="button" role="tab" aria-selected="true">Investigation</button>
                </li>
@@ -512,7 +511,7 @@
 
          <div class="modal-body pt-0">
             <!-- Tabs -->
-            <ul class="nav nav-tabs nav-justified" role="tablist">
+            <ul class="nav nav-fill nav-underline nav-justified" role="tablist">
                <li class="bundle-nav-item nav-item" role="presentation">
                   <button class="bundle-nav-link nav-link" data-bs-toggle="tab" data-bs-target="#inv_alias" type="button" role="tab" aria-selected="true">Alias</button>
                </li>
@@ -587,22 +586,22 @@
                      <form action="{% url 'build:bundle' bundle.pk %}" method="post" id="form_modification_history">
                         {% csrf_token %}
 
+                        <!-- Version ID -->
+                        <div class="mt-3">
+                           <label for="version_id">Version ID</label>
+                           {{ form_modification_history.version_id }}
+                        </div>
+
                         <!-- Description-->
                         <div class="mt-3">
-                           <label for="mod_desc" class="required">Description</label>
+                           <label for="mod_desc">Description</label>
                            {{ form_modification_history.description }}
                         </div>
 
                         <!-- Modification Date -->
                         <div class="mt-3">
-                           <label for="mod_date" class="required">Modificaiton Date</label>
+                           <label for="mod_date">Modificaiton Date</label>
                            {{ form_modification_history.modification_date }}
-                        </div>
-
-                        <!-- Version ID -->
-                        <div class="mt-3">
-                           <label for="version_id">Version ID</label>
-                           {{ form_modification_history.version_id }}
                         </div>
                         
                         <!-- Create Modification History -->
@@ -621,9 +620,9 @@
                      {% for modification_history in modification_history_set %}
                      <div class="card snippet-card ms-0 me-3">
                         <div class="card-body">
-                           <p class="card-text">Description: {{ modification_history.description }}</p>
                            <p class="card-text">Version ID: {{ modification_history.version_id}}</p>
-                           <p class="card-text">Modification date: {{ modification_history.modification_date }}</p>
+                           <p class="card-text">Description: {{ modification_history.description }}</p>
+                           <p class="card-text">Modification Date: {{ modification_history.modification_date }}</p>
                         
                            <form action="{% url 'build:modification_history_delete' bundle.pk modification_history.pk %}" method="post" style="display:inline;">
                               {% csrf_token %}
@@ -664,13 +663,13 @@
 
                         <!-- Publication Year -->
                         <div class="mt-3">
-                           <label for="publication_year" class="required">Publication Year</label>
+                           <label for="publication_year">Publication Year</label>
                            {{ form_citation_information.publication_year }}
                         </div>
 
                         <!-- Description -->
                         <div class="mt-3">
-                           <label for="mod_desc" class="required">Description</label>
+                           <label for="mod_desc">Description</label>
                            {{ form_citation_information.description }}
                         </div>
 
@@ -727,7 +726,7 @@
 
          <div class="modal-body ">
             <!-- Tabs -->
-            <ul class="nav nav-tabs nav-justified" role="tablist">
+            <ul class="nav nav-fill nav-underline nav-justified" role="tablist">
                <li class="nav-item" role="presentation">
                   <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#doc_collection" type="button" role="tab" aria-selected="true">Document Collection</button>
                </li>
@@ -739,7 +738,7 @@
                {% endfor %}
                
                <li class="nav-item" role="presentation">
-                  <button class="nav-link btn-light text-dark" data-bs-toggle="tab" data-bs-target="#add_a_collection" type="button" role="tab" aria-selected="false">+ Add New Collection</button>
+                  <button class="nav-link" data-bs-toggle="tab" data-bs-target="#add_a_collection" type="button" role="tab" aria-selected="false"><i class="fa fa-plus me-2"></i> Add New Collection</button>
                </li>
             </ul>
 
@@ -838,13 +837,13 @@
 
                         <!-- Collection Name -->
                         <div class="mt-3">
-                           <label for="col_name" class="required">Collection Name</label>
+                           <label for="col_name">Collection Name</label>
                            {{ form_additional_collections.collection_name }}
                         </div>
 
                         <!-- Alternate Title -->
                         <div class="mt-3">
-                           <label for="col_type" class="required">Collection Type</label>
+                           <label for="col_type">Collection Type</label>
                            {{ form_additional_collections.collection_type }}
                         </div>
 
@@ -898,13 +897,13 @@
 
                      <!-- Name-->
                      <div class="mt-3">
-                        <label for="doc_name" class="required">Document Name</label>
+                        <label for="doc_name">Document Name</label>
                         {{ form_document.document_name }}
                      </div>
 
                      <!-- Publication Date -->
                      <div class="mt-3">
-                        <label for="pub_date" class="required">Publication Date</label>
+                        <label for="pub_date">Publication Date</label>
                         {{ form_document.publication_date }}
                      </div>
 
@@ -1000,13 +999,13 @@
 
                      <!-- Name-->
                      <div class="mt-3">
-                        <label for="data_name" class="required">Name</label>
+                        <label for="data_name">Name</label>
                         {{ form_data.name }}
                      </div>
 
                      <!-- Processing Level -->
                      <div class="mt-3">
-                        <label for="processing_level" class="required">Processing Level</label>
+                        <label for="processing_level">Processing Level</label>
                         {{ form_data.processing_level }}
                      </div>
 
