@@ -48,13 +48,13 @@ class ConfirmForm(forms.Form):
 
 
 class AliasForm(forms.ModelForm):
-    alternate_id = forms.CharField(required=False, max_length=100, widget=forms.TextInput(attrs={
+    alternate_id = forms.CharField(required=True, max_length=100, widget=forms.TextInput(attrs={
             'class': 'form-control',
             'id': 'alt_id'
         })
     )
 
-    alternate_title = forms.CharField(required=False, max_length=100, widget=forms.TextInput(attrs={
+    alternate_title = forms.CharField(required=True, max_length=100, widget=forms.TextInput(attrs={
             'class': 'form-control',
             'id': 'alt_title'
         })
@@ -293,7 +293,7 @@ class CollectionsForm(forms.ModelForm):
 
 
 class AdditionalCollectionForm(forms.ModelForm):
-    collection_name = forms.CharField(required=False, max_length=100, widget=forms.TextInput(attrs={
+    collection_name = forms.CharField(required=True, max_length=100, widget=forms.TextInput(attrs={
         'class': 'form-control form-outline',
         'id': 'col_name'
     }))
