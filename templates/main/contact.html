@@ -63,8 +63,8 @@ Contact Atmospheres Node
 .section-heading {
     font-size: 2.2em;
     font-weight: 700;
-    margin-top: 120px;
-    margin-bottom: 10px;
+    margin-top: 20px;
+    margin-bottom: 15x;
     color: #333;
     text-align: center;
 }
@@ -222,25 +222,6 @@ h3.h3-responsive {
     
 <br>
 
-    {% comment %} <div class="row mb-3">
-        <div class="col-md-12 rgba-indigo">
-            <h3 class="h3-responsive">Send a message to ELSA <i class="fa fa-snowflake-o"></i></h3>
-            <form role="form" action="" method="post" autocomplete="off">
-                {% csrf_token %}
-
-                {% for field in form %}
-                    <div class="fieldWrapper">
-                        {{ field.errors }}
-                        {{ field.label_tag }} {{ field }}
-                     </div>
-                {% endfor %}
-                
-                {{ contact_form.as_p }}
-                <button type="submit" class="btn btn-default">Submit</button>
-                <button class="round-button" data-toggle="tiptool" data-placement="right" title="After submitting the form, please wait 48 hours for us to get back to you.">?</button>
-            </form>
-        </div>
-    </div> {% endcomment %}
 
     <!-- Modal Button -->
 <div class="fixed-contact-button" data-bs-toggle="modal" data-bs-target="#contactModal">
