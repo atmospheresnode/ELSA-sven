@@ -8,6 +8,7 @@
             width: 90%;
             margin: auto;
             margin-bottom: 15px;
+            margin-top: 30px;
         }
         .hover-card:hover {
             transform: scale(1.05);
@@ -15,7 +16,7 @@
         }
     </style>
 
-    <div class="container-fluid justify-content-center align-items-center py-5">
+    <div class="container-fluid justify-content-center align-items-center py-0" >
         <!-- First Container for the Cards -->
         <div class="container">
             <div class="row gx-1">
@@ -80,7 +81,7 @@
         </div>
 
         <!-- Second Container for the Migrations Card -->
-        <div class="container-fluid mt-5" style="padding: 0;">
+        <div class="container-fluid mt-5 py-4" style="margin-bottom: -30px;">
           <div class="row justify-content-center">
               <div class="col-11">
                   <div class="card h-100 d-flex flex-column">
@@ -90,6 +91,7 @@
                               Would you like to see a tool like ELSA to handle all of your PDS3 to PDS4 Bundle Migrations? Here at atmos, we are hoping to develop an interface just for you. <a href="{% url 'main:contact' %}">Contact ELSA</a> and let us know so we can push it up our list of items to-do!
                           </div>
                       </div>
+
                       <!-- To Bundle Button -->
                       <a href="{{ user.userprofile.get_absolute_url }}" class="btn btn-light text-light m-4">Bundle Hub</a>
                   </div>
