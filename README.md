@@ -18,6 +18,12 @@ This approach takes advantage of Atmospheres Node expertise to ensure all connec
 ## **Release Notes** 
 This section provides a timeline of ELSA's release history, highlighting key updates, new features, bug fixes, and improvements, with the most recent release listed first.
 
-### **Version 1.9 (January 24, 2025)**
+### **Current Version** 
+> ### **Version 1.9.1 (February 07, 2025)**
+- Resolved vertical spacing inconsistencies between the header and footer for a more uniform layout.
+- Enhanced the Instrument and Target selection pages to always display the selected items, eliminating excessive whitespace. Previously, these pages only showed the selection dropdown on load, leading to layout gaps.
+
+### **Previous Versions** 
+> ### **Version 1.9 (January 24, 2025)**
 - Added ELSA version display in the footer.
 - Updated the copyright year to reflect 2025.
