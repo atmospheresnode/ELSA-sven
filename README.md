@@ -22,6 +22,7 @@ This section provides a timeline of ELSA's release history, highlighting key upd
 > ### **Version 1.9.2 (February 14, 2025)**
 - Delete features added for host products, instruments, and targets.
 - Status update feature enhanced for host products, instruments, and targets: The user will be prompted now if nothing is selected.
+- Updated the the context product crawler, update_context.py, to be more concise when adding context products to database. It adds the reference links between investigations to facilities and facilities to telescopes. Includes updates to using CTLI library for newer context products.
   
 
 ### **Previous Versions** 
