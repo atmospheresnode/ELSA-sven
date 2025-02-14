@@ -27,30 +27,30 @@ Add Context: Host Products
                     Select Your Host Product
                 </h3>
             </div>
-            <div class="card-body text-center">
+            <div class="card-body text-center mb-2">
                 {% if investigation.type_of == "Mission" %}
-                <form id="query01" method="post" action="{% url 'build:context_search_instrument_host_and_facility' bundle.pk investigation.pk %}" class="d-flex flex-column align-items-center">
-                    <p class="text-left mb-4">Host products describe the top level of an observing system consisting of the platform that contains instruments for collecting data. Spacecraft are considered <strong>Instrument Hosts</strong> whereas Observatories or Laboratories would be <strong>Facilities</strong>. Depending on the investigation you chose on the last page you will have associated options here. If your investigation does not use a spacecraft or facility, you should select the No Host option from the selector.</p>
-                    <p class="text-left mb-4">From the drop-down menu, select which type of host you plan to use. The initial selection will be <strong>instrument host</strong>(for mobile hosts) or <strong>facility</strong>(for stationary hosts). After selecting one of these two options you will be given a pull-down menu for the appropriate set. Instrument hosts include mobile platforms like spacecraft, rovers, landers, etc. whereas facilities include laboratories and observatories. If you plan to use telescopes and/or instruments not associated with a host, select the No Host option.</p>
+                <p class="text-left mb-3">Host products describe the top level of an observing system consisting of the platform that contains instruments for collecting data. Spacecraft are considered <strong>Instrument Hosts</strong> whereas Observatories or Laboratories would be <strong>Facilities</strong>. Depending on the investigation you chose on the last page you will have associated options here. If your investigation does not use a spacecraft or facility, you should select the No Host option from the selector.</p>
+                <p class="text-left mb-4">From the drop-down menu, select which type of host you plan to use. The initial selection will be <strong>instrument host</strong>(for mobile hosts) or <strong>facility</strong>(for stationary hosts). After selecting one of these two options you will be given a pull-down menu for the appropriate set. Instrument hosts include mobile platforms like spacecraft, rovers, landers, etc. whereas facilities include laboratories and observatories. If you plan to use telescopes and/or instruments not associated with a host, select the No Host option.</p>
+                <form id="query01" method="post" action="{% url 'build:context_search_instrument_host_and_facility' bundle.pk investigation.pk %}" class="d-flex justify-content-center align-items-center">
                     {% csrf_token %}
-                    <div class="form-group mb-4">
+                    <div class="form-group">
                         {{ form_instrument_host }}
                         {{ form.errors }}
                         {{ form.non_field_errors }}
                     </div>
-                    <input type="submit" class="btn btn-success" value="Submit" style="margin-top: 10px; padding: .2rem .5rem"/>
+                    <input type="submit" class="btn btn-success" value="Submit" style="padding: .2rem .5rem; margin-left: 10px"/>
                 </form>
                 {% else %}
-                <form id="query01" method="post" action="{% url 'build:context_search_instrument_host_and_facility' bundle.pk investigation.pk %}" class="d-flex flex-column align-items-center">
-                    <p class="text-left mb-4">Host products describe the top level of an observing system consisting of the platform that contains instruments for collecting data. Spacecraft are considered <strong>Instrument Hosts</strong> whereas Observatories or Laboratories would be <strong>Facilities</strong>. Depending on the investigation you chose on the last page you will have associated options here. If your investigation does not use a spacecraft or facility, you should select the No Host option from the selector.</p>
-                    <p class="text-left mb-4">Facilities are stationary hosts such as laboratories or observatories, and will contain references for lab instruments and/or telescopes with instruments. Please select your facility</p>
+                <p class="text-left mb-4">Host products describe the top level of an observing system consisting of the platform that contains instruments for collecting data. Spacecraft are considered <strong>Instrument Hosts</strong> whereas Observatories or Laboratories would be <strong>Facilities</strong>. Depending on the investigation you chose on the last page you will have associated options here. If your investigation does not use a spacecraft or facility, you should select the No Host option from the selector.</p>
+                <p class="text-left mb-4">Facilities are stationary hosts such as laboratories or observatories, and will contain references for lab instruments and/or telescopes with instruments. Please select your facility</p>
+                <form id="query01" method="post" action="{% url 'build:context_search_instrument_host_and_facility' bundle.pk investigation.pk %}" class="d-flex justify-content-center align-items-center">
                     {% csrf_token %}
-                    <div class="form-group mb-4">
+                    <div class="form-group">
                         {{ form_facility }}
                         {{ form.errors }}
                         {{ form.non_field_errors }}
                     </div>
-                    <input type="submit" class="btn btn-success" value="Submit" style="margin-top: 10px; padding: .2rem .5rem"/>
+                    <input type="submit" class="btn btn-success" value="Submit" style="padding: .2rem .5rem; margin-left: 10px"/>
                 </form>
                 {% endif %}
             </div>
@@ -65,10 +65,13 @@ Add Context: Host Products
         <div class="card mb-4">
             <div class="card-header text-white text-center" style="padding: 1rem 1rem; background-color: #708090">
                 <h3 class="mb-2 mt-2">
-                    Recently Added Host Product
+                    Selected Host Product
                 </h3>
             </div>
-            <div class="card-body">
+            <div class="card-body text-center">
+            
+            {% if investigation.type_of == "Mission" %}
+            {% if bundle_instrument_host_set|length > 0 %}
                 <h5 class="text-center mb-4">Update: {{ instrument_host }} added to <i>{{ bundle }}</i></h5>
                 <div class="row">
                     {% for ih in bundle_instrument_host_set %}
@@ -78,13 +81,20 @@ Add Context: Host Products
                                     <div class="card-body text-center">
                                         <h4 class="card-title">{{ ih.name }}</h4>
                                         <p class="card-text">{{ ih.lid }}</p>
+                                        <a type="button" class="btn btn-danger" href="{% url 'build:delete_instrument_host' bundle.pk ih.pk %}" style="margin-top: 15px;">Remove</a>
                                     </div>
                                 </a>
                             </div>
                         </div>
                     {% endfor %}
                 </div>
-                {% if facility %}
+            {% else %}
+                <!-- No host product selected message -->
+                <h5 class="text-danger text-center">No host product has been selected! Please choose one to get started.</h5>
+            {% endif %}
+                
+            {% else %}
+                {% if bundle_facility_set|length > 0 %}
                 <h3 class="text-center mb-4">Update: {{ facility }} added to <i>{{ bundle }}</i></h3>
                 <div class="row">
                     {% for fac in bundle_facility_set %}
@@ -98,13 +108,19 @@ Add Context: Host Products
                                     <div class="card-body text-center">
                                         <h4 class="card-title">{{ fac.name }}</h4>
                                         <p class="card-text">{{ fac.lid }}</p>
+                                        <a type="button" class="btn btn-danger" href="{% url 'build:delete_instrument_host' bundle.pk instrument_host.pk %}" style="margin-top: 15px;">Remove</a>
                                     </div>
                                 </a>
                             </div>
                         </div>
                     {% endfor %}
                 </div>
-                {% endif %}
+                {% else %}
+                <!-- No host product selected message -->
+                <h5 class="text-danger text-center">No host product has been selected! Please choose one to get started.</h5>
+            {% endif %}
+            {% endif %}
+            
             </div>
         </div>
     </div>

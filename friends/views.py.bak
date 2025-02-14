@@ -70,7 +70,7 @@ def profile(request, pk_user):
     context_dict['bundle_count'] = Bundle.objects.filter(user=context_dict['user']).count()
 
     if request.user == context_dict['user']:
-        return render(request, 'friends/userprofile_detail.html', context_dict)
+        return render(request, 'friends/bundle_hub.html', context_dict)
 
     else:
         return redirect('main:restricted_access')

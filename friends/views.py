@@ -90,7 +90,7 @@ def profile(request, pk_user):
 
 
     if request.user == context_dict['user']:
-        return render(request, 'friends/userprofile_detail.html', context_dict)
+        return render(request, 'friends/bundle_hub.html', context_dict)
 
     else:
         return redirect('main:restricted_access')

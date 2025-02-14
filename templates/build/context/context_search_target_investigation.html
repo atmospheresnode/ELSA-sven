@@ -18,27 +18,20 @@ Add Context: Target
 
 
 {% block body_block %}
-<!--First row-->
-<div class="row pt-2">
-    <!--Column-->
-    <div class="col-md-12">
-        <h4 class="card-header stylish-color white-text text-center z-depth-2">Select your target</h4>
-	</br>
-    </div>
-    <!--/.Column-->
-</div>
 
 <!--First row-->
-<!--Second row-->
-<div class="row mt-1 pt-0">
-    <div class="col-md-8 mx-auto mb-4">
+<div class="row">
+    <div class="col-md-8 mx-auto mb-4" style="margin-top: 30px">
         <div class="card">
-            <div class="card-header text-white text-center" style="padding: 1rem 1rem; background-color: #2F4F4F">
-                <p class="mb-2">
-                    Targets are often provided based on the selected context. A pull-down menu of available targets may be provided, especially if you’ve selected Mission context products. For more general-purpose observing systems or non-affiliated instruments, you may need to select a target from the entire list of available targets.
-                </p>
+            <div class="card-header text-white text-center" style="padding: 0.5rem 0.5rem; background-color: #2F4F4F">
+                <h3 class="mb-2 mt-2">
+                    Select Target
+                </h3>
             </div>
-            <div class="card-body text-center">
+            <div class="card-body text-center mb-2">
+                <p class="mb-3">
+                     Targets are often provided based on the selected context. A pull-down menu of available targets may be provided, especially if you’ve selected Mission context products. For more general-purpose observing systems or non-affiliated instruments, you may need to select a target from the entire list of available targets.
+                </p>
                 <form id="query01" method="post" action="{% url 'build:context_search_target_investigation' bundle.pk investigation.pk %}" class="d-flex justify-content-center align-items-center">
                     {% csrf_token %}
                     <div class="form-group mr-2">
@@ -53,7 +46,6 @@ Add Context: Target
 <!--/.Row-->
 <!--Row-->
 
-{% comment %} {% if target %} {% endcomment %}
 <!-- Recently Added Target Section -->
 <div class="row mt-4">
     <div class="col-md-10 mx-auto mb-4">
@@ -62,6 +54,7 @@ Add Context: Target
                 <h3 class="mb-0">Recently Added Target</h3>
             </div>
             <div class="card-body">
+                {% if bundle_target_set|length > 0 %}
                 <h5 class="text-center mb-4">Update: {{ target }} added to <i>{{ bundle }}</i></h3>
                 <div class="row">
                     {% for tar in bundle_target_set %}
@@ -70,16 +63,22 @@ Add Context: Target
                                 <div class="card-body text-center">
                                     <h4 class="card-title">{{ tar.name }}</h4>
                                     <p class="card-text">{{ tar.lid }}</p>
+                                    <a type="button" class="btn btn-danger" href="{% url 'build:delete_target' bundle.pk tar.pk %}" style="margin-top: 5px;">Remove</a>
                                 </div>
                             </div>
                         </div>
                     {% endfor %}
                 </div>
+                {% else %}
+                    <!-- No target selected message -->
+                    <h5 class="text-danger text-center">No target selected yet!</h5>
+                {% endif %}
             </div>
         </div>
     </div>
 </div>
-{% comment %} {% endif %} {% endcomment %}
+
+
 
 
 <!-- Go back to build bundle page -->
