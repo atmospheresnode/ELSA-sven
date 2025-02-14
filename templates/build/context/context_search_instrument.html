@@ -21,12 +21,15 @@ Add Context: Instrument
 <div class="row">
     <div class="col-md-8 mx-auto mb-4" style="margin-top: 30px">
         <div class="card">
-            <div class="card-header text-white text-center" style="padding: 1rem 1rem; background-color: #2F4F4F">
-                <p class="mb-2">
-                    Choose an associated instrument from the host product you just selected. Instruments are the pieces of equipment that actually collect the data, and it's important to include these in your observing systems.
-                </p>
+            <div class="card-header text-white text-center" style="padding: 0.5rem 0.5rem; background-color: #2F4F4F">
+                <h3 class="mb-2 mt-2">
+                    Select Instrument
+                </h3>
             </div>
-            <div class="card-body text-center">
+            <div class="card-body text-center mb-2">
+                <p class="mb-3">
+                    You've selected <strong> {{ instrument_host }} </strong> as the host product for your bundle. Now, choose an associated instrument from the host product to add to your bundle. Instruments are the pieces of equipment that actually collect the data, and it's important to include these in your observing systems.
+                </p>
                 <form id="query01" method="post" action="{% url 'build:context_search_instrument' bundle.pk investigation.pk instrument_host.pk %}" class="d-flex justify-content-center align-items-center">
                     {% csrf_token %}
                     <div class="form-group mr-2">
@@ -41,15 +44,14 @@ Add Context: Instrument
     </div>
 </div>
 
-{% comment %} {% if instrument %} {% endcomment %}
 <div class="row mt-4">
     <div class="col-md-10 mx-auto mb-4">
         <div class="card mb-4">
             <div class="card-header text-white text-center" style="padding: 1rem 1rem; background-color: #708090">
-                <h3 class="mb-0">Recently Added Instrument</h3>
+                <h3 class="mb-0">Recently Selected Instrument</h3>
             </div>
             <div class="card-body">
-                {% comment %} {% if instrument %} {% endcomment %}
+                {% if bundle_instrument_set|length > 0 %}
                 <h5 class="text-center mb-4">Update: {{ instrument }} added to <i>{{ bundle }}</i></h5>
                 <div class="row">
                     {% for ins in bundle_instrument_set %}
@@ -59,18 +61,21 @@ Add Context: Instrument
                                     <div class="card-body text-center">
                                         <h4 class="card-title">{{ ins.name }}</h4>
                                         <p class="card-text">{{ ins.lid }}</p>
+                                        <a type="button" class="btn btn-danger" href="{% url 'build:delete_instrument' bundle.pk ins.pk %}" style="margin-top: 15px;">Remove</a>
                                     </div>
                                 </a>
                             </div>
                         </div>
                     {% endfor %}
                 </div>
-                {% comment %} {% endif %} {% endcomment %}
+                {% else %}
+                <!-- No instrument selected message -->
+                <h5 class="text-danger text-center">No instrument selected yet!</h5>
+                {% endif %}
             </div>
         </div>
     </div>
 </div>
-{% comment %} {% endif %} {% endcomment %}
 
 
 <!-- Go back to build bundle page -->
