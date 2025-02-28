@@ -182,9 +182,18 @@ class CitationInformationForm(forms.ModelForm):
     # modify author and editor list for future to format like 
     # last name, first name; last name, f; etc (both versions work)
 
-    author_list = forms.CharField(required=False, widget = forms.TextInput(attrs={
+    # author_list = forms.CharField(required=False, widget = forms.TextInput(attrs={
+    #     'class': 'form-control form-outline',
+    #     'id': 'author_list'
+    # }))
+    number_of_authors_people = forms.IntegerField(required=True, widget= forms.NumberInput(attrs={
         'class': 'form-control form-outline',
-        'id': 'author_list'
+        'id': 'number of authors (people) for List_Author'
+    }))
+
+    number_of_authors_organization = forms.IntegerField(required=True, widget= forms.NumberInput(attrs={
+        'class': 'form-control form-outline',
+        'id': 'number of authors (organization) for List_Author'
     }))
 
     description = forms.CharField(required=True, widget = forms.TextInput(attrs={
