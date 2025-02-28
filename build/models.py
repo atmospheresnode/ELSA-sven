@@ -820,6 +820,7 @@ class Investigation(models.Model):
     # objects themselves, because these models haven't been defined yet
 
     instrument_hosts = models.ManyToManyField("Instrument_Host")
+    facilities = models.ManyToManyField("Facility")
     targets = models.ManyToManyField("Target")
 
     # Attributes used to manage Investigation object
@@ -1927,7 +1928,7 @@ class Telescope(models.Model):
         name.text = self.name
         facility_type = etree.SubElement(
             Observing_System_Component, 'type')
-        facility_type.text = self.type_of
+        # facility_type.text = self.type_of
         Internal_Reference = etree.SubElement(
             Observing_System_Component, 'Internal_Reference')
         lid_reference = etree.SubElement(
@@ -3050,7 +3051,7 @@ class Data(models.Model):
     )
     
     DATA_TYPES = (
-        #('Array', 'Array'),
+        #('Array', 'Array'),    
         ('Table Binary','Table Binary'),
         ('Table Character','Table Character'),
         ('Table Delimited','Table Delimited'),
@@ -4279,7 +4280,9 @@ Referenced from        Identification_Area
 class Citation_Information(models.Model):
 
     bundle = models.ForeignKey(Bundle, on_delete=models.CASCADE)
-    author_list = models.CharField(max_length=MAX_CHAR_FIELD, blank=True)
+    # author_list = models.CharField(max_length=MAX_CHAR_FIELD, blank=True)
+    number_of_authors_people = models.PositiveIntegerField(default=0)
+    number_of_authors_organization = models.PositiveIntegerField(default=0)
     editor_list = models.CharField(max_length=MAX_CHAR_FIELD, blank=True)
     publication_year = models.CharField(max_length=MAX_CHAR_FIELD)
     description = models.CharField(max_length=MAX_TEXT_FIELD)
@@ -4316,9 +4319,30 @@ class Citation_Information(models.Model):
         # Identification_Area.insert(0, Citation_Information)
 
         # Add Citation_Information information
-        if self.author_list:
-            author_list = etree.SubElement(Citation_Information, 'author_list')
-            author_list.text = self.author_list
+        if self.number_of_authors_people > 0 or self.number_of_authors_organization > 0:
+            list_author = etree.SubElement(Citation_Information, 'List_Author')
+
+            for _ in range(self.number_of_authors_people):
+                author = etree.SubElement(list_author, 'Person')
+                given_name = etree.SubElement(author, 'given_name')
+                family_name = etree.SubElement(author, 'family_name')
+                person_orcid = etree.SubElement(author, 'person_orcid')
+                affiliation = etree.SubElement(author, 'Affiliation')
+
+                organization_name = etree.SubElement(affiliation, 'organization_name')
+
+            for _ in range(self.number_of_authors_organization):
+                organization = etree.SubElement(list_author, 'Organization')
+                organization_name = etree.SubElement(organization, 'organization_name')
+                organization_rorid = etree.SubElement(organization, 'organization_rorid')
+                sequence_number = etree.SubElement(organization, 'sequence_number')
+                parent_organization = etree.SubElement(organization, 'Parent_Organization')
+
+                parent_organization_name = etree.SubElement(parent_organization, 'parent_organization_name')
+
+        # if self.author_list:
+        #     author_list = etree.SubElement(Citation_Information, 'author_list')
+        #     author_list.text = self.author_list
         if self.editor_list:
             editor_list = etree.SubElement(Citation_Information, 'editor_list')
             editor_list.text = self.editor_list
