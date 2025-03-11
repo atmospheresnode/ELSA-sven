@@ -3082,6 +3082,24 @@ class Data(models.Model):
     # Function make_directory(path) can be found in chocolate.py.  It checks the existence
     # of a directory before creating the directory.
 
+    def builf_base_file(self):
+        source_file = os.path.join(settings.TEMPLATE_DIR, 'pds4_labels')
+        source_file = os.path.join(source_file, 'base_templates')
+        
+        source_file = os.path.join(source_file, 'data_{}.xml'.format(replace_all(self.data_type.lower()), ' ', '_'))
+
+        ret_name = self.name.lower()
+        ret_name = replace_all(ret_name, ' ', '_')
+        out_file = os.path.join(self.directory(), ret_name + '.xml')
+
+        #set selected version
+        update = Version()
+        bundle = Bundle()
+        print (source_file + "<<<<<<<<")
+        print(out_file)
+
+        update.version_update_old(self.data.bundle.version, source_file,out_file)
+
     def build_directory(self):
         data_name = self.name.lower()
         data_name = replace_all(data_name, ' ', '_')
@@ -4300,9 +4318,10 @@ class Citation_Information(models.Model):
         Modification_History = Identification_Area.find(
             '{}Modification_History'.format(NAMESPACE))
 
-        # Find Alias_List.  If no Alias_List is found, make one.
-        Citation_Information = etree.Element(
-            '{}Citation_Information'.format(NAMESPACE))
+        # Find Citation_Information.  If no Citation_Information is found, make one.
+        Citation_Information = Identification_Area.find('{}Citation_Information'.format(NAMESPACE))
+        if Citation_Information is None:
+            Citation_Information = etree.Element('{}Citation_Information'.format(NAMESPACE))
         
         # Add Citation_Information information
         if Modification_History is not None:

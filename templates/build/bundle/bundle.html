@@ -640,7 +640,8 @@
                <div class="tab-pane fade show active" id="inv_cite" role="tabpanel">
                   <!-- Form -->
                   <div class="row px-2">
-                     <form action="{% url 'build:bundle' bundle.pk %}" method="post" id="form_citation_information">
+                     <!-- This is where to change the linkage to one of the new pages -->
+                     <form action="{% url 'build:bundle' bundle.pk %}" method="post" id="form_citation_information"> 
                         {% csrf_token %}
 
                         <!-- Author List -->
@@ -701,12 +702,18 @@
                               <p class="card-text">Keyword(s): {{ citation_information.editor_list }}</p>
                               <p class="card-text">Publication Year: {{ citation_information.publication_year }}</p>
                               <p class="card-text">Description: {{ citation_information.description }}</p>
+
+                              <!-- Linkage to edit citation information -->
+                              <form action="" method="post" style="display:inline;">
+                                 {% csrf_token %}
+                                 <button type="submit" class="btn btn-light btn-sm">Edit</button>
+                              </form>
                            
-                           <!--implementing citation delete-->
-                           <form action="{% url 'build:citation_information_delete' bundle.pk citation_information.pk %}" method="post" style="display:inline;">
-                              {% csrf_token %}
-                              <button type="submit" class="btn btn-danger btn-sm">Delete</button>
-                           </form>
+                              <!--implementing citation delete-->
+                              <form action="{% url 'build:citation_information_delete' bundle.pk citation_information.pk %}" method="post" style="display:inline;">
+                                 {% csrf_token %}
+                                 <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                              </form>
                            </div>
                         </div>
                         {% endfor %}
