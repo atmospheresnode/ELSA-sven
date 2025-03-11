@@ -4283,7 +4283,9 @@ class Citation_Information(models.Model):
     # author_list = models.CharField(max_length=MAX_CHAR_FIELD, blank=True)
     number_of_authors_people = models.PositiveIntegerField(default=0)
     number_of_authors_organization = models.PositiveIntegerField(default=0)
-    editor_list = models.CharField(max_length=MAX_CHAR_FIELD, blank=True)
+    #editor_list = models.CharField(max_length=MAX_CHAR_FIELD, blank=True)
+    number_of_editors_people = models.PositiveIntegerField(default=0)
+    number_of_editors_organization = models.PositiveIntegerField(default=0)
     publication_year = models.CharField(max_length=MAX_CHAR_FIELD)
     description = models.CharField(max_length=MAX_TEXT_FIELD)
     keyword = models.CharField(max_length=MAX_CHAR_FIELD, blank=True)
@@ -4300,9 +4302,11 @@ class Citation_Information(models.Model):
         Modification_History = Identification_Area.find(
             '{}Modification_History'.format(NAMESPACE))
 
-        # Find Alias_List.  If no Alias_List is found, make one.
-        Citation_Information = etree.Element(
+        # If no Citation_Information is found, make one.
+        Citation_Information = Identification_Area.find(
             '{}Citation_Information'.format(NAMESPACE))
+        if Citation_Information is None:
+            Citation_Information = etree.Element('Citation_Information')
         
         # Add Citation_Information information
         if Modification_History is not None:
@@ -4310,13 +4314,6 @@ class Citation_Information(models.Model):
 
         else:
             Identification_Area.append(Citation_Information)
-
-
-        # # Double check but I'm pretty sure Citation_Information is only added once.
-        # # if Citation_Information is None:
-        # Citation_Information = etree.SubElement(
-        #     Identification_Area, 'Citation_Information')
-        # Identification_Area.insert(0, Citation_Information)
 
         # Add Citation_Information information
         if self.number_of_authors_people > 0 or self.number_of_authors_organization > 0:
@@ -4340,12 +4337,28 @@ class Citation_Information(models.Model):
 
                 parent_organization_name = etree.SubElement(parent_organization, 'parent_organization_name')
 
-        # if self.author_list:
-        #     author_list = etree.SubElement(Citation_Information, 'author_list')
-        #     author_list.text = self.author_list
-        if self.editor_list:
-            editor_list = etree.SubElement(Citation_Information, 'editor_list')
-            editor_list.text = self.editor_list
+
+        if self.number_of_editors_people > 0 or self.number_of_editors_organization > 0:
+            list_editor = etree.SubElement(Citation_Information, 'List_Editor')
+
+            for _ in range(self.number_of_editors_people):
+                editor = etree.SubElement(list_editor, 'Person')
+                given_name = etree.SubElement(editor, 'given_name')
+                family_name = etree.SubElement(editor, 'family_name')
+                person_orcid = etree.SubElement(editor, 'person_orcid')
+                affiliation = etree.SubElement(editor, 'Affiliation')
+
+                organization_name = etree.SubElement(affiliation, 'organization_name')
+            
+            for _ in range(self.number_of_editors_organization):
+                organization = etree.SubElement(list_editor, 'Organization')
+                organization_name = etree.SubElement(organization, 'organization_name')
+                organization_rorid = etree.SubElement(organization, 'organization_rorid')
+                sequence_number = etree.SubElement(organization, 'sequence_number')
+                parent_organization = etree.SubElement(organization, 'Parent_Organization')
+
+                parent_organization_name = etree.SubElement(parent_organization, 'parent_organization_name')
+            
         publication_year = etree.SubElement(
             Citation_Information, 'publication_year')
         publication_year.text = self.publication_year

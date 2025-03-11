@@ -196,14 +196,21 @@ class CitationInformationForm(forms.ModelForm):
         'id': 'number of authors (organization) for List_Author'
     }))
 
+    # new field for number of authors
+    number_of_editors_people = forms.IntegerField(required=True, widget= forms.NumberInput(attrs={
+        'class': 'form-control form-outline',
+        'id': 'number of editors (people) for List_Editor'
+    }))
+
+    number_of_editors_organization = forms.IntegerField(required=True, widget= forms.NumberInput(attrs={
+        'class': 'form-control form-outline',
+        'id': 'number of editors (organization) for List_Editor'
+    }))
+    ##
+
     description = forms.CharField(required=True, widget = forms.TextInput(attrs={
         'class': 'form-control form-outline',
         'id': 'cite_desc'
-    }))
-
-    editor_list = forms.CharField(required=False, widget = forms.TextInput(attrs={
-        'class': 'form-control form-outline',
-        'id': 'editor_list'
     }))
 
     keyword = forms.CharField(required=False, widget = forms.TextInput(attrs={
