@@ -1736,7 +1736,7 @@ class Facility(models.Model):
         self.save()
 
     def fill_label(self, label_root):
-        Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE))
+        Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE)) # <- This is the issue
 
         Observing_System = Context_Area.find('{}Observing_System'.format(NAMESPACE))
 
