@@ -3082,7 +3082,7 @@ class Data(models.Model):
     # Function make_directory(path) can be found in chocolate.py.  It checks the existence
     # of a directory before creating the directory.
 
-    def builf_base_file(self):
+    def build_base_file(self):
         source_file = os.path.join(settings.TEMPLATE_DIR, 'pds4_labels')
         source_file = os.path.join(source_file, 'base_templates')
         
@@ -4386,6 +4386,94 @@ class Citation_Information(models.Model):
         description = etree.SubElement(Citation_Information, 'description')
         description.text = self.description
         
+        return label_root
+
+    def fill_label_values(self, label_root, cleaned_form):
+        # Find Identification_Area
+        Identification_Area = label_root.find(
+            '{}Identification_Area'.format(NAMESPACE))
+
+        # Find Citation_Information.  If no Citation_Information is found, make one.
+        Citation_Information = Identification_Area.find('{}Citation_Information'.format(NAMESPACE))
+
+        if self.number_of_authors_people > 0 or self.number_of_authors_organization > 0:
+            list_author = Citation_Information.find('{}List_Author'.format(NAMESPACE))
+
+            authors_people = list_author.findall('{}Person'.format(NAMESPACE))
+
+            author_people_count = 0
+
+            for author in authors_people:
+                given_name = author.find('{}given_name'.format(NAMESPACE))
+                given_name.text = cleaned_form.get(f'author_person_{author_people_count}_given_name')
+                family_name = author.find('{}family_name'.format(NAMESPACE))
+                family_name.text = cleaned_form.get(f'author_person_{author_people_count}_family_name')
+                person_orcid = author.find('{}person_orcid'.format(NAMESPACE))
+                person_orcid.text = cleaned_form.get(f'author_person_{author_people_count}_orcid')
+
+                affiliation = author.find('{}Affiliation'.format(NAMESPACE))
+                organization_name = affiliation.find('{}organization_name'.format(NAMESPACE))
+                organization_name.text = cleaned_form.get(f'author_person_{author_people_count}_affiliation')
+
+                author_people_count = author_people_count + 1
+
+            authors_organization = list_author.findall('{}Organization'.format(NAMESPACE))
+
+            authors_organization_count = 0
+
+            for author in authors_organization:
+                organization_name = author.find('{}organization_name'.format(NAMESPACE))
+                organization_name.text = cleaned_form.get(f'author_org_{authors_organization_count}_name')
+                organization_rorid = author.find('{}organization_rorid'.format(NAMESPACE))
+                organization_rorid.text = cleaned_form.get(f'author_org_{authors_organization_count}_rorid')
+                sequence_number = author.find('{}sequence_number'.format(NAMESPACE))
+                sequence_number.text = str(cleaned_form.get(f'author_org_{authors_organization_count}_sequence_number'))
+
+                parent_organization = author.find('{}Parent_Organization'.format(NAMESPACE))
+                parent_organization_name = parent_organization.find('{}parent_organization_name'.format(NAMESPACE))
+                parent_organization_name.text = cleaned_form.get(f'author_org_{authors_organization_count}_parent_org_name')
+
+                authors_organization_count = authors_organization_count + 1
+
+        if self.number_of_editors_people > 0 or self.number_of_editors_organization > 0:
+            list_editor = Citation_Information.find('{}List_Editor'.format(NAMESPACE))
+
+            editors_people = list_editor.findall('{}Person'.format(NAMESPACE))
+
+            editor_people_count = 0
+
+            for editor in editors_people:
+                given_name = editor.find('{}given_name'.format(NAMESPACE))
+                given_name.text = cleaned_form.get(f'editor_person_{editor_people_count}_given_name')
+                family_name = editor.find('{}family_name'.format(NAMESPACE))
+                family_name.text = cleaned_form.get(f'editor_person_{editor_people_count}_family_name')
+                person_orcid = editor.find('{}person_orcid'.format(NAMESPACE))
+                person_orcid.text = cleaned_form.get(f'editor_person_{editor_people_count}_orcid')
+
+                affiliation = editor.find('{}Affiliation'.format(NAMESPACE))
+                organization_name = affiliation.find('{}organization_name'.format(NAMESPACE))
+                organization_name.text = cleaned_form.get(f'editor_person_{editor_people_count}_affiliation')
+
+                editor_people_count = editor_people_count + 1
+
+            editors_organization = list_editor.findall('{}Organization'.format(NAMESPACE))
+
+            editors_organization_count = 0
+
+            for editor in editors_organization:
+                organization_name = editor.find('{}organization_name'.format(NAMESPACE))
+                organization_name.text = cleaned_form.get(f'editor_org_{editors_organization_count}_name')
+                organization_rorid = editor.find('{}organization_rorid'.format(NAMESPACE))
+                organization_rorid.text = cleaned_form.get(f'editor_org_{editors_organization_count}_rorid')
+                sequence_number = editor.find('{}sequence_number'.format(NAMESPACE))
+                sequence_number.text = str(cleaned_form.get(f'editor_org_{editors_organization_count}_sequence_number'))
+
+                parent_organization = editor.find('{}Parent_Organization'.format(NAMESPACE))
+                parent_organization_name = parent_organization.find('{}parent_organization_name'.format(NAMESPACE))
+                parent_organization_name.text = cleaned_form.get(f'editor_org_{editors_organization_count}_parent_org_name')
+
+                editors_organization_count = editors_organization_count + 1
+
         return label_root
     
     def remove_xml(self, label_root):

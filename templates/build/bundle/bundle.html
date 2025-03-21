@@ -642,7 +642,7 @@
                   <div class="row px-2">
                      <!-- This is where to change the linkage to one of the new pages -->
                      <!--Changed the view after build and added citation information.pk-->
-                     <form action="{% url 'build:edit_citation_information' bundle.pk citation_information.pk %}" method="post" id="form_citation_information"> 
+                     <form action="{% url 'build:bundle' bundle.pk %}" method="post" id="form_citation_information"> 
                         {% csrf_token %}
                         
                         <!-- Author List -->

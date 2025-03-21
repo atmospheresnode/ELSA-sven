@@ -289,7 +289,84 @@ class CitationInformationForm(forms.ModelForm):
         cleaned_data = super().clean()
         # Add custom validation logic here if needed
         return cleaned_data
+    
 
+
+class EditCitationInformationForm(forms.Form):
+    # given_name = forms.CharField(required=True, widget = forms.TextInput(attrs={
+    #     'class': 'form-control form-outline',
+    #     'id': 'First Name of Author'
+    # }))
+    # family_name = forms.CharField(required=True, widget = forms.TextInput(attrs={
+    #     'class': 'form-control form-outline',
+    #     'id': 'Last Name of Author'
+    # }))
+    # orcid = forms.CharField(required=True, widget = forms.TextInput(attrs={
+    #     'class': 'form-control form-outline',
+    #     'id': 'ORCID'
+    # }))
+    # organization_name = forms.CharField(required=False, widget = forms.TextInput(attrs={
+    #     'class': 'form-control form-outline',
+    #     'id': 'Affiliated Organization'
+    # }))
+
+    def __init__(self, *args, **kwargs):
+        self.pk_cit = kwargs.pop('pk_cit')
+        super(EditCitationInformationForm, self).__init__(*args, **kwargs)
+
+        self.citation_information = Citation_Information.objects.get(pk=self.pk_cit)
+
+        # Add fields for authors (people)
+        self._add_person_fields('author', self.citation_information.number_of_authors_people)
+
+        # Add fields for authors (organizations)
+        self._add_organization_fields('author', self.citation_information.number_of_authors_organization)
+
+        # Add fields for editors (people)
+        self._add_person_fields('editor', self.citation_information.number_of_editors_people)
+
+        # Add fields for editors (organizations)
+        self._add_organization_fields('editor', self.citation_information.number_of_editors_organization)
+
+    def _add_person_fields(self, prefix, count):
+        """Helper method to add fields for a person (author or editor)."""
+        for i in range(count):
+            self.fields[f'{prefix}_person_{i}_given_name'] = forms.CharField(
+                required=False,
+                widget=forms.TextInput(attrs={'class': 'form-control form-outline'})
+            )
+            self.fields[f'{prefix}_person_{i}_family_name'] = forms.CharField(
+                required=False,
+                widget=forms.TextInput(attrs={'class': 'form-control form-outline'})
+            )
+            self.fields[f'{prefix}_person_{i}_orcid'] = forms.CharField(
+                required=False,
+                widget=forms.TextInput(attrs={'class': 'form-control form-outline'})
+            )
+            self.fields[f'{prefix}_person_{i}_affiliation'] = forms.CharField(
+                required=False,
+                widget=forms.TextInput(attrs={'class': 'form-control form-outline'})
+            )
+
+    def _add_organization_fields(self, prefix, count):
+        """Helper method to add fields for an organization (author or editor)."""
+        for i in range(count):
+            self.fields[f'{prefix}_org_{i}_name'] = forms.CharField(
+                required=False,
+                widget=forms.TextInput(attrs={'class': 'form-control form-outline'})
+            )
+            self.fields[f'{prefix}_org_{i}_rorid'] = forms.CharField(
+                required=False,
+                widget=forms.TextInput(attrs={'class': 'form-control form-outline'})
+            )
+            self.fields[f'{prefix}_org_{i}_sequence_number'] = forms.IntegerField(
+                required=False,
+                widget=forms.NumberInput(attrs={'class': 'form-control form-outline'})
+            )
+            self.fields[f'{prefix}_org_{i}_parent_org_name'] = forms.CharField(
+                required=False,
+                widget=forms.TextInput(attrs={'class': 'form-control form-outline'})
+            )
 
 
 

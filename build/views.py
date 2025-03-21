@@ -697,7 +697,7 @@ def bundle(request, pk_bundle):
             context_dict['form_citation_information'] = form_citation_information
 
             # # fixes the refresh duplication issue - deric
-            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
+            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/citation_information_current/' + str(citation_information.pk) + '/')
 
             # fixes the refresh duplication issue, use this one for offline testing - deric
             # return HttpResponseRedirect('/build/' + pk_bundle + '/')
@@ -1131,7 +1131,8 @@ def citation_information(request, pk_bundle):
            
 
             print('------------- End Build Citation Information -------------------')
-            return redirect(reverse('build:context_search', args=[pk_bundle]))
+            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/citation_information_current/' + str(citation_information.pk) + '/')
+            # return redirect(reverse('build:context_search', args=[pk_bundle]))
             
         # Update context_dict with the current Citation_Information models associated with the user's bundle
         context_dict['citation_information_set'] = Citation_Information.objects.filter(bundle=bundle)
@@ -1150,33 +1151,50 @@ def edit_citation_information(request, pk_bundle, pk_citation_information):
 
     bundle = Bundle.objects.get(pk=pk_bundle)
 
+    context_dict = {}
+
     # Secure ELSA by seeing if the user logged in is the same user associated with the Bundle
     if request.user == bundle.user:
         print('authorized user: {}'.format(request.user))
 
         # Get forms
         citation_information = Citation_Information.objects.get(pk=pk_citation_information)
-        form_citation_information = CitationInformationForm(request.POST or None, instance=citation_information)
+        form_edit_citation_information = EditCitationInformationForm(request.POST or None, pk_cit=pk_citation_information)
 
-        if form_citation_information.is_valid():
+        if form_edit_citation_information.is_valid():
             print('form_citation_information is valid')
-            # Create Citation_Information model object
-            citation_information = form_citation_information.save(commit=False)
-            citation_information.bundle = bundle
-            citation_information.save()
-            print('Citation Information model object: {}'.format(citation_information))
-            
+            cleaned_form = form_edit_citation_information.cleaned_data
+
+            all_labels = []
+
             product_bundle = Product_Bundle.objects.get(bundle=bundle)
             product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
 
-            write_into_label(citation_information, product_bundle, product_collections_list)
+            all_labels.append(product_bundle)
+            all_labels.extend(product_collections_list)
 
-            context_dict = {
-                'form_citation_information': form_citation_information,
-                'bundle': bundle,
-            }
+            for label in all_labels:
+            # Open appropriate label(s).  
+                print('- Label: {}'.format(label))
+                print(' ... Opening Label ... ')
+                label_list = open_label_with_tree(label.label())
+                label_root = label_list[1]
+                print(' ... Building Label ... ')
+                label_root = citation_information.fill_label_values(label_root, cleaned_form)
 
-            return render(request, 'build/citation_information/citation_information_current.html', context_dict)
+                # Close appropriate label(s)
+                print(' ... Closing Label ... ')
+                close_label(label.label(), label_root, label_list[2])
+
+            return redirect(reverse('build:context_search', args=[pk_bundle]))
+
+        context_dict = {
+            'form_edit_citation_information': form_edit_citation_information,
+            'bundle': bundle,
+        }
+
+            # return render(request, 'build/citation_information/citation_information_current.html', context_dict)
+        return render(request, 'build/citation_information/citation_information_current.html', context_dict)
         
     else:
         print('unauthorized user attempting to access a restricted area.')

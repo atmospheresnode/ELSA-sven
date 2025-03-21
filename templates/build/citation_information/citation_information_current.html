@@ -12,61 +12,18 @@
                         <form method="post">
                             {% csrf_token %}
                             {{ form.as_p }}
-                        
-                            <h3>Authors (People)</h3>
-                            {% for i in range(form.initial.number_of_authors_people) %}
-                                <div>
-                                    <label>Given Name:</label>
-                                    {{ form.author_person_{{ i }}_given_name }}
-                                    <label>Family Name:</label>
-                                    {{ form.author_person_{{ i }}_family_name }}
-                                    <label>ORCID:</label>
-                                    {{ form.author_person_{{ i }}_orcid }}
-                                    <label>Affiliation:</label>
-                                    {{ form.author_person_{{ i }}_affiliation }}
-                                </div>
-                            {% endfor %}
-                        
-                            <h3>Authors (Organizations)</h3>
-                            {% for i in range(form.initial.number_of_authors_organization) %}
-                                <div>
-                                    <label>Organization Name:</label>
-                                    {{ form.author_org_{{ i }}_name }}
-                                    <label>ROR ID:</label>
-                                    {{ form.author_org_{{ i }}_rorid }}
-                                    <label>Sequence Number:</label>
-                                    {{ form.author_org_{{ i }}_sequence_number }}
-                                    <label>Parent Organization Name:</label>
-                                    {{ form.author_org_{{ i }}_parent_org_name }}
-                                </div>
-                            {% endfor %}
-                        
-                            <h3>Editors (People)</h3>
-                            {% for i in range(form.initial.number_of_editors_people) %}
-                                <div>
-                                    <label>Given Name:</label>
-                                    {{ form.editor_person_{{ i }}_given_name }}
-                                    <label>Family Name:</label>
-                                    {{ form.editor_person_{{ i }}_family_name }}
-                                    <label>ORCID:</label>
-                                    {{ form.editor_person_{{ i }}_orcid }}
-                                    <label>Affiliation:</label>
-                                    {{ form.editor_person_{{ i }}_affiliation }}
-                                </div>
-                            {% endfor %}
-                        
-                            <h3>Editors (Organizations)</h3>
-                            {% for i in range(form.initial.number_of_editors_organization) %}
-                                <div>
-                                    <label>Organization Name:</label>
-                                    {{ form.editor_org_{{ i }}_name }}
-                                    <label>ROR ID:</label>
-                                    {{ form.editor_org_{{ i }}_rorid }}
-                                    <label>Sequence Number:</label>
-                                    {{ form.editor_org_{{ i }}_sequence_number }}
-                                    <label>Parent Organization Name:</label>
-                                    {{ form.editor_org_{{ i }}_parent_org_name }}
-                                </div>
+
+                            {% for field in form_edit_citation_information %}
+                            <div class="mb-3">
+                                <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                                {{ field }}
+                                {% if field.help_text %}
+                                    <small class="form-text text-muted">{{ field.help_text }}</small>
+                                {% endif %}
+                                {% for error in field.errors %}
+                                    <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            </div>
                             {% endfor %}
                         
                             <button type="submit">Submit</button>
