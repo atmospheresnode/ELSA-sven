@@ -1142,6 +1142,46 @@ def citation_information(request, pk_bundle):
         print('unauthorized user attempting to access a restricted area.')
         return redirect('main:restricted_access')
 
+def edit_citation_information(request, pk_bundle, pk_citation_information):
+    print('\n\n')
+    print('-------------------------------------------------------------------------')
+    print('\n\n--------------- Edit Citation_Information with ELSA -------------------')
+    print('------------------------------ DEBUGGER ---------------------------------')
+
+    bundle = Bundle.objects.get(pk=pk_bundle)
+
+    # Secure ELSA by seeing if the user logged in is the same user associated with the Bundle
+    if request.user == bundle.user:
+        print('authorized user: {}'.format(request.user))
+
+        # Get forms
+        citation_information = Citation_Information.objects.get(pk=pk_citation_information)
+        form_citation_information = CitationInformationForm(request.POST or None, instance=citation_information)
+
+        if form_citation_information.is_valid():
+            print('form_citation_information is valid')
+            # Create Citation_Information model object
+            citation_information = form_citation_information.save(commit=False)
+            citation_information.bundle = bundle
+            citation_information.save()
+            print('Citation Information model object: {}'.format(citation_information))
+            
+            product_bundle = Product_Bundle.objects.get(bundle=bundle)
+            product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+
+            write_into_label(citation_information, product_bundle, product_collections_list)
+
+            context_dict = {
+                'form_citation_information': form_citation_information,
+                'bundle': bundle,
+            }
+
+            return render(request, 'build/citation_information/citation_information_current.html', context_dict)
+        
+    else:
+        print('unauthorized user attempting to access a restricted area.')
+        return redirect('main:restricted_access')
+
 
 def modification_history(request, pk_bundle):
     print('\n\n')

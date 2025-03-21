@@ -103,6 +103,7 @@ BUNDLE_TYPE_CHOICES = (
 )
 
 VERSION_CHOICES = (
+    ('1N00', '1N00'),
     ('1K00', '1K00'),
     ('1J00', '1J00'),
     ('1I00', '1I00'),
@@ -225,16 +226,75 @@ class CitationInformationForm(forms.ModelForm):
 
     # validators=[RegexValidator(r'^\d{1,10}$')])
 
-    class Meta(object):
+    class Meta:
         model = Citation_Information
         exclude = ('bundle',)
 
-    """
-        clean should do nothing to the description.  For publication_year, CitationInformationForm uses Django's DateField form field.  Django's DateField form field (https://docs.djangoproject.com/en/2.0/_modules/django/forms/fields/#DateField) simply sees if the input could be converted to a date time object.  Therefore, values like 6020 can be input.  We need to decide if we want to prevent user errors such as this, raise warnings to the user, do nothing, etc...
-    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Add fields for authors (people)
+        self._add_person_fields('author', self.initial.get('number_of_authors_people', 0))
+
+        # Add fields for authors (organizations)
+        self._add_organization_fields('author', self.initial.get('number_of_authors_organization', 0))
+
+        # Add fields for editors (people)
+        self._add_person_fields('editor', self.initial.get('number_of_editors_people', 0))
+
+        # Add fields for editors (organizations)
+        self._add_organization_fields('editor', self.initial.get('number_of_editors_organization', 0))
+
+    def _add_person_fields(self, prefix, count):
+        """Helper method to add fields for a person (author or editor)."""
+        for i in range(count):
+            self.fields[f'{prefix}_person_{i}_given_name'] = forms.CharField(
+                required=False,
+                widget=forms.TextInput(attrs={'class': 'form-control form-outline'})
+            )
+            self.fields[f'{prefix}_person_{i}_family_name'] = forms.CharField(
+                required=False,
+                widget=forms.TextInput(attrs={'class': 'form-control form-outline'})
+            )
+            self.fields[f'{prefix}_person_{i}_orcid'] = forms.CharField(
+                required=False,
+                widget=forms.TextInput(attrs={'class': 'form-control form-outline'})
+            )
+            self.fields[f'{prefix}_person_{i}_affiliation'] = forms.CharField(
+                required=False,
+                widget=forms.TextInput(attrs={'class': 'form-control form-outline'})
+            )
+
+    def _add_organization_fields(self, prefix, count):
+        """Helper method to add fields for an organization (author or editor)."""
+        for i in range(count):
+            self.fields[f'{prefix}_org_{i}_name'] = forms.CharField(
+                required=False,
+                widget=forms.TextInput(attrs={'class': 'form-control form-outline'})
+            )
+            self.fields[f'{prefix}_org_{i}_rorid'] = forms.CharField(
+                required=False,
+                widget=forms.TextInput(attrs={'class': 'form-control form-outline'})
+            )
+            self.fields[f'{prefix}_org_{i}_sequence_number'] = forms.IntegerField(
+                required=False,
+                widget=forms.NumberInput(attrs={'class': 'form-control form-outline'})
+            )
+            self.fields[f'{prefix}_org_{i}_parent_org_name'] = forms.CharField(
+                required=False,
+                widget=forms.TextInput(attrs={'class': 'form-control form-outline'})
+            )
 
     def clean(self):
-        pass
+        cleaned_data = super().clean()
+        # Add custom validation logic here if needed
+        return cleaned_data
+
+
+
+
+
+
 
 
 """
