@@ -158,10 +158,10 @@ class Context_Product:
          '''
 
         big_keyword_dict={'target':{'lid':[''], 'title':[''], 'pds:Target.pds:type':[''], 'vid':[''], 'ops:Label_File_Info.ops:file_ref':[''] } ,
-                          'investigation':{'lid':[''], 'title':[''], 'pds:Investigation.pds:type':[''], 'vid':[''], 'ops:Label_File_Info.ops:file_ref':[''], 'observing_system_components':[''], 'targets':[''] }, 
+                          'investigation':{'lid':[''], 'title':[''], 'pds:Investigation.pds:type':[''], 'vid':[''], 'ops:Label_File_Info.ops:file_ref':[''], 'observing_system_components':[''], 'targets':[''], 'ref_lid_facility':[''] }, 
                           'instrument':{'lid':[''], 'title':[''], 'pds:Instrument.pds:type':[''], 'vid':[''], 'ops:Label_File_Info.ops:file_ref':[''], 'ref_lid_instrument_host':[''] },
                           'instrument_host': {'lid':[''], 'title':[''], 'pds:Instrument_Host.pds:type':[''], 'vid':[''], 'ops:Label_File_Info.ops:file_ref':[''], 'investigations':[''], 'targets':[''], 'ref_lid_instrument':[''] },
-                          'facility':{'lid':[''], 'title':[''], 'pds:Facility.pds:type':[''], 'vid':[''], 'ops:Label_File_Info.ops:file_ref':[''], 'ref_lid_instrument':[''] }, 
+                          'facility':{'lid':[''], 'title':[''], 'pds:Facility.pds:type':[''], 'vid':[''], 'ops:Label_File_Info.ops:file_ref':[''], 'ref_lid_instrument':[''], 'ref_lid_telescope':[''] }, 
                           'telescope':{'lid':[''], 'title':[''], 'vid':[''], 'ops:Label_File_Info.ops:file_ref':[''], 'ref_lid_instrument':['']}
                            }
         
@@ -185,6 +185,7 @@ class Context_Product:
                         if key == 'observing_system_components' or key == 'investigations' or key == 'targets':
                             self.context_info[key]=product[key]
                         else:
+                            # print(key)
                             self.context_info[key]=product['properties'][key] 
                     except KeyError: 
                         print('keyword '+key +' not found in xml label for '+self.lid, file=outlog)
@@ -195,122 +196,169 @@ class Context_Product:
     def insert_into_db(self):
         '''Adds the context product to elsa's database. 
         '''
-
-        if self.type == 'telescope':
-            new_product=self.model_name(lid=self.context_info['lid'][0], 
-                    name=self.context_info['title'][0], 
-                    # type_of=self.context_info[self.type+'_type'][0], 
-                    vid=self.context_info['vid'][0],
-                    file_ref=self.context_info['ops:Label_File_Info.ops:file_ref'][0]
-                    )
-        else:
-            try:
-                new_product=self.model_name(lid=self.context_info['lid'][0], 
-                    name=self.context_info['title'][0], 
-                    type_of=self.context_info['pds:{}.pds:type'.format(self.type.title())][0], 
-                    vid=self.context_info['vid'][0],
-                    file_ref=self.context_info['ops:Label_File_Info.ops:file_ref'][0]
-                    )
-
-            except TypeError:
-            # happens when there's a tag missing in the xml that ELSA's db
-            # doesn't allow to be null/blank. Many fields do allow this
-            # (since most of what we need for an internal reference is the LID).
-        
-                print('ERROR adding context product ' +self.lid + ' , keyword missing ^', file=outlog)
-                problem_products.append(self.lid)
-                return False
-
-        if self.context_info['vid'][0] == "":
-            print('ERROR adding context product ' +self.lid + ' , vid missing ^', file=outlog)
+        try:
+            new_product, created = self.model_name.objects.get_or_create(
+                lid=self.context_info['lid'][0],
+                defaults={
+                    'name': self.context_info['title'][0],
+                    'type_of': self.context_info['pds:{}.pds:type'.format(self.type.title())][0] if self.type != 'telescope' else '',
+                    'vid': self.context_info['vid'][0],
+                    'file_ref': self.context_info['ops:Label_File_Info.ops:file_ref'][0]
+                }
+            )
+            self.new_product = new_product
+            return True
+        except Exception as e:
+            print(f'ERROR adding context product {self.lid}: {str(e)}', file=outlog)
             problem_products.append(self.lid)
             return False
-        
-        self.new_product=new_product
-        self.new_product.save()
 
-        return(True)
+
+        # if self.type == 'telescope':
+        #     new_product=self.model_name(lid=self.context_info['lid'][0], 
+        #             name=self.context_info['title'][0], 
+        #             # type_of=self.context_info[self.type+'_type'][0], 
+        #             vid=self.context_info['vid'][0],
+        #             file_ref=self.context_info['ops:Label_File_Info.ops:file_ref'][0]
+        #             )
+        # else:
+        #     try:
+        #         new_product=self.model_name(lid=self.context_info['lid'][0], 
+        #             name=self.context_info['title'][0], 
+        #             type_of=self.context_info['pds:{}.pds:type'.format(self.type.title())][0], 
+        #             vid=self.context_info['vid'][0],
+        #             file_ref=self.context_info['ops:Label_File_Info.ops:file_ref'][0]
+        #             )
+
+        #     except TypeError:
+        #     # happens when there's a tag missing in the xml that ELSA's db
+        #     # doesn't allow to be null/blank. Many fields do allow this
+        #     # (since most of what we need for an internal reference is the LID).
+        
+        #         print('ERROR adding context product ' +self.lid + ' , keyword missing ^', file=outlog)
+        #         problem_products.append(self.lid)
+        #         return False
+
+        # if self.context_info['vid'][0] == "":
+        #     print('ERROR adding context product ' +self.lid + ' , vid missing ^', file=outlog)
+        #     problem_products.append(self.lid)
+        #     return False
+        
+        # self.new_product=new_product
+        # self.new_product.save()
+
+        # return(True)
 
     def save_references(self, new_product):
         '''Saves all of a product's references to other products to the global
         variable reference_list, so we can link them together in the database later. 
           '''
-
-        for field in new_product._meta.get_fields(): 
-            if list(field.name)[-1]!="s": #make sure we skip non-relational fields
+        
+        for field in new_product._meta.get_fields():
+            if not field.is_relation or field.many_to_many:
                 continue
             
+            keyword = field.name
             if self.type == 'investigation' and field.name == 'instrument_hosts':
                 keyword = 'observing_system_components'
-            else:
-                keyword = field.name
-
-            if self.type == 'instrument' and field.name == 'instrument_hosts':
-                keyword = 'ref_lid_instrument_host'
-
-            if self.type == 'instrument_host' and field.name == 'instruments':
+            elif self.type == 'investigation' and field.name == 'facilities':
+                keyword = 'ref_lid_facility'
+            elif self.type in ['facility', 'telescope'] and field.name == 'instruments':
                 keyword = 'ref_lid_instrument'
-            else:
-                keyword = field.name
+            elif self.type == 'facility' and field.name == 'telescopes':
+                keyword = 'ref_lid_telescope'
             
-            # if self.type == 'facility' and field.name == 'instruments':
-            #     keyword = 'ref_lid_instrument'
-
-            if self.type == 'facility' or self.type == 'telescope':
-                keyword = 'ref_lid_instrument'
-
-            if keyword not in self.context_info.keys():
-                continue        
-
-            if self.context_info[keyword]==['']:
+            if keyword not in self.context_info or not self.context_info[keyword]:
                 continue
-
-            if field.name == 'facilities':
-                ref_model=get_model('facility')
-            else:
-                ref_model=get_model(field.name[:-1])
-           
+            
+            ref_model = field.related_model
             for ref_lid in self.context_info[keyword]:
-                if keyword == 'observing_system_components' or keyword == 'investigations' or keyword == 'targets':
-                    ref_obj=ref_model.objects.filter(lid=ref_lid['id'])
-
-                    if ref_lid['id'] not in id_list:
-                        id_list.append(ref_lid['id'])
-                    
-                    if [self.lid, ref_lid['id']] not in reference_pairs:
-                        reference_pairs.append([self.lid, ref_lid['id']])
-                else:
-                    #Add logic for old lids __phx
-                    
-
-                    ref_obj=ref_model.objects.filter(lid=ref_lid)         
-
-                    if ref_lid not in id_list:
-                        id_list.append(ref_lid)
-                    
-                    if [self.lid, ref_lid] not in reference_pairs:
-                        reference_pairs.append([self.lid, ref_lid])
+                if isinstance(ref_lid, dict):
+                    ref_lid = ref_lid['id']
                 
-                continue
+                if ref_lid not in id_list:
+                    id_list.append(ref_lid)
+                
+                reference_pairs.append([self.lid, ref_lid])
+
+        # for field in new_product._meta.get_fields(): 
+        #     if list(field.name)[-1]!="s": #make sure we skip non-relational fields
+        #         continue
+            
+        #     if self.type == 'investigation' and field.name == 'instrument_hosts':
+        #         keyword = 'observing_system_components'
+        #     else:
+        #         keyword = field.name
+
+        #     if self.type == 'investigation' and field.name == 'facilities':
+        #         keyword = 'ref_lid_facility'
+
+        #     if self.type == 'instrument' and field.name == 'instrument_hosts':
+        #         keyword = 'ref_lid_instrument_host'
+
+        #     if self.type == 'instrument_host' and field.name == 'instruments':
+        #         keyword = 'ref_lid_instrument'
+        #     else:
+        #         keyword = field.name
+            
+        #     # if self.type == 'facility' and field.name == 'instruments':
+        #     #     keyword = 'ref_lid_instrument'
+
+        #     if self.type == 'facility' or self.type == 'telescope':
+        #         keyword = 'ref_lid_instrument'
+
+        #     if keyword not in self.context_info.keys():
+        #         continue        
+
+        #     if self.context_info[keyword]==['']:
+        #         continue
+
+        #     if field.name == 'facilities':
+        #         ref_model=get_model('facility')
+        #     else:
+        #         ref_model=get_model(field.name[:-1])
+           
+        #     for ref_lid in self.context_info[keyword]:
+        #         if keyword == 'observing_system_components' or keyword == 'investigations' or keyword == 'targets':
+        #             ref_obj=ref_model.objects.filter(lid=ref_lid['id'])
+
+        #             if ref_lid['id'] not in id_list:
+        #                 id_list.append(ref_lid['id'])
+                    
+        #             if [self.lid, ref_lid['id']] not in reference_pairs:
+        #                 reference_pairs.append([self.lid, ref_lid['id']])
+        #         else:
+        #             #Add logic for old lids __phx
+                    
+
+        #             ref_obj=ref_model.objects.filter(lid=ref_lid)         
+
+        #             if ref_lid not in id_list:
+        #                 id_list.append(ref_lid)
+                    
+        #             if [self.lid, ref_lid] not in reference_pairs:
+        #                 reference_pairs.append([self.lid, ref_lid])
+                
+        #         continue
             # past here is code from when this function also added links between
             # references, but doing all of that after we've added all of the 
             # new lid's to the db ends up being much cleaner and harder to 
             # break (at the expense of speed, but. This is ELSA, we need 
             # robust-ness more than just about anything else)
 
-                if not ref_obj.exists(): #not in database
-                    reference_pairs.append([self.lid, ref_lid])
-                    if ref_lid not in id_list:
-                        id_list.append(ref_lid) 
-                    continue
+                # if not ref_obj.exists(): #not in database
+                #     reference_pairs.append([self.lid, ref_lid])
+                #     if ref_lid not in id_list:
+                #         id_list.append(ref_lid) 
+                #     continue
                     
             
-                ref_obj = ref_obj[0]
-                    # note about the [0] above- looks like there are 
-                    # duplicate entries for some products, so we grab only the first
-                attr=getattr(self.model_name.objects.filter(lid=self.lid).first(), ref_obj, None)
-                attr.add(ref_obj)
-                print('\tInternal reference added; '+str(new_product.lid) + ' -> '+ str(ref_lid))
+                # ref_obj = ref_obj[0]
+                #     # note about the [0] above- looks like there are 
+                #     # duplicate entries for some products, so we grab only the first
+                # attr=getattr(self.model_name.objects.filter(lid=self.lid).first(), ref_obj, None)
+                # attr.add(ref_obj)
+                # print('\tInternal reference added; '+str(new_product.lid) + ' -> '+ str(ref_lid))
                 
             #print(attr.all())
             
@@ -322,55 +370,75 @@ def add_reference_links(reference_pairs):
     https://docs.djangoproject.com/en/4.1/topics/db/examples/many_to_many/
             
     ''' 
-    # print(problem_products)
     for pair in reference_pairs:
-        if pair[0] in problem_products or pair[1] in problem_products: # I hate this. this should not be necessary. hamburger help me
+        if pair[0] in problem_products or pair[1] in problem_products:
             continue
-        print(pair, file=outlog)
         
         model1 = get_model(pair[0].split(':')[4])
         model2 = get_model(pair[1].split(':')[4])
-        lid1=pair[0]
-        lid2=pair[1]
-        obj1 = model1.objects.filter(lid=lid1).first()
-        obj2 = model2.objects.filter(lid=lid2).first()
-
-        print(model1, lid1, obj1)
-        print(model2, lid2, obj2)
-
+        obj1 = model1.objects.filter(lid=pair[0]).first()
+        obj2 = model2.objects.filter(lid=pair[1]).first()
+        
         if not obj1 or not obj2:
+            print(f'Failed to add reference: {pair[0]} -> {pair[1]}', file=outlog)
             continue
+        
+        for obj, other_obj in [(obj1, obj2), (obj2, obj1)]:
+            for field in obj._meta.get_fields():
+                if field.is_relation and field.many_to_many and field.related_model == other_obj._meta.model:
+                    getattr(obj, field.name).add(other_obj)
+                    print(f'Internal reference added: {obj.lid} -> {other_obj.lid}', file=outlog)
 
-        # makes sure a manytomanyfield that links the objects actually exists.
-        field1 = []
-        for f in obj1._meta.get_fields():
-            if f.name == pair[1].split(':')[4]+"s":
-                field1.append(f)
-            if f.name == pair[1].split(':')[4][:-1]+"ies":
-                field1.append(f)
-        # field1 = [f for f in obj1._meta.get_fields() if f.name == pair[1].split(':')[4]+"s"]
-        print(field1)
-        if len(field1)==1:
+
+    # print(problem_products)
+    # for pair in reference_pairs:
+    #     if pair[0] in problem_products or pair[1] in problem_products: # I hate this. this should not be necessary. hamburger help me
+    #         continue
+    #     print(pair, file=outlog)
+        
+    #     model1 = get_model(pair[0].split(':')[4])
+    #     model2 = get_model(pair[1].split(':')[4])
+    #     lid1=pair[0]
+    #     lid2=pair[1]
+    #     obj1 = model1.objects.filter(lid=lid1).first()
+    #     obj2 = model2.objects.filter(lid=lid2).first()
+
+    #     print(model1, lid1, obj1)
+    #     print(model2, lid2, obj2)
+
+    #     if not obj1 or not obj2:
+    #         continue
+
+    #     # makes sure a manytomanyfield that links the objects actually exists.
+    #     field1 = []
+    #     for f in obj1._meta.get_fields():
+    #         if f.name == pair[1].split(':')[4]+"s":
+    #             field1.append(f)
+    #         if f.name == pair[1].split(':')[4][:-1]+"ies":
+    #             field1.append(f)
+    #     # field1 = [f for f in obj1._meta.get_fields() if f.name == pair[1].split(':')[4]+"s"]
+    #     print(field1)
+    #     if len(field1)==1:
             
-            #add reference from obj1 -> obj2 to database
-            attr1=getattr(obj1, pair[1].split(':')[4]+"s", None)
-            attr1.add(obj2)
-            print('\tInternal reference added; '+pair[0] + ' -> '+ pair[1], file=outlog)
+    #         #add reference from obj1 -> obj2 to database
+    #         attr1=getattr(obj1, pair[1].split(':')[4]+"s", None)
+    #         attr1.add(obj2)
+    #         print('\tInternal reference added; '+pair[0] + ' -> '+ pair[1], file=outlog)
                 
         
-        # now repeat to add reference from obj2 -> obj1 
-        # (if that's a valid reference, based on the fields we've defined in models.py)
-        field2 = []
-        for f in obj2._meta.get_fields():
-            if f.name == pair[1].split(':')[4]+"s":
-                field2.append(f)
-            if f.name == pair[1].split(':')[4][:-1]+"ies":
-                field2.append(f)
-        # field2 = [f for f in obj2._meta.get_fields() if f.name == pair[0].split(':')[4]+"s"]
-        if len(field2)==1:
-            attr2=getattr(obj2, pair[0].split(':')[4]+"s", None)
-            attr2.add(obj1)
-            print('\tInternal reference added; '+pair[1] + ' -> '+ pair[0], file=outlog)
+    #     # now repeat to add reference from obj2 -> obj1 
+    #     # (if that's a valid reference, based on the fields we've defined in models.py)
+    #     field2 = []
+    #     for f in obj2._meta.get_fields():
+    #         if f.name == pair[1].split(':')[4]+"s":
+    #             field2.append(f)
+    #         if f.name == pair[1].split(':')[4][:-1]+"ies":
+    #             field2.append(f)
+    #     # field2 = [f for f in obj2._meta.get_fields() if f.name == pair[0].split(':')[4]+"s"]
+    #     if len(field2)==1:
+    #         attr2=getattr(obj2, pair[0].split(':')[4]+"s", None)
+    #         attr2.add(obj1)
+    #         print('\tInternal reference added; '+pair[1] + ' -> '+ pair[0], file=outlog)
  
 
 def test():
