@@ -888,14 +888,17 @@ def bundle(request, pk_bundle):
             all_labels.append(product_bundle)
             all_labels.extend(product_collections_list)  
 
-            data.build_directory()
+            # data.build_directory()
+            data.build_base_file()
 
             form_data = DataForm(request.POST or None, pk_bun=pk_bundle)
             context_dict['form_data'] = form_data
             context_dict['data_set'] = Data.objects.filter(bundle=bundle)
 
             # # fixes the refresh duplication issue - deric
-            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
+            # return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
+            # For now redirect to the table edit form, but we want intelligence later to switch to a different page dependent on data type
+            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/' + str(data.pk) + '/table_creation/') 
 
             # fixes the refresh duplication issue, use this one for offline testing - deric
             # return HttpResponseRedirect('/build/' + pk_bundle + '/')
@@ -2420,7 +2423,7 @@ def Table_Creation(request, pk_bundle, pk_data):
     if request.user == bundle.user:
         if data.data_type == 'Table Delimited':
             print("delim form chosen")
-            data_form = Table_Delimited_Form(request.POST or None, pk_ins=data.name, pk_bun=pk_bundle)
+            data_form = Table_Delimited_Form(request.POST or None, pk_data=pk_data, pk_ins=data.name, pk_bun=pk_bundle)
 
         elif data.data_type == 'Table Binary':
             print("binary form chosen")
@@ -2443,7 +2446,7 @@ def Table_Creation(request, pk_bundle, pk_data):
             form = data_form.save(commit=False)
             form.save()
 
-            form.build_data_file()
+            # form.build_data_file()
 
             # product_bundle = Product_Bundle.objects.get(bundle=bundle)
             # product_collections_list = Product_Collection.objects.filter(bundle=bundle)

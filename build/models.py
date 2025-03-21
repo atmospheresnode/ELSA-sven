@@ -3061,6 +3061,7 @@ class Data(models.Model):
     name = models.CharField(max_length=MAX_CHAR_FIELD)
     processing_level = models.CharField(max_length=30, choices=PROCESSING_LEVEL_CHOICES, default='Raw')
     data_type = models.CharField(max_length=256,choices=DATA_TYPES, default = '')
+    header = models.BooleanField(default=False)
 
     collection = models.ForeignKey(AdditionalCollections, on_delete = models.CASCADE, default='',)
 
@@ -3086,11 +3087,15 @@ class Data(models.Model):
         source_file = os.path.join(settings.TEMPLATE_DIR, 'pds4_labels')
         source_file = os.path.join(source_file, 'base_templates')
         
-        source_file = os.path.join(source_file, 'data_{}.xml'.format(replace_all(self.data_type.lower()), ' ', '_'))
+        if self.header:
+            source_file = os.path.join(source_file, 'data_{}_with_header.xml'.format(replace_all(self.data_type.lower(), ' ', '_')))
+        else:
+            source_file = os.path.join(source_file, 'data_{}.xml'.format(replace_all(self.data_type.lower(), ' ', '_')))
 
         ret_name = self.name.lower()
         ret_name = replace_all(ret_name, ' ', '_')
-        out_file = os.path.join(self.directory(), ret_name + '.xml')
+        # data_directory = os.path.join(self.collection.directory(), ret_name)
+        out_file = os.path.join(self.collection.directory(), ret_name + '.xml')
 
         #set selected version
         update = Version()
@@ -3098,7 +3103,7 @@ class Data(models.Model):
         print (source_file + "<<<<<<<<")
         print(out_file)
 
-        update.version_update_old(self.data.bundle.version, source_file,out_file)
+        update.version_update_old(self.bundle.version, source_file,out_file)
 
     def build_directory(self):
         data_name = self.name.lower()

@@ -1033,6 +1033,38 @@
                         {{ form_data.data_type }}
                      </div>
 
+                     <script>
+                        document.addEventListener("DOMContentLoaded", function () {
+                            var dropdown = document.getElementById("id_data_type");
+                            var checkboxContainer = document.getElementById("header_field");
+                            var checkbox = document.getElementById("id_header");
+                
+                            function toggleCheckboxVisibility() {
+                                if (dropdown.value === "Table Delimited") {  // Adjust to match the triggering option
+                                    checkboxContainer.style.display = "block";
+                                } else {
+                                    checkboxContainer.style.display = "none";
+                                    checkbox.checked = false;  // Uncheck when hidden
+                                }
+                            }
+                
+                            dropdown.addEventListener("change", toggleCheckboxVisibility);
+                            toggleCheckboxVisibility(); // Call on page load to ensure correct state
+                        });
+                    </script>
+
+                    <style>
+                        #checkbox-container {
+                           display: none;
+                        }
+                    </style>
+
+                     <!-- Data Type Header -->
+                     <div id="header_field" class="mt-3">
+                        <label for="header">Header?</label>
+                        {{ form_data.header }}
+                     </div>
+
                      <!-- Collection -->
                      <div class="mt-3">
                         <label for="collection">Collection</label>
