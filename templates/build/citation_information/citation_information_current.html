@@ -1,0 +1,119 @@
+{% extends 'base-derk.html' %}
+{% load static %}
+
+{% block body_block %}
+<div class="container-fluid py-5">
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-9 col-xl-8">
+            <div class="card border-0 rounded-lg">
+                <div class="card-header text-primary p-4 text-center">
+                    <h2 class="mb-0 fw-bold">Citation Information</h2>
+                </div>
+                <div class="card-body p-4 p-lg-5">
+                    <form method="post" class="needs-validation" novalidate>
+                        {% csrf_token %}
+                        
+                        <div class="row mb-4">
+                            {% for field in form %}
+                                <div class="col-12 col-md-6 mb-3">
+                                    <label for="{{ field.id_for_label }}" class="form-label fw-semibold">{{ field.label }}</label>
+                                    <div class="form-control-wrapper">
+                                        {{ field }}
+                                    </div>
+                                    {% if field.help_text %}
+                                        <small class="form-text text-muted">{{ field.help_text }}</small>
+                                    {% endif %}
+                                    {% for error in field.errors %}
+                                        <div class="invalid-feedback d-block">{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                        
+                        <!-- Citation information fields -->
+                        <div class="row g-3">
+                            {% for field in form_edit_citation_information %}
+                                <div class="col-12 {% if forloop.counter|divisibleby:2 %}col-md-6{% else %}col-md-6{% endif %} mb-3">
+                                    <label for="{{ field.id_for_label }}" class="form-label fw-semibold">{{ field.label }}</label>
+                                    <div class="form-control-wrapper">
+                                        {{ field }}
+                                    </div>
+                                    {% if field.help_text %}
+                                        <small class="form-text text-muted">{{ field.help_text }}</small>
+                                    {% endif %}
+                                    {% for error in field.errors %}
+                                        <div class="invalid-feedback d-block">{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                            <button type="reset" class="btn btn-outline-secondary px-4 me-md-2">Reset</button>
+                            <button type="submit" class="btn btn-primary px-4">Submit</button>
+                        </div>
+                    </form>
+                    
+                    <hr class="my-5">
+                    
+                    <form action="" method="post" id="" class="pt-3">
+                        {% csrf_token %}
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-light text-light my-2"></button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    (function() {
+        'use strict'
+        const forms = document.querySelectorAll('.needs-validation')
+        Array.from(forms).forEach(form => {
+            form.addEventListener('submit', event => {
+                if (!form.checkValidity()) {
+                    event.preventDefault()
+                    event.stopPropagation()
+                }
+                form.classList.add('was-validated')
+            }, false)
+        })
+    })()
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        const formControls = document.querySelectorAll('input, select, textarea');
+        formControls.forEach(element => {
+            element.classList.add('form-control');
+            if (element.tagName === 'INPUT' && element.type !== 'checkbox' && element.type !== 'radio') {
+                element.classList.add('rounded-pill');
+            }
+        });
+        
+        const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+        checkboxes.forEach(checkbox => {
+            checkbox.classList.remove('form-control');
+            checkbox.classList.add('form-check-input');
+            const wrapper = checkbox.closest('.form-control-wrapper');
+            if (wrapper) {
+                wrapper.classList.add('form-check');
+            }
+        });
+    });
+</script>
+{% endblock %}
+
+<style>
+    .form-control-wrapper {
+        width: 100%;
+    }
+    
+    input, select, textarea {
+        display: block;
+        width: 100%;
+    }
+</style>

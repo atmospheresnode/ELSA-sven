@@ -820,6 +820,7 @@ class Investigation(models.Model):
     # objects themselves, because these models haven't been defined yet
 
     instrument_hosts = models.ManyToManyField("Instrument_Host")
+    facilities = models.ManyToManyField("Facility")
     targets = models.ManyToManyField("Target")
 
     # Attributes used to manage Investigation object
@@ -1927,7 +1928,7 @@ class Telescope(models.Model):
         name.text = self.name
         facility_type = etree.SubElement(
             Observing_System_Component, 'type')
-        facility_type.text = self.type_of
+        # facility_type.text = self.type_of
         Internal_Reference = etree.SubElement(
             Observing_System_Component, 'Internal_Reference')
         lid_reference = etree.SubElement(
@@ -3050,7 +3051,7 @@ class Data(models.Model):
     )
     
     DATA_TYPES = (
-        #('Array', 'Array'),
+        #('Array', 'Array'),    
         ('Table Binary','Table Binary'),
         ('Table Character','Table Character'),
         ('Table Delimited','Table Delimited'),
@@ -3060,6 +3061,7 @@ class Data(models.Model):
     name = models.CharField(max_length=MAX_CHAR_FIELD)
     processing_level = models.CharField(max_length=30, choices=PROCESSING_LEVEL_CHOICES, default='Raw')
     data_type = models.CharField(max_length=256,choices=DATA_TYPES, default = '')
+    header = models.BooleanField(default=False)
 
     collection = models.ForeignKey(AdditionalCollections, on_delete = models.CASCADE, default='',)
 
@@ -3080,6 +3082,28 @@ class Data(models.Model):
     # build_directory builds a directory of the form data_<processing_level>.
     # Function make_directory(path) can be found in chocolate.py.  It checks the existence
     # of a directory before creating the directory.
+
+    def build_base_file(self):
+        source_file = os.path.join(settings.TEMPLATE_DIR, 'pds4_labels')
+        source_file = os.path.join(source_file, 'base_templates')
+        
+        if self.header:
+            source_file = os.path.join(source_file, 'data_{}_with_header.xml'.format(replace_all(self.data_type.lower(), ' ', '_')))
+        else:
+            source_file = os.path.join(source_file, 'data_{}.xml'.format(replace_all(self.data_type.lower(), ' ', '_')))
+
+        ret_name = self.name.lower()
+        ret_name = replace_all(ret_name, ' ', '_')
+        # data_directory = os.path.join(self.collection.directory(), ret_name)
+        out_file = os.path.join(self.collection.directory(), ret_name + '.xml')
+
+        #set selected version
+        update = Version()
+        bundle = Bundle()
+        print (source_file + "<<<<<<<<")
+        print(out_file)
+
+        update.version_update_old(self.bundle.version, source_file,out_file)
 
     def build_directory(self):
         data_name = self.name.lower()
@@ -4279,8 +4303,12 @@ Referenced from        Identification_Area
 class Citation_Information(models.Model):
 
     bundle = models.ForeignKey(Bundle, on_delete=models.CASCADE)
-    author_list = models.CharField(max_length=MAX_CHAR_FIELD, blank=True)
-    editor_list = models.CharField(max_length=MAX_CHAR_FIELD, blank=True)
+    # author_list = models.CharField(max_length=MAX_CHAR_FIELD, blank=True)
+    number_of_authors_people = models.PositiveIntegerField(default=0)
+    number_of_authors_organization = models.PositiveIntegerField(default=0)
+    #editor_list = models.CharField(max_length=MAX_CHAR_FIELD, blank=True)
+    number_of_editors_people = models.PositiveIntegerField(default=0)
+    number_of_editors_organization = models.PositiveIntegerField(default=0)
     publication_year = models.CharField(max_length=MAX_CHAR_FIELD)
     description = models.CharField(max_length=MAX_TEXT_FIELD)
     keyword = models.CharField(max_length=MAX_CHAR_FIELD, blank=True)
@@ -4297,9 +4325,10 @@ class Citation_Information(models.Model):
         Modification_History = Identification_Area.find(
             '{}Modification_History'.format(NAMESPACE))
 
-        # Find Alias_List.  If no Alias_List is found, make one.
-        Citation_Information = etree.Element(
-            '{}Citation_Information'.format(NAMESPACE))
+        # Find Citation_Information.  If no Citation_Information is found, make one.
+        Citation_Information = Identification_Area.find('{}Citation_Information'.format(NAMESPACE))
+        if Citation_Information is None:
+            Citation_Information = etree.Element('{}Citation_Information'.format(NAMESPACE))
         
         # Add Citation_Information information
         if Modification_History is not None:
@@ -4308,20 +4337,50 @@ class Citation_Information(models.Model):
         else:
             Identification_Area.append(Citation_Information)
 
-
-        # # Double check but I'm pretty sure Citation_Information is only added once.
-        # # if Citation_Information is None:
-        # Citation_Information = etree.SubElement(
-        #     Identification_Area, 'Citation_Information')
-        # Identification_Area.insert(0, Citation_Information)
-
         # Add Citation_Information information
-        if self.author_list:
-            author_list = etree.SubElement(Citation_Information, 'author_list')
-            author_list.text = self.author_list
-        if self.editor_list:
-            editor_list = etree.SubElement(Citation_Information, 'editor_list')
-            editor_list.text = self.editor_list
+        if self.number_of_authors_people > 0 or self.number_of_authors_organization > 0:
+            list_author = etree.SubElement(Citation_Information, 'List_Author')
+
+            for _ in range(self.number_of_authors_people):
+                author = etree.SubElement(list_author, 'Person')
+                given_name = etree.SubElement(author, 'given_name')
+                family_name = etree.SubElement(author, 'family_name')
+                person_orcid = etree.SubElement(author, 'person_orcid')
+                affiliation = etree.SubElement(author, 'Affiliation')
+
+                organization_name = etree.SubElement(affiliation, 'organization_name')
+
+            for _ in range(self.number_of_authors_organization):
+                organization = etree.SubElement(list_author, 'Organization')
+                organization_name = etree.SubElement(organization, 'organization_name')
+                organization_rorid = etree.SubElement(organization, 'organization_rorid')
+                sequence_number = etree.SubElement(organization, 'sequence_number')
+                parent_organization = etree.SubElement(organization, 'Parent_Organization')
+
+                parent_organization_name = etree.SubElement(parent_organization, 'parent_organization_name')
+
+
+        if self.number_of_editors_people > 0 or self.number_of_editors_organization > 0:
+            list_editor = etree.SubElement(Citation_Information, 'List_Editor')
+
+            for _ in range(self.number_of_editors_people):
+                editor = etree.SubElement(list_editor, 'Person')
+                given_name = etree.SubElement(editor, 'given_name')
+                family_name = etree.SubElement(editor, 'family_name')
+                person_orcid = etree.SubElement(editor, 'person_orcid')
+                affiliation = etree.SubElement(editor, 'Affiliation')
+
+                organization_name = etree.SubElement(affiliation, 'organization_name')
+            
+            for _ in range(self.number_of_editors_organization):
+                organization = etree.SubElement(list_editor, 'Organization')
+                organization_name = etree.SubElement(organization, 'organization_name')
+                organization_rorid = etree.SubElement(organization, 'organization_rorid')
+                sequence_number = etree.SubElement(organization, 'sequence_number')
+                parent_organization = etree.SubElement(organization, 'Parent_Organization')
+
+                parent_organization_name = etree.SubElement(parent_organization, 'parent_organization_name')
+            
         publication_year = etree.SubElement(
             Citation_Information, 'publication_year')
         publication_year.text = self.publication_year
@@ -4332,6 +4391,94 @@ class Citation_Information(models.Model):
         description = etree.SubElement(Citation_Information, 'description')
         description.text = self.description
         
+        return label_root
+
+    def fill_label_values(self, label_root, cleaned_form):
+        # Find Identification_Area
+        Identification_Area = label_root.find(
+            '{}Identification_Area'.format(NAMESPACE))
+
+        # Find Citation_Information.  If no Citation_Information is found, make one.
+        Citation_Information = Identification_Area.find('{}Citation_Information'.format(NAMESPACE))
+
+        if self.number_of_authors_people > 0 or self.number_of_authors_organization > 0:
+            list_author = Citation_Information.find('{}List_Author'.format(NAMESPACE))
+
+            authors_people = list_author.findall('{}Person'.format(NAMESPACE))
+
+            author_people_count = 0
+
+            for author in authors_people:
+                given_name = author.find('{}given_name'.format(NAMESPACE))
+                given_name.text = cleaned_form.get(f'author_person_{author_people_count}_given_name')
+                family_name = author.find('{}family_name'.format(NAMESPACE))
+                family_name.text = cleaned_form.get(f'author_person_{author_people_count}_family_name')
+                person_orcid = author.find('{}person_orcid'.format(NAMESPACE))
+                person_orcid.text = cleaned_form.get(f'author_person_{author_people_count}_orcid')
+
+                affiliation = author.find('{}Affiliation'.format(NAMESPACE))
+                organization_name = affiliation.find('{}organization_name'.format(NAMESPACE))
+                organization_name.text = cleaned_form.get(f'author_person_{author_people_count}_affiliation')
+
+                author_people_count = author_people_count + 1
+
+            authors_organization = list_author.findall('{}Organization'.format(NAMESPACE))
+
+            authors_organization_count = 0
+
+            for author in authors_organization:
+                organization_name = author.find('{}organization_name'.format(NAMESPACE))
+                organization_name.text = cleaned_form.get(f'author_org_{authors_organization_count}_name')
+                organization_rorid = author.find('{}organization_rorid'.format(NAMESPACE))
+                organization_rorid.text = cleaned_form.get(f'author_org_{authors_organization_count}_rorid')
+                sequence_number = author.find('{}sequence_number'.format(NAMESPACE))
+                sequence_number.text = str(cleaned_form.get(f'author_org_{authors_organization_count}_sequence_number'))
+
+                parent_organization = author.find('{}Parent_Organization'.format(NAMESPACE))
+                parent_organization_name = parent_organization.find('{}parent_organization_name'.format(NAMESPACE))
+                parent_organization_name.text = cleaned_form.get(f'author_org_{authors_organization_count}_parent_org_name')
+
+                authors_organization_count = authors_organization_count + 1
+
+        if self.number_of_editors_people > 0 or self.number_of_editors_organization > 0:
+            list_editor = Citation_Information.find('{}List_Editor'.format(NAMESPACE))
+
+            editors_people = list_editor.findall('{}Person'.format(NAMESPACE))
+
+            editor_people_count = 0
+
+            for editor in editors_people:
+                given_name = editor.find('{}given_name'.format(NAMESPACE))
+                given_name.text = cleaned_form.get(f'editor_person_{editor_people_count}_given_name')
+                family_name = editor.find('{}family_name'.format(NAMESPACE))
+                family_name.text = cleaned_form.get(f'editor_person_{editor_people_count}_family_name')
+                person_orcid = editor.find('{}person_orcid'.format(NAMESPACE))
+                person_orcid.text = cleaned_form.get(f'editor_person_{editor_people_count}_orcid')
+
+                affiliation = editor.find('{}Affiliation'.format(NAMESPACE))
+                organization_name = affiliation.find('{}organization_name'.format(NAMESPACE))
+                organization_name.text = cleaned_form.get(f'editor_person_{editor_people_count}_affiliation')
+
+                editor_people_count = editor_people_count + 1
+
+            editors_organization = list_editor.findall('{}Organization'.format(NAMESPACE))
+
+            editors_organization_count = 0
+
+            for editor in editors_organization:
+                organization_name = editor.find('{}organization_name'.format(NAMESPACE))
+                organization_name.text = cleaned_form.get(f'editor_org_{editors_organization_count}_name')
+                organization_rorid = editor.find('{}organization_rorid'.format(NAMESPACE))
+                organization_rorid.text = cleaned_form.get(f'editor_org_{editors_organization_count}_rorid')
+                sequence_number = editor.find('{}sequence_number'.format(NAMESPACE))
+                sequence_number.text = str(cleaned_form.get(f'editor_org_{editors_organization_count}_sequence_number'))
+
+                parent_organization = editor.find('{}Parent_Organization'.format(NAMESPACE))
+                parent_organization_name = parent_organization.find('{}parent_organization_name'.format(NAMESPACE))
+                parent_organization_name.text = cleaned_form.get(f'editor_org_{editors_organization_count}_parent_org_name')
+
+                editors_organization_count = editors_organization_count + 1
+
         return label_root
     
     def remove_xml(self, label_root):

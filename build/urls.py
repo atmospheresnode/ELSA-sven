@@ -39,6 +39,11 @@ urlpatterns = [
 
     # Citation_Information
     re_path(r'^(?P<pk_bundle>\d+)/citation_information/$', views.citation_information, name='citation_information'),
+    
+    #Edit Citation Information
+    re_path(r'^(?P<pk_bundle>\d+)/citation_information_current/(?P<pk_citation_information>\d+)/$', views.edit_citation_information, name='edit_citation_information'),
+    
+    
     # Modification_History
     re_path(r'^(?P<pk_bundle>\d+)/modification_history/$', views.modification_history, name='modification_history'),
 

@@ -1,0 +1,26 @@
+{% extends 'base-derk.html' %}
+{% load static %}
+
+{% block body_block %}
+<div class="container-fluid">
+    <div class="row justify-content-center align-items-center py-4">
+        <div class="col-12 col-lg-9 col-xl-10">
+            <div class="card">
+                <div class="card-body m-4">
+                    <h2 class="mb-5 pb-2 pb-md-0 mb-md-4">Citation Information -- Edit Form</h2>
+                    <p>
+                        This portion will allow you to edit any previous value of the citation information.
+                    </p>
+
+                    <hr>
+
+                    <form action="" method="post" id="" class="pt-3">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-light text-light my-4"></button>
+                     </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -640,19 +640,31 @@
                <div class="tab-pane fade show active" id="inv_cite" role="tabpanel">
                   <!-- Form -->
                   <div class="row px-2">
-                     <form action="{% url 'build:bundle' bundle.pk %}" method="post" id="form_citation_information">
+                     <!-- This is where to change the linkage to one of the new pages -->
+                     <!--Changed the view after build and added citation information.pk-->
+                     <form action="{% url 'build:bundle' bundle.pk %}" method="post" id="form_citation_information"> 
                         {% csrf_token %}
-
+                        
                         <!-- Author List -->
                         <div class="mt-3">
-                           <label for="author_list">Author List</label>
-                           {{ form_citation_information.author_list }}
+                           <label for="author_list">Number of Authors (People)</label>
+                           {{ form_citation_information.number_of_authors_people }}
+                        </div>
+
+                        <div class="mt-3">
+                           <label for="author_list">Number of Authors (Organizations)</label>
+                           {{ form_citation_information.number_of_authors_organization }}
                         </div>
 
                         <!-- Editor List -->
                         <div class="mt-3">
-                           <label for="editor_list">Editor List</label>
-                           {{ form_citation_information.editor_list }}
+                           <label for="author_list">Number of Editors (People)</label>
+                           {{ form_citation_information.number_of_editors_people }}
+                        </div>
+
+                        <div class="mt-3">
+                           <label for="author_list">Number of Editors (Organizations)</label>
+                           {{ form_citation_information.number_of_editors_organization }}
                         </div>
 
                         <!-- Keyword -->
@@ -696,12 +708,18 @@
                               <p class="card-text">Keyword(s): {{ citation_information.editor_list }}</p>
                               <p class="card-text">Publication Year: {{ citation_information.publication_year }}</p>
                               <p class="card-text">Description: {{ citation_information.description }}</p>
+
+                              <!-- Linkage to edit citation information -->
+                              <form action="" method="post" style="display:inline;">
+                                 {% csrf_token %}
+                                 <button type="submit" class="btn btn-light btn-sm">Edit</button>
+                              </form>
                            
-                           <!--implementing citation delete-->
-                           <form action="{% url 'build:citation_information_delete' bundle.pk citation_information.pk %}" method="post" style="display:inline;">
-                              {% csrf_token %}
-                              <button type="submit" class="btn btn-danger btn-sm">Delete</button>
-                           </form>
+                              <!--implementing citation delete-->
+                              <form action="{% url 'build:citation_information_delete' bundle.pk citation_information.pk %}" method="post" style="display:inline;">
+                                 {% csrf_token %}
+                                 <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                              </form>
                            </div>
                         </div>
                         {% endfor %}
@@ -1013,6 +1031,38 @@
                      <div class="mt-3">
                         <label for="data_type">Data Type</label>
                         {{ form_data.data_type }}
+                     </div>
+
+                     <script>
+                        document.addEventListener("DOMContentLoaded", function () {
+                            var dropdown = document.getElementById("id_data_type");
+                            var checkboxContainer = document.getElementById("header_field");
+                            var checkbox = document.getElementById("id_header");
+                
+                            function toggleCheckboxVisibility() {
+                                if (dropdown.value === "Table Delimited") {  // Adjust to match the triggering option
+                                    checkboxContainer.style.display = "block";
+                                } else {
+                                    checkboxContainer.style.display = "none";
+                                    checkbox.checked = false;  // Uncheck when hidden
+                                }
+                            }
+                
+                            dropdown.addEventListener("change", toggleCheckboxVisibility);
+                            toggleCheckboxVisibility(); // Call on page load to ensure correct state
+                        });
+                    </script>
+
+                    <style>
+                        #checkbox-container {
+                           display: none;
+                        }
+                    </style>
+
+                     <!-- Data Type Header -->
+                     <div id="header_field" class="mt-3">
+                        <label for="header">Header?</label>
+                        {{ form_data.header }}
                      </div>
 
                      <!-- Collection -->
