@@ -697,7 +697,7 @@ def bundle(request, pk_bundle):
             context_dict['form_citation_information'] = form_citation_information
 
             # # fixes the refresh duplication issue - deric
-            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
+            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/citation_information_current/' + str(citation_information.pk) + '/')
 
             # fixes the refresh duplication issue, use this one for offline testing - deric
             # return HttpResponseRedirect('/build/' + pk_bundle + '/')
@@ -888,14 +888,17 @@ def bundle(request, pk_bundle):
             all_labels.append(product_bundle)
             all_labels.extend(product_collections_list)  
 
-            data.build_directory()
+            # data.build_directory()
+            data.build_base_file()
 
             form_data = DataForm(request.POST or None, pk_bun=pk_bundle)
             context_dict['form_data'] = form_data
             context_dict['data_set'] = Data.objects.filter(bundle=bundle)
 
             # # fixes the refresh duplication issue - deric
-            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
+            # return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
+            # For now redirect to the table edit form, but we want intelligence later to switch to a different page dependent on data type
+            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/' + str(data.pk) + '/table_creation/') 
 
             # fixes the refresh duplication issue, use this one for offline testing - deric
             # return HttpResponseRedirect('/build/' + pk_bundle + '/')
@@ -1131,13 +1134,71 @@ def citation_information(request, pk_bundle):
            
 
             print('------------- End Build Citation Information -------------------')
-            return redirect(reverse('build:context_search', args=[pk_bundle]))
+            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/citation_information_current/' + str(citation_information.pk) + '/')
+            # return redirect(reverse('build:context_search', args=[pk_bundle]))
             
         # Update context_dict with the current Citation_Information models associated with the user's bundle
         context_dict['citation_information_set'] = Citation_Information.objects.filter(bundle=bundle)
         return render(request, 'build/citation_information/citation_information.html', context_dict)
 
     # Secure: Current user is not the user associated with the bundle, so...
+    else:
+        print('unauthorized user attempting to access a restricted area.')
+        return redirect('main:restricted_access')
+
+def edit_citation_information(request, pk_bundle, pk_citation_information):
+    print('\n\n')
+    print('-------------------------------------------------------------------------')
+    print('\n\n--------------- Edit Citation_Information with ELSA -------------------')
+    print('------------------------------ DEBUGGER ---------------------------------')
+
+    bundle = Bundle.objects.get(pk=pk_bundle)
+
+    context_dict = {}
+
+    # Secure ELSA by seeing if the user logged in is the same user associated with the Bundle
+    if request.user == bundle.user:
+        print('authorized user: {}'.format(request.user))
+
+        # Get forms
+        citation_information = Citation_Information.objects.get(pk=pk_citation_information)
+        form_edit_citation_information = EditCitationInformationForm(request.POST or None, pk_cit=pk_citation_information)
+
+        if form_edit_citation_information.is_valid():
+            print('form_citation_information is valid')
+            cleaned_form = form_edit_citation_information.cleaned_data
+
+            all_labels = []
+
+            product_bundle = Product_Bundle.objects.get(bundle=bundle)
+            product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+
+            all_labels.append(product_bundle)
+            all_labels.extend(product_collections_list)
+
+            for label in all_labels:
+            # Open appropriate label(s).  
+                print('- Label: {}'.format(label))
+                print(' ... Opening Label ... ')
+                label_list = open_label_with_tree(label.label())
+                label_root = label_list[1]
+                print(' ... Building Label ... ')
+                label_root = citation_information.fill_label_values(label_root, cleaned_form)
+
+                # Close appropriate label(s)
+                print(' ... Closing Label ... ')
+                close_label(label.label(), label_root, label_list[2])
+
+            return redirect(reverse('build:context_search', args=[pk_bundle]))
+
+        context_dict = {
+            'form_edit_citation_information': form_edit_citation_information,
+            'bundle': bundle,
+        }
+
+            # return render(request, 'build/citation_information/citation_information_current.html', context_dict)
+        return render(request, 'build/citation_information/citation_information_current.html', context_dict)
+        
     else:
         print('unauthorized user attempting to access a restricted area.')
         return redirect('main:restricted_access')
@@ -2362,7 +2423,7 @@ def Table_Creation(request, pk_bundle, pk_data):
     if request.user == bundle.user:
         if data.data_type == 'Table Delimited':
             print("delim form chosen")
-            data_form = Table_Delimited_Form(request.POST or None, pk_ins=data.name, pk_bun=pk_bundle)
+            data_form = Table_Delimited_Form(request.POST or None, pk_data=pk_data, pk_ins=data.name, pk_bun=pk_bundle)
 
         elif data.data_type == 'Table Binary':
             print("binary form chosen")
@@ -2385,7 +2446,7 @@ def Table_Creation(request, pk_bundle, pk_data):
             form = data_form.save(commit=False)
             form.save()
 
-            form.build_data_file()
+            # form.build_data_file()
 
             # product_bundle = Product_Bundle.objects.get(bundle=bundle)
             # product_collections_list = Product_Collection.objects.filter(bundle=bundle)
