@@ -24,7 +24,10 @@ This section provides a timeline of ELSA's release history, highlighting key upd
 - Delete Citation Information: Fixed the error that used to happen when deleting multiple Citation Information.
 - Edit Citation Information: A temporary solution prompts the user that the feature is being built.
 - Edit Investigation Area: Pull-down menu is introduced before the modals pop-up.
-- Citation Information Form: UI is updated to the ELSA standard. 
+- Citation Information Form: UI is updated to the ELSA standard.
+- Table Creation: Updated design of table creation form for Delimited, Binary, and Character tables.
+- Table Delimited Header: Added form options for a header for Table Delimited and the creation and writing into the XML labels.
+- Bug Fixes: Fixed the bug of not being able to write into table XML files as they are not found. 
 
   
 
