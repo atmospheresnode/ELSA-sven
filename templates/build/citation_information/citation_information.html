@@ -23,9 +23,19 @@
                         {{ form_citation_information }}
                         
                         <!-- Create Cite Info -->
-                        <button type="submit" class="btn btn-light text-light my-4">Create Citation Information</button>
-                     </form>
+                        <br>
+                        <div class="d-flex mb-5 pt-3">
+                            <input type="submit" class="btn btn-light text-light" value="Create Citation Information"/>
+                            <a href="{% url 'build:context_search' bundle.pk %}" class="btn btn-light text-light ms-3">
+                                Skip
+                                <i class="fa fa-arrow-right ms-2"></i></a>
+                        </div>
+                        
+                    </form>
                 </div>
+
+                
+
             </div>
         </div>
     </div>
