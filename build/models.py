@@ -4336,6 +4336,16 @@ class Citation_Information(models.Model):
 
         else:
             Identification_Area.append(Citation_Information)
+        
+        publication_year = etree.SubElement(
+            Citation_Information, 'publication_year')
+        publication_year.text = self.publication_year
+        if self.keyword:
+            # Ask how keywords are saved #
+            keyword = etree.SubElement(Citation_Information, 'keyword')
+            keyword.text = self.keyword
+        description = etree.SubElement(Citation_Information, 'description')
+        description.text = self.description
 
         # Add Citation_Information information
         if self.number_of_authors_people > 0 or self.number_of_authors_organization > 0:
@@ -4380,16 +4390,6 @@ class Citation_Information(models.Model):
                 parent_organization = etree.SubElement(organization, 'Parent_Organization')
 
                 parent_organization_name = etree.SubElement(parent_organization, 'parent_organization_name')
-            
-        publication_year = etree.SubElement(
-            Citation_Information, 'publication_year')
-        publication_year.text = self.publication_year
-        if self.keyword:
-            # Ask how keywords are saved #
-            keyword = etree.SubElement(Citation_Information, 'keyword')
-            keyword.text = self.keyword
-        description = etree.SubElement(Citation_Information, 'description')
-        description.text = self.description
         
         return label_root
 
@@ -4485,8 +4485,10 @@ class Citation_Information(models.Model):
         Identification_Area = label_root.find('{}Identification_Area'.format(NAMESPACE))
 
         Citation_Information = Identification_Area.find('{}Citation_Information'.format(NAMESPACE))
-
-        Citation_Information.getparent().remove(Citation_Information)
+        
+        #Added this check to avoid the multiple deletation- Rupak (Temporary solution until we implement the new idea)
+        if Citation_Information is not None and Citation_Information.getparent() is not None:
+            Citation_Information.getparent().remove(Citation_Information)
 
         # for alias in Alias_List:
         #     if(alias[0].text.title() == self.alternate_id.title()):

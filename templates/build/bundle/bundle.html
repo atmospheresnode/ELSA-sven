@@ -109,7 +109,14 @@
                      {% comment %} <a type="button" class="btn btn-info text-light" href="" aria-expanded="true" style="box-shadow: none;">Help</a> {% endcomment %}
                      <a type="button" class="btn btn-danger text-light" data-bs-toggle="modal" data-bs-target="#delete_modal" aria-expanded="false" style="box-shadow: none;">Delete Bundle</a>
                      <a type="button" class="btn btn-success text-light" href="{% url 'build:bundle_download' bundle.pk %}" aria-expanded="false" style="box-shadow: none;">Download Bundle</a>
-                     <a type="button" class="btn btn-light text-light" data-bs-toggle="modal" data-bs-target="#investigation_modal" aria-expanded="false" style="box-shadow: none;">Edit Investigation Area</a>
+                     
+                     <a type="button" class="btn btn-light text-light dropdown-toggle" id="investigation_dropdown" data-bs-toggle="dropdown" aria-expanded="false" style="box-shadow: none;">Edit Investigation Area</a>
+                        <ul class="dropdown-menu" aria-labelledby="investigation_dropdown">
+                           <li><a class="dropdown-item" data-bs-toggle="modal" data-bs-target="#alias_modal">Alias</a></li>
+                           <li><a class="dropdown-item" data-bs-toggle="modal" data-bs-target="#mod_history_modal">Modification History</a></li>
+                           <li><a class="dropdown-item" data-bs-toggle="modal" data-bs-target="#citation_information_modal">Citation Information</a></li>
+                        </ul>
+                     
                      <a type="button" class="btn btn-light text-light" data-bs-toggle="modal" data-bs-target="#context_modal" aria-expanded="false" style="box-shadow: none;">Edit Context Products</a>
                      <a type="button" class="btn btn-light text-light" data-bs-toggle="modal" data-bs-target="#collections_modal" aria-expanded="false" style="box-shadow: none;">Edit Collections</a>
                </div>
@@ -500,33 +507,24 @@
 </div>
 
 <!-- Investigation Area Modal -->
-<div class="modal fade" id="investigation_modal">
+<!-- Splitting the Investigation Area into 3 different pop-up modals accessed by the dropdown -->
+
+<!-- Alias -->
+<div class="modal fade" id="alias_modal">
    <div class="modal-dialog modal-xl">
       <div class="modal-content">
          <!-- Title -->
          <div class="modal-header d-flex justify-content-center position-relative">
-            <h5 class="modal-title">Investigation Area</h5>
+            <h5 class="modal-title">Alias</h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="position: absolute; right: 1rem;"></button>
          </div>
 
          <div class="modal-body pt-0">
-            <!-- Tabs -->
-            <ul class="nav nav-fill nav-underline nav-justified" role="tablist">
-               <li class="bundle-nav-item nav-item" role="presentation">
-                  <button class="bundle-nav-link nav-link" data-bs-toggle="tab" data-bs-target="#inv_alias" type="button" role="tab" aria-selected="true">Alias</button>
-               </li>
-               <li class="bundle-nav-item nav-item" role="presentation">
-                  <button class="bundle-nav-link nav-link" data-bs-toggle="tab" data-bs-target="#inv_mod" type="button" role="tab" aria-selected="false">Modification History</button>
-               </li>
-               <li class="bundle-nav-item nav-item" role="presentation">
-                  <button class="bundle-nav-link nav-link active" data-bs-toggle="tab" data-bs-target="#inv_cite" type="button" role="tab" aria-selected="false">Citation Information</button>
-               </li>
-            </ul>
 
             <!-- Content -->
             <div class="tab-content">
                <!-- Alias -->
-               <div class="tab-pane fade" id="inv_alias" role="tabpanel">
+               <div class="tab-pane show active" id="inv_alias" role="tabpanel">
                   <!-- Form -->
                   <div class="row px-2">
                      <form action="{% url 'build:bundle' bundle.pk %}" method="post" id="form_alias" >
@@ -579,9 +577,29 @@
                      {% endif %}
                   </div>
                </div>
+            </div>
+         </div>
+      </div>
+   </div>
+</div>
+
+<!-- Modificaiton History -->
+<div class="modal fade" id="mod_history_modal">
+   <div class="modal-dialog modal-xl">
+      <div class="modal-content">
+         <!-- Title -->
+         <div class="modal-header d-flex justify-content-center position-relative">
+            <h5 class="modal-title">Modification History</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="position: absolute; right: 1rem;"></button>
+         </div>
+
+         <div class="modal-body pt-0">
+
+            <!-- Content -->
+            <div class="tab-content">
 
                <!-- Modification History -->
-               <div class="tab-pane fade" id="inv_mod" role="tabpanel">
+               <div class="tab-pane show active" id="inv_mod" role="tabpanel">
                   <div class="row px-2">
                      <form action="{% url 'build:bundle' bundle.pk %}" method="post" id="form_modification_history">
                         {% csrf_token %}
@@ -635,10 +653,32 @@
                      {% endif %}
                   </div>
                </div>
+            </div>
+         </div>
+      </div>
+   </div>
+</div>
 
+
+<!-- Citation Information -->
+<div class="modal fade" id="citation_information_modal">
+   <div class="modal-dialog modal-xl">
+      <div class="modal-content">
+         <!-- Title -->
+         <div class="modal-header d-flex justify-content-center position-relative">
+            <h5 class="modal-title">Citation Information</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="position: absolute; right: 1rem;"></button>
+         </div>
+
+         <div class="modal-body pt-0">
+
+            <!-- Content -->
+            <div class="tab-content">
                <!-- Citation Information -->
-               <div class="tab-pane fade show active" id="inv_cite" role="tabpanel">
+               <div class="tab-pane show active" id="inv_cite" role="tabpanel">
                   <!-- Form -->
+
+               {% if citation_information_set_count == 0 %}
                   <div class="row px-2">
                      <!-- This is where to change the linkage to one of the new pages -->
                      <!--Changed the view after build and added citation information.pk-->
@@ -691,6 +731,65 @@
                         <button type="submit" class="btn btn-light text-light my-4">Create Citaiton Information</button>
                      </form>
                   </div>
+                  
+                  {% else %}
+
+                  <div class="row px-2">
+                     <!--This logic needs to be changed: When exists, it displays list author and list editor as carousel-->
+                     <!--For now, it is displaying the same thing as when nothing exists; which is the main form to add citation information-->
+                     <form action="{% url 'build:bundle' bundle.pk %}" method="post" id="form_citation_information"> 
+                        {% csrf_token %}
+                        
+                        <!-- Author List -->
+                        <div class="mt-3">
+                           <label for="author_list">Number of Authors (People)</label>
+                           {{ form_citation_information.number_of_authors_people }}
+                        </div>
+
+                        <div class="mt-3">
+                           <label for="author_list">Number of Authors (Organizations)</label>
+                           {{ form_citation_information.number_of_authors_organization }}
+                        </div>
+
+                        <!-- Editor List -->
+                        <div class="mt-3">
+                           <label for="author_list">Number of Editors (People)</label>
+                           {{ form_citation_information.number_of_editors_people }}
+                        </div>
+
+                        <div class="mt-3">
+                           <label for="author_list">Number of Editors (Organizations)</label>
+                           {{ form_citation_information.number_of_editors_organization }}
+                        </div>
+
+                        <!-- Keyword -->
+                        <div class="mt-3">
+                           <label for="keyword">Keyword</label>
+                           {{ form_citation_information.keyword }}
+                        </div>
+
+                        <!-- Publication Year -->
+                        <div class="mt-3">
+                           <label for="publication_year">Publication Year<span class="text-danger" title="This field is required">*</span></label>
+                           {{ form_citation_information.publication_year }}
+                        </div>
+
+                        <!-- Description -->
+                        <div class="mt-3">
+                           <label for="mod_desc">Description<span class="text-danger" title="This field is required">*</span></label>
+                           {{ form_citation_information.description }}
+                        </div>
+
+                        {{ form_citation_information.errors }}
+
+                        <!-- Create Citation Information -->
+                        <button type="submit" class="btn btn-light text-light my-4">Create Citaiton Information</button>
+                     </form>
+                  </div>
+
+
+                  {% endif %}
+                  
 
                   <!-- List of Citation Information Snippets -->
                   <div class="modal-footer justify-content-start">
@@ -709,11 +808,16 @@
                               <p class="card-text">Publication Year: {{ citation_information.publication_year }}</p>
                               <p class="card-text">Description: {{ citation_information.description }}</p>
 
-                              <!-- Linkage to edit citation information -->
-                              <form action="" method="post" style="display:inline;">
+                              <!-- The edit does not work yet. Prompting the user to delete the citaion info to make changes. -->
+                              {% comment %} <form action="" method="post" style="display:inline;">
                                  {% csrf_token %}
                                  <button type="submit" class="btn btn-light btn-sm">Edit</button>
-                              </form>
+                              </form> {% endcomment %}
+
+                              <button type="button" class="btn btn-light btn-sm"
+                                    onclick="alert('Edit functionality is currently under development.\nPlease delete and create a new citation to make any changes.\nWe apologize for the inconvenience!')">
+                                 Edit
+                              </button>
                            
                               <!--implementing citation delete-->
                               <form action="{% url 'build:citation_information_delete' bundle.pk citation_information.pk %}" method="post" style="display:inline;">
@@ -723,6 +827,7 @@
                            </div>
                         </div>
                         {% endfor %}
+
                      {% endif %}
                   </div>
                </div>

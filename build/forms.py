@@ -293,22 +293,6 @@ class CitationInformationForm(forms.ModelForm):
 
 
 class EditCitationInformationForm(forms.Form):
-    # given_name = forms.CharField(required=True, widget = forms.TextInput(attrs={
-    #     'class': 'form-control form-outline',
-    #     'id': 'First Name of Author'
-    # }))
-    # family_name = forms.CharField(required=True, widget = forms.TextInput(attrs={
-    #     'class': 'form-control form-outline',
-    #     'id': 'Last Name of Author'
-    # }))
-    # orcid = forms.CharField(required=True, widget = forms.TextInput(attrs={
-    #     'class': 'form-control form-outline',
-    #     'id': 'ORCID'
-    # }))
-    # organization_name = forms.CharField(required=False, widget = forms.TextInput(attrs={
-    #     'class': 'form-control form-outline',
-    #     'id': 'Affiliated Organization'
-    # }))
 
     def __init__(self, *args, **kwargs):
         self.pk_cit = kwargs.pop('pk_cit')
@@ -331,45 +315,62 @@ class EditCitationInformationForm(forms.Form):
     def _add_person_fields(self, prefix, count):
         """Helper method to add fields for a person (author or editor)."""
         for i in range(count):
+            # Creating labels so that the words are capitalized
+            given_name_label = f"{prefix.capitalize()} Person {i+1} Given Name"
+            family_name_label = f"{prefix.capitalize()} Person {i+1} Family Name"
+            orcid_label = f"{prefix.capitalize()} Person {i+1} ORCID"
+            affiliation_label = f"{prefix.capitalize()} Person {i+1} Affiliation"
+            
             self.fields[f'{prefix}_person_{i}_given_name'] = forms.CharField(
                 required=False,
+                label=given_name_label,
                 widget=forms.TextInput(attrs={'class': 'form-control form-outline'})
             )
             self.fields[f'{prefix}_person_{i}_family_name'] = forms.CharField(
                 required=False,
+                label=family_name_label,
                 widget=forms.TextInput(attrs={'class': 'form-control form-outline'})
             )
             self.fields[f'{prefix}_person_{i}_orcid'] = forms.CharField(
                 required=False,
+                label=orcid_label,
                 widget=forms.TextInput(attrs={'class': 'form-control form-outline'})
             )
             self.fields[f'{prefix}_person_{i}_affiliation'] = forms.CharField(
                 required=False,
+                label=affiliation_label,
                 widget=forms.TextInput(attrs={'class': 'form-control form-outline'})
             )
 
     def _add_organization_fields(self, prefix, count):
         """Helper method to add fields for an organization (author or editor)."""
         for i in range(count):
+            # Creating labels so that the words are capitalized
+            name_label = f"{prefix.capitalize()} Organization {i+1} Name"
+            rorid_label = f"{prefix.capitalize()} Organization {i+1} RORID"
+            sequence_label = f"{prefix.capitalize()} Organization {i+1} Sequence Number"
+            parent_org_label = f"{prefix.capitalize()} Organization {i+1} Parent Organization Name"
+            
             self.fields[f'{prefix}_org_{i}_name'] = forms.CharField(
                 required=False,
+                label=name_label,
                 widget=forms.TextInput(attrs={'class': 'form-control form-outline'})
             )
             self.fields[f'{prefix}_org_{i}_rorid'] = forms.CharField(
                 required=False,
+                label=rorid_label,
                 widget=forms.TextInput(attrs={'class': 'form-control form-outline'})
             )
             self.fields[f'{prefix}_org_{i}_sequence_number'] = forms.IntegerField(
                 required=False,
+                label=sequence_label,
                 widget=forms.NumberInput(attrs={'class': 'form-control form-outline'})
             )
             self.fields[f'{prefix}_org_{i}_parent_org_name'] = forms.CharField(
                 required=False,
+                label=parent_org_label,
                 widget=forms.TextInput(attrs={'class': 'form-control form-outline'})
             )
-
-
-
 
 
 
