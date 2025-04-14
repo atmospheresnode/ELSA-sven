@@ -6,8 +6,10 @@
     <div class="row justify-content-center">
         <div class="col-12 col-lg-9 col-xl-8">
             <div class="card border-0 rounded-lg">
-                <div class="card-header text-primary p-4 text-center">
-                    <h2 class="mb-0 fw-bold">Citation Information</h2>
+                <div class="card-header text-white text-center" style="padding: 0.5rem 0.5rem; background-color: #2F4F4F">
+                    <h3 class="mb-2 mt-2">
+                        Citation Information
+                    </h3>
                 </div>
                 <div class="card-body p-4 p-lg-5">
                     <form method="post" class="needs-validation" novalidate>
@@ -50,16 +52,7 @@
                         
                         <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
                             <button type="reset" class="btn btn-outline-secondary px-4 me-md-2">Reset</button>
-                            <button type="submit" class="btn btn-primary px-4">Submit</button>
-                        </div>
-                    </form>
-                    
-                    <hr class="my-5">
-                    
-                    <form action="" method="post" id="" class="pt-3">
-                        {% csrf_token %}
-                        <div class="d-grid">
-                            <button type="submit" class="btn btn-light text-light my-2"></button>
+                            <button type="submit" class="btn btn-success px-4">Submit</button>
                         </div>
                     </form>
                 </div>
@@ -67,6 +60,17 @@
         </div>
     </div>
 </div>
+
+<!-- Go back to build bundle page -->
+<div class="row" style="margin-bottom: -10px">
+    <div class="col-md-12 d-flex align-items-center justify-content-center" style="margin-bottom: -10px">
+    <!-- Correct URL -->
+    <a href="{% url 'build:bundle' bundle.pk %}" class="btn bi bi-arrow-return-left" style="background-color: #008B8B; color: white;">
+        <i class="fa fa-arrow-circle-left"></i> Bundle Details
+    </a>
+    </div>
+</div> 
+
 {% endblock %}
 
 {% block extra_js %}
