@@ -2445,20 +2445,17 @@ def Table_Creation(request, pk_bundle, pk_data):
         if data_form.is_valid():
             form = data_form.save(commit=False)
             form.save()
-
-            # form.build_data_file()
-
-            # product_bundle = Product_Bundle.objects.get(bundle=bundle)
-            # product_collections_list = Product_Collection.objects.filter(bundle=bundle)
-
-            # write_into_label(form, product_bundle, product_collections_list)
+            cleaned_form = data_form.cleaned_data
 
             label_list = open_label_with_tree(form.label())
             label_root = label_list[1]
             # Fill label - fills 
             print(' ... Filling Label ... ')
             #label_root = bundle.version.fill_xml_schema(label_root)
-            label_root = form.fill_base_case(label_root)
+            if data.data_type == 'Table Delimited':
+                label_root = form.fill_base_case(label_root, cleaned_form)
+            else:
+                label_root = form.fill_base_case(label_root)
             # Close label    
             print(' ... Closing Label ... ')
             close_label(label_list[0], label_root, label_list[2]) 

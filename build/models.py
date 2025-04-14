@@ -3169,8 +3169,8 @@ class Table_Delimited(models.Model):
         """
             label returns the physical label location in ELSAs archive
         """
-        print(os.path.join(self.directory(), self.name_label_case()))
-        return os.path.join(self.directory(), self.name_label_case())
+        print(os.path.join(self.collection.directory(), self.name_label_case()))
+        return os.path.join(self.collection.directory(), self.name_label_case())
 
         # directory returns the file path associated with the given model.
     def directory(self):
@@ -3199,7 +3199,7 @@ class Table_Delimited(models.Model):
 
         update.version_update_old(self.data.bundle.version, source_file,out_file)
         
-    def fill_base_case(self, root):
+    def fill_base_case(self, root, cleaned_form):
 
         Table_Delimited = root
 
@@ -3230,6 +3230,18 @@ class Table_Delimited(models.Model):
         science_facet1.text = self.facet1
 
         f = Table_Delimited.find('{}File_Area_Observational'.format(NAMESPACE))
+
+        if self.data.header:
+            header = f.find('{}Header'.format(NAMESPACE))
+            local_id = header.find('{}local_identifier'.format(NAMESPACE))
+            local_id.text = cleaned_form.get('local_identifier')
+
+            offset = header.find('{}offset'.format(NAMESPACE))
+            offset.text = str(cleaned_form.get('header_offset'))
+
+            object_length = header.find('{}object_length'.format(NAMESPACE))
+            object_length.text = str(cleaned_form.get('header_object_length'))
+
         td = f.find('{}Table_Delimited'.format(NAMESPACE))
         
         if self.name:
@@ -3242,7 +3254,11 @@ class Table_Delimited(models.Model):
 
         if self.offset:
             offset = td.find('{}offset'.format(NAMESPACE))
-            offset.text = str(self.offset)
+
+            if self.data.header:
+                offset.text = str(cleaned_form.get('header_offset') + self.offset)
+            else:
+                offset.text = str(self.offset)
         
         if self.object_length:
             object_length = td.find('{}object_length'.format(NAMESPACE))
@@ -3418,7 +3434,7 @@ class Table_Fixed_Width(models.Model):
         return os.path.join(self.directory(), self.name_label_case())
 
     def directory(self):
-        data_collection_name = self.collection.collection_name.lower()
+        data_collection_name = self.collection.lower()
         data_directory = os.path.join(self.data.bundle.directory(), data_collection_name)
         return data_directory  
 
@@ -3431,7 +3447,7 @@ class Table_Fixed_Width(models.Model):
         ret_name = self.data.name.lower()
         ret_name = replace_all(ret_name, ' ', '_')
         out_file = os.path.join(self.directory(), ret_name + '.xml')
-        out_file = os.path.join(self.directory(), self.data.name + '.xml')
+        # out_file = os.path.join(self.directory(), self.data.name + '.xml')
 
         #set selected version
         update = Version()

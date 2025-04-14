@@ -91,7 +91,535 @@ Specify Some Data
                 <div class="card-body">
                     <form id="data_form" method="post" action="{% url 'build:table_creation' bundle.pk data.pk %}">
                         {% csrf_token %}
-                        {{ data_form.as_p }}
+                        {% if data.data_type == 'Table Delimited' %}
+                        {% if data.header %}
+                        <h4 class="mb-3">Header Information</h4>
+                        <!-- Header Fields -->
+                        <div class="row gx-2">
+                            <!-- First column -->
+                            <div class="col-md-6">
+                                <div class="mb-4 form-outline">
+                                    <div class="col-md-2 mt-2">
+                                        <h6>Local Identifier</h6>
+                                    </div>
+    
+                                    <div class="col-md-10">
+                                        {{ data_form.local_identifier }}
+                                    </div>
+                                    <!-- <label for="local_identifier"><h6>Local Identifier</h6></label>
+                                    {{ data_form.local_identifier }} -->
+                                </div>
+
+                                <div class="mb-4 form-outline">
+                                    <div class="col-md-2 mt-2">
+                                        <h6>Header Offset</h6>
+                                    </div>
+    
+                                    <div class="col-md-10">
+                                        {{ data_form.header_offset }}
+                                    </div>
+                                    <!-- <label for="header_offset"><h6>Header Offset</h6></label>
+                                    {{ data_form.header_offset }} -->
+                                </div>
+                                <div class="mb-4 form-outline">
+                                    <div class="col-md-2 mt-2">
+                                        <h6>Header Object Length</h6>
+                                    </div>
+    
+                                    <div class="col-md-10">
+                                        {{ data_form.header_object_length }}
+                                    </div>
+                                    <!-- <label for="header_object_length"><h6>Header Object Length</h6></label>
+                                    {{ data_form.header_object_length }} -->
+                                </div>
+                            </div>
+
+                            <!-- Second column -->
+                            <div class="col-md-6">
+                                
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <h4 class="mb-3">Table Information</h4>
+                        <div class="row justify-content-start">
+                            <!-- First column -->
+                            <div class="col-md-6">
+                                <div class="mb-4 form-outline">
+                                    <div class="col-md-2 mt-2">
+                                        <h6>Name</h6>
+                                    </div>
+    
+                                    <div class="col-md-10">
+                                        {{ data_form.name }}
+                                    </div>
+                                    <!-- <label for="name"><h6>Name</h6></label>
+                                    {{ data_form.name }} -->
+                                </div>
+
+                                <div class="mb-4 form-outline">
+                                    <div class="col-md-2 mt-2">
+                                        <h6>Offset</h6>
+                                    </div>
+    
+                                    <div class="col-md-10">
+                                        {{ data_form.offset }}
+                                    </div>
+                                    <!-- <label for="offset"><h6>Offset</h6></label>
+                                    {{ data_form.offset }} -->
+                                </div>
+
+                                <div class="mb-4 form-outline">
+                                    <div class="col-md-2 mt-2">
+                                        <h6>Object Length</h6>
+                                    </div>
+    
+                                    <div class="col-md-10">
+                                        {{ data_form.object_length }}
+                                    </div>
+                                    <!-- <label for="object_length"><h6>Object Length</h6></label>
+                                    {{ data_form.object_length }} -->
+                                </div>
+
+                                <div class="mb-4 form-outline">
+                                    <div class="col-md-2 mt-2">
+                                        <h6>Description</h6>
+                                    </div>
+    
+                                    <div class="col-md-10">
+                                        {{ data_form.description }}
+                                    </div>
+                                    <!-- <label for="description"><h6>Description</h6></label>
+                                    {{ data_form.description }} -->
+                                </div>
+                                <div class="mb-4 form-outline">
+                                    <div class="col-md-2 mt-2">
+                                        <h6>Records</h6>
+                                    </div>
+    
+                                    <div class="col-md-10">
+                                        {{ data_form.records }}
+                                    </div>
+                                    <!-- <label for="records"><h6>Records</h6></label>
+                                    {{ data_form.records }} -->
+                                </div>
+                            </div>
+
+                            <!-- Second column -->
+                            <div class="col-md-6">
+                                <div class="mb-4 form-outline">
+                                    <div class="col-md-2 mt-2">
+                                        <h6>Field Delimiter</h6>
+                                    </div>
+    
+                                    <div class="col-md-10">
+                                        {{ data_form.field_delimiter }}
+                                    </div>
+                                    <!-- <label for="field_delimiter"><h6>Field Delimiter</h6></label>
+                                    {{ data_form.field_delimiter }} -->
+                                </div>
+
+                                <div class="mb-4 form-outline">
+                                    <div class="col-md-2 mt-2">
+                                        <h6>Fields</h6>
+                                    </div>
+    
+                                    <div class="col-md-10">
+                                        {{ data_form.fields }}
+                                    </div>
+                                    <!-- <label for="fields"><h6>Fields</h6></label>
+                                    {{ data_form.fields }} -->
+                                </div>
+
+                                <div class="mb-4 form-outline">
+                                    <div class="col-md-2 mt-2">
+                                        <h6>Facet 1</h6>
+                                    </div>
+    
+                                    <div class="col-md-10">
+                                        {{ data_form.facet1 }}
+                                    </div>
+                                    <!-- <label for="facet1"><h6>Facet 1</h6></label>
+                                    {{ data_form.facet1 }} -->
+                                </div>
+
+                                <div class="mb-4 form-outline">
+                                    <div class="col-md-2 mt-2">
+                                        <h6>Data</h6>
+                                    </div>
+    
+                                    <div class="col-md-10">
+                                        {{ data_form.data }}
+                                    </div>
+                                    <!-- <label for="data"><h6>Data</h6></label>
+                                    {{ data_form.data }} -->
+                                </div>
+
+                                <div class="mb-4 form-outline">
+                                    <div class="col-md-2 mt-2">
+                                        <h6>Collection</h6>
+                                    </div>
+    
+                                    <div class="col-md-10">
+                                        {{ data_form.collection }}
+                                    </div>
+                                    <!-- <label for="collection"><h6>Collection</h6></label>
+                                    {{ data_form.collection }} -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- <div class="mb-4 form-outline">
+                            <div class="row">
+                                <div class="col-md-2 mt-2">
+                                    <h6>Name</h6>
+                                </div>
+
+                                <div class="col-md-10">
+                                    {{ data_form.name }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4 form-outline">
+                            <div class="row">
+                                <div class="col-md-2 mt-2">
+                                    <h6>Offset</h6>
+                                </div>
+
+                                <div class="col-md-10">
+                                    {{ data_form.offset }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4 form-outline">
+                            <div class="row">
+                                <div class="col-md-2 mt-2">
+                                    <h6>Object Length</h6>
+                                </div>
+
+                                <div class="col-md-10">
+                                    {{ data_form.object_length }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4 form-outline">
+                            <div class="row">
+                                <div class="col-md-2 mt-2">
+                                    <h6>Description</h6>
+                                </div>
+
+                                <div class="col-md-10">
+                                    {{ data_form.description }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4 form-outline">
+                            <div class="row">
+                                <div class="col-md-2 mt-2">
+                                    <h6>Records</h6>
+                                </div>
+
+                                <div class="col-md-10">
+                                    {{ data_form.records }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4 form-outline">
+                            <div class="row">
+                                <div class="col-md-2 mt-2">
+                                    <h6>Field Delimiter</h6>
+                                </div>
+
+                                <div class="col-md-10">
+                                    {{ data_form.field_delimiter }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4 form-outline">
+                            <div class="row">
+                                <div class="col-md-2 mt-2">
+                                    <h6>Fields</h6>
+                                </div>
+
+                                <div class="col-md-10">
+                                    {{ data_form.fields }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4 form-outline">
+                            <div class="row">
+                                <div class="col-md-2 mt-2">
+                                    <h6>Facet 1</h6>
+                                </div>
+
+                                <div class="col-md-10">
+                                    {{ data_form.facet1 }}
+                                </div>
+                            </div>
+                        </div>
+
+                        {% if data.header %}
+                        <div class="mb-4 form-outline">
+                            <div class="row">
+                                <div class="col-md-2 mt-2">
+                                    <h6>Local Identifier</h6>
+                                </div>
+
+                                <div class="col-md-10">
+                                    {{ data_form.local_identifier }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4 form-outline">
+                            <div class="row">
+                                <div class="col-md-2 mt-2">
+                                    <h6>Header Offset</h6>
+                                </div>
+
+                                <div class="col-md-10">
+                                    {{ data_form.header_offset }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4 form-outline">
+                            <div class="row">
+                                <div class="col-md-2 mt-2">
+                                    <h6>Header Object Length</h6>
+                                </div>
+
+                                <div class="col-md-10">
+                                    {{ data_form.header_object_length }}
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <div class="mb-4 form-outline">
+                            <div class="row">
+                                <div class="col-md-2 mt-2">
+                                    <h6>Data</h6>
+                                </div>
+
+                                <div class="col-md-10">
+                                    {{ data_form.data }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4 form-outline">
+                            <div class="row">
+                                <div class="col-md-2 mt-2">
+                                    <h6>Collection</h6>
+                                </div>
+
+                                <div class="col-md-10">
+                                    {{ data_form.collection }}
+                                </div>
+                            </div>
+                        </div> -->
+                        {% elif data.data_type == 'Table Binary' %}
+                        <div class="mb-4 form-outline">
+                            <div class="row">
+                                <div class="col-md-2 mt-2">
+                                    <h6>Name</h6>
+                                </div>
+
+                                <div class="col-md-10">
+                                    {{ data_form.name }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4 form-outline">
+                            <div class="row">
+                                <div class="col-md-2 mt-2">
+                                    <h6>Offset</h6>
+                                </div>
+
+                                <div class="col-md-10">
+                                    {{ data_form.offset }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4 form-outline">
+                            <div class="row">
+                                <div class="col-md-2 mt-2">
+                                    <h6>Records</h6>
+                                </div>
+
+                                <div class="col-md-10">
+                                    {{ data_form.records }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4 form-outline">
+                            <div class="row">
+                                <div class="col-md-2 mt-2">
+                                    <h6>Fields</h6>
+                                </div>
+
+                                <div class="col-md-10">
+                                    {{ data_form.fields }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4 form-outline">
+                            <div class="row">
+                                <div class="col-md-2 mt-2">
+                                    <h6>Facet 1</h6>
+                                </div>
+
+                                <div class="col-md-10">
+                                    {{ data_form.facet1 }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4 form-outline">
+                            <div class="row">
+                                <div class="col-md-2 mt-2">
+                                    <h6>Data</h6>
+                                </div>
+
+                                <div class="col-md-10">
+                                    {{ data_form.data }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4 form-outline">
+                            <div class="row">
+                                <div class="col-md-2 mt-2">
+                                    <h6>Collection</h6>
+                                </div>
+
+                                <div class="col-md-10">
+                                    {{ data_form.collection }}
+                                </div>
+                            </div>
+                        </div>
+                        {% elif data.data_type == 'Table Character' %}
+                        <div class="mb-4 form-outline">
+                            <div class="row">
+                                <div class="col-md-2 mt-2">
+                                    <h6>Name</h6>
+                                </div>
+
+                                <div class="col-md-10">
+                                    {{ data_form.name }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4 form-outline">
+                            <div class="row">
+                                <div class="col-md-2 mt-2">
+                                    <h6>Offset</h6>
+                                </div>
+
+                                <div class="col-md-10">
+                                    {{ data_form.offset }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4 form-outline">
+                            <div class="row">
+                                <div class="col-md-2 mt-2">
+                                    <h6>Object Length</h6>
+                                </div>
+
+                                <div class="col-md-10">
+                                    {{ data_form.object_length }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4 form-outline">
+                            <div class="row">
+                                <div class="col-md-2 mt-2">
+                                    <h6>Description</h6>
+                                </div>
+
+                                <div class="col-md-10">
+                                    {{ data_form.description }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4 form-outline">
+                            <div class="row">
+                                <div class="col-md-2 mt-2">
+                                    <h6>Records</h6>
+                                </div>
+
+                                <div class="col-md-10">
+                                    {{ data_form.records }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4 form-outline">
+                            <div class="row">
+                                <div class="col-md-2 mt-2">
+                                    <h6>Fields</h6>
+                                </div>
+
+                                <div class="col-md-10">
+                                    {{ data_form.fields }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4 form-outline">
+                            <div class="row">
+                                <div class="col-md-2 mt-2">
+                                    <h6>Facet 1</h6>
+                                </div>
+
+                                <div class="col-md-10">
+                                    {{ data_form.facet1 }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4 form-outline">
+                            <div class="row">
+                                <div class="col-md-2 mt-2">
+                                    <h6>Data</h6>
+                                </div>
+
+                                <div class="col-md-10">
+                                    {{ data_form.data }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4 form-outline">
+                            <div class="row">
+                                <div class="col-md-2 mt-2">
+                                    <h6>Collection</h6>
+                                </div>
+
+                                <div class="col-md-10">
+                                    {{ data_form.collection }}
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        <!-- {{ data_form.as_p }} -->
                         <div class="text-center mt-3">
                             <button type="submit" class="btn btn-success btn-md">Submit</button>
                         </div>
