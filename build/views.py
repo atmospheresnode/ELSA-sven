@@ -17,6 +17,7 @@ from django import forms
 from django.forms import modelformset_factory
 from django.views.generic.edit import UpdateView, DeleteView
 from django.contrib import messages
+import lxml.etree as ET # for XML parsing- Added by Rupak
 # from lxml import etree # debug product obs only
 
 
@@ -1070,6 +1071,18 @@ def success_delete(request):
     return render(request, 'build/bundle/success_delete.html')
 
 
+
+#helper function to get the bundle name from the bundle id
+def bundle_title(xml_content: str) -> str:
+    try:
+        ns = {'pds': 'http://pds.nasa.gov/pds4/pds/v1'}
+        root = ET.fromstring(xml_content.encode('utf-8'))
+        title_element = root.find('.//pds:Identification_Area/pds:title', namespaces=ns)
+        return title_element.text.strip() if title_element is not None else None
+    except ET.XMLSyntaxError as e:
+        print(f"[XML ERROR] Could not parse XML: {e}")
+        return None
+    
 def citation_information(request, pk_bundle):
     print('\n\n')
     print('-------------------------------------------------------------------------')
@@ -1113,7 +1126,6 @@ def citation_information(request, pk_bundle):
         context_dict = {
             'form_citation_information': form_citation_information,
             'bundle': bundle,
-
         }
 
         # After ELSAs friend hits submit, if the forms are completed correctly, we should enter
@@ -1131,7 +1143,6 @@ def citation_information(request, pk_bundle):
             product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
 
             write_into_label(citation_information, product_bundle, product_collections_list)
-           
 
             print('------------- End Build Citation Information -------------------')
             return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/citation_information_current/' + str(citation_information.pk) + '/')
@@ -2705,7 +2716,7 @@ def delete_citation_information(request, pk_bundle, pk_citation_information):
     remove_from_label(citation_information, product_bundle, product_collections_list)
     bundle.citation_information.remove(citation_information)
 
-    return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
+    return HttpResponseRedirect(reverse('build:citation_information', args=[pk_bundle]))
 
 
 def delete_instrument(request, pk_bundle, pk_instrument):
