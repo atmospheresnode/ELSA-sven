@@ -739,7 +739,6 @@ class ProductDocumentForm(forms.ModelForm):
     )
     description = forms.CharField(
         required=False,
-        max_length=100,
         label_suffix = '',
         widget=forms.Textarea(attrs={
             'class': 'form-control',
@@ -747,14 +746,7 @@ class ProductDocumentForm(forms.ModelForm):
             'rows': 3
         })
     )
-    document_editions = forms.IntegerField(
-        required=False,
-        label_suffix = '',
-        widget=forms.NumberInput(attrs={
-            'class': 'form-control',
-           # 'placeholder': 'Document Editions'
-        })
-    )
+
     revision_id = forms.CharField(
         required=False,
         max_length=100,
@@ -764,6 +756,16 @@ class ProductDocumentForm(forms.ModelForm):
            # 'placeholder': 'Revision ID'
         })
     )
+
+    document_editions = forms.IntegerField(
+        required=False,
+        label_suffix = '',
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+           # 'placeholder': 'Document Editions'
+        })
+    )
+    
     edition_name = forms.CharField(
         required=False,
         max_length=100,
