@@ -19,13 +19,24 @@ This approach takes advantage of Atmospheres Node expertise to ensure all connec
 This section provides a timeline of ELSA's release history, highlighting key updates, new features, bug fixes, and improvements, with the most recent release listed first.
 
 ### **Current Version** 
-> ### **Version 1.9.2 (February 14, 2025)**
-- Delete features added for host products, instruments, and targets.
-- Status update feature enhanced for host products, instruments, and targets: The user will be prompted now if nothing is selected.
-- Updated the the context product crawler, update_context.py, to be more concise when adding context products to database. It adds the reference links between investigations to facilities and facilities to telescopes. Includes updates to using CTLI library for newer context products.
+> ### **Version 1.9.3 (April 14, 2025)**
+- Bundle_XML: Citation Information order is updated to reflect 1N00 version.
+- Delete Citation Information: Fixed the error that used to happen when deleting multiple Citation Information.
+- Edit Citation Information: A temporary solution prompts the user that the feature is being built.
+- Edit Investigation Area: Pull-down menu is introduced before the modals pop-up.
+- Citation Information Form: UI is updated to the ELSA standard.
+- Table Creation: Updated design of table creation form for Delimited, Binary, and Character tables.
+- Table Delimited Header: Added form options for a header for Table Delimited and the creation and writing into the XML labels.
+- Bug Fixes: Fixed the bug of not being able to write into table XML files as they are not found. 
+
   
 
 ### **Previous Versions** 
+> ### **Version 1.9.2 (February 14, 2025)**
+- Delete features added for host products, instruments, and targets.
+- Status update feature enhanced for host products, instruments, and targets: The user will be prompted now if nothing is selected.
+- Updated the context product crawler, update_context.py, to be more concise when adding context products to the database. It adds the reference links between investigations to facilities and facilities to telescopes. This includes updates on using the CTLI library for newer context products.
+  
 > ### **Version 1.9.1 (February 07, 2025)**
 - Resolved vertical spacing inconsistencies between the header and footer for a more uniform layout.
 - Enhanced the Instrument and Target selection pages to always display the selected items, eliminating excessive whitespace. Previously, these pages only showed the selection dropdown on load, leading to layout gaps.
