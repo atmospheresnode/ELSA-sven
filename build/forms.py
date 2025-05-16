@@ -888,15 +888,17 @@ class Table_Delimited_Form(forms.ModelForm):
                 # widget=forms.TextInput(attrs={'class': 'form-control form-outline'})
             )
 
-            self.fields['header_offset'] = forms.IntegerField(
-                required=True,
-                # widget=forms.NumberInput(attrs={'class': 'form-control form-outline'})
-            )
+            # self.fields['header_offset'] = forms.IntegerField(
+            #     required=True,
+            #     # widget=forms.NumberInput(attrs={'class': 'form-control form-outline'})
+            # )
 
             self.fields['header_object_length'] = forms.IntegerField(
                 required=True,
                 # widget=forms.NumberInput(attrs={'class': 'form-control form-outline'})
             )
+
+        self.fields['offset'] = forms.IntegerField(min_value=0, required=False)
         
         self.fields['data'] = forms.ModelChoiceField(queryset=Data.objects.filter(name=self.pk_ins), required = True)
         self.fields['collection'] = forms.ModelChoiceField(queryset=AdditionalCollections.objects.filter(bundle=self.pk_bun), required = True)
