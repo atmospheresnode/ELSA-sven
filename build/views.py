@@ -2438,11 +2438,11 @@ def Table_Creation(request, pk_bundle, pk_data):
 
         elif data.data_type == 'Table Binary':
             print("binary form chosen")
-            data_form = Table_Binary_Form(request.POST or None, pk_ins=data.name, pk_bun=pk_bundle)
+            data_form = Table_Binary_Form(request.POST or None, pk_data=pk_data, pk_ins=data.name, pk_bun=pk_bundle)
 
         elif data.data_type == 'Table Character':
             print("character form chosen")
-            data_form = Table_Fixed_Width_Form(request.POST or None, pk_ins=data.name, pk_bun=pk_bundle)
+            data_form = Table_Fixed_Width_Form(request.POST or None, pk_data=pk_data, pk_ins=data.name, pk_bun=pk_bundle)
 
         elif data.data_type == 'Array':
             data_form = ArrayForm(request.POST or None)
@@ -2465,10 +2465,7 @@ def Table_Creation(request, pk_bundle, pk_data):
             # Fill label - fills 
             print(' ... Filling Label ... ')
             #label_root = bundle.version.fill_xml_schema(label_root)
-            if data.data_type == 'Table Delimited':
-                label_root = form.fill_base_case(label_root, cleaned_form)
-            else:
-                label_root = form.fill_base_case(label_root)
+            label_root = form.fill_base_case(label_root, cleaned_form)
             # Close label    
             print(' ... Closing Label ... ')
             close_label(label_list[0], label_root, label_list[2]) 
