@@ -44,8 +44,14 @@ Context
                             {{ form_investigation }}
                             {{ form.errors }}
                             {{ form.non_field_errors }}
-
-                            <input type="submit" class="btn btn-light text-light mt-4" value="Submit"/>
+                            
+                            <div class="d-flex mb-5 ms-3 px-3 pt-3">
+                            <input type="submit" class="btn btn-light text-light me-2" value="Submit"/>
+                            <a href="{% url 'build:bundle' bundle.pk %}" class="btn btn-light text-light">
+                                Skip
+                                <i class="fa fa-arrow-right ms-2"></i>
+                            </a>
+                            </div>
                         </form> 
                     </div>
 
@@ -60,6 +66,10 @@ Context
                             {{ form.non_field_errors }}
                             
                             <input type="submit" class="btn btn-light text-light" value="Submit"/>
+                            <a href="{% url 'build:bundle' bundle.pk %}" class="btn btn-light text-light">
+                                Skip
+                                <i class="fa fa-arrow-right ms-2"></i>
+                            </a>
                         </form> 
                     </div>
                 </div>
