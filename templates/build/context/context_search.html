@@ -35,6 +35,7 @@ Context
                         </li>
                     </ul>
 
+<<<<<<< HEAD
                     <!-- Investigation Tab -->
                     <div class="col-md-12 tab-pane fade show active" id="con_inv" role="tabpanel">
                         <p> To begin, select an investigation product below to associate with your bundle. Investigations serve as the top level of the context system and will associate your bundle with a larger project.</br> <strong>Investigations are categorized as:</strong> Individual Investigations, Missions, Field Campaigns, Observing Campaigns, or Other Investigations. Selecting an investigation will pare down the list of components to the ones that go with that investigation (i.e., associated instruments, targets, etc.) </p>
@@ -44,8 +45,14 @@ Context
                             {{ form_investigation }}
                             {{ form.errors }}
                             {{ form.non_field_errors }}
-
-                            <input type="submit" class="btn btn-light text-light mt-4" value="Submit"/>
+                            
+                            <div class="d-flex mb-5 ms-3 px-3 pt-3">
+                            <input type="submit" class="btn btn-light text-light me-2" value="Submit"/>
+                            <a href="{% url 'build:bundle' bundle.pk %}" class="btn btn-light text-light">
+                                Skip
+                                <i class="fa fa-arrow-right ms-2"></i>
+                            </a>
+                            </div>
                         </form> 
                     </div>
 
@@ -60,7 +67,42 @@ Context
                             {{ form.non_field_errors }}
                             
                             <input type="submit" class="btn btn-light text-light" value="Submit"/>
+                            <a href="{% url 'build:bundle' bundle.pk %}" class="btn btn-light text-light">
+                                Skip
+                                <i class="fa fa-arrow-right ms-2"></i>
+                            </a>
                         </form> 
+=======
+                    <div class="tab-content">
+                        <!-- Investigation Tab -->
+                        <div class="col-md-12 tab-pane fade show active" id="con_inv" role="tabpanel">
+                            <p> To begin, select an investigation product below to associate with your bundle. Investigations serve as the top level of the context system and will associate your bundle with a larger project.</br> <strong>Investigations are categorized as:</strong> Individual Investigations, Missions, Field Campaigns, Observing Campaigns, or Other Investigations. Selecting an investigation will pare down the list of components to the ones that go with that investigation (i.e., associated instruments, targets, etc.). More context  </p>
+                            
+                            <form class="card-body" id="form_investigation" method="post" action="{% url 'build:context_search_investigation' bundle.pk  %}">
+                                {% csrf_token %}
+                                {{ form_investigation }}
+                                {{ form.errors }}
+                                {{ form.non_field_errors }}
+
+                                <input type="submit" class="btn btn-light text-light mt-4" value="Submit"/>
+                            </form> 
+                        </div>
+                    
+
+                        <!-- Target Tab -->
+                        <div class="col-md-12 tab-pane fade" id="con_tar" role="tabpanel">
+                            <p>Choose the target(s) you wish to add to your bundle. This is a complete list of availabe targets, independent of any investigations chosen.</p>
+                            
+                            <form class="card-body" id="form_target" method="post" action="{% url 'build:context_search_target' bundle.pk %}">
+                                {% csrf_token %}
+                                {{ form_target }}
+                                {{ form.errors }}
+                                {{ form.non_field_errors }}
+                                
+                                <input type="submit" class="btn btn-light text-light" value="Submit"/>
+                            </form> 
+                        </div>
+>>>>>>> 00231750fc068d2bb01fe0d42c351841e379aee0
                     </div>
                 </div>
             </div>

@@ -1,0 +1,91 @@
+{% extends 'base-derk.html' %}
+{% load static %}
+
+{% block body_block %}
+<div class="container mt-5">
+  <h2 class="mb-4 text-center text-primary">Welcome to the Guided Walkthrough</h2>
+  <p class="lead">
+    Follow the step-by-step process below to build your bundle. You may skip any step during the walkthrough and still add or edit information later from the main bundle interface.
+  </p>
+
+  <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-4 mt-4">
+
+    <!-- Step 1: Alias -->
+    <div class="col">
+      <div class="card h-100 shadow-sm">
+        <div class="card-body">
+          <div class="mb-3 text-primary">
+            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="currentColor" class="bi bi-tag" viewBox="0 0 16 16">
+                <!--<path> is an SVG(Scalable Vector Graphics) element used to draw complex shapes-->
+                <path d="M3 2a1 1 0 0 0-1 1v4.586a1 1 0 0 0 .293.707l6 6a1 1 0 0 0 1.414 0l4.586-4.586a1 1 0 0 0 0-1.414l-6-6A1 1 0 0 0 7.586 2H3zm3 1a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
+            </svg>
+          </div>
+          <h5 class="card-title">Alias</h5>
+          <p class="card-text">
+            PDS4 allows providers to add alternative names or identifiers as ‘Aliases’. These are optional and can be added later. If you know you have alternate names, add them now or skip this step.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 2: Modification History -->
+    <div class="col">
+      <div class="card h-100 shadow-sm">
+        <div class="card-body">
+          <div class="mb-3 text-primary">
+            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="currentColor" class="bi bi-clock-history" viewBox="0 0 16 16">
+              <path d="M8.515 3.062a.5.5 0 0 1 .5.5v4.4l3.7 2.2a.5.5 0 1 1-.5.866l-4-2.4A.5.5 0 0 1 7.5 7V3.562a.5.5 0 0 1 1.015-.5z"/>
+              <path d="M8 1a7 7 0 1 1-4.546 12.15.5.5 0 0 1 .92-.39A6 6 0 1 0 8 2a.5.5 0 0 1 0-1z"/>
+            </svg>
+          </div>
+          <h5 class="card-title">Modification History</h5>
+          <p class="card-text">
+            Track changes in your bundle by adding Modification History details. An initial record marks creation, but you can add more updates as needed.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 3: Citation Information -->
+    <div class="col">
+      <div class="card h-100 shadow-sm">
+        <div class="card-body">
+          <div class="mb-3 text-primary">
+            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="currentColor" class="bi bi-journal-text" viewBox="0 0 16 16">
+              <path d="M5 10.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5zm0-2a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5zm0-2a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5z"/>
+              <path d="M3 1.5a.5.5 0 0 1 .5-.5H6a.5.5 0 0 1 0 1H4v11h9v-1a.5.5 0 0 1 1 0v1a1 1 0 0 1-1 1H3.5a.5.5 0 0 1-.5-.5v-12z"/>
+            </svg>
+          </div>
+          <h5 class="card-title">Citation Information</h5>
+          <p class="card-text">
+            Add authors and editors to credit label creators. Use the format: Last Name, First Initial; separate multiple names with a semicolon.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 4: Context Products -->
+    <div class="col">
+      <div class="card h-100 shadow-sm">
+        <div class="card-body">
+          <div class="mb-3 text-primary">
+            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="currentColor" class="bi bi-gear" viewBox="0 0 16 16">
+              <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492zM5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0z"/>
+              <path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.9 3.434 2.54 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.892 3.434-.9 2.54-2.54l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.892-1.64-.9-3.433-2.54-2.54l-.292.159a.873.873 0 0 1-1.255-.52l-.094-.319z"/>
+            </svg>
+          </div>
+          <h5 class="card-title">Context Products</h5>
+          <p class="card-text">
+            Categorize investigations such as missions or campaigns. Selecting one filters components like instruments and targets relevant to that investigation.
+          </p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="mt-5 d-flex justify-content-center">
+    <a href="{% url 'build:alias' bundle.id %}" class="btn btn-primary">Start Walkthrough</a>
+  </div>
+</div>
+{% endblock %}
