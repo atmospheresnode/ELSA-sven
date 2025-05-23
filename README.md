@@ -22,14 +22,14 @@ This section provides a timeline of ELSA's release history, highlighting key upd
 > ### **Version 1.9.5 (May 23, 2025)**
 - New Walkthrough feature: Users now get a semi-guided step-by-step walkthrough as they create a new bundle.
 - New Bundle Progress feature: Users can see what parts of the identification area are complete in the main bundle page.
-- 
+- Data Table Products: Update binary and fixed-width table forms to include options for a header. Information also writes correctly into XML Files.
 
 
 ### **Previous Versions** 
 
 > ### **Version 1.9.4 (May 16, 2025)**
 - Add A Document Product form ordering fixes.
-- 
+- Fixed Delimited Table Product to include header options, updated UI of form, and writing into XML file.
 
 > ### **Version 1.9.3 (April 14, 2025)**
 - Bundle_XML: Citation Information order is updated to reflect 1N00 version.
