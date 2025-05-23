@@ -3237,7 +3237,7 @@ class Table_Delimited(models.Model):
             local_id.text = cleaned_form.get('local_identifier')
 
             offset = header.find('{}offset'.format(NAMESPACE))
-            offset.text = str(cleaned_form.get('header_offset'))
+            offset.text = '0' # str(cleaned_form.get('header_offset'))
 
             object_length = header.find('{}object_length'.format(NAMESPACE))
             object_length.text = str(cleaned_form.get('header_object_length'))
@@ -3252,13 +3252,14 @@ class Table_Delimited(models.Model):
         local_identifier = td.find('{}local_identifier'.format(NAMESPACE))
         local_identifier.text = 'table'
 
-        if self.offset:
-            offset = td.find('{}offset'.format(NAMESPACE))
+        # if self.offset:
+        offset = td.find('{}offset'.format(NAMESPACE))
 
-            if self.data.header:
-                offset.text = str(cleaned_form.get('header_offset') + self.offset)
-            else:
-                offset.text = str(self.offset)
+        if self.data.header:
+            print('within offset with header')
+            offset.text = str(cleaned_form.get('header_object_length')) # str(cleaned_form.get('header_offset') + self.offset)
+        else:
+            offset.text = str(self.offset)
         
         if self.object_length:
             object_length = td.find('{}object_length'.format(NAMESPACE))

@@ -20,6 +20,12 @@
                     <form id="form_alias" method="post" action="{% url 'build:alias' bundle.pk %}" class="pt-3">
                         {% csrf_token %}
 
+                        {% if form_alias.non_field_errors %}
+                            <div class= "alert alert-dange">
+                                {{ form_alias.non_field_errors  }}
+                            </div>
+                        {% endif %}
+
                         <!-- Alternate ID -->
                         <div class="mb-4 form-outline">
                             <div class="row">

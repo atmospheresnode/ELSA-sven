@@ -2522,7 +2522,9 @@ def Table_Creation(request, pk_bundle, pk_data):
             'data_form': data_form,
         }
 
+        
         if data_form.is_valid():
+            print('data form valid')
             form = data_form.save(commit=False)
             form.save()
             cleaned_form = data_form.cleaned_data
@@ -2549,6 +2551,8 @@ def Table_Creation(request, pk_bundle, pk_data):
             context_products.extend(bundle.targets.all())
             for context_product in context_products:
                 write_into_label(context_product, form, None)
+        else:
+            print(data_form.errors.as_data())
 
         return render(request, 'build/data/Table_Creation.html', context_dict)
     else:
