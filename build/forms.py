@@ -744,7 +744,6 @@ class ProductDocumentForm(forms.ModelForm):
     )
     description = forms.CharField(
         required=False,
-        max_length=100,
         label_suffix = '',
         widget=forms.Textarea(attrs={
             'class': 'form-control',
@@ -752,14 +751,7 @@ class ProductDocumentForm(forms.ModelForm):
             'rows': 3
         })
     )
-    document_editions = forms.IntegerField(
-        required=False,
-        label_suffix = '',
-        widget=forms.NumberInput(attrs={
-            'class': 'form-control',
-           # 'placeholder': 'Document Editions'
-        })
-    )
+
     revision_id = forms.CharField(
         required=False,
         max_length=100,
@@ -769,6 +761,16 @@ class ProductDocumentForm(forms.ModelForm):
            # 'placeholder': 'Revision ID'
         })
     )
+
+    document_editions = forms.IntegerField(
+        required=False,
+        label_suffix = '',
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+           # 'placeholder': 'Document Editions'
+        })
+    )
+    
     edition_name = forms.CharField(
         required=False,
         max_length=100,
@@ -891,15 +893,17 @@ class Table_Delimited_Form(forms.ModelForm):
                 # widget=forms.TextInput(attrs={'class': 'form-control form-outline'})
             )
 
-            self.fields['header_offset'] = forms.IntegerField(
-                required=True,
-                # widget=forms.NumberInput(attrs={'class': 'form-control form-outline'})
-            )
+            # self.fields['header_offset'] = forms.IntegerField(
+            #     required=True,
+            #     # widget=forms.NumberInput(attrs={'class': 'form-control form-outline'})
+            # )
 
             self.fields['header_object_length'] = forms.IntegerField(
                 required=True,
                 # widget=forms.NumberInput(attrs={'class': 'form-control form-outline'})
             )
+
+        self.fields['offset'] = forms.IntegerField(min_value=0, required=False)
         
         self.fields['data'] = forms.ModelChoiceField(queryset=Data.objects.filter(name=self.pk_ins), required = True)
         self.fields['collection'] = forms.ModelChoiceField(queryset=AdditionalCollections.objects.filter(bundle=self.pk_bun), required = True)
