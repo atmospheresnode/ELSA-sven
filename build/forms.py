@@ -48,13 +48,13 @@ class ConfirmForm(forms.Form):
 
 
 class AliasForm(forms.ModelForm):
-    alternate_id = forms.CharField(required=True, max_length=100, widget=forms.TextInput(attrs={
+    alternate_id = forms.CharField(required=False, max_length=100, widget=forms.TextInput(attrs={
             'class': 'form-control',
             'id': 'alt_id'
         })
     )
 
-    alternate_title = forms.CharField(required=True, max_length=100, widget=forms.TextInput(attrs={
+    alternate_title = forms.CharField(required=False, max_length=100, widget=forms.TextInput(attrs={
             'class': 'form-control',
             'id': 'alt_title'
         })
@@ -68,12 +68,17 @@ class AliasForm(forms.ModelForm):
         })
     )
 
-
-
     class Meta(object):
         model = Alias
         exclude = ('bundle',)
 
+    def clean(self):
+        cleaned_data = super().clean()
+        alternate_id = cleaned_data.get("alternate_id")
+        alternate_title = cleaned_data.get("alternate_title")
+
+        if not alternate_id and not alternate_title:
+            raise forms.ValidationError("Please provide an Alternate ID or an Alternate Title")
 
 class AliasDelete(forms.ModelForm):
 
@@ -99,7 +104,7 @@ class ArrayForm(forms.ModelForm):
 
 BUNDLE_TYPE_CHOICES = (
     ('Archive', 'Archive'),
-    ('Supplemental', 'Supplemental'),
+    ('External', 'External'),
 )
 
 VERSION_CHOICES = (
@@ -912,9 +917,31 @@ class Table_Binary_Form(forms.ModelForm):
         exclude = ('bundle',)
     
     def __init__(self, *args, **kwargs):
+        self.pk_data = kwargs.pop('pk_data')
         self.pk_ins = kwargs.pop('pk_ins')
         self.pk_bun = kwargs.pop('pk_bun')
+        data = Data.objects.get(pk=self.pk_data)
+
         super(Table_Binary_Form, self).__init__(*args, **kwargs)
+
+        if data.header:
+            self.fields['local_identifier'] = forms.CharField(
+                required=True,
+                # widget=forms.TextInput(attrs={'class': 'form-control form-outline'})
+            )
+
+            # self.fields['header_offset'] = forms.IntegerField(
+            #     required=True,
+            #     # widget=forms.NumberInput(attrs={'class': 'form-control form-outline'})
+            # )
+
+            self.fields['header_object_length'] = forms.IntegerField(
+                required=True,
+                # widget=forms.NumberInput(attrs={'class': 'form-control form-outline'})
+            )
+
+        self.fields['offset'] = forms.IntegerField(min_value=0, required=False)
+
         self.fields['data'] = forms.ModelChoiceField(queryset=Data.objects.filter(name=self.pk_ins), required = True)
         self.fields['collection'] = forms.ModelChoiceField(queryset=AdditionalCollections.objects.filter(bundle=self.pk_bun), required = True)
 
@@ -928,9 +955,31 @@ class Table_Fixed_Width_Form(forms.ModelForm):
         exclude = ('bundle',)
     
     def __init__(self, *args, **kwargs):
+        self.pk_data = kwargs.pop('pk_data')
         self.pk_ins = kwargs.pop('pk_ins')
         self.pk_bun = kwargs.pop('pk_bun')
+        data = Data.objects.get(pk=self.pk_data)
+
         super(Table_Fixed_Width_Form, self).__init__(*args, **kwargs)
+
+        if data.header:
+            self.fields['local_identifier'] = forms.CharField(
+                required=True,
+                # widget=forms.TextInput(attrs={'class': 'form-control form-outline'})
+            )
+
+            # self.fields['header_offset'] = forms.IntegerField(
+            #     required=True,
+            #     # widget=forms.NumberInput(attrs={'class': 'form-control form-outline'})
+            # )
+
+            self.fields['header_object_length'] = forms.IntegerField(
+                required=True,
+                # widget=forms.NumberInput(attrs={'class': 'form-control form-outline'})
+            )
+
+        self.fields['offset'] = forms.IntegerField(min_value=0, required=False)
+
         self.fields['data'] = forms.ModelChoiceField(queryset=Data.objects.filter(name=self.pk_ins), required = True)
         self.fields['collection'] = forms.ModelChoiceField(queryset=AdditionalCollections.objects.filter(bundle=self.pk_bun), required = True)
 
