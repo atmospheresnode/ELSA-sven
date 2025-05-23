@@ -33,7 +33,7 @@
                             {{ form_bundle.name }}
 
                             <!-- Bundle Name Guideline Tooltip -->
-                            <span tabindex="0" data-toggle="tooltip" 
+                            <span tabindex="1" data-toggle="tooltip" 
                                 title="The name of your bundle is the unique name you would like your bundle to be archived as. The version of your bundle should be the most up-to-date version unless otherwise noted by your node personnel. The type of bundle depends on your data. If your bundle is meant to be archived, choose archive. This option is what most bundle types are. If your bundle contains supplemental data to an already archived bundle, choose supplemental. Each bundle contains a document, context, and xml_schema collection. All other collections contained in your bundle will be decided between you, {{ user.first_name }}, and your node personnel. If you are working directly with ATM and are unsure of which collections are in your bundle, send a message to ELSA and someone from ATM will get back to you shortly. If you are working with another node, please contact your node.">
                                 <button type="button" class="btn btn-block" style="pointer-events: none; border: none;" disabled>
                                     <i class="fa fa-question"></i>
@@ -71,6 +71,21 @@
                                     <span class="me-2" tabindex="0">
                                         <i class="fa fa-chevron-down text-muted"></i>
                                     </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Walkthrough Option -->
+                        <div class="mb-4">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h5 class="card-title">Enable Bundle Walkthrough?</h5>
+                                    <p class="card-text text-muted">New to bundle creation or need a refresher? Let ELSA assist you. Enable the guided walkthrough for a step-by-step tour of the primary bundle setup process.</p>
+                                    
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="enableWalkthrough" name="enable_walkthrough" checked>
+                                        <label class="form-check-label" for="enableWalkthrough">Yes, walk me through the process!</label>
+                                    </div>
                                 </div>
                             </div>
                         </div>
