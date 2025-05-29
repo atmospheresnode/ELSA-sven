@@ -19,6 +19,20 @@ This approach takes advantage of Atmospheres Node expertise to ensure all connec
 This section provides a timeline of ELSA's release history, highlighting key updates, new features, bug fixes, and improvements, with the most recent release listed first.
 
 ### **Current Version** 
+> ### **Version 1.9.5 (May 23, 2025)**
+- New Walkthrough feature: Users now get a semi-guided step-by-step walkthrough as they create a new bundle.
+- New Bundle Progress feature: Users can see what parts of the identification area are complete in the main bundle page.
+- Data Table Products: Update binary and fixed-width table forms to include options for a header. Information also writes correctly into XML Files.
+- Bundle Build Page: Updated introduction for better clarification and accuracy.
+- Alias Page: Users are no longer required to enter both an Alternate ID and an Alternate Title.
+
+
+### **Previous Versions** 
+
+> ### **Version 1.9.4 (May 16, 2025)**
+- Add A Document Product form ordering fixes.
+- Fixed Delimited Table Product to include header options, updated UI of form, and writing into XML file.
+
 > ### **Version 1.9.3 (April 14, 2025)**
 - Bundle_XML: Citation Information order is updated to reflect 1N00 version.
 - Delete Citation Information: Fixed the error that used to happen when deleting multiple Citation Information.
@@ -29,9 +43,6 @@ This section provides a timeline of ELSA's release history, highlighting key upd
 - Table Delimited Header: Added form options for a header for Table Delimited and the creation and writing into the XML labels.
 - Bug Fixes: Fixed the bug of not being able to write into table XML files as they are not found. 
 
-  
-
-### **Previous Versions** 
 > ### **Version 1.9.2 (February 14, 2025)**
 - Delete features added for host products, instruments, and targets.
 - Status update feature enhanced for host products, instruments, and targets: The user will be prompted now if nothing is selected.

@@ -126,28 +126,68 @@
    </div>
 
    <!-- The Rest -->
-   <div class="row py-4">
-      <div class="col-md-3">
-        <div class="card d-flex">
-           <h2 class="card-title text-center mt-3">Files</h2>
-           <div class="card_body m-4">
-               <div class="col">
-                  {% for f in file_context %}
-                  <div class="col py-2">                  
-                    <button 
-                        type="button" 
-                        class="btn btn-light text-light file-button" 
-                        data-filename="{{ f.0 }}" 
-                        data-content="{{ f.1 }}"
-                        {% if forloop.first %} id="defaultFile" {% endif %}>
-                            {{ f.0 }}
-                     </button>
-                  </div>
-                  {% endfor %}
-            </div>
-         </div>
+<div class="row py-4">
+  <div class="col-md-3">
+    <!-- Files Card -->
+    <div class="card d-flex mb-4">
+       <h5 class="card-header bg-secondary text-light text-center">Files</h5>
+      <div class="card_body m-4">
+        <div class="col">
+          {% for f in file_context %}
+          <div class="col py-2">                  
+            <button 
+              type="button" 
+              class="btn btn-light text-white file-button text-center" 
+              data-filename="{{ f.0 }}" 
+              data-content="{{ f.1 }}"
+              {% if forloop.first %} id="defaultFile" {% endif %}>
+              {{ f.0 }}
+            </button>
+          </div>
+          {% endfor %}
+        </div>
       </div>
-   </div>
+    </div>
+
+   <div class="card">
+  <h5 class="card-header bg-secondary text-white text-center">Bundle Progress</h5>
+  <div class="list-group list-group-flush">
+    <div class="list-group-item d-flex justify-content-between align-items-center">
+      Alias
+      <span class="badge {% if status_dict.Alias %}bg-success{% else %}bg-danger{% endif %}">
+        {% if status_dict.Alias %}
+          <i class="bi bi-check-circle-fill"></i>
+        {% else %}
+          <i class="bi bi-x-circle-fill"></i>
+        {% endif %}
+      </span>
+    </div>
+    <div class="list-group-item d-flex justify-content-between align-items-center">
+      Modification History
+      <span class="badge {% if status_dict.Modification_History %}bg-success{% else %}bg-danger{% endif %}">
+        {% if status_dict.Modification_History %}
+          <i class="bi bi-check-circle-fill"></i>
+        {% else %}
+          <i class="bi bi-x-circle-fill"></i>
+        {% endif %}
+      </span>
+    </div>
+    <div class="list-group-item d-flex justify-content-between align-items-center">
+      Citation Information
+      <span class="badge {% if status_dict.Citation_Information %}bg-success{% else %}bg-danger{% endif %}">
+        {% if status_dict.Citation_Information %}
+          <i class="bi bi-check-circle-fill"></i>
+        {% else %}
+          <i class="bi bi-x-circle-fill"></i>
+        {% endif %}
+      </span>
+    </div>
+  </div>
+</div>
+</div>
+
+
+
 
    <div class="col-md-9">
       <div class="card d-flex">
@@ -1138,7 +1178,7 @@
                         {{ form_data.data_type }}
                      </div>
 
-                     <script>
+                     <!-- <script>
                         document.addEventListener("DOMContentLoaded", function () {
                             var dropdown = document.getElementById("id_data_type");
                             var checkboxContainer = document.getElementById("header_field");
@@ -1156,7 +1196,7 @@
                             dropdown.addEventListener("change", toggleCheckboxVisibility);
                             toggleCheckboxVisibility(); // Call on page load to ensure correct state
                         });
-                    </script>
+                    </script> -->
 
                     <style>
                         #checkbox-container {
