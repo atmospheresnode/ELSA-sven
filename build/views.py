@@ -472,13 +472,73 @@ def build(request):
             context_dict['Product_Collection_Set'] = Product_Collection.objects.filter(
                 bundle=bundle)
 
-            url = smart_str(bundle.id) + '/' + 'alias' 
+            # url = smart_str(bundle.id) + '/' + 'alias' 
 
-            print('trying to trigger server reset')
-            return redirect(url, request, context_dict)
+            # print('trying to trigger server reset')
+            # return redirect(url, request, context_dict)
+
+            # Determine where to redirect based on walkthrough checkbox
+            enable_walkthrough = request.POST.get('enable_walkthrough') == 'on'
+
+            if enable_walkthrough:
+                print('Walkthrough enabled — redirecting to walkthrough page.')
+                return redirect('build:yes_intro_page', bundle_id=bundle.id)
+            else:
+                print('Walkthrough not enabled — redirecting to main bundle page.')
+                return redirect('build:no_intro_page', bundle_id=bundle.id)
 
 
     return render(request, 'build/build.html', context_dict)
+
+
+@login_required
+def yes_intro_page(request, bundle_id):
+    print(' \n\n \n\n-------------------------------------------------------------------------')
+    print('\n\n---------------- Welcome to Build A Bundle with ELSA --------------------')
+    print('------------------------------ DEBUGGER ---------------------------------')
+
+    # Get Bundle
+    bundle = Bundle.objects.get(pk=bundle_id)
+
+    # Secure ELSA by seeing if the user logged in is the same user associated with the Bundle
+    if request.user == bundle.user:
+        print('authorized user: {}'.format(request.user))
+        # ELSA's current user is the bundle user so begin view logic
+
+        # Declare context_dict for template
+        context_dict = {
+            'bundle': bundle,
+        }
+
+        return render(request, 'build/walkthrough/yes_intro.html', context_dict)
+    else:
+        print('unauthorized user attempting to access a restricted area.')
+        return redirect('main:restricted_access')
+
+
+@login_required
+def no_intro_page(request, bundle_id):
+    print(' \n\n \n\n-------------------------------------------------------------------------')
+    print('\n\n---------------- Welcome to Build A Bundle with ELSA --------------------')
+    print('------------------------------ DEBUGGER ---------------------------------')
+
+    # Get Bundle
+    bundle = Bundle.objects.get(pk=bundle_id)
+
+    # Secure ELSA by seeing if the user logged in is the same user associated with the Bundle
+    if request.user == bundle.user:
+        print('authorized user: {}'.format(request.user))
+        # ELSA's current user is the bundle user so begin view logic
+
+        # Declare context_dict for template
+        context_dict = {
+            'bundle': bundle,
+        }
+
+        return render(request, 'build/walkthrough/no_intro.html', context_dict)
+    else:
+        print('unauthorized user attempting to access a restricted area.')
+        return redirect('main:restricted_access')
 
 
 @login_required
@@ -666,6 +726,15 @@ def bundle(request, pk_bundle):
             'user':request.user,
         }
 
+        # Compute status for bundle progress checklist
+        status_dict = {
+            'Alias': bundle.alias_set.exists(),
+            'Citation_Information': bundle.citation_information_set.exists(),
+            'Modification_History': bundle.modification_history_set.exists(),
+            'Context Products': bundle.data_set.exists()
+        }
+
+        context_dict['status_dict'] = status_dict
         context_dict['directory_name'] = directory_name
         context_dict['subfiles'] = c 
         context_dict['file_context'] = file_context
@@ -2438,11 +2507,11 @@ def Table_Creation(request, pk_bundle, pk_data):
 
         elif data.data_type == 'Table Binary':
             print("binary form chosen")
-            data_form = Table_Binary_Form(request.POST or None, pk_ins=data.name, pk_bun=pk_bundle)
+            data_form = Table_Binary_Form(request.POST or None, pk_data=pk_data, pk_ins=data.name, pk_bun=pk_bundle)
 
         elif data.data_type == 'Table Character':
             print("character form chosen")
-            data_form = Table_Fixed_Width_Form(request.POST or None, pk_ins=data.name, pk_bun=pk_bundle)
+            data_form = Table_Fixed_Width_Form(request.POST or None, pk_data=pk_data, pk_ins=data.name, pk_bun=pk_bundle)
 
         elif data.data_type == 'Array':
             data_form = ArrayForm(request.POST or None)
@@ -2465,10 +2534,7 @@ def Table_Creation(request, pk_bundle, pk_data):
             # Fill label - fills 
             print(' ... Filling Label ... ')
             #label_root = bundle.version.fill_xml_schema(label_root)
-            if data.data_type == 'Table Delimited':
-                label_root = form.fill_base_case(label_root, cleaned_form)
-            else:
-                label_root = form.fill_base_case(label_root)
+            label_root = form.fill_base_case(label_root, cleaned_form)
             # Close label    
             print(' ... Closing Label ... ')
             close_label(label_list[0], label_root, label_list[2]) 

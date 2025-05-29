@@ -3321,13 +3321,19 @@ class Table_Binary(models.Model):
         return name_edit
 
     def label(self):
-        return os.path.join(self.directory(), self.name_label_case())
+        """
+            label returns the physical label location in ELSAs archive
+        """
+        print(os.path.join(self.collection.directory(), self.name_label_case()))
+        return os.path.join(self.collection.directory(), self.name_label_case())
 
+        # directory returns the file path associated with the given model.
     def directory(self):
+        # data_collection_name = self.collection.collection_name.lower()
         data_name = self.data.name.lower()
         data_name = replace_all(data_name, ' ', '_')
         data_directory = os.path.join(self.collection.directory(), data_name)
-        return data_directory 
+        return data_directory
 
     def build_data_file(self):
         # Locate base case Product_Bundle template found in templates/pds4_labels/base_case/product_bundle
@@ -3345,7 +3351,7 @@ class Table_Binary(models.Model):
 
         update.version_update_old(self.data.bundle.version, source_file,out_file)
         
-    def fill_base_case(self, root):
+    def fill_base_case(self, root, cleaned_form):
             
         Table_Binary = root
         
@@ -3376,14 +3382,32 @@ class Table_Binary(models.Model):
         science_facet1.text = self.facet1
 
         f = Table_Binary.find('{}File_Area_Observational'.format(NAMESPACE))
+
+        if self.data.header:
+            header = f.find('{}Header'.format(NAMESPACE))
+            local_id = header.find('{}local_identifier'.format(NAMESPACE))
+            local_id.text = cleaned_form.get('local_identifier')
+
+            offset = header.find('{}offset'.format(NAMESPACE))
+            offset.text = '0' # str(cleaned_form.get('header_offset'))
+
+            object_length = header.find('{}object_length'.format(NAMESPACE))
+            object_length.text = str(cleaned_form.get('header_object_length'))
+
         tb = f.find('{}Table_Binary'.format(NAMESPACE))
         rb = tb.find('{}Record_Binary'.format(NAMESPACE))
         if self.name:
             name = tb.find('{}name'.format(NAMESPACE))
             name.text = self.name
 
-        if self.offset:
-            offset = tb.find('{}offset'.format(NAMESPACE))
+        # if self.offset:
+        offset = tb.find('{}offset'.format(NAMESPACE))
+            # offset.text = str(self.offset)
+
+        if self.data.header:
+            print('within offset with header')
+            offset.text = str(cleaned_form.get('header_object_length')) # str(cleaned_form.get('header_offset') + self.offset)
+        else:
             offset.text = str(self.offset)
 
         if self.records:
@@ -3432,12 +3456,19 @@ class Table_Fixed_Width(models.Model):
         return name_edit
 
     def label(self):
-        return os.path.join(self.directory(), self.name_label_case())
+        """
+            label returns the physical label location in ELSAs archive
+        """
+        print(os.path.join(self.collection.directory(), self.name_label_case()))
+        return os.path.join(self.collection.directory(), self.name_label_case())
 
+        # directory returns the file path associated with the given model.
     def directory(self):
-        data_collection_name = self.collection.lower()
-        data_directory = os.path.join(self.data.bundle.directory(), data_collection_name)
-        return data_directory  
+        # data_collection_name = self.collection.collection_name.lower()
+        data_name = self.data.name.lower()
+        data_name = replace_all(data_name, ' ', '_')
+        data_directory = os.path.join(self.collection.directory(), data_name)
+        return data_directory
 
     def build_data_file(self):
         # Locate base case Product_Bundle template found in templates/pds4_labels/base_case/product_bundle
@@ -3457,7 +3488,7 @@ class Table_Fixed_Width(models.Model):
 
         update.version_update_old(self.data.bundle.version, source_file,out_file)
         
-    def fill_base_case(self, root):
+    def fill_base_case(self, root, cleaned_form):
 
         Table_Character = root
 
@@ -3481,13 +3512,25 @@ class Table_Fixed_Width(models.Model):
         information_model_version = Identification_Area.find('information_model_version')
         #information_model_version.text = self.bundle.version.with_dots()
 
-        Observation_Area = Table_Delimited.find('{}Observation_Area'.format(NAMESPACE))
+        Observation_Area = Table_Character.find('{}Observation_Area'.format(NAMESPACE))
         Primary_Result_Summary = Observation_Area.find('{}Primary_Result_Summary'.format(NAMESPACE))
         Science_Facets = Primary_Result_Summary.find('{}Science_Facets'.format(NAMESPACE))
         science_facet1 = Science_Facets.find('{}facet1'.format(NAMESPACE))
         science_facet1.text = self.facet1
 
         f = Table_Character.find('{}File_Area_Observational'.format(NAMESPACE))
+
+        if self.data.header:
+            header = f.find('{}Header'.format(NAMESPACE))
+            local_id = header.find('{}local_identifier'.format(NAMESPACE))
+            local_id.text = cleaned_form.get('local_identifier')
+
+            offset = header.find('{}offset'.format(NAMESPACE))
+            offset.text = '0' # str(cleaned_form.get('header_offset'))
+
+            object_length = header.find('{}object_length'.format(NAMESPACE))
+            object_length.text = str(cleaned_form.get('header_object_length'))
+
         tc = f.find('{}Table_Character'.format(NAMESPACE))
         rc = tc.find('{}Record_Character'.format(NAMESPACE))
 
@@ -3495,8 +3538,14 @@ class Table_Fixed_Width(models.Model):
             name = tc.find('{}name'.format(NAMESPACE))
             name.text = self.name
 
-        if self.offset:
-            offset = tc.find('{}offset'.format(NAMESPACE))
+        # if self.offset:
+        offset = tc.find('{}offset'.format(NAMESPACE))
+            # offset.text = str(self.offset)
+
+        if self.data.header:
+            print('within offset with header')
+            offset.text = str(cleaned_form.get('header_object_length')) # str(cleaned_form.get('header_offset') + self.offset)
+        else:
             offset.text = str(self.offset)
 
         if self.object_length:
