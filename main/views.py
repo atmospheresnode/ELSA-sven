@@ -29,6 +29,7 @@ from django.template.loader import get_template
 from django.http import HttpResponseRedirect, HttpResponse
 from .models import Joke
 from .forms import *
+from django.forms import modelformset_factory
 
 # from .forms import ContactForm, UserContactForm, UploadedDocumentForm # I'm not sure uploaded document form should be here (k).
 import random
@@ -42,7 +43,11 @@ from datetime import date
 
 # index is the home page for elsa.
 def index(request):
-    return render(request, 'main/index.html', {})
+    contact_form = ContactForm(request.POST or None)
+    context_dict = {
+        'contact_form': contact_form,
+    }
+    return render(request, 'main/index.html', context_dict)
 
 # about describes elsa's purpose, goal, etc.
 def about(request):
@@ -131,6 +136,8 @@ def contact(request):
             #logger.error('{}: contact_form is not valid.'.format(datetime.now()))
 
     return render(request, 'main/contact.html', context_dict)
+
+    
 
 # restricted_access is the page that displays if a user is travelling to an area they have no business being in.
 @login_required
