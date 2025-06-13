@@ -7,167 +7,6 @@ Context
 
 {% block body_block %}
 
-<style>
-
-.card {
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
-    border-radius: 12px;
-    margin: auto auto;
-    text-align: center;
-    font-family: 'Roboto', sans-serif;
-    transition: transform 0.3s, box-shadow 0.3s;
-    background: #fff;
-}
-.card:hover {
-    transform: translateY(-8px);
-    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
-}
-
-.card img {
-    width: 100%;
-    height: auto;
-    display: block;
-}
-
-.card-content {
-    padding: 15px;
-    margin-bottom: 10px;
-}
-
-.card h2 {
-    margin: 10px 0;
-    font-size: 1.6em;
-    color: #333;
-    font-weight: 600;
-}
-
-.card p.title {
-    color: #888;
-    font-size: 1.1em;
-    margin: 5px 0;
-}
-
-.card p {
-    color: #555;
-    font-size: 1em;
-    line-height: 1.4;
-}
-
-.card button a {
-    color: white;
-    text-decoration: none;
-}
-
-.section-heading {
-    font-size: 2.2em;
-    font-weight: 700;
-    margin-top: 20px;
-    margin-bottom: 15x;
-    color: #333;
-    text-align: center;
-}
-
-.section-description {
-    font-size: 1.2em;
-    color: #666;
-    margin-bottom: 40px;
-    text-align: center;
-}
-
-.rgba-indigo {
-    background-color: rgba(63, 81, 181, 0.1);
-    padding: 20px;
-    border-radius: 10px;
-}
-
-h3.h3-responsive {
-    font-size: 1.6em;
-    margin-bottom: 20px;
-    color: #333;
-    text-align: center;
-}
-
-@media (max-width: 768px) {
-    .card {
-        max-width: 100%;
-    }
-    .section-heading {
-        font-size: 1.8em;
-    }
-    .section-description {
-        font-size: 1em;
-    }
-}
-
-.btn {
-    display: inline-flex;
-    align-items: center; 
-    justify-content: center; 
-    color: white;
-    padding: 2x 2px;
-    background-color: #5F9EA0;
-    border-radius: 5px;
-    text-decoration: none; 
-    cursor: pointer;
-    transition: background-color 0.3s;
-}
-
-.btn:hover {
-    background-color: #0056b3;
-}
-
-.btn i {
-    font-size: 20px;
-}
-
-.round-button {
-    display:inline-block;
-    height:25px;
-    width:25px;
-    color: white;
-    text-align: center;
-    align-items: center; 
-    margin: 4px 2px;
-    background-color: #2E8B57;
-    font-size:12px;
-    border-color: #FFFAFA;
-    border-radius: 50%;
-    font-weight: bold;
-    border: 1px solid #2E8B57;  
-}
-
-.fixed-contact-button {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    background-color: #5F9EA0;
-    color: white;
-    border-radius: 50%;
-    width: 60px;
-    height: 60px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 24px;
-    cursor: pointer;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    transition: background-color 0.3s, transform 0.3s;
-}
-
-.fixed-contact-button:hover {
-    background-color: #0056b3;
-    transform: translateY(-4px);
-}
-
-/* Modal Styling */
-.modal-content {
-    border-radius: 10px;
-    padding: 20px;
-    background-color: #fff;
-}
-
-</style>
-
 <div class="container-fluid">
     <div class="row justify-content-center align-items-center py-4">
         <div class="col-12 col-lg-9 col-xl-10">
@@ -176,26 +15,6 @@ h3.h3-responsive {
                     <h2 class="mb-5 pb-2 pb-md-0 mb-md-4">Context Products</h2>
 
                     <hr>
-
-                    <!-- Context Tabs -->
-                    <ul class="nav nav-tabs nav-justified" role="tablist">
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#con_inv" type="button" role="tab" aria-selected="true">Investigation</button>
-                        </li>
-                        {% if instrument_hosts %}
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link " data-bs-toggle="tab" data-bs-target="#con_ih" type="button" role="tab" aria-selected="false">Instrument Hosts</button>
-                        </li>
-                        {% endif %}
-                        {% if instruments %}
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link " data-bs-toggle="tab" data-bs-target="#con_ins" type="button" role="tab" aria-selected="false">Instruments</button>
-                        </li>
-                        {% endif %}
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link " data-bs-toggle="tab" data-bs-target="#con_tar" type="button" role="tab" aria-selected="false">Targets</button>
-                        </li>
-                    </ul>
 
                     <div class="tab-content">
                         <!-- Investigation Tab -->
@@ -208,31 +27,11 @@ h3.h3-responsive {
                                 {{ form_investigation }}
                                 {{ form.errors }}
                                 {{ form.non_field_errors }}
-
-                                <input type="submit" class="btn btn-light text-light mt-4" value="Submit"/>
-                            </form> 
-                        </div>
-                    
-
-                        <!-- Target Tab -->
-                        <div class="col-md-12 tab-pane fade" id="con_tar" role="tabpanel">
-                            <p>Choose the target(s) you wish to add to your bundle. This is a complete list of availabe targets, independent of any investigations chosen.</p>
-                            
-                            <form class="card-body" id="form_target" method="post" action="{% url 'build:context_search_target' bundle.pk %}">
-                                {% csrf_token %}
-                                {{ form_target }}
-                                {{ form.errors }}
-                                {{ form.non_field_errors }}
-                                
-                                <input type="submit" class="btn btn-light text-light" value="Submit"/>
-                            </form> 
-                        </div>
-                    </div>
-                                                    <!-- Contact Button -->
-                                <div class="fixed-contact-button" data-bs-toggle="modal" data-bs-target="#contactModal">
-                                    <i class="fa fa-envelope"></i>
+                                <div class="d-flex">
+                                    <input type="submit" class="btn btn-light text-light mt-4" value="Submit"/>
+                                    <input type="button" class="btn btn-light text-light mt-4 ms-auto" data-bs-toggle="modal" data-bs-target="#contactModal" value="Contact">
                                 </div>
-                                
+
                                 <!-- Contact Modal -->
                                 <div class="modal fade" id="contactModal" tabindex="-1" role="dialog" aria-labelledby="contactModalLabel" aria-hidden="true">
                                     <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
@@ -243,6 +42,7 @@ h3.h3-responsive {
                                             </div>
                                             <div class="modal-body">
                                                     <form role="form" action="" method="post" autocomplete="off">
+                                                        <p>Please describe the context product you need. An ATM node representative will contact you to finalize what you need before officially submitting to the PDS system.</p>
                                                         {% csrf_token %}
                                                         {% for field in form %}
                                                             <div class="fieldWrapper">
@@ -256,7 +56,10 @@ h3.h3-responsive {
                                             </div>
                                         </div>
                                     </div>
-                                </div> 
+                                </div>
+                            </form>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
