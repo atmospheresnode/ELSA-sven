@@ -1,7 +1,21 @@
 {% extends 'base-derk.html' %}
 {% load static %}
 
+
 {% block body_block %}
+
+<style>
+  .btn {
+    border-radius: 0.5rem;
+    transition: 0.2s ease-in-out;
+  }
+
+  .btn:hover {
+    transform: scale(1.03);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  }
+</style>
+
   {% if user.is_authenticated %}
   <div class="container-fluid justify-content-center align-items-center">
     <!-- What Card -->
@@ -80,6 +94,25 @@
             and eventually includes products (your files + metadata labels). 
             ELSA provides a consistent way to populate the XML labels with the unique identifiers that serve as the backbone of PDS4 in an easy and helpful way.
           </p>
+
+          <!-- Action Buttons -->
+          <div class="mt-4 d-flex justify-content-center gap-3 flex-wrap">
+
+            <p class="text-muted">
+              For support or questions about ELSA, please contact us below.  
+              Individual data providers may submit feedback using the review form.
+            </p>
+            <!-- Contact Us Button -->
+            <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#contactModal">
+              Contact Us
+            </button>
+
+            <!-- Review Form Button -->
+            <a href="{% url 'review:index' %}" class="btn btn-outline-primary">
+              Submit Review
+            </a>
+          </div>
+
         </div>
 
         <!-- Right-Side Card-->
@@ -124,5 +157,56 @@
         </div>
       </div>
     </div>
+
+
+    <!-- Contact Modal -->
+<div class="modal fade" id="contactModal" tabindex="-1" role="dialog" aria-labelledby="contactModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="contactModalLabel">Send a Message to ELSA</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form role="form" action="{% url 'main:contact_from_login' %}" method="post" autocomplete="off">
+          {% csrf_token %}
+                        {% for field in form %}
+                            <div class="fieldWrapper">
+                                {{ field.errors }}
+                                {{ field.label_tag }} {{ field }}
+                            </div>
+                        {% endfor %}
+                        {{ contact_form.as_p }}
+          <button id="contact-submit-button" type="submit" class="btn btn-default">Send message</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+/* Modal Styling */
+.modal-content {
+    border-radius: 10px;
+    padding: 20px;
+    background-color: #fff;
+}
+
+ #contact-submit-button {
+    display: inline-flex;
+    align-items: center; 
+    justify-content: center; 
+    color: white;
+    padding: 2x 2px;
+    background-color: #5F9EA0;
+    border-radius: 5px;
+    text-decoration: none; 
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+
+
+</style>
   {% endif %}
 {% endblock %}

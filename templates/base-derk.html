@@ -77,11 +77,18 @@
                         
 
                         <li class="nav-item">
+                            <a class="nav-link" href="{% url 'main:about'%}#Staff">
+                                <i class="fa fa-user-circle"></i>
+                                ELSA Team
+                            </a>
+                        </li>
+
+                        <li class="nav-item">
                             <a class="nav-link" href="{% url 'main:contact'%}">
                                 <i class="fa fa-envelope"></i>
                                 Contact
                             </a>
-                        </li>
+                        </li>                                                
                     </ul>
 
                         <ul class="navbar-nav ms-auto me-5">
@@ -123,6 +130,12 @@
                         <i class="fa fa-cloud" style="color: rgb(43, 187, 173);"></i>
                         Planetary Atmospheres Node 
                     </a>   
+                </li>
+                <li class ="nav-item">
+                    <a href="{% url 'main:contact'%}" class="nav-link px-2 text-light" style="text-decoration: none;">
+                        <i class="fa fa-envelope" style="color: rgb(43, 187, 173);"></i>
+                        Contact Us
+                    </a>
                 </li>
             </ul>
             <p class="footer-copyright text-center pt-2"><a>Version 1.9.5</a> © 2025 New Mexico State University</p>
