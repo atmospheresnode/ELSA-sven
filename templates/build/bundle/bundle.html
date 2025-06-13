@@ -150,42 +150,90 @@
     </div>
 
    <div class="card">
-  <h5 class="card-header bg-secondary text-white text-center">Bundle Progress</h5>
-  <div class="list-group list-group-flush">
-    <div class="list-group-item d-flex justify-content-between align-items-center">
-      Alias
-      <span class="badge {% if status_dict.Alias %}bg-success{% else %}bg-danger{% endif %}">
-        {% if status_dict.Alias %}
-          <i class="bi bi-check-circle-fill"></i>
-        {% else %}
-          <i class="bi bi-x-circle-fill"></i>
-        {% endif %}
-      </span>
-    </div>
-    <div class="list-group-item d-flex justify-content-between align-items-center">
-      Modification History
-      <span class="badge {% if status_dict.Modification_History %}bg-success{% else %}bg-danger{% endif %}">
-        {% if status_dict.Modification_History %}
-          <i class="bi bi-check-circle-fill"></i>
-        {% else %}
-          <i class="bi bi-x-circle-fill"></i>
-        {% endif %}
-      </span>
-    </div>
-    <div class="list-group-item d-flex justify-content-between align-items-center">
-      Citation Information
-      <span class="badge {% if status_dict.Citation_Information %}bg-success{% else %}bg-danger{% endif %}">
-        {% if status_dict.Citation_Information %}
-          <i class="bi bi-check-circle-fill"></i>
-        {% else %}
-          <i class="bi bi-x-circle-fill"></i>
-        {% endif %}
-      </span>
-    </div>
-  </div>
-</div>
-</div>
+   <h5 class="card-header bg-secondary text-white text-center">Bundle Progress</h5>
+   <div class="list-group list-group-flush">
+      <!-- Alias -->
+      <div class="list-group-item d-flex justify-content-between align-items-center">
+         Alias
+         <span class="badge {% if status_dict.Alias %}bg-success{% else %}bg-danger{% endif %}">
+            {% if status_dict.Alias %}
+               <i class="bi bi-check-circle-fill"></i>
+            {% else %}
+               <i class="bi bi-x-circle-fill"></i>
+            {% endif %}
+         </span>
+      </div>
+      <!-- Modification History -->
+      <div class="list-group-item d-flex justify-content-between align-items-center">
+         Modification History
+         <span class="badge {% if status_dict.Modification_History %}bg-success{% else %}bg-danger{% endif %}">
+            {% if status_dict.Modification_History %}
+               <i class="bi bi-check-circle-fill"></i>
+            {% else %}
+               <i class="bi bi-x-circle-fill"></i>
+            {% endif %}
+         </span>
+      </div>
+      <!-- Citation Information -->
+      <div class="list-group-item d-flex justify-content-between align-items-center">
+         Citation Information
+         <span class="badge {% if status_dict.Citation_Information %}bg-success{% else %}bg-danger{% endif %}">
+            {% if status_dict.Citation_Information %}
+               <i class="bi bi-check-circle-fill"></i>
+            {% else %}
+               <i class="bi bi-x-circle-fill"></i>
+            {% endif %}
+         </span>
+      </div>
+      <!-- Investigations -->
+      <div class="list-group-item d-flex justify-content-between align-items-center">
+         Investigations
+         <span class="badge {% if status_dict.Investigations %}bg-success{% else %}bg-danger{% endif %}">
+            {% if status_dict.Investigations %}
+               <i class="bi bi-check-circle-fill"></i>
+            {% else %}
+               <i class="bi bi-x-circle-fill"></i>
+            {% endif %}
+         </span>
+      </div>
+      <!-- Hosts -->
+      <div class="list-group-item d-flex justify-content-between align-items-center">
+         Hosts
+         <span class="badge {% if status_dict.Hosts %}bg-success{% else %}bg-danger{% endif %}">
+            {% if status_dict.Hosts %}
+               <i class="bi bi-check-circle-fill"></i>
+            {% else %}
+               <i class="bi bi-x-circle-fill"></i>
+            {% endif %}
+         </span>
+      </div>
 
+      <!-- Instruments -->
+      <div class="list-group-item d-flex justify-content-between align-items-center">
+         Instruments
+         <span class="badge {% if status_dict.Instruments %}bg-success{% else %}bg-danger{% endif %}">
+            {% if status_dict.Instruments %}
+               <i class="bi bi-check-circle-fill"></i>
+            {% else %}
+               <i class="bi bi-x-circle-fill"></i>
+            {% endif %}
+         </span>
+      </div>
+
+      <!-- Targets -->
+      <div class="list-group-item d-flex justify-content-between align-items-center">
+         Targets
+         <span class="badge {% if status_dict.Targets %}bg-success{% else %}bg-danger{% endif %}">
+            {% if status_dict.Targets %}
+               <i class="bi bi-check-circle-fill"></i>
+            {% else %}
+               <i class="bi bi-x-circle-fill"></i>
+            {% endif %}
+         </span>
+      </div>
+   </div>
+</div>
+</div>
 
 
 

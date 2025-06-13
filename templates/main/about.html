@@ -37,12 +37,31 @@ Educational Labeling System @Atmospheres
     }
 
     .section-content {
+        /* border: 2px solid #ddd;
+        padding: 2rem;
+        border-radius: 5px;
+        background-color: #FFFAF0;
+        margin-bottom: 15px; */
+
+        display: flex;
+        flex-direction: column;
+        max-width: 1400px;
+        width: 100%;
+        margin: 1rem auto;
         border: 2px solid #ddd;
         padding: 2rem;
         border-radius: 5px;
         background-color: #FFFAF0;
         margin-bottom: 15px;
     }
+
+    .section-content img {
+        width: 100%;
+        height: auto;
+        object-fit: cover;
+        border-radius: 4px;
+    }
+    
 
     .button {
         background-color: #007bff;
@@ -112,7 +131,7 @@ Educational Labeling System @Atmospheres
 
     <hr class="mb-2">
 
-    <!--Section: For Software Developers-->
+    <!-- Section: For Software Developers
     <section class="text-center text-lg-left section-content">
         <div class="row">
             <div class="col-lg-4">
@@ -127,7 +146,67 @@ Educational Labeling System @Atmospheres
                 <a class="btn button mb-3" href="https://atmos.nmsu.edu/elsa/contact/">Contact Us</a>
             </div>
         </div>
-    </section>
+    </section> -->
+    
+    <div id="Staff">
+        <!--Section: Nancy Chanover-->
+        <section class="text-center text-lg-left section-content">
+            <div class="row">
+                <div class="col-lg-4">
+                    <div class="view overlay hm-white-slight z-depth-1-half">
+                        <img src="{% static 'images/Nancy_elsa.png' %}" style="max-width: 80%" class="img-fluid" alt="MercEm">
+                    </div>
+                </div>
+                <div class="col-lg-8">
+                    <h6 class="section-title text-primary"><i class="fa fa-snowflake-o"></i> ELSA</h6>
+                    <h4><strong>Nancy Chanover</strong></h4>
+                    <h6><strong>ATM Node PI</strong></h6>
+                    <p>PDS ATM Node Lead</p>
+                    <a class="btn button mb-3" href="https://astro.nmsu.edu/directory/nancy-chanover.html"><i class="fa fa-info-circle"></i></a>
+                </div>
+            </div>
+        </section>
+
+        <!--Section: Lynn Neakrase-->
+        <section class="text-center text-lg-left section-content">
+            <div class="row">
+                <div class="col-lg-4">
+                    <div class="view overlay hm-white-slight z-depth-1-half">
+                        <img src="{% static 'images/Lynn_elsa.jpg' %}" style="max-width: 80%" class="img-fluid" alt="MercEm">
+                    </div>
+                </div>
+                <div class="col-lg-8">
+                    <h6 class="section-title text-primary"><i class="fa fa-snowflake-o"></i> ELSA</h6>
+                    <h4><strong>Lynn Neakrase</strong></h4>
+                    <h5><strong>Senior Research Scientist</strong></h5>
+                    <p>Lead Designer for ELSA, Derived Data Archive Liaison</p>
+                    <a href="http://astronomy.nmsu.edu/lneakras/Lynn_Neakrase/About_Me.html" title="NMSU_Profile" class="btn button mb-3">
+                            <i class="fa fa-info-circle"></i>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <!--Section: Lyle Huber-->
+        <section class="text-center text-lg-left section-content">
+            <div class="row">
+                <div class="col-lg-4">
+                    <div class="view overlay hm-white-slight z-depth-1-half">
+                        <img src="{% static 'images/Lyle_elsa.jpg' %}" style="max-width: 80%" class="img-fluid" alt="MercEm">
+                    </div>
+                </div>
+                <div class="col-lg-8">
+                    <h6 class="section-title text-primary"><i class="fa fa-snowflake-o"></i> ELSA</h6>
+                    <h4><strong>Lyle Huber</strong></h4>
+                    <h5><strong>ATM Data Manager</strong></h5>
+                    <p>Archive Data Manager, Mission Data Liaison</p>
+                    <a href="http://astro.nmsu.edu/facultydirectory/lyle-huber.html" title="NMSU_Profile" class="btn button mb-3">
+                        <i class="fa fa-info-circle"></i>
+                    </a>
+                </div>
+            </div>
+        </section>
+    </div>
 </div>
 
 {% endblock %}
