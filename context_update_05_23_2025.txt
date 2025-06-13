@@ -1,0 +1,1351 @@
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:juice.rime
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:mpo.mgns
+keyword ref_lid_instrument not found in xml label for urn:esa:psa:context:facility:observatory.estrack
+keyword ref_lid_telescope not found in xml label for urn:esa:psa:context:facility:observatory.estrack
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:juice.gala
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:juice.swi
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:juice.uvs
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:mpo.phebus
+keyword ref_lid_instrument not found in xml label for urn:esa:psa:context:telescope:malarguee.dsa3_35m
+Adding context product; urn:esa:psa:context:telescope:malarguee.dsa3_35m
+ERROR adding context product urn:esa:psa:context:telescope:malarguee.dsa3_35m: Invalid field name(s) for model Telescope: 'type_of'.
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:amelia.edm
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:comars.edm
+keyword ref_lid_facility not found in xml label for urn:esa:psa:context:investigation:mission.em16
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:juice.jmag
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:juice.navcam
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:mpo.bela
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:mpo.isa
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:juice.majis
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:juice.pep
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:juice.rpwi
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:mpo.mixs
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:mpo.more
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:mpo.simbio-sys
+keyword ref_lid_facility not found in xml label for urn:esa:psa:context:investigation:mission.juice
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:juice.janus
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:juice.pride
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:juice.radem
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:mpo.mertis
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:mtm.mcam
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:tgo.frend
+keyword ref_lid_facility not found in xml label for urn:esa:psa:context:investigation:mission.bc
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:mpo.mag
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:mpo.sixs
+keyword ref_lid_instrument not found in xml label for urn:esa:psa:context:telescope:new_norcia.dsa1_35m
+Adding context product; urn:esa:psa:context:telescope:new_norcia.dsa1_35m
+ERROR adding context product urn:esa:psa:context:telescope:new_norcia.dsa1_35m: Invalid field name(s) for model Telescope: 'type_of'.
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:tgo.cassis
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:tgo.nomad
+keyword ref_lid_instrument not found in xml label for urn:esa:psa:context:instrument_host:spacecraft.mmo
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:deca.edm
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:tgo.acs
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:juice.3gm
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:juice.haa
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:juice.jmc
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:mpo.berm
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:mpo.serena
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:dreams.edm
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:telescope:jac.ukirt3m8
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.saturn_ring_plane_crossing_1995
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:facility:laboratory.hofmeister
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:laboratory.hofmeister
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:laboratory.imperial_college-hydraulics
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:laboratory.odu-ftir
+Adding context product; urn:nasa:pds:context:facility:observatory.atlas-chl
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:facility:observatory.chuguevskaya
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:observatory.chuguevskaya
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:facility:observatory.keck
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:observatory.keck
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:facility:observatory.ondrejov
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:observatory.ondrejov
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:facility:observatory.saao
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:facility:observatory.smt
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:observatory.smt
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:facility:observatory.teide
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:facility:observatory.valle_d_aosta
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:observatory.valle_d_aosta
+Adding context product; urn:nasa:pds:context:facility:observatory.valle_d_aosta
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:pse.a14a
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:lsg.a17a
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:metriccam.a17c
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:amos.neat_maui_camera
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:amos.neat_maui_camera
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:apache_point.arc3m5.agile
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:apache_point.arc3m5.agile
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:arc_ssa.fts_3000
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:arc_ssa.fts_3000
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:atlas-chl.0m5.sta1600
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:atlas-chl.0m5.sta1600
+Adding context product; urn:nasa:pds:context:instrument:atlas-chl.0m5.sta1600
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:au-msl.awtsi-2004
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:classe.mordor
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:classe.mordor
+Adding context product; urn:nasa:pds:context:instrument:classe.mordor
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:clem1.a-star
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:clem1.b-star
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:clem1.lidar
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:clipper.rea
+Adding context product; urn:nasa:pds:context:instrument:clipper.rea
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:clipper.sud
+Adding context product; urn:nasa:pds:context:instrument:clipper.sud
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:clps_to_2im_ncll.scalpss
+Adding context product; urn:nasa:pds:context:instrument:clps_to_2im_ncll.scalpss
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:caps.co
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:issna.co
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mag.co
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:eso-chajnantor.alma.alma_radio_receiver
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:eso-chajnantor.alma.alma_radio_receiver
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:eso-paranal.vlt_8m2.visir
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:eso-paranal.vlt_8m2.visir
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:haute-provence.1m20.ccd_1m2
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:haute-provence.1m20.ccd_1m2
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:amica.hay
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:lidar.hay
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:nirs.hay
+keyword pds:Instrument.pds:type not found in xml label for urn:jaxa:darts:context:instrument:hyb2.cam-h
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:ice.radwav
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:edl.insight
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:irtf-maunakea.3m2.mirac2
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:irtf-maunakea.3m2.mirac2
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:kaguya.lism
+keyword pds:Instrument.pds:type not found in xml label for urn:kari:kpds:context:instrument:kplo.kgrs
+Adding context product; urn:kari:kpds:context:instrument:kplo.kgrs
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:leura.0m25.sbig_st9e
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:leura.0m25.sbig_st9e
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:liciacube.hga
+Adding context product; urn:nasa:pds:context:instrument:liciacube.hga
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:lro.dlre
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:lro.lend
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:lt.ltm
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:m10.pls
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:descam.mer1
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:pancam.mer2
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:epps-eps.mess
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mascs.mess
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:mex.omega
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mhc.plibs_z300
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:mhc.plibs_z300
+Adding context product; urn:nasa:pds:context:instrument:mhc.plibs_z300
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mmt.single_mirror6m5.ccd47
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:mmt.single_mirror6m5.ccd47
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:irs.mr7
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:wac.mr7
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:uvs.mr9
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:crism.mro
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:rhaz_right_a.msl
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:nh.pepssi
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:otes.orex
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:orm.gtc10m4.osiris
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:orm.gtc10m4.osiris
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:fgm.p11
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:palmer_divide.old10inch.sbig_st8
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:palmer_divide.old10inch.sbig_st8
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:partizanskoye.1m25_azt11.crao5c
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:partizanskoye.1m25_azt11.crao5c
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:ssi.phx
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:pvmp.sp-night.snfr
+Adding context product; urn:nasa:pds:context:instrument:pvmp.sp-night.snfr
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:pvo.orpa
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:relab.bd-vnir
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:relab.bd-vnir
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:rl.rolis
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:rl.romap
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:spitzer.irs
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:utsa_kamc.bruker_eds
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:utsa_kamc.bruker_eds
+Adding context product; urn:nasa:pds:context:instrument:utsa_kamc.bruker_eds
+ERROR adding context product urn:nasa:pds:context:instrument:utsa_kamc.bruker_eds: (1406, "Data too long for column 'name' at row 1")
+keyword pds:Instrument.pds:type not found in xml label for urn:jaxa:darts:context:instrument:vco.lir
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:vega1.tvs
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:vg1.pls
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:vg2.pra
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:cam1.vl2
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:irtm.vo1
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:wise.wise_camera
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:instrument_host:spacecraft.a12l
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:instrument_host:spacecraft.a15s
+Adding context product; urn:nasa:pds:context:instrument_host:spacecraft.clps_to_2ab_pll
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.apollo_15
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.apollo_16
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.bopps
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.contour_mission
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.deep_space_program_science_experiment
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.gravity_recovery_and_interior_laboratory
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.lunar_reconnaissance_orbiter
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.magellan
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.new_horizons_kem2
+Adding context product; urn:nasa:pds:context:investigation:mission.new_horizons_kem2
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.pioneer_8
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.pioneer_venus
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.solar_and_heliospheric_observatory
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.spitzer
+Adding context product; urn:nasa:pds:context:investigation:observing_campaign.pre-magellan
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:observing_campaign.saturn_small_satellite_astrometry
+Adding context product; urn:nasa:pds:context:investigation:observing_campaign.saturn_small_satellite_astrometry
+ERROR adding context product urn:nasa:pds:context:investigation:observing_campaign.saturn_small_satellite_astrometry: (1406, "Data too long for column 'file_ref' at row 1")
+Adding context product; urn:nasa:pds:context:target:asteroid.152830_dinkinesh
+Adding context product; urn:nasa:pds:context:target:asteroid.52246_donaldjohanson
+Adding context product; urn:nasa:pds:context:target:comet.c1997_o1_tilbrook
+Adding context product; urn:nasa:pds:context:target:comet.c1999_n2_lynn
+Adding context product; urn:nasa:pds:context:target:comet.c2012_e2_swan
+Adding context product; urn:nasa:pds:context:target:comet.c2013_r1_lovejoy
+Adding context product; urn:nasa:pds:context:target:planetary_system.neptune_system
+Adding context product; urn:nasa:pds:context:target:planetary_system.saturn_system
+Adding context product; urn:nasa:pds:context:target:star.alf01_cru
+Adding context product; urn:nasa:pds:context:target:star.eps_mic
+Adding context product; urn:nasa:pds:context:target:star.gam_ori
+Adding context product; urn:nasa:pds:context:target:star_cluster.ngc_3532
+Adding context product; urn:nasa:pds:context:telescope:atlas-cpt.0m5
+ERROR adding context product urn:nasa:pds:context:telescope:atlas-cpt.0m5: Invalid field name(s) for model Telescope: 'type_of'.
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:telescope:parkes.dss49_64m
+Adding context product; urn:nasa:pds:context:telescope:parkes.dss49_64m
+ERROR adding context product urn:nasa:pds:context:telescope:parkes.dss49_64m: Invalid field name(s) for model Telescope: 'type_of'.
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:telescope:table_mountain.astro_mechanics0m61
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:laboratory.ghent-ice
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:laboratory.lasp
+Adding context product; urn:nasa:pds:context:facility:laboratory.lasp
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:laboratory.pal
+Adding context product; urn:nasa:pds:context:facility:observatory.atlas-mlo
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:facility:observatory.ensenada
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:observatory.ensenada
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:facility:observatory.goodricke-pigott
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:observatory.goodricke-pigott
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:facility:observatory.lick
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:observatory.lick
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:facility:observatory.partizanskoye
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:observatory.partizanskoye
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:facility:observatory.uwo_meteor_radar
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:observatory.uwo_meteor_radar
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:pancam.a17c
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:chuguev.azt8_0m70.sbig_st6_uv
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:chuguev.azt8_0m70.sbig_st6_uv
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:clipper.pim
+Adding context product; urn:nasa:pds:context:instrument:clipper.pim
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:con.crispspec
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:ctio-cerro_tololo.smarts_1m0.fruttispec
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:ctio-cerro_tololo.smarts_1m0.fruttispec
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:dawn.fc2
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:dushanbe.rcc.sanglok
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:dushanbe.rcc.sanglok
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:eso-la_silla.1m52.bcspectrograph
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:eso-la_silla.1m52.bcspectrograph
+Adding context product; urn:nasa:pds:context:instrument:eso-la_silla.1m52.bcspectrograph
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:eso-la_silla.3m6.timmi2
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:eso-la_silla.3m6.timmi2
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:eso-la_silla.ntt.eso_rild
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:eso-la_silla.ntt.eso_rild
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:gemini-south.8m1.t-recs
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:gemini-south.8m1.t-recs
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:goldstone.dss14_70m.recv_x
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:goldstone.dss14_70m.recv_x
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:guelph-wel.guelph_wt
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:hst.acs
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:hst.hstacs
+keyword pds:Instrument.pds:type not found in xml label for urn:jaxa:darts:context:instrument:hyb2.lidar
+keyword pds:Instrument.pds:type not found in xml label for urn:jaxa:darts:context:instrument:hyb2.sci
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:ice.ici
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:irtf-maunakea.3m2.mirsi
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:irtf-maunakea.3m2.mirsi
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:keck.10m_keck1.lws_ir
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:keck.10m_keck1.lws_ir
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:keck.10m_keck2.echelle
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:keck.10m_keck2.echelle
+keyword pds:Instrument.pds:type not found in xml label for urn:kari:kpds:context:instrument:kplo.polcam
+Adding context product; urn:kari:kpds:context:instrument:kplo.polcam
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:las_cumbres.2m0_telescopes.merope
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:las_cumbres.2m0_telescopes.merope
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:vis.lcross
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:lowell.loneos_0m60.loneos_mosaic_ccd
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:lowell.loneos_0m60.loneos_mosaic_ccd
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:lp.mag
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:lucy.prop
+Adding context product; urn:nasa:pds:context:instrument:lucy.prop
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:m10.mag
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:magdalena_ridge.mro2m4.photdoc_camera
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:magdalena_ridge.mro2m4.photdoc_camera
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mars2020.ecam
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:apxs.mer2
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:hazcam.mer2
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mi.mer2
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mdis-wac.mess
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mgs.tes
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mmt.single_mirror6m5.clio
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:mmt.single_mirror6m5.clio
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mount_bigelow.1m54.ccd21
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:mount_bigelow.1m54.ccd21
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mount_lemmon.1m54.10kccd
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:mount_lemmon.1m54.10kccd
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:uvs.mr7
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:iris.mr9
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:chemin.msl
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:fhaz_left_a.msl
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:hazcam.msl
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mast_right.msl
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:navcam.msl
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:rad.msl
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:rover.msl
+Adding context product; urn:nasa:pds:context:instrument:rover.msl
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:multi-host.generic_nicmos_ir_camera
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:multi-host.generic_nicmos_ir_camera
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:naoj-hawaii.subaru_8m2.comics
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:naoj-hawaii.subaru_8m2.comics
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:grs.near
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:no-host.hyperion-ifs3000
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:no-host.hyperion-ifs3000
+Adding context product; urn:nasa:pds:context:instrument:no-host.hyperion-ifs3000
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:ody.rss
+Adding context product; urn:nasa:pds:context:instrument:ody.rss
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:orm.galileo_zeiss3m5.dolores
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:orm.galileo_zeiss3m5.dolores
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:pal.vwt
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:palomar.oschin_schmidt_1m2.quest_camera
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:palomar.oschin_schmidt_1m2.quest_camera
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:tega.phx
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:psyche.ns
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:pvmp.bus.bnms
+Adding context product; urn:nasa:pds:context:instrument:pvmp.bus.bnms
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:pvmp.lp.lsfr
+Adding context product; urn:nasa:pds:context:instrument:pvmp.lp.lsfr
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:pvmp.sp-day.dlbi
+Adding context product; urn:nasa:pds:context:instrument:pvmp.sp-day.dlbi
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:pvmp.sp-north.sas
+Adding context product; urn:nasa:pds:context:instrument:pvmp.sp-north.sas
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:rl.civa
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:rl.ptolemy
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:ro.midas
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:ro.rpcmag
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:sders-china.shapotou_wt
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:simeis.grubb1m.sbig_st-6
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:simeis.grubb1m.sbig_st-6
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:uly.grb
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:utsa_kamc.hitachi_sem
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:utsa_kamc.hitachi_sem
+Adding context product; urn:nasa:pds:context:instrument:utsa_kamc.hitachi_sem
+ERROR adding context product urn:nasa:pds:context:instrument:utsa_kamc.hitachi_sem: (1406, "Data too long for column 'name' at row 1")
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:vega2.pm1
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:vega2.puma
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:vg1.iris
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mawd.vo1
+keyword ref_lid_instrument not found in xml label for urn:jaxa:darts:context:instrument_host:rover.minerva2-1_hibou
+Adding context product; urn:nasa:pds:context:instrument_host:spacecraft.pvmp.sp-day
+Adding context product; urn:nasa:pds:context:instrument_host:spacecraft.pvmp.sp-night
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:field_campaign.dd_eldorado_nv_2015
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.apollo_14
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.epoxi
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.galileo
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.infrared_astronomical_satellite
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.insight
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.kaguya
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.mariner71
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.neas
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.pioneer_10
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.viking
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:other_investigation.wt_threshold
+Adding context product; urn:nasa:pds:context:target:comet.96p_machholz_1
+Adding context product; urn:nasa:pds:context:target:comet.c1999_j3_linear
+Adding context product; urn:nasa:pds:context:target:comet.c2002_v1_neat
+Adding context product; urn:nasa:pds:context:target:comet.c2012_k1_panstarrs
+Adding context product; urn:nasa:pds:context:target:comet.c2015_g2_master
+Adding context product; urn:nasa:pds:context:target:star.42_peg
+Adding context product; urn:nasa:pds:context:target:star.del_sco
+Adding context product; urn:nasa:pds:context:target:star.eta_cma
+Adding context product; urn:nasa:pds:context:target:star.gam_cnc
+Adding context product; urn:nasa:pds:context:target:star.hd_44594
+Adding context product; urn:nasa:pds:context:target:star.io_ori
+Adding context product; urn:nasa:pds:context:target:star.kap_sco
+Adding context product; urn:nasa:pds:context:target:star.mu._sgr
+Adding context product; urn:nasa:pds:context:target:star.zet_pup
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:telescope:hunters_hill.sct0m36
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:telescope:paul_wild.dss47_2008
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:facility:observatory.jac
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:observatory.jac
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:valle_d'aosta.oavda.pl3041
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.saturn_small_satellite_astrometry
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:facility:laboratory.arc_ssa
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:laboratory.arc_ssa
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:laboratory.classe
+Adding context product; urn:nasa:pds:context:facility:laboratory.classe
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:laboratory.usda-ars-lubbock
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:facility:observatory.arecibo
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:observatory.arecibo
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:facility:observatory.carbuncle_hill
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:observatory.carbuncle_hill
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:facility:observatory.kuiper-airborne
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:facility:observatory.simeis
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:observatory.simeis
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:facility:observatory.stockport
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:observatory.stockport
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:pancam.a15c
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:clem1.lwir
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:clipper.uvs
+Adding context product; urn:nasa:pds:context:instrument:clipper.uvs
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:eng.co
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:inms.co
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mimi-inca.co
+Adding context product; urn:nasa:pds:context:instrument:mimi-inca.co
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:vims.co
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:ctio-cerro_tololo.2mass_1m3.2masssouth
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:ctio-cerro_tololo.2mass_1m3.2masssouth
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:ctio-cerro_tololo.victorblanco_4m0.decam
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:ctio-cerro_tololo.victorblanco_4m0.decam
+Adding context product; urn:nasa:pds:context:instrument:ctio-cerro_tololo.victorblanco_4m0.decam
+ERROR adding context product urn:nasa:pds:context:instrument:ctio-cerro_tololo.victorblanco_4m0.decam: (1406, "Data too long for column 'file_ref' at row 1")
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:dawn.vir
+keyword pds:Instrument.pds:type not found in xml label for urn:jaxa:darts:context:instrument:dcam3.dcam3-d
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:dif.mri
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:ds1.pepe
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:eso-la_silla.1m04.denis
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:eso-la_silla.1m04.denis
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:flwo.2mass1m3.2massnorth
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:flwo.2mass1m3.2massnorth
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:gio.ope
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:go.mag
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:go.nims
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:goldstone.dss13_34m.recv_x
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:goldstone.dss13_34m.recv_x
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:gp.had
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:ice.epas
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:imperial_college-hydraulics.bagnold_wt
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:apss-ifg.insight
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:kpno.corning2m13.cfim_t2ka
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:kpno.corning2m13.cfim_t2ka
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:ladee.nms
+Adding context product; urn:nasa:pds:context:instrument:ladee.nms
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:las_cumbres.1m0_telescopes.nres
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:las_cumbres.1m0_telescopes.nres
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:lbto-mount_graham.lbt_8m4x2.lbc_guide_camera
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:lbto-mount_graham.lbt_8m4x2.lbc_guide_camera
+Adding context product; urn:nasa:pds:context:instrument:lbto-mount_graham.lbt_8m4x2.lbc_guide_camera
+ERROR adding context product urn:nasa:pds:context:instrument:lbto-mount_graham.lbt_8m4x2.lbc_guide_camera: (1406, "Data too long for column 'file_ref' at row 1")
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:magdalena_ridge.mro2m4.andor_2kx2k_ccd
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:magdalena_ridge.mro2m4.andor_2kx2k_ccd
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:magdalena_ridge.mro2m4.photgjon_camera
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:magdalena_ridge.mro2m4.photgjon_camera
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mars2020.edlcam
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mars2020.lcam
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mars2020.meda
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mars2020.supercam
+keyword pds:Instrument.pds:type not found in xml label for urn:jaxa:darts:context:instrument:mascot.micromega
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mcdonald.harlanjsmith_2m7.p45a_phot
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:mcdonald.harlanjsmith_2m7.p45a_phot
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:apxs.mer1
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:hazcam.mer1
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:navcam.mer1
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:epps-fips.mess
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:rss.mess
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mgs.moc
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mmt.single_mirror6m5.pisces
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:mmt.single_mirror6m5.pisces
+Adding context product; urn:nasa:pds:context:instrument:mmt.single_mirror6m5.pisces
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:irs.mr6
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:iss.mr9
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:rss.mr9
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mcs.mro
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:chemcam_soh.msl
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mast_left.msl
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:nav_right_a.msl
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:rhaz_left_b.msl
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:multi-host.generic_vis_hsp
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:multi-host.generic_vis_hsp
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:rss.near
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:no-host.lorenz_met_station
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:no-host.lorenz_met_station
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:no-host.poets
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:no-host.poets
+Adding context product; urn:nasa:pds:context:instrument:no-host.poets
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:ola.orex
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:rac.phx
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:psyche.rss
+Adding context product; urn:nasa:pds:context:instrument:psyche.rss
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:pvmp.lp.lgc
+Adding context product; urn:nasa:pds:context:instrument:pvmp.lp.lgc
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:pvmp.lp.lnms
+Adding context product; urn:nasa:pds:context:instrument:pvmp.lp.lnms
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:pvmp.sp-night.sn
+Adding context product; urn:nasa:pds:context:instrument:pvmp.sp-night.sn
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:pvmp.sp-north.snfr
+Adding context product; urn:nasa:pds:context:instrument:pvmp.sp-north.snfr
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:pvo.ogbd
+Adding context product; urn:nasa:pds:context:instrument:pvo.ogbd
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:qmu-wal.butterfield_wt
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:rl.apxs
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:rl.cosac
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:rl.sesame
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:swri.swurc
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:swri.swurc
+Adding context product; urn:nasa:pds:context:instrument:swri.swurc
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:cam1.vl1
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:cam2.vl2
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:visa.vo1
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:field_campaign.dd_nnss-nv_2019
+Adding context product; urn:nasa:pds:context:investigation:field_campaign.dd_nnss-nv_2019
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.hst
+keyword ref_lid_facility not found in xml label for urn:kari:kpds:context:investigation:mission.kplo
+Adding context product; urn:kari:kpds:context:investigation:mission.kplo
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.midcourse_space_experiment
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.psyche
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.suisei
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.venera_15_and_16
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:other_investigation.hot_ion_atmos_escape
+Adding context product; urn:nasa:pds:context:target:asteroid.21900_orus
+Adding context product; urn:nasa:pds:context:target:asteroid.3548_eurybates
+Adding context product; urn:nasa:pds:context:target:comet.c2011_l4_panstarrs
+Adding context product; urn:nasa:pds:context:target:star.pi.04_ori
+Adding context product; urn:nasa:pds:context:telescope:atlas-mlo.0m5
+ERROR adding context product urn:nasa:pds:context:telescope:atlas-mlo.0m5: Invalid field name(s) for model Telescope: 'type_of'.
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:telescope:eso-paranal.vlt_antu_8m2_ut1
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:telescope:malarguee.dss84_35m
+Adding context product; urn:nasa:pds:context:telescope:malarguee.dss84_35m
+ERROR adding context product urn:nasa:pds:context:telescope:malarguee.dss84_35m: Invalid field name(s) for model Telescope: 'type_of'.
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:telescope:new_norcia.dss74_35m
+Adding context product; urn:nasa:pds:context:telescope:new_norcia.dss74_35m
+ERROR adding context product urn:nasa:pds:context:telescope:new_norcia.dss74_35m: Invalid field name(s) for model Telescope: 'type_of'.
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:telescope:palmer_divide.0m5
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:telescope:stockport.jubilee
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:telescope:u_alabama.fecker0m25
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:laboratory.aps
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:laboratory.au-msl
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:laboratory.isu_ae
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:laboratory.kuleuven-leg
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:laboratory.sders-china
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:facility:observatory.kpno
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:observatory.kpno
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:pse.a11e
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:arecibo.305m.trans_s
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:arecibo.305m.trans_s
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:atlas-mlo.0m5.sta1600
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:atlas-mlo.0m5.sta1600
+Adding context product; urn:nasa:pds:context:instrument:atlas-mlo.0m5.sta1600
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:au-msl.sloped_wt
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:clipper.ecm
+Adding context product; urn:nasa:pds:context:instrument:clipper.ecm
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:clipper.eth
+Adding context product; urn:nasa:pds:context:instrument:clipper.eth
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:clps_to_2ab_pll.nss
+Adding context product; urn:nasa:pds:context:instrument:clps_to_2ab_pll.nss
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:cirs.co
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:con.crispimag
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:dawn.grand
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:dii.its
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:ds1.micas
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:eso-paranal.vlt_kueyen_8m2_ut2.forsi
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:eso-paranal.vlt_kueyen_8m2_ut2.forsi
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:ghent-ice.ice_wt
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:gio.ims
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:gio.jpa
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:gio.mag
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:go.uvs
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:gp.nfr
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:hofmeister.da_3_02_ir_spec
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:hofmeister.da_3_02_ir_spec
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:hst.hsp
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:hst.wfpc2
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:idc.insight
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:iras.fpa
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:irtf-maunakea.3m2.mirlin
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:irtf-maunakea.3m2.mirlin
+keyword pds:Instrument.pds:type not found in xml label for urn:kari:kpds:context:instrument:kplo.shc
+Adding context product; urn:kari:kpds:context:instrument:kplo.shc
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:kpno.mayall4m.kpmc
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:kpno.mayall4m.kpmc
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mir1.lcross
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:nir1.lcross
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:nsp1.lcross
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:lro.lola
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mars2020.pixl
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:maunakea.2m24.tinsley_phot
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:maunakea.2m24.tinsley_phot
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mcdonald.struve2m1.molp
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:mcdonald.struve2m1.molp
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mdm.markiii
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:mdm.markiii
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mi.mer1
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:mex.marsis
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mgs.mag
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mgs.mola
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:nac.mr6
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:hirise.mro
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:chemcam_rmi.msl
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:nav_right_b.msl
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:multi-host.beckman_dk2a_spec
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:multi-host.beckman_dk2a_spec
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:nlr.near
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:nh.lorri
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:no-host.hyperion-ifs5000
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:no-host.hyperion-ifs5000
+Adding context product; urn:nasa:pds:context:instrument:no-host.hyperion-ifs5000
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:ody.mar
+Adding context product; urn:nasa:pds:context:instrument:ody.mar
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:ody.ns
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:orm.int2m54.ids
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:orm.int2m54.ids
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:hvm.p10
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:pgl.asd-fieldspec3
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:pgl.asd-fieldspec3
+Adding context product; urn:nasa:pds:context:instrument:pgl.asd-fieldspec3
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:pvo.ocpp
+Adding context product; urn:nasa:pds:context:instrument:pvo.ocpp
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:pvo.oir
+Adding context product; urn:nasa:pds:context:instrument:pvo.oir
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:rl.consert
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:ro.cosima
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:ro.miro
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:ro.osinac
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:sbu_cpex.raman
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:sbu_cpex.raman
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:telescope.birc.sto
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:telescope.birc.sto
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:tu-tewt.tewt
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:ucberkeley-rfs.belly_wt
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:uly.hiscale-ca
+Adding context product; urn:esa:psa:context:instrument:uly.hiscale-ca
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:v13.ep
+Adding context product; urn:nasa:pds:context:instrument:v13.ep
+keyword pds:Instrument.pds:type not found in xml label for urn:jaxa:darts:context:instrument:vco.rss
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:vega1.iks
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:vega1.mischa
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:vega2.tvs
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:vex.mag
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:vg2.eng
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:vg2.iris
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:vg2.mag
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:vg2.pls
+keyword ref_lid_instrument not found in xml label for urn:jaxa:darts:context:instrument_host:rover.minerva2-1_owl
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:instrument_host:spacecraft.a14l
+Adding context product; urn:nasa:pds:context:investigation:individual.lunar_simulants_fuv_reflectance_gimar_22
+ERROR adding context product urn:nasa:pds:context:investigation:individual.lunar_simulants_fuv_reflectance_gimar_22: (1406, "Data too long for column 'file_ref' at row 1")
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:individual.none
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.apollo_12
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.apollo_17
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.clps_to_2ab
+Adding context product; urn:nasa:pds:context:investigation:mission.clps_to_2ab
+keyword ref_lid_facility not found in xml label for urn:esa:psa:context:investigation:mission.giotto
+keyword ref_lid_facility not found in xml label for urn:jaxa:darts:context:investigation:mission.hyb2
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.international_cometary_explorer
+keyword ref_lid_facility not found in xml label for urn:esa:psa:context:investigation:mission.iue
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.mars_exploration_rover
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.mars_reconnaissance_orbiter
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.new_horizons_kem1
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.next
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.pioneer_11
+keyword ref_lid_facility not found in xml label for urn:esa:psa:context:investigation:mission.ulysses
+keyword ref_lid_facility not found in xml label for urn:esa:psa:context:investigation:mission.venus_express
+Adding context product; urn:nasa:pds:context:investigation:observing_campaign.atlas
+Adding context product; urn:nasa:pds:context:investigation:observing_campaign.saturn_occultation_of_28_sagittarius_1989
+ERROR adding context product urn:nasa:pds:context:investigation:observing_campaign.saturn_occultation_of_28_sagittarius_1989: (1406, "Data too long for column 'file_ref' at row 1")
+Adding context product; urn:nasa:pds:context:target:comet.141p_machholz_2
+Adding context product; urn:nasa:pds:context:target:comet.c2001_a2_linear
+Adding context product; urn:nasa:pds:context:target:comet.c2002_g3_soho
+Adding context product; urn:nasa:pds:context:target:comet.c2012_f6_lemmon
+Adding context product; urn:nasa:pds:context:target:comet.c2013_x1_panstarrs
+Adding context product; urn:nasa:pds:context:target:comet.c2014_q1_panstarrs
+Adding context product; urn:nasa:pds:context:target:planetary_system.mercury_system
+Adding context product; urn:nasa:pds:context:target:satellite.3548_eurybates.queta
+Adding context product; urn:nasa:pds:context:target:satellite.617_patroclus.menoetius
+Adding context product; urn:nasa:pds:context:target:star.28_sgr
+Adding context product; urn:nasa:pds:context:target:star.bet_psa
+Adding context product; urn:nasa:pds:context:target:star.mu._sco
+Adding context product; urn:nasa:pds:context:target:star.rs_cnc
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:telescope:lowell.21in0
+Adding context product; urn:nasa:pds:context:telescope:lowell.nuro_0m79
+ERROR adding context product urn:nasa:pds:context:telescope:lowell.nuro_0m79: Invalid field name(s) for model Telescope: 'type_of'.
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:telescope:usuda.dss48_64m
+Adding context product; urn:nasa:pds:context:telescope:usuda.dss48_64m
+ERROR adding context product urn:nasa:pds:context:telescope:usuda.dss48_64m: Invalid field name(s) for model Telescope: 'type_of'.
+Adding context product; urn:nasa:pds:context:telescope:valle_d_aosta.oavda
+ERROR adding context product urn:nasa:pds:context:telescope:valle_d_aosta.oavda: Invalid field name(s) for model Telescope: 'type_of'.
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:laboratory.ksu-hpwel
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:laboratory.qmu-wal
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:facility:observatory.dushanbe
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:observatory.dushanbe
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:facility:observatory.el_leoncito
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:observatory.el_leoncito
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:facility:observatory.haute-provence
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:observatory.haute-provence
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:facility:observatory.palomar
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:observatory.palomar
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:pse.a12a
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:metriccam.a16c
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:pancam.a16c
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:aps.beamline13ide
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:aps.beamline13ide
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:clem1.hires
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:clipper.gnc
+Adding context product; urn:nasa:pds:context:instrument:clipper.gnc
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:clipper.mas
+Adding context product; urn:nasa:pds:context:instrument:clipper.mas
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:clipper.rss
+Adding context product; urn:nasa:pds:context:instrument:clipper.rss
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:con.ngims
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:ctio-cerro_tololo.soar_4m1.soi
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:ctio-cerro_tololo.soar_4m1.soi
+Adding context product; urn:nasa:pds:context:instrument:ctio-cerro_tololo.soar_4m1.soi
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:dart.draco
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:dart.hga
+Adding context product; urn:nasa:pds:context:instrument:dart.hga
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:dif.hriv
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:dsn.rss
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:eso-la_silla.ntt.eso_multi
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:eso-la_silla.ntt.eso_multi
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:gbo.gbt_100m.4mm_receiver
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:gbo.gbt_100m.4mm_receiver
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:gio.hmc
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:goldstone.dss14_70m.trans_x
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:goldstone.dss14_70m.trans_x
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:hp.acp
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:hst.nicmos
+keyword pds:Instrument.pds:type not found in xml label for urn:jaxa:darts:context:instrument:hyb2.onc
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:ice.mag
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:radiometer.insight
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:seis.insight
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:isu_ae.isuwt
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:kaguya.grs
+keyword pds:Instrument.pds:type not found in xml label for urn:kari:kpds:context:instrument:kplo.kmag
+Adding context product; urn:kari:kpds:context:instrument:kplo.kmag
+keyword pds:Instrument.pds:type not found in xml label for urn:kari:kpds:context:instrument:kplo.luti
+Adding context product; urn:kari:kpds:context:instrument:kplo.luti
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:ladee.ldex
+Adding context product; urn:nasa:pds:context:instrument:ladee.ldex
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:ladee.uvs
+Adding context product; urn:nasa:pds:context:instrument:ladee.uvs
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:las_cumbres.0m4_telescopes.sbig_stl6303
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:las_cumbres.0m4_telescopes.sbig_stl6303
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:las_cumbres.1m0_telescopes.sinistro
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:las_cumbres.1m0_telescopes.sinistro
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:nsp2.lcross
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:vsp.lcross
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:lowell.hall_ritchey-chretien_1_1m07.kron_photometer
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:lowell.hall_ritchey-chretien_1_1m07.kron_photometer
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:lp.mager
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:lro.lroc
+keyword pds:Instrument.pds:type not found in xml label for urn:jaxa:darts:context:instrument:mascot.mascam
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mb.mer1
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mag.mess
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:xrs.mess
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mount_bigelow.0m7.10kccd
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:mount_bigelow.0m7.10kccd
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mount_bigelow.1m54.finkspec
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:mount_bigelow.1m54.finkspec
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mount_bigelow.1m54.mont4k
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:mount_bigelow.1m54.mont4k
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mpfr.apxs
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mpfr.rcrr
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:wac.mr6
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:marci.mro
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:sam.msl
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:multi-host.brukifs125hr_ftspec
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:multi-host.brukifs125hr_ftspec
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:nh.leisa
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:nh.mvic
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:prop.orex
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:rexis.orex
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:orm.int2m54.wfc
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:orm.int2m54.wfc
+Adding context product; urn:nasa:pds:context:instrument:orm.int2m54.wfc
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:palomar.hale_5m08.pharo
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:palomar.hale_5m08.pharo
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:pgl.ocean_optics-uvflame
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:pgl.ocean_optics-uvflame
+Adding context product; urn:nasa:pds:context:instrument:pgl.ocean_optics-uvflame
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:ts.phb2
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:vsk.phb2
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:om.phx
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:psyche.imager
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:psyche.mag
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:pvmp.sp-day.sas
+Adding context product; urn:nasa:pds:context:instrument:pvmp.sp-day.sas
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:pvmp.sp-night.dlbi
+Adding context product; urn:nasa:pds:context:instrument:pvmp.sp-night.dlbi
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:pvmp.sp-night.sas
+Adding context product; urn:nasa:pds:context:instrument:pvmp.sp-night.sas
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:pvmp.sp-north.dlbi
+Adding context product; urn:nasa:pds:context:instrument:pvmp.sp-north.dlbi
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:pvmp.sp-north.sn
+Adding context product; urn:nasa:pds:context:instrument:pvmp.sp-north.sn
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:pvo.oad
+Adding context product; urn:nasa:pds:context:instrument:pvo.oad
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:pvo.opa
+Adding context product; urn:nasa:pds:context:instrument:pvo.opa
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:pvo.ouvs
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:rl.sd2
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:ro.navcam
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:ro.osiwac
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:sakig.imf
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:sbu_cpex.ftir
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:sbu_cpex.ftir
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:steward-kittpeak.bok2m3.90prime
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:steward-kittpeak.bok2m3.90prime
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:ttu-ag_eng.darwish_wt
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:usda-ars-lubbock.usda-ars_wt
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:uwo_meteor_radar.cmor.cmor_inst
+keyword pds:Instrument.pds:type not found in xml label for urn:jaxa:darts:context:instrument:vco.ir1
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:vega1.pm1
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:vg2.uvs
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:gcms.vl2
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:visa.vo2
+keyword ref_lid_instrument not found in xml label for urn:jaxa:darts:context:instrument_host:rover.minerva2-2_ulula
+Adding context product; urn:nasa:pds:context:instrument_host:spacecraft.v9
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:individual_investigation.lab.hydrocarbon_spectra
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.2001_mars_odyssey
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.deep_impact
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.mars2020
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.mars_science_laboratory
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.maven
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.pioneer_9
+keyword ref_lid_facility not found in xml label for urn:jaxa:darts:context:investigation:mission.vco
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.wise
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:observing_campaign.saturn_ring_plane_crossing_1995
+Adding context product; urn:nasa:pds:context:investigation:observing_campaign.saturn_ring_plane_crossing_1995
+ERROR adding context product urn:nasa:pds:context:investigation:observing_campaign.saturn_ring_plane_crossing_1995: (1406, "Data too long for column 'file_ref' at row 1")
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:other_investigation.astromat_data
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:other_investigation.clps
+Adding context product; urn:nasa:pds:context:investigation:other_investigation.clps
+Adding context product; urn:nasa:pds:context:target:comet.c2001_og108_loneos
+Adding context product; urn:nasa:pds:context:target:comet.c2002_o4_hoenig
+Adding context product; urn:nasa:pds:context:target:comet.c2002_x5_kudo-fujikawa
+Adding context product; urn:nasa:pds:context:target:comet.c2014_e2_jacques
+Adding context product; urn:nasa:pds:context:target:planetary_system.mars_system
+Adding context product; urn:nasa:pds:context:target:star.eps_gem
+Adding context product; urn:nasa:pds:context:target:star.kap_cma
+Adding context product; urn:nasa:pds:context:target:star.kap_vel
+Adding context product; urn:nasa:pds:context:target:star.lam_aql
+Adding context product; urn:nasa:pds:context:target:star.tet_car
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:telescope:carbuncle_hill.0m35
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:telescope:ensenada.2m12
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:telescope:eso-paranal.vlt_yepun_8m2_ut4
+Adding context product; urn:nasa:pds:context:telescope:fremont_peak.fpo0m32
+ERROR adding context product urn:nasa:pds:context:telescope:fremont_peak.fpo0m32: Invalid field name(s) for model Telescope: 'type_of'.
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:telescope:ondrejov.0m65
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:facility:observatory.valle_d'aosta
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:observatory.valle_d'aosta
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:laboratory.asf
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:laboratory.psf
+Adding context product; urn:nasa:pds:context:facility:laboratory.psf
+ERROR adding context product urn:nasa:pds:context:facility:laboratory.psf: (1406, "Data too long for column 'name' at row 1")
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:laboratory.swri
+Adding context product; urn:nasa:pds:context:facility:laboratory.swri
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:facility:observatory.flwo
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:observatory.flwo
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:facility:observatory.leura
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:observatory.leura
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:facility:observatory.modra
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:observatory.modra
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:facility:observatory.u_alabama
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:observatory.u_alabama
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:metriccam.a15c
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:oms.a15c
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:oms.a16c
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:fuvs.a17c
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:asf.thz_farir_beamline
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:asf.thz_farir_beamline
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:atlas-hko.0m5.sta1600
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:atlas-hko.0m5.sta1600
+Adding context product; urn:nasa:pds:context:instrument:atlas-hko.0m5.sta1600
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:au-msl.awtsii-2010
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:clem1.nir
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:clps_to_2ab_pll.lets
+Adding context product; urn:nasa:pds:context:instrument:clps_to_2ab_pll.lets
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:clps_to_2ab_pll.nirvss
+Adding context product; urn:nasa:pds:context:instrument:clps_to_2ab_pll.nirvss
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:clps_to_2ab_pll.pitms
+Adding context product; urn:nasa:pds:context:instrument:clps_to_2ab_pll.pitms
+ERROR adding context product urn:nasa:pds:context:instrument:clps_to_2ab_pll.pitms: (1406, "Data too long for column 'name' at row 1")
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:ctio-cerro_tololo.soar_4m1.ghts
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:ctio-cerro_tololo.soar_4m1.ghts
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:dawn.fc1
+Adding context product; urn:nasa:pds:context:instrument:dawn.fc1
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:gemini-south.8m1.gmos-s
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:gemini-south.8m1.gmos-s
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:gp.gpms
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:hp.disr
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:hst.foc
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:hst.stis
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:hst.wfc3
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:icc.insight
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:irtf-maunakea.3m2.mirac
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:irtf-maunakea.3m2.mirac
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:irtf-maunakea.3m2.mirli
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:irtf-maunakea.3m2.mirli
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:irtf-maunakea.3m2.primo_1
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:irtf-maunakea.3m2.primo_1
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:jiram.jno
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:uvs.jno
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:lasp.mcpherson-vuvas
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:lasp.mcpherson-vuvas
+Adding context product; urn:nasa:pds:context:instrument:lasp.mcpherson-vuvas
+ERROR adding context product urn:nasa:pds:context:instrument:lasp.mcpherson-vuvas: (1406, "Data too long for column 'name' at row 1")
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mir2.lcross
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:liciacube.luke
+Adding context product; urn:nasa:pds:context:instrument:liciacube.luke
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:lowell.discovery_4m3.lmi
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:lowell.discovery_4m3.lmi
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:lp.aps
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:lp.er
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:lp.grs
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:lucy.leisa
+Adding context product; urn:nasa:pds:context:instrument:lucy.leisa
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mars2020.mastcamz
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mars2020.rimfax
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mars2020.rover
+keyword pds:Instrument.pds:type not found in xml label for urn:jaxa:darts:context:instrument:mascot.mara
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:maunakea.2m24.uht2kccd
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:maunakea.2m24.uht2kccd
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mcdonald.harlanjsmith_2m7.lcs
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:mcdonald.harlanjsmith_2m7.lcs
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:descam.mer2
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mb.mer2
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mdis-nac.mess
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:ns.mess
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:mex.spicam
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mgn.rdrs
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mhc.plibs_z903
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:mhc.plibs_z903
+Adding context product; urn:nasa:pds:context:instrument:mhc.plibs_z903
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mount_bigelow.0m7.4kccd
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:mount_bigelow.0m7.4kccd
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mount_lemmon.1m02.2kccd
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:mount_lemmon.1m02.2kccd
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mpfr.rclt
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:nac.mr7
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:apxs.msl
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mahli.msl
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mardi.msl
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:nav_left_a.msl
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:multi-host.generic_gaas_hsp
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:multi-host.generic_gaas_hsp
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:xrs.near
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:no-host.pietersma-portable_wt
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:ody.accel
+Adding context product; urn:nasa:pds:context:instrument:ody.accel
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:ocams.orex
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:ovirs.orex
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:orm.galileo_zeiss3m5.nics
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:orm.galileo_zeiss3m5.nics
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:ipp.p10
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:pal.cwt
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:pvmp.lp.lcps
+Adding context product; urn:nasa:pds:context:instrument:pvmp.lp.lcps
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:pvmp.sp-day.sn
+Adding context product; urn:nasa:pds:context:instrument:pvmp.sp-day.sn
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:pvo.onms
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:rl.mupus
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:siding_spring.uppsala0m5.4kccd
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:siding_spring.uppsala0m5.4kccd
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:soho.swan
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:steward-kittpeak.spacewatch_0m9.mosaic
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:steward-kittpeak.spacewatch_0m9.mosaic
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:steward-kittpeak.spacewatch_1m8.fli
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:steward-kittpeak.spacewatch_1m8.fli
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:table_mountain.astro_mechanics0m61.ccd
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:table_mountain.astro_mechanics0m61.ccd
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:uly.vhm-fgm
+keyword pds:Instrument.pds:type not found in xml label for urn:jaxa:darts:context:instrument:vco.ir2
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:vg1.issn
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:vg1.issw
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:vg1.mag
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:vg1.uvs
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:cam2.vl1
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:instrument_host:spacecraft.a12c
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:individual.greeley_field_amboycrater
+Adding context product; urn:nasa:pds:context:investigation:individual.lowell_observatory_near_earth_object_survey
+ERROR adding context product urn:nasa:pds:context:investigation:individual.lowell_observatory_near_earth_object_survey: (1406, "Data too long for column 'file_ref' at row 1")
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:individual.titan-material-database
+Adding context product; urn:nasa:pds:context:investigation:individual.titan-material-database
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.hayabusa
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.juno
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.lucy
+Adding context product; urn:nasa:pds:context:investigation:mission.lucy
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.mariner_10
+keyword ref_lid_facility not found in xml label for urn:esa:psa:context:investigation:mission.mars_express
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.neowise
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.new_horizons
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.phobos_2
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.pre-magellan
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.stardust
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.vega_2
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.venera_9
+Adding context product; urn:nasa:pds:context:investigation:mission.venera_9
+Adding context product; urn:nasa:pds:context:target:astrophysical.cosmic_background
+Adding context product; urn:nasa:pds:context:target:planetary_system.jupiter_system
+Adding context product; urn:nasa:pds:context:target:star.bet_hya
+Adding context product; urn:nasa:pds:context:target:star.del_ori
+Adding context product; urn:nasa:pds:context:target:star.eps_cma
+Adding context product; urn:nasa:pds:context:target:star.iot_ori
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:telescope:chuguevskaya.0m7
+Adding context product; urn:nasa:pds:context:telescope:lbto-mount_graham.lbt_8m4x2
+ERROR adding context product urn:nasa:pds:context:telescope:lbto-mount_graham.lbt_8m4x2: Invalid field name(s) for model Telescope: 'type_of'.
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:telescope:lowell.perkins_warner1m83
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:instrument_host:spacecraft.a17s
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:laboratory.guelph-wel
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:laboratory.mhc
+Adding context product; urn:nasa:pds:context:facility:laboratory.mhc
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:laboratory.pgl
+Adding context product; urn:nasa:pds:context:facility:laboratory.pgl
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:laboratory.psl
+Adding context product; urn:nasa:pds:context:facility:laboratory.psl
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:laboratory.relab
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:laboratory.ttu-ag_eng
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:laboratory.utsa_kamc
+Adding context product; urn:nasa:pds:context:facility:laboratory.utsa_kamc
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:facility:observatory.amos
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:observatory.amos
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:facility:observatory.asiago
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:observatory.asiago
+Adding context product; urn:nasa:pds:context:facility:observatory.atlas-cpt
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:facility:observatory.caha-calar_alto
+Adding context product; urn:nasa:pds:context:facility:observatory.lbto-mount_graham
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:facility:observatory.paul_wild
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:observatory.paul_wild
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:facility:observatory.table_mountain
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:observatory.table_mountain
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:sws.a12a
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:pse.a15a
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:lsm.a16a
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:pse.a16a
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:lace.a17a
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:arecibo.305m.recv_s
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:arecibo.305m.recv_s
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:asiago.copernico1m82.afosc
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:asiago.copernico1m82.afosc
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:clipper.mis
+Adding context product; urn:nasa:pds:context:instrument:clipper.mis
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:clipper.nac
+Adding context product; urn:nasa:pds:context:instrument:clipper.nac
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:clps_to_2im_ncll.rolses
+Adding context product; urn:nasa:pds:context:instrument:clps_to_2im_ncll.rolses
+ERROR adding context product urn:nasa:pds:context:instrument:clps_to_2im_ncll.rolses: (1406, "Data too long for column 'name' at row 1")
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:isswa.co
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mimi-chems.co
+Adding context product; urn:nasa:pds:context:instrument:mimi-chems.co
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:ctio-cerro_tololo.smarts_1m50.cassegrainspec
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:ctio-cerro_tololo.smarts_1m50.cassegrainspec
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:dif.hrii
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:dsn.media
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:dsn.media
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:el_leoncito.js2m15.torino_phot
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:el_leoncito.js2m15.torino_phot
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:eso-la_silla.ntt.sofi
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:eso-la_silla.ntt.sofi
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:gemini_north-maunakea.8m1.gmos_n
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:gemini_north-maunakea.8m1.gmos_n
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:go.pls
+keyword pds:Instrument.pds:type not found in xml label for urn:jaxa:darts:context:instrument:hyb2.nirs3
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:irtf-maunakea.3m2.cvf
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:irtf-maunakea.3m2.cvf
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mwr.jno
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:waves.jno
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:kuleuven-leg.logie_wt
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:las_cumbres.2m0_telescopes.floyds
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:las_cumbres.2m0_telescopes.floyds
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:nir2.lcross
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:liciacube.leia
+Adding context product; urn:nasa:pds:context:instrument:liciacube.leia
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:lp.ns
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:lucy.ltes
+Adding context product; urn:nasa:pds:context:instrument:lucy.ltes
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:lucy.mvic
+Adding context product; urn:nasa:pds:context:instrument:lucy.mvic
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mars2020.helicam
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mars2020.moxie
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mars2020.sherloc
+keyword pds:Instrument.pds:type not found in xml label for urn:jaxa:darts:context:instrument:mascot.mbus
+Adding context product; urn:jaxa:darts:context:instrument:mascot.mbus
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mini-tes.mer1
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:pancam.mer1
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:grs.mess
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:mex.hrsc
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:modra.0m6.ap8
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:modra.0m6.ap8
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mount_bigelow.1m54.larson_ihw
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:mount_bigelow.1m54.larson_ihw
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mount_lemmon.1m54.4kccd
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:mount_lemmon.1m54.4kccd
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:uvs.mr6
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:accel.mro
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:ctx.mro
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:chemcam_libs.msl
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:dan.msl
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:fhaz_right_a.msl
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:fhaz_right_b.msl
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:rhaz_left_a.msl
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:multi-host.dbp
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:multi-host.generic_ccd_camera
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:multi-host.generic_ccd_camera
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:multi-host.generic_ir_hsp
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:multi-host.generic_ir_hsp
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:rebelxt.n-a
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:msi.near
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:neas.neacam
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:no-host.dunhuang-portable_wt
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:ody.themis
+Adding context product; urn:nasa:pds:context:instrument:ody.themis
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:hvm.p11
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:pa.p11
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:uv.p11
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:pvmp.bus.bims
+Adding context product; urn:nasa:pds:context:instrument:pvmp.bus.bims
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:pvmp.lp.dlbi
+Adding context product; urn:nasa:pds:context:instrument:pvmp.lp.dlbi
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:pvo.oetp
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:pvo.orad
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:ro.rosina
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:ro.virtis
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:sdu.navcam
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:soho.lasco
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:steward-kittpeak.spacewatch_0m9.driftscan
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:steward-kittpeak.spacewatch_0m9.driftscan
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:uly.hiscale-lems
+Adding context product; urn:esa:psa:context:instrument:uly.hiscale-lems
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:uly.swics
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:vega1.puma
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:vega2.mischa
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:vex.virtis
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:vg1.eng
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:vg1.pra
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:vg2.issn
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:seis.vl2
+Adding context product; urn:nasa:pds:context:instrument:seis.vl2
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mawd.vo2
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:visb.vo2
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:instrument_host:spacecraft.a14c
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:instrument_host:spacecraft.a16s
+Adding context product; urn:nasa:pds:context:instrument_host:spacecraft.pvmp.sp-north
+Adding context product; urn:nasa:pds:context:investigation:individual.frankenspectra
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:individual.greeley_35mm_slides
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.apollo_11
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.chandrayaan-1
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.comet_sl9-jupiter_collision
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.dawn_mission_to_vesta_and_ceres
+keyword ref_lid_facility not found in xml label for urn:esa:psa:context:investigation:mission.giotto_extended_mission
+keyword ref_lid_facility not found in xml label for urn:esa:psa:context:investigation:mission.international_rosetta_mission
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.ladee
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.lunar_prospector
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.mars_pathfinder
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.near_earth_asteroid_rendezvous
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.phoenix
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.sakigake
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.vega_1
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.venera_13
+Adding context product; urn:nasa:pds:context:investigation:mission.venera_13
+Adding context product; urn:nasa:pds:context:target:asteroid.11351_leucus
+Adding context product; urn:nasa:pds:context:target:asteroid.15094_polymele
+Adding context product; urn:nasa:pds:context:target:comet.c2009_r1_mcnaught
+Adding context product; urn:nasa:pds:context:target:star.51_peg
+Adding context product; urn:nasa:pds:context:target:star.alf_lup
+Adding context product; urn:nasa:pds:context:target:star.del_cet
+Adding context product; urn:nasa:pds:context:target:star.eps_per
+Adding context product; urn:nasa:pds:context:target:star.lam_tau
+Adding context product; urn:nasa:pds:context:target:star.mu._cen
+Adding context product; urn:nasa:pds:context:telescope:atlas-chl.0m5
+ERROR adding context product urn:nasa:pds:context:telescope:atlas-chl.0m5: Invalid field name(s) for model Telescope: 'type_of'.
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:telescope:ensenada.1m5
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:laboratory.cls
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:laboratory.sbu_cpex
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:laboratory.tu-tewt
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:laboratory.ucberkeley-rfs
+Adding context product; urn:nasa:pds:context:facility:observatory.atlas-hko
+ERROR adding context product urn:nasa:pds:context:facility:observatory.atlas-hko: (1366, "Incorrect string value: '\\xC4\\x81, Ma...' for column `test_elsa_newdb`.`build_facility`.`name` at row 1")
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:facility:observatory.fremont_peak
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:observatory.fremont_peak
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:facility:observatory.hunters_hill
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:observatory.hunters_hill
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:facility:observatory.orm
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:observatory.orm
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:facility:observatory.palmer_divide
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:observatory.palmer_divide
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:facility:observatory.pic_du_midi
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:sws.a15a
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:lspe.a17a
+Adding context product; urn:nasa:pds:context:instrument:lspe.a17a
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:apache_point.sdss2m5.sdss_photometric
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:apache_point.sdss2m5.sdss_photometric
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:atlas-cpt.0m5.sta1600
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:atlas-cpt.0m5.sta1600
+Adding context product; urn:nasa:pds:context:instrument:atlas-cpt.0m5.sta1600
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:carbuncle_hill.0m35.sbig_st8
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:carbuncle_hill.0m35.sbig_st8
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:m3.ch1-orb
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:clem1.uvvis
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:clipper.wac
+Adding context product; urn:nasa:pds:context:instrument:clipper.wac
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:cls.farir_beamline
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:cls.farir_beamline
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mimi-lemms.co
+Adding context product; urn:nasa:pds:context:instrument:mimi-lemms.co
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:rss.co
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:con.cfi
+keyword pds:Instrument.pds:type not found in xml label for urn:jaxa:darts:context:instrument:dcam3.dcam3-a
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:eso-la_silla.ntt.efosc2
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:eso-la_silla.ntt.efosc2
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:fremont_peak.fpo0m32.sbig_st10xme
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:fremont_peak.fpo0m32.sbig_st10xme
+Adding context product; urn:nasa:pds:context:instrument:fremont_peak.fpo0m32.sbig_st10xme
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:go.ppr
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:go.ssd
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:go.ssi
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:hp.gcms
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:hst.cos
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:hst.fgs
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:hst.fos
+keyword pds:Instrument.pds:type not found in xml label for urn:jaxa:darts:context:instrument:hyb2.tir
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:ice.plawav
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:irtf-maunakea.3m2.spex
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:irtf-maunakea.3m2.spex
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:fgm.jno
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:kpno-mcmath-pierce-solar.main_1m61.vacuum-spectrograph
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:kpno-mcmath-pierce-solar.main_1m61.vacuum-spectrograph
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:kpno.boller1m3.kpsc
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:kpno.boller1m3.kpsc
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:ksu-hpwel.chepil_wt
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:las_campanas.magellan_baade_6m5.imacs
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:las_campanas.magellan_baade_6m5.imacs
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:las_campanas.swope_1m0.4k_ccd
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:las_campanas.swope_1m0.4k_ccd
+Adding context product; urn:nasa:pds:context:instrument:las_campanas.swope_1m0.4k_ccd
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:las_cumbres.1m0_telescopes.fli
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:las_cumbres.1m0_telescopes.fli
+Adding context product; urn:nasa:pds:context:instrument:las_cumbres.1m0_telescopes.fli
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:las_cumbres.2m0_telescopes.spectral
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:las_cumbres.2m0_telescopes.spectral
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:lowell.hall_ritchey-chretien_1_1m07.nasa42cam
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:lowell.hall_ritchey-chretien_1_1m07.nasa42cam
+Adding context product; urn:nasa:pds:context:instrument:lowell.hall_ritchey-chretien_1_1m07.nasa42cam
+ERROR adding context product urn:nasa:pds:context:instrument:lowell.hall_ritchey-chretien_1_1m07.nasa42cam: (1406, "Data too long for column 'file_ref' at row 1")
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:lowell.nuro_0m79.nasacam
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:lowell.nuro_0m79.nasacam
+Adding context product; urn:nasa:pds:context:instrument:lowell.nuro_0m79.nasacam
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:lt.hvm3
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:lucy.llorri
+Adding context product; urn:nasa:pds:context:instrument:lucy.llorri
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:lucy.rss
+Adding context product; urn:nasa:pds:context:instrument:lucy.rss
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:lucy.ttcam
+Adding context product; urn:nasa:pds:context:instrument:lucy.ttcam
+keyword pds:Instrument.pds:type not found in xml label for urn:jaxa:darts:context:instrument:mascot.masmag
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:maunakea.2m24.snifs
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:maunakea.2m24.snifs
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:acc.maven
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mag.maven
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:ngims.maven
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mcdonald.struve2m1.cs
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:mcdonald.struve2m1.cs
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mini-tes.mer2
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:navcam.mer2
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mla.mess
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:mex.pfs
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mhc.chemlibs
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:mhc.chemlibs
+Adding context product; urn:nasa:pds:context:instrument:mhc.chemlibs
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mhc.superlibs
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:mhc.superlibs
+Adding context product; urn:nasa:pds:context:instrument:mhc.superlibs
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:imp.mpfl
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mpfr.rcrt
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:fhaz_left_b.msl
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:nav_left_b.msl
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:rhaz_right_b.msl
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:msx.spirit3
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:multi-host.generic_insp_hsp
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:multi-host.generic_insp_hsp
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mag.near
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:nis.near
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:ody.grs
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:ody.hend
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:rss.orex
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:tagcams.orex
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:pa.p10
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:uv.p10
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:pal.marswit
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:pal.twt
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:palmer_divide.old10inch.ccd0m5
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:palmer_divide.old10inch.ccd0m5
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:palomar.oschin_schmidt_1m2.tricam
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:palomar.oschin_schmidt_1m2.tricam
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:krfm.phb2
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:lidar.phx
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:meca_afm.phx
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:psf.asd-labspec4
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:psf.asd-labspec4
+Adding context product; urn:nasa:pds:context:instrument:psf.asd-labspec4
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:psl.bruker-vertex80v
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:psl.bruker-vertex80v
+Adding context product; urn:nasa:pds:context:instrument:psl.bruker-vertex80v
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:psyche.grs
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:pvmp.lp.las
+Adding context product; urn:nasa:pds:context:instrument:pvmp.lp.las
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:pvmp.lp.lir
+Adding context product; urn:nasa:pds:context:instrument:pvmp.lp.lir
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:pvmp.lp.ln
+Adding context product; urn:nasa:pds:context:instrument:pvmp.lp.ln
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:pvmp.sp-day.snfr
+Adding context product; urn:nasa:pds:context:instrument:pvmp.sp-day.snfr
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:pvo.oefd
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:pvo.oims
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:pvo.omag
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:relab.bc-ftir1
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:relab.bc-ftir1
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:relab.bcf-ftir2
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:relab.bcf-ftir2
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:ro.alice
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:smt.heinrich_hertz10m.mpifr
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:smt.heinrich_hertz10m.mpifr
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:uly.hiscale-lefs
+Adding context product; urn:esa:psa:context:instrument:uly.hiscale-lefs
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:v9.ep
+Adding context product; urn:nasa:pds:context:instrument:v9.ep
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:valle_d_aosta.oavda.pl3041
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:valle_d_aosta.oavda.pl3041
+Adding context product; urn:nasa:pds:context:instrument:valle_d_aosta.oavda.pl3041
+keyword pds:Instrument.pds:type not found in xml label for urn:jaxa:darts:context:instrument:vco.lac
+keyword pds:Instrument.pds:type not found in xml label for urn:jaxa:darts:context:instrument:vco.uvi
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:vg1.rss
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:vg2.issw
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:gcms.vl1
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:visb.vo1
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:irtm.vo2
+Adding context product; urn:nasa:pds:context:instrument_host:spacecraft.clipper
+Adding context product; urn:nasa:pds:context:instrument_host:spacecraft.clps_to_2im_ncll
+Adding context product; urn:kari:kpds:context:instrument_host:spacecraft.kplo
+Adding context product; urn:nasa:pds:context:instrument_host:spacecraft.lucy
+Adding context product; urn:nasa:pds:context:instrument_host:spacecraft.pvmp.bus
+Adding context product; urn:nasa:pds:context:instrument_host:spacecraft.pvmp.lp
+Adding context product; urn:nasa:pds:context:instrument_host:spacecraft.v13
+Adding context product; urn:nasa:pds:context:investigation:individual.arecibo_radar_imaging_and_doppler_spectroscopy
+ERROR adding context product urn:nasa:pds:context:investigation:individual.arecibo_radar_imaging_and_doppler_spectroscopy: (1406, "Data too long for column 'file_ref' at row 1")
+Adding context product; urn:nasa:pds:context:investigation:individual.libs_reference_database
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.clipper
+Adding context product; urn:nasa:pds:context:investigation:mission.clipper
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.clps_to_2im
+Adding context product; urn:nasa:pds:context:investigation:mission.clps_to_2im
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.deep_space_1
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.light_italian_cubesat_for_imaging_of_asteroids
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.lunar_trailblazer
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.mariner69
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.mars_global_surveyor
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.mars_observer
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.messenger
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.viper
+Adding context product; urn:nasa:pds:context:investigation:mission.viper
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:mission.voyager
+keyword ref_lid_facility not found in xml label for urn:nasa:pds:context:investigation:other_investigation.geodesy
+Adding context product; urn:nasa:pds:context:target:comet.c1996_q1_tabur
+Adding context product; urn:nasa:pds:context:target:comet.c1998_u5_linear
+Adding context product; urn:nasa:pds:context:target:comet.c2002_y1_juels-hovorcem
+Adding context product; urn:nasa:pds:context:target:comet.c2006_m4_swan
+Adding context product; urn:nasa:pds:context:target:comet.c2007_f1_loneos
+Adding context product; urn:nasa:pds:context:target:comet.c2013_us10_catalina
+Adding context product; urn:nasa:pds:context:target:comet.c2013_v5_oukaimeden
+Adding context product; urn:nasa:pds:context:target:planetary_system.venus_system
+Adding context product; urn:nasa:pds:context:target:satellite.152830_dinkinesh.selam
+Adding context product; urn:nasa:pds:context:target:star.b_cen
+Adding context product; urn:nasa:pds:context:target:star.eps_sgr
+Adding context product; urn:nasa:pds:context:target:star.rho_leo
+Adding context product; urn:nasa:pds:context:target:trans-neptunian_object.2020_ks11
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:telescope:amos.aeos
+Adding context product; urn:nasa:pds:context:telescope:atlas-hko.0m5
+ERROR adding context product urn:nasa:pds:context:telescope:atlas-hko.0m5: Invalid field name(s) for model Telescope: 'type_of'.
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:telescope:las_campanas.magellan_clay_6m5
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:telescope:leura.0m25
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:telescope:lick.shane3m05
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:telescope:palomar.1m52
