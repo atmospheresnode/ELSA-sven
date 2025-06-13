@@ -171,7 +171,7 @@ h3.h3-responsive {
 </style>
 
 
-<div class="container">
+<!-- <div class="container">
     <h2 class="section-heading">Planetary Atmospheres Node</h2>
     <p class="section-description">Below are the top three contacts listed for the PDS Atmospheres Node. If you would like to send a message to the entire team, feel free to click the message button in the bottom-right corner or contact them individually using the following platforms available.</p>
 
@@ -221,15 +221,15 @@ h3.h3-responsive {
 </div>
     
 <br>
-
+ -->
 
     <!-- Modal Button -->
-<div class="fixed-contact-button" data-bs-toggle="modal" data-bs-target="#contactModal">
+<!-- <div class="fixed-contact-button" data-bs-toggle="modal" data-bs-target="#contactModal">
     <i class="fa fa-envelope"></i>
-</div>
+</div> -->
 
 <!-- Contact Modal -->
-<div class="modal fade" id="contactModal" tabindex="-1" role="dialog" aria-labelledby="contactModalLabel" aria-hidden="true">
+<!-- <div class="modal fade" id="contactModal" tabindex="-1" role="dialog" aria-labelledby="contactModalLabel" aria-hidden="false">
     <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
         <div class="modal-content">
             <div class="modal-header">
@@ -251,6 +251,24 @@ h3.h3-responsive {
             </div>
         </div>
     </div>
+</div> -->
+
+<div class="modal-header">
+    <h2 class="modal-title" id="contactModalLabel">Send a Message to ELSA</h2>
+</div>
+    <div class="modal-body">
+        <form role="form" action="" method="post" autocomplete="off">
+            <p>Please use the following form to contact the ELSA team. You can report an issue, ask for help, or request information about the ELSA application. An ATM node representative will contact you with further information.</p>
+            {% csrf_token %}
+            {% for field in form %}
+            <div class="fieldWrapper">
+                {{ field.errors }}
+                {{ field.label_tag }} {{ field }}
+            </div>
+            {% endfor %}
+            {{ contact_form.as_p }}
+            <button type="submit" class="btn btn-default">Send message</button>
+        </form>
 </div>
 
 {% endblock %}

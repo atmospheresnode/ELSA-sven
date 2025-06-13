@@ -84,8 +84,7 @@ def contact(request):
                 subject = "{} is contacting ELSA".format(context_dict['name']),
                 body = content,
                 from_email = 'atm-elsa@nmsu.edu',
-                #to = ['elsa@atmos.nmsu.edu', 'sajomont@nmsu.edu', 'lneakras@nmsu.edu'],
-                to = ['rupakdey@nmsu.edu'],
+                to = ['sajomont@nmsu.edu', 'pds-atm@nmsu.edu', 'rupakdey@nmsu.edu'],
                 headers = {'Reply-To': 'atm-elsa@nmsu.edu' }
             )
 

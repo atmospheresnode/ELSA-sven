@@ -4,6 +4,9 @@ import os
 import sys
 import datetime 
 import django
+from requests.exceptions import RequestException
+from django.db.models.fields.related import ManyToManyField
+
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'elsa.settings')
 django.setup()
 
@@ -51,8 +54,10 @@ class Command(BaseCommand):
             for i in id_list: 
 
                 print(i)
+                print(i.split(':'))
+                # print(i.split(':')[4])
                 # skip agency for now
-                if i.split(':')[4] == 'agency' or i.split(':')[4] == 'node' or i.split(':')[4] == 'personnel' or i.split(':')[4] == 'resource' or i.split(':')[4] == 'airborne':
+                if len(i.split(':')) < 4 or i.split(':')[4] == 'agency' or i.split(':')[4] == 'node' or i.split(':')[4] == 'personnel' or i.split(':')[4] == 'resource' or i.split(':')[4] == 'airborne':
                     continue
 
                 test_id = Context_Product(i) 
@@ -107,7 +112,14 @@ def fetch_ids(limit=5000):
     api_url = "https://pds.nasa.gov/api/search/1/products?q=pds:Identification_Area.pds:product_class%20eq%20%22Product_Context%22"
 
     payload = {'limit': limit}
-    response = requests.get(api_url, params=payload)
+    try:
+        response = requests.get(api_url, params=payload)
+        response.raise_for_status()
+    except RequestException as e:
+        print(f"Network error occurred: {e}", file=outlog)
+        # Optionally: retry, skip, or add to problem_products
+        # problem_products.append(api_url)
+        return []
 
     data = json.dumps(response.json(), indent=4)
     data = json.loads(data)
@@ -159,7 +171,7 @@ class Context_Product:
 
         big_keyword_dict={'target':{'lid':[''], 'title':[''], 'pds:Target.pds:type':[''], 'vid':[''], 'ops:Label_File_Info.ops:file_ref':[''] } ,
                           'investigation':{'lid':[''], 'title':[''], 'pds:Investigation.pds:type':[''], 'vid':[''], 'ops:Label_File_Info.ops:file_ref':[''], 'observing_system_components':[''], 'targets':[''], 'ref_lid_facility':[''] }, 
-                          'instrument':{'lid':[''], 'title':[''], 'pds:Instrument.pds:type':[''], 'vid':[''], 'ops:Label_File_Info.ops:file_ref':[''], 'ref_lid_instrument_host':[''] },
+                          'instrument':{'lid':[''], 'title':[''], 'pds:Instrument.pds:type':[''], 'ctli:Type_List.ctli:type':[''], 'vid':[''], 'ops:Label_File_Info.ops:file_ref':[''], 'ref_lid_instrument_host':[''] },
                           'instrument_host': {'lid':[''], 'title':[''], 'pds:Instrument_Host.pds:type':[''], 'vid':[''], 'ops:Label_File_Info.ops:file_ref':[''], 'investigations':[''], 'targets':[''], 'ref_lid_instrument':[''] },
                           'facility':{'lid':[''], 'title':[''], 'pds:Facility.pds:type':[''], 'vid':[''], 'ops:Label_File_Info.ops:file_ref':[''], 'ref_lid_instrument':[''], 'ref_lid_telescope':[''] }, 
                           'telescope':{'lid':[''], 'title':[''], 'vid':[''], 'ops:Label_File_Info.ops:file_ref':[''], 'ref_lid_instrument':['']}
@@ -173,7 +185,14 @@ class Context_Product:
         '''Queries the API for info to get a Context_Product object's information.'''
         api_url = "https://pds.nasa.gov/api/search/1/products?q=lid%20eq%20%22{}%22".format(self.lid)
 
-        response = requests.get(api_url)
+        try:
+            response = requests.get(api_url)
+            response.raise_for_status()
+        except RequestException as e:
+            print(f"Network error occurred: {e} with lid {self.lid}", file=outlog)
+            # Optionally: retry, skip, or add to problem_products
+            # problem_products.append(api_url)
+            return False
 
         data = json.dumps(response.json(), indent=4)
         data = json.loads(data)
@@ -184,6 +203,9 @@ class Context_Product:
                     try: 
                         if key == 'observing_system_components' or key == 'investigations' or key == 'targets':
                             self.context_info[key]=product[key]
+                        elif key == 'ctli:Type_List.ctli:type':
+                            print('keyword '+key +' found as ctli in xml label for '+self.lid, file=outlog)
+                            self.context_info[key]=product['properties'][key] 
                         else:
                             # print(key)
                             self.context_info[key]=product['properties'][key] 
@@ -201,7 +223,7 @@ class Context_Product:
                 lid=self.context_info['lid'][0],
                 defaults={
                     'name': self.context_info['title'][0],
-                    'type_of': self.context_info['pds:{}.pds:type'.format(self.type.title())][0] if self.type != 'telescope' else '',
+                    'type_of': self.context_info['pds:{}.pds:type'.format(self.type.title())][0] if self.type != 'telescope' or self.context_info['ctli:Type_List.ctli:type'.format(self.type.title())][0] != '' else self.context_info['pds:{}.pds:type'.format(self.type.title())][0],
                     'vid': self.context_info['vid'][0],
                     'file_ref': self.context_info['ops:Label_File_Info.ops:file_ref'][0]
                 }
@@ -255,9 +277,15 @@ class Context_Product:
           '''
         
         for field in new_product._meta.get_fields():
-            if not field.is_relation or field.many_to_many:
+            # print(field)
+            if not isinstance(field, ManyToManyField):
                 continue
+
+            # if not field.is_relation or field.many_to_many:
+            #     continue
             
+            
+
             keyword = field.name
             if self.type == 'investigation' and field.name == 'instrument_hosts':
                 keyword = 'observing_system_components'
@@ -280,6 +308,8 @@ class Context_Product:
                     id_list.append(ref_lid)
                 
                 reference_pairs.append([self.lid, ref_lid])
+
+                print('appended reference pair')
 
         # for field in new_product._meta.get_fields(): 
         #     if list(field.name)[-1]!="s": #make sure we skip non-relational fields
