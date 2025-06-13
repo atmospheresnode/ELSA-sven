@@ -23,6 +23,8 @@ This section provides a timeline of ELSA's release history, highlighting key upd
 - New Walkthrough feature: Users now get a semi-guided step-by-step walkthrough as they create a new bundle.
 - New Bundle Progress feature: Users can see what parts of the identification area are complete in the main bundle page.
 - Data Table Products: Update binary and fixed-width table forms to include options for a header. Information also writes correctly into XML Files.
+- Bundle Build Page: Updated introduction for better clarification and accuracy.
+- Alias Page: Users are no longer required to enter both an Alternate ID and an Alternate Title.
 
 
 ### **Previous Versions** 

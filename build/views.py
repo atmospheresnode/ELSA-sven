@@ -4,6 +4,7 @@ from __future__ import print_function
 
 from builtins import str
 from .forms import *
+from main.forms import *
 from .models import *
 from itertools import chain
 # from context.models import *
@@ -1353,6 +1354,7 @@ def context_search(request, pk_bundle):
 
         form_investigation = InvestigationForm(request.POST or None)
         form_target = TargetFormAll(request.POST or None)
+        contact_form = ContactForm(request.POST or None)
 
         # Context Dictionary
         context_dict = {
@@ -1364,7 +1366,8 @@ def context_search(request, pk_bundle):
             'instrument_list': bundle.instruments.all(),
             'target_list': bundle.targets.all(),
             'facility_list': bundle.facilities.all(),
-            'telescope_list': bundle.telescopes.all(),
+            'telescope_list': bundle.telescopes.all(),\
+            'contact_form': contact_form,
         }
 
         return render(request, 'build/context/context_search.html', context_dict)
