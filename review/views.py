@@ -57,7 +57,6 @@ def index(request):
         content = template.render(context_dict)
 
         email = EmailMessage(
-<<<<<<< HEAD
             subject = "Derived Data Peer Review from {}".format(context_dict['contact_name']),
             body = content,
             from_email = 'atm-elsa@nmsu.edu',
@@ -65,14 +64,6 @@ def index(request):
             to =['lneakras@nmsu.edu', 'sajomont@nmsu.edu', 'rupakdey@nmsu.edu'],
             # to = ['rupakdey@nmsu.edu'],
             headers = {'Reply-To': context_dict['contact_email'] }
-=======
-            subject="Derived Data Peer Review from {}".format(context_dict['contact_name']),
-            body=content,
-            from_email='atm-elsa@nmsu.edu',
-            # t
-            to=['rupakdey@nmsu.edu'],
-            headers={'Reply-To': context_dict['contact_email']}
->>>>>>> 081daf2a55bf910b7679f384564d1fbcac8972f4
         )
 
         email_confirmation = EmailMessage(
