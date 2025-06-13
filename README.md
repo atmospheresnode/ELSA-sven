@@ -19,15 +19,21 @@ This approach takes advantage of Atmospheres Node expertise to ensure all connec
 This section provides a timeline of ELSA's release history, highlighting key updates, new features, bug fixes, and improvements, with the most recent release listed first.
 
 ### **Current Version** 
+> ### **Version 1.9.6 (June 13, 2025)**
+- Landing Page: Contact Us and Submit Review buttons are added.
+- Review Form: Users are now able to save a draft until they submit it. It retains the input until the form is submitted and resets the form fields after submission.
+- Bundle Progress Feature: Context products' status is also added to the vertical bar.
+- 
+
+
+### **Previous Versions** 
+
 > ### **Version 1.9.5 (May 23, 2025)**
 - New Walkthrough feature: Users now get a semi-guided step-by-step walkthrough as they create a new bundle.
 - New Bundle Progress feature: Users can see what parts of the identification area are complete in the main bundle page.
 - Data Table Products: Update binary and fixed-width table forms to include options for a header. Information also writes correctly into XML Files.
 - Bundle Build Page: Updated introduction for better clarification and accuracy.
 - Alias Page: Users are no longer required to enter both an Alternate ID and an Alternate Title.
-
-
-### **Previous Versions** 
 
 > ### **Version 1.9.4 (May 16, 2025)**
 - Add A Document Product form ordering fixes.
