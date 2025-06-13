@@ -28,7 +28,7 @@ import copy
 
 
 #    Final Variables ------------------------------------------------------------------------------------
-MAX_CHAR_FIELD = 100
+MAX_CHAR_FIELD = 150
 MAX_LID_FIELD = 255
 MAX_TEXT_FIELD = 1000
 
