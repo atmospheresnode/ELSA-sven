@@ -94,6 +94,7 @@ def index(request):
         pdf_file = generate_pdf(context_dict)
 
         email = EmailMessage(
+<<<<<<< HEAD
             subject="Derived Data Peer Review from {}".format(context_dict['contact_name']),
             #body=content,
             body="A new review has been submitted by {}. Please find the attached documents for details.".format(context_dict['contact_name']),
@@ -101,6 +102,15 @@ def index(request):
             # t
             to=['rupakdey@nmsu.edu'],
             headers={'Reply-To': context_dict['contact_email']}
+=======
+            subject = "Derived Data Peer Review from {}".format(context_dict['contact_name']),
+            body = content,
+            from_email = 'atm-elsa@nmsu.edu',
+            # to = ['lneakras@nmsu.edu', 'lhuber@nmsu.edu'],
+            to =['lneakras@nmsu.edu', 'sajomont@nmsu.edu', 'rupakdey@nmsu.edu'],
+            # to = ['rupakdey@nmsu.edu'],
+            headers = {'Reply-To': context_dict['contact_email'] }
+>>>>>>> 7a94c7428e535f8b43b82602bc5cce714a8d3f29
         )
 
         # Attach the generated DOCX and PDF files
