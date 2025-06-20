@@ -4,9 +4,14 @@ from __future__ import print_function
 
 from django.core.mail import EmailMessage
 from django.shortcuts import render
-from django.template.loader import get_template
+from django.template.loader import get_template, render_to_string
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+
+from docx import Document
+from io import BytesIO
+from xhtml2pdf import pisa
+
 
 from .forms import ReviewForm, UserInfoForm
 from .models import ReviewDraft
@@ -14,6 +19,34 @@ from .models import ReviewDraft
 import json
 import uuid
 import traceback
+
+
+# Function to generate a DOCX document from the context dictionary
+def generate_docx(context_dict):
+    doc = Document()
+    doc.add_heading('Derived Data Review', 0)
+
+    doc.add_paragraph(f"Name: {context_dict['contact_name']}")
+    doc.add_paragraph(f"Email: {context_dict['contact_email']}")
+    doc.add_paragraph(f"Derived Data: {context_dict['derived_data']}")
+    doc.add_paragraph("Does the data provide clear and concise documentation adequate for its usage? " + context_dict['question1'])
+    doc.add_paragraph("Are you able to manipulate and plot the data, interpret columns into tables, and understand the context and relationships of the data products? " + context_dict['question2'])
+    doc.add_paragraph("Are there any concerns about the creation/generation, calibration, or general usability of the data? " + context_dict['question3'])
+    doc.add_paragraph("Any further comments to PDS Atmospheres Node about the data? " + context_dict['question4'])
+
+    buffer = BytesIO()
+    doc.save(buffer)
+    buffer.seek(0)
+    return buffer
+
+# Function to generate a PDF document from the context dictionary
+def generate_pdf(context_dict):
+    html = render_to_string('review/comment_template.txt', context_dict)
+    buffer = BytesIO()
+    pisa.CreatePDF(src=html, dest=buffer)
+    buffer.seek(0)
+    return buffer
+
 
 # Index view: It handles both GET and POST requests, processes the review form, and sends emails
 def index(request):
@@ -52,18 +85,30 @@ def index(request):
         context_dict['question3'] = review_form.cleaned_data['question3']
         context_dict['question4'] = review_form.cleaned_data['question4']
 
-        # Find template used for email
-        template = get_template('review/comment_template.txt')
-        content = template.render(context_dict)
+        # # Find template used for email (CURRENTLY NOT USED: DOCX AND PDF ARE ATTACHED INSTEAD)
+        # template = get_template('review/comment_template.txt')
+        # content = template.render(context_dict)
+
+        # Generate attachments
+        docx_file = generate_docx(context_dict)
+        pdf_file = generate_pdf(context_dict)
 
         email = EmailMessage(
             subject="Derived Data Peer Review from {}".format(context_dict['contact_name']),
-            body=content,
+            #body=content,
+            body="A new review has been submitted by {}. Please find the attached documents for details.".format(context_dict['contact_name']),
             from_email='atm-elsa@nmsu.edu',
             # t
             to=['rupakdey@nmsu.edu'],
             headers={'Reply-To': context_dict['contact_email']}
         )
+
+        # Attach the generated DOCX and PDF files
+        email.attach('review.docx', docx_file.read(), 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+        email.attach('review.pdf', pdf_file.read(), 'application/pdf')
+        print("Before sending email to ELSA team")
+        email.send()
+        print("After sending email to ELSA team")
 
         email_confirmation = EmailMessage(
             subject="Thank you for submitting a Derived Data Peer Review!",
@@ -72,8 +117,10 @@ def index(request):
             to=[context_dict['contact_email']]
         )
 
-        print("Before sending email")
-        email.send()
+        # Attach the same DOCX and PDF files to the confirmation email
+        email_confirmation.attach('review.docx', docx_file.getvalue(), 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+        email_confirmation.attach('review.pdf', pdf_file.getvalue(), 'application/pdf')
+        print("Before sending email confirmation to user")
         email_confirmation.send()
         print("After sending email")
 
