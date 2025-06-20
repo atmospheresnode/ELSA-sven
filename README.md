@@ -23,7 +23,8 @@ This section provides a timeline of ELSA's release history, highlighting key upd
 - Landing Page: Contact Us and Submit Review buttons are added.
 - Review Form: Users are now able to save a draft until they submit it. It retains the input until the form is submitted and resets the form fields after submission.
 - Bundle Progress Feature: Context products' status is also added to the vertical bar.
-- 
+- Contact Page: Contact page has been repurposed to have a submittable form to contact an ATM node representative
+- About Page: Cards for ELSA staff have been add to the bottom of the page along with an information link to a personal website
 
 
 ### **Previous Versions** 
