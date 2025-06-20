@@ -1356,6 +1356,8 @@ def context_search(request, pk_bundle):
         form_target = TargetFormAll(request.POST or None)
         contact_form = ContactForm(request.POST or None)
 
+        context_products_contact = ContextProductsContactForm(request.POST or None)
+
         # Context Dictionary
         context_dict = {
             'bundle': bundle,
@@ -1368,6 +1370,7 @@ def context_search(request, pk_bundle):
             'facility_list': bundle.facilities.all(),
             'telescope_list': bundle.telescopes.all(),\
             'contact_form': contact_form,
+            'context_products_contact' : context_products_contact,
         }
 
         return render(request, 'build/context/context_search.html', context_dict)

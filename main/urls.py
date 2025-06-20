@@ -17,6 +17,7 @@ urlpatterns = [
     re_path(r'^services/$', views.services, name='services'),
     re_path(r'^construction/$', views.construction, name='construction'),
     re_path(r'^contact/$', views.contact, name='contact'),
+    re_path(r'^context_products_contact/$', views.context_products_contact, name='context_products_contact'),
     re_path(r'^error/$', views.error, name='error'),
     re_path(r'^restricted_access/$', views.restricted_access, name='restricted_access'),
     re_path(r'^simple_upload/$', views.simple_upload, name='simple_upload'),
