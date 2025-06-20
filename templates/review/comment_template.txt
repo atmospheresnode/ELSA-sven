@@ -1,31 +1,3 @@
-Contact Name:
-{{ contact_name }}
-
-Email:
-{{ contact_email }}
-
-Agency:
-{{ agency }}
-
-PDS data:
-{{ derived_data }}
-
-
-
-
-{{ question1|safe }}
-
-{{ question2|safe }}
-
-Are there any concerns about the creation/generation, calibration, or general usability of the data?
-{{ question3|safe }}
-
-Any further comments to PDS Atmospheres Node about the data?
-{{ question4|safe }}
-
-
-
-
 <!DOCTYPE html>
 <html>
 <head>
@@ -79,17 +51,17 @@ Any further comments to PDS Atmospheres Node about the data?
     </div>
 
     <div class="section">
-        <span class="label">Question 2:</span>
+        <span class="label">Are you able to manipulate and plot the data, interpret columns into tables, and understand the context and relationships of the data products?</span>
         <div class="content">{{ question2 }}</div>
     </div>
 
     <div class="section">
-        <span class="label">Question 3:</span>
+        <span class="label">Are there any concerns about the creation/generation, calibration, or general usability of the data?</span>
         <div class="content">{{ question3 }}</div>
     </div>
 
     <div class="section">
-        <span class="label">Question 4:</span>
+        <span class="label">Any further comments to PDS Atmospheres Node about the data?</span>
         <div class="content">{{ question4 }}</div>
     </div>
 </body>
