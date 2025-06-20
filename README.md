@@ -19,15 +19,18 @@ This approach takes advantage of Atmospheres Node expertise to ensure all connec
 This section provides a timeline of ELSA's release history, highlighting key updates, new features, bug fixes, and improvements, with the most recent release listed first.
 
 ### **Current Version** 
+> ### **Version 1.9.7 (June 20, 2025)**
+- Review Form: The ELSA team now receives reviews in both DOCX and PDF file formats. Also, it sends the user a copy of their submission.
+
+
+### **Previous Versions** 
+
 > ### **Version 1.9.6 (June 13, 2025)**
 - Landing Page: Contact Us and Submit Review buttons are added.
 - Review Form: Users are now able to save a draft until they submit it. It retains the input until the form is submitted and resets the form fields after submission.
 - Bundle Progress Feature: Context products' status is also added to the vertical bar.
 - Contact Page: Contact page has been repurposed to have a submittable form to contact an ATM node representative
 - About Page: Cards for ELSA staff have been add to the bottom of the page along with an information link to a personal website
-
-
-### **Previous Versions** 
 
 > ### **Version 1.9.5 (May 23, 2025)**
 - New Walkthrough feature: Users now get a semi-guided step-by-step walkthrough as they create a new bundle.
