@@ -85,16 +85,15 @@ def index(request):
         context_dict['question3'] = review_form.cleaned_data['question3']
         context_dict['question4'] = review_form.cleaned_data['question4']
 
-        # # Find template used for email (CURRENTLY NOT USED: DOCX AND PDF ARE ATTACHED INSTEAD)
-        # template = get_template('review/comment_template.txt')
-        # content = template.render(context_dict)
+        # Find template used for email confirmation
+        template = get_template('review/comment_template.txt')
+        content = template.render(context_dict)
 
         # Generate attachments
         docx_file = generate_docx(context_dict)
         pdf_file = generate_pdf(context_dict)
 
         email = EmailMessage(
-<<<<<<< HEAD
             subject="Derived Data Peer Review from {}".format(context_dict['contact_name']),
             #body=content,
             body="A new review has been submitted by {}. Please find the attached documents for details.".format(context_dict['contact_name']),
@@ -102,15 +101,6 @@ def index(request):
             # t
             to=['rupakdey@nmsu.edu'],
             headers={'Reply-To': context_dict['contact_email']}
-=======
-            subject = "Derived Data Peer Review from {}".format(context_dict['contact_name']),
-            body = content,
-            from_email = 'atm-elsa@nmsu.edu',
-            # to = ['lneakras@nmsu.edu', 'lhuber@nmsu.edu'],
-            to =['lneakras@nmsu.edu', 'sajomont@nmsu.edu', 'rupakdey@nmsu.edu'],
-            # to = ['rupakdey@nmsu.edu'],
-            headers = {'Reply-To': context_dict['contact_email'] }
->>>>>>> 7a94c7428e535f8b43b82602bc5cce714a8d3f29
         )
 
         # Attach the generated DOCX and PDF files
@@ -122,7 +112,7 @@ def index(request):
 
         email_confirmation = EmailMessage(
             subject="Thank you for submitting a Derived Data Peer Review!",
-            body="Your review for '{}' data set has been received. Your review copy is included for your record:\n{}\nThank you for using ELSA!\n\nRegards,\nTeam ELSA".format(context_dict['derived_data'], content),
+            body="Your review has been received. Your review copy is included for your record. Please find the attachments! \nThank you for using ELSA!\n\nRegards,\nTeam ELSA",
             from_email='atm-elsa@nmsu.edu',
             to=[context_dict['contact_email']]
         )
