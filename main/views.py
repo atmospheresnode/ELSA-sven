@@ -75,7 +75,7 @@ def contact(request):
            
             context_dict['name'] = '{0}, {1}'.format(request.user.last_name, request.user.first_name)
             context_dict['email'] = request.user.email
-            context_dict['agency'] = request.user.userprofile.agency
+            # context_dict['agency'] = request.user.userprofile.agency
             context_dict['message'] = user_contact_form.cleaned_data['message']
             content = template.render(context_dict)
 
@@ -136,7 +136,89 @@ def contact(request):
 
     return render(request, 'main/contact.html', context_dict)
 
-    
+#Context Products Contact Form
+def context_products_contact(request):
+    context_products_contact = ContextProductsContactForm(request.POST or None)
+    user_contact_form = UserContactForm(request.POST or None)
+    context_dict = {}
+    context_dict['contact_form'] = context_products_contact
+    context_dict['context_products_contact'] = context_products_contact
+    context_dict['user_contact_form'] = user_contact_form
+    context_dict['email_sent'] = False
+    context_dict['user_logged_in'] = False
+    template = get_template('main/contact_template.txt')
+    print('text')
+
+    if user_contact_form.is_valid():
+        print('user contact form is valid')
+           
+    if request.user.is_authenticated:
+        context_dict['user_logged_in'] = True
+        if user_contact_form.is_valid():
+            print('user_contact_form is valid')
+           
+            context_dict['name'] = '{0}, {1}'.format(request.user.last_name, request.user.first_name)
+            context_dict['email'] = request.user.email
+            context_dict['message'] = user_contact_form.cleaned_data['message']
+            content = template.render(context_dict)
+
+            #Email to ELSA from user
+            email = EmailMessage(
+                subject = "{} is contacting ELSA".format(context_dict['name']),
+                body = content,
+                from_email = 'atm-elsa@nmsu.edu',
+                to = ['sajomont@nmsu.edu', 'pds-atm@nmsu.edu', 'rupakdey@nmsu.edu'],
+                headers = {'Reply-To': 'atm-elsa@nmsu.edu' }
+            )
+
+            #Email confirmation to user
+            email_confirmation = EmailMessage(
+                subject = "Thank you for contacting ELSA!",
+                body = "Your message has been received. Please allow 24-48 hours to receive a response. Thank you for using ELSA! \n\nRegards,\nTeam ELSA",
+                from_email = 'atm-elsa@nmsu.edu',
+                to = [context_dict['email']]
+            )
+
+            email.send()
+            email_confirmation.send()
+            
+            context_dict['email_sent'] = True
+            return HttpResponseRedirect('/contact') # redirects to the same page to clear the form after submission
+
+            
+            
+
+    #     #else:
+    #      #   logger.error('{}: user_contact_form is not valid'.format(date.today()))
+
+    # else:
+    #     if contact_form.is_valid():
+    #         print('contact_form is valid')
+
+    #         # Email the profile with the contact information
+    #         context_dict['name'] = contact_form.cleaned_data['name']
+    #         # context_dict['email'] = contact_form.cleaned_data['email']
+    #         context_dict['email'] = 'atm-elsa@nmsu.edu'
+    #         context_dict['agency'] = contact_form.cleaned_data['agency']
+    #         context_dict['message'] = contact_form.cleaned_data['message']
+    #         content = template.render(context_dict)
+    #         email = EmailMessage(
+    #             subject = "{} is contacting ELSA".format(context_dict['name']),
+    #             body = content,
+    #             # from_email = context_dict['email'],
+    #             from_email = 'atm-elsa@nmsu.edu',
+    #             # to = ['elsa@atmos.nmsu.edu',],
+    #             to = ['sajomont@nmsu.edu'],
+    #             # headers = {'Reply-To': context_dict['email'] }
+    #         )
+    #         email.send()
+    #         context_dict['email_sent'] = True
+
+        #else:
+            #logger.error('{}: contact_form is not valid.'.format(datetime.now()))
+
+    return render(request, 'main/contact.html', context_dict)
+
 
 # restricted_access is the page that displays if a user is travelling to an area they have no business being in.
 @login_required

@@ -31,33 +31,31 @@ Context
                                     <input type="submit" class="btn btn-light text-light mt-4" value="Submit"/>
                                     <input type="button" class="btn btn-light text-light mt-4 ms-auto" data-bs-toggle="modal" data-bs-target="#contactModal" value="Contact">
                                 </div>
-
-                                <!-- Contact Modal -->
-                                <div class="modal fade" id="contactModal" tabindex="-1" role="dialog" aria-labelledby="contactModalLabel" aria-hidden="true">
-                                    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
-                                        <div class="modal-content">
-                                            <div class="modal-header">
-                                                <h5 class="modal-title" id="contactModalLabel">Send a Message to ELSA</h5>
-                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                            </div>
-                                            <div class="modal-body">
-                                                    <form role="form" action="" method="post" autocomplete="off">
-                                                        <p>Please describe the context product you need. An ATM node representative will contact you to finalize what you need before officially submitting to the PDS system.</p>
-                                                        {% csrf_token %}
-                                                        {% for field in form %}
-                                                            <div class="fieldWrapper">
-                                                                {{ field.errors }}
-                                                                {{ field.label_tag }} {{ field }}
-                                                            </div>
-                                                        {% endfor %}
-                                                        {{ contact_form.as_p }}
-                                                        <button type="submit" class="btn btn-default">Send message</button>
-                                                    </form>
-                                            </div>
+                            </form>
+                            <!-- Contact Modal -->
+                            <div class="modal fade" id="contactModal" tabindex="-1" role="dialog" aria-labelledby="contactModalLabel" aria-hidden="true">
+                                <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="contactModalLabel">Send a Message to ELSA</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <form role="form" action="" method="post" autocomplete="off">
+                                                <p>Please describe the context product you need. An ATM node representative will contact you to finalize what you need before officially submitting to the PDS system.</p>
+                                                    {% csrf_token %}
+                                                    {% for field in context_products_contact %}
+                                                    <div class="fieldWrapper">
+                                                        {{ field.errors }}
+                                                        {{ field.label_tag }} {{ field }}
+                                                    </div>
+                                                    {% endfor %}
+                                                    <button type="submit" class="btn btn-default">Send message</button>
+                                            </form>
                                         </div>
                                     </div>
                                 </div>
-                            </form>
+                            </div>
                         </div>
                     </div>
                 </div>
