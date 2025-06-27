@@ -651,6 +651,23 @@ def bundle(request, pk_bundle):
         form_instrument_host = InstrumentHostForm(request.POST or None, pk_inv=None)
         form_facility = FacilityForm(request.POST or None)
 
+        # creating sets of objects associated with the bundle to add to the bundle progress checklist
+        investigations_set = bundle.investigations.all()
+        targets_set = bundle.targets.all()
+        instrument_hosts_set = bundle.instrument_hosts.all()
+        facilities_set = bundle.facilities.all()
+        telescopes_set = bundle.telescopes.all()
+        hosts_set = False
+        if (instrument_hosts_set.exists() or
+            facilities_set.exists() or
+            telescopes_set.exists()):
+            # If there are instrument hosts, facilities, or telescopes, we can get the instruments
+            hosts_set = True
+            
+        instruments_set = bundle.instruments.all()
+        product_observational_set = Product_Observational.objects.filter(data__bundle=bundle)
+
+
         # Following code is to get xml content of bundle xml files
         # Temporary testing, will be better to add this to chocoloate.py as it's likely we want to do this multiple times
         # Said Ajo :/
@@ -732,7 +749,11 @@ def bundle(request, pk_bundle):
             'Alias': bundle.alias_set.exists(),
             'Citation_Information': bundle.citation_information_set.exists(),
             'Modification_History': bundle.modification_history_set.exists(),
-            'Context Products': bundle.data_set.exists()
+            'Investigations': investigations_set.exists(),
+            'Targets': targets_set.exists(),
+            'Instruments': instruments_set.exists(),
+            'Hosts': hosts_set,
+            'Product_Observational': product_observational_set.exists(),
         }
 
         context_dict['status_dict'] = status_dict
@@ -1356,6 +1377,8 @@ def context_search(request, pk_bundle):
         form_target = TargetFormAll(request.POST or None)
         contact_form = ContactForm(request.POST or None)
 
+        context_products_contact = ContextProductsContactForm(request.POST or None)
+
         # Context Dictionary
         context_dict = {
             'bundle': bundle,
@@ -1368,6 +1391,7 @@ def context_search(request, pk_bundle):
             'facility_list': bundle.facilities.all(),
             'telescope_list': bundle.telescopes.all(),\
             'contact_form': contact_form,
+            'context_products_contact' : context_products_contact,
         }
 
         return render(request, 'build/context/context_search.html', context_dict)

@@ -9,11 +9,12 @@ Context
 
 <style>
 
-
+/* {% comment %} 
 .card:hover {
     transform: translateY(-8px);
     box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
-}
+} 
+{% endcomment %} */
 
 .card img {
     width: 100%;
@@ -97,7 +98,7 @@ h3.h3-responsive {
     justify-content: center; 
     color: white;
     padding: 2x 2px;
-    background-color: #5F9EA0;
+    background-color: #2bbbad;
     border-radius: 5px;
     text-decoration: none; 
     cursor: pointer;
@@ -105,7 +106,7 @@ h3.h3-responsive {
 }
 
 .btn:hover {
-    background-color: #0056b3;
+    background-color: #26a498;
 }
 
 .btn i {
@@ -169,94 +170,74 @@ h3.h3-responsive {
 
                     <hr>
 
-                    <!-- Context Tabs -->
-                    <ul class="nav nav-tabs nav-justified" role="tablist">
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#con_inv" type="button" role="tab" aria-selected="true">Investigation</button>
-                        </li>
-                        {% if instrument_hosts %}
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link " data-bs-toggle="tab" data-bs-target="#con_ih" type="button" role="tab" aria-selected="false">Instrument Hosts</button>
-                        </li>
-                        {% endif %}
-                        {% if instruments %}
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link " data-bs-toggle="tab" data-bs-target="#con_ins" type="button" role="tab" aria-selected="false">Instruments</button>
-                        </li>
-                        {% endif %}
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link " data-bs-toggle="tab" data-bs-target="#con_tar" type="button" role="tab" aria-selected="false">Targets</button>
-                        </li>
-                    </ul>
-
-                    <!-- Investigation Tab -->
-                    <div class="col-md-12 tab-pane fade show active" id="con_inv" role="tabpanel">
-                        <p> To begin, select an investigation product below to associate with your bundle. Investigations serve as the top level of the context system and will associate your bundle with a larger project.</br> <strong>Investigations are categorized as:</strong> Individual Investigations, Missions, Field Campaigns, Observing Campaigns, or Other Investigations. Selecting an investigation will pare down the list of components to the ones that go with that investigation (i.e., associated instruments, targets, etc.) </p>
-                        
-                        <form class="card-body" id="form_investigation" method="post" action="{% url 'build:context_search_investigation' bundle.pk  %}">
-                            {% csrf_token %}
-                            {{ form_investigation }}
-                            {{ form.errors }}
-                            {{ form.non_field_errors }}
+                    <div class="tab-content">
+                        <!-- Investigation Tab -->
+                        <div class="col-md-12 tab-pane fade show active" id="con_inv" role="tabpanel">
+                            <p> To begin, select an investigation product below to associate with your bundle. Investigations serve as the top level of the context system and will associate your bundle with a larger project.</br> <strong>Investigations are categorized as:</strong> Individual Investigations, Missions, Field Campaigns, Observing Campaigns, or Other Investigations. Selecting an investigation will pare down the list of components to the ones that go with that investigation (i.e., associated instruments, targets, etc.).</p>
+                            <p>If you have a new investigation or cannot find your investigation in the pull-down selector, you should contact the ATM node using the Contact button below.</p>
                             
-                            <div class="d-flex mb-5 ms-3 px-3 pt-3">
-                            <input type="submit" class="btn btn-light text-light me-2" value="Submit"/>
-                            <a href="{% url 'build:bundle' bundle.pk %}" class="btn btn-light text-light">
-                                Skip
-                                <i class="fa fa-arrow-right ms-2"></i>
-                            </a>
+                            <form class="card-body" id="form_investigation" method="post" action="{% url 'build:context_search_investigation' bundle.pk  %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="form_name" value="investigation_form">
+                                <input type="hidden" name="form_name" value="contact_form">
+
+                                <!-- {{ form_investigation }}
+                                {{ form.errors }}
+                                {{ form.non_field_errors }} -->
+
+                                {% for field in form_investigation %}
+                                    <div class="form-group">
+                                        {{ field.label_tag }}
+                                        {{ field }}
+                                        {% if field.errors %}
+                                        <div class="text-danger">{{ field.errors }}</div>
+                                        {% endif %}
+                                    </div>
+                                {% endfor %}
+
+                                <div class="d-flex">
+                                    <input type="submit" class="btn btn-light text-light mt-4" value="Submit"/>
+                                    <input type="button" class="btn btn-light text-light mt-4 ms-auto" data-bs-toggle="modal" data-bs-target="#contactModal" value="Contact">
+                                </div>
+                            </form>
+                            <!-- Contact Modal -->
+                            <div class="modal fade" id="contactModal" tabindex="-1" role="dialog" aria-labelledby="contactModalLabel" aria-hidden="true">
+                                <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+                                    <div class="modal-content">
+                                        <form method="post" action="{% url 'main:context_products_contact' %}">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="form_name" value="contact_form">
+
+                                            <div class="modal-header">
+                                                <h5 class="modal-title" id="contactModalLabel">Send a Message to ELSA</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+
+                                            <div class="modal-body">
+                                                <p>Please describe the context product you need. An ATM node representative will contact you to finalize what you need before officially submitting to the PDS system.</p>
+                                                {% for field in context_products_contact %}
+                                                    <div class="form-group">
+                                                        {{ field.label_tag }} 
+                                                        {{ field }}
+                                                        {% if field.errors %}
+                                                            <div class="text-danger">{{ field.errors }}</div>
+                                                        {% endif %}
+                                                    </div>
+                                                {% endfor %}
+                                            </div>
+
+                                            <div class="modal-footer">
+                                                <button type="submit" class="btn btn-default">Send message</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
                             </div>
-                        </form> 
+                        </div>
                     </div>
-
-                    <!-- Target Tab -->
-                    <div class="col-md-12 tab-pane fade" id="con_tar" role="tabpanel">
-                        <p>Choose the target(s) you wish to add to your bundle. This is a complete list of availabe targets, independent of any investigations chosen.</p>
-                        
-                        <form class="card-body" id="form_target" method="post" action="{% url 'build:context_search_target' bundle.pk %}">
-                            {% csrf_token %}
-                            {{ form_target }}
-                            {{ form.errors }}
-                            {{ form.non_field_errors }}
-                            
-                            <input type="submit" class="btn btn-light text-light" value="Submit"/>
-                            <a href="{% url 'build:bundle' bundle.pk %}" class="btn btn-light text-light">
-                                Skip
-                                <i class="fa fa-arrow-right ms-2"></i>
-                            </a>
-                        </form> 
-                    </div>
-                    
                 </div>
-                
             </div>
         </div>
     </div>
 </div>
-
-    <!-- Modal Button -->
-<div class="fixed-contact-button" data-bs-toggle="modal" data-bs-target="#contactModal">
-    <i class="fa fa-envelope"></i>
-</div>
-
-<!-- Contact Modal -->
-<div class="modal fade" id="contactModal" tabindex="-1" role="dialog" aria-labelledby="contactModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="contactModalLabel">Send a Message to ELSA</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                    <form role="form" action="" method="post" autocomplete="off">
-                         {% csrf_token %}
-                    {{ contact_form.as_p }}
-                    {{ contact_form.errors }}
-                    {{ contact_form.non_field_errors }}
-                        <button type="submit" class="btn btn-default">Send message</button>
-                    </form>
-            </div>
-        </div>
-    </div>
-</div>
-{% endblock %} 
+{% endblock %}

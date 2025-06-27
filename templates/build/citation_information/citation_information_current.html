@@ -5,23 +5,21 @@
 <div class="container-fluid py-5">
     <div class="row justify-content-center">
         <div class="col-12 col-lg-9 col-xl-8">
-            <div class="card border-0 rounded-lg">
-                <div class="card-header text-white text-center" style="padding: 0.5rem 0.5rem; background-color: #2F4F4F">
-                    <h3 class="mb-2 mt-2">
-                        Citation Information
-                    </h3>
+            <div class="card border-0 rounded-lg shadow-md">
+                <div class="card-header text-white text-center" style="background-color: #2F4F4F">
+                    <h3 class="mb-2 mt-2">Citation Information</h3>
                 </div>
                 <div class="card-body p-4 p-lg-5">
+
                     <form method="post" class="needs-validation" novalidate>
                         {% csrf_token %}
-                        
+
+                        <!-- General Fields -->
                         <div class="row mb-4">
                             {% for field in form %}
                                 <div class="col-12 col-md-6 mb-3">
                                     <label for="{{ field.id_for_label }}" class="form-label fw-semibold">{{ field.label }}</label>
-                                    <div class="form-control-wrapper">
-                                        {{ field }}
-                                    </div>
+                                    <div class="form-control-wrapper">{{ field }}</div>
                                     {% if field.help_text %}
                                         <small class="form-text text-muted">{{ field.help_text }}</small>
                                     {% endif %}
@@ -31,25 +29,130 @@
                                 </div>
                             {% endfor %}
                         </div>
-                        
-                        <!-- Citation information fields -->
-                        <div class="row g-3">
-                            {% for field in form_edit_citation_information %}
-                                <div class="col-12 {% if forloop.counter|divisibleby:2 %}col-md-6{% else %}col-md-6{% endif %} mb-3">
-                                    <label for="{{ field.id_for_label }}" class="form-label fw-semibold">{{ field.label }}</label>
-                                    <div class="form-control-wrapper">
-                                        {{ field }}
+
+                        <!-- Tabs -->
+                        <ul class="nav nav-tabs mb-4" id="citationTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="authors-tab" data-bs-toggle="tab" data-bs-target="#authors" type="button" role="tab" aria-controls="authors" aria-selected="true">
+                                    Authors
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="editors-tab" data-bs-toggle="tab" data-bs-target="#editors" type="button" role="tab" aria-controls="editors" aria-selected="false">
+                                    Editors
+                                </button>
+                            </li>
+                        </ul>
+
+                        <div class="tab-content" id="citationTabsContent">
+                            <!-- AUTHORS TAB -->
+                            <div class="tab-pane fade show active" id="authors" role="tabpanel" aria-labelledby="authors-tab">
+                                <!-- People -->
+                                <div class="mb-4">
+                                    <h5 class="border-bottom pb-2 mb-3">
+                                        <i class="bi bi-person-fill text-primary me-1"></i> People
+                                    </h5>
+                                    <div class="row g-3">
+                                        {% for field in form_edit_citation_information %}
+                                            {% if 'author' in field.name and 'person' in field.name %}
+                                                <div class="col-12 col-md-6 mb-3">
+                                                    <label for="{{ field.id_for_label }}" class="form-label fw-semibold">
+                                                        {{ field.label }}
+                                                    </label>
+                                                    <div class="form-control-wrapper">{{ field }}</div>
+                                                    {% if field.help_text %}
+                                                        <small class="form-text text-muted">{{ field.help_text }}</small>
+                                                    {% endif %}
+                                                    {% for error in field.errors %}
+                                                        <div class="invalid-feedback d-block">{{ error }}</div>
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        {% endfor %}
                                     </div>
-                                    {% if field.help_text %}
-                                        <small class="form-text text-muted">{{ field.help_text }}</small>
-                                    {% endif %}
-                                    {% for error in field.errors %}
-                                        <div class="invalid-feedback d-block">{{ error }}</div>
-                                    {% endfor %}
                                 </div>
-                            {% endfor %}
+
+                                <!-- Organizations -->
+                                <div>
+                                    <h5 class="border-bottom pb-2 mb-3">
+                                        <i class="bi bi-building text-success me-1"></i> Organizations
+                                    </h5>
+                                    <div class="row g-3">
+                                        {% for field in form_edit_citation_information %}
+                                            {% if 'author' in field.name and 'org' in field.name %}
+                                                <div class="col-12 col-md-6 mb-3">
+                                                    <label for="{{ field.id_for_label }}" class="form-label fw-semibold">
+                                                        {{ field.label }}
+                                                    </label>
+                                                    <div class="form-control-wrapper">{{ field }}</div>
+                                                    {% if field.help_text %}
+                                                        <small class="form-text text-muted">{{ field.help_text }}</small>
+                                                    {% endif %}
+                                                    {% for error in field.errors %}
+                                                        <div class="invalid-feedback d-block">{{ error }}</div>
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- EDITORS TAB -->
+                            <div class="tab-pane fade" id="editors" role="tabpanel" aria-labelledby="editors-tab">
+                                <!-- People -->
+                                <div class="mb-4">
+                                    <h5 class="border-bottom pb-2 mb-3">
+                                        <i class="bi bi-person-fill text-primary me-1"></i> People
+                                    </h5>
+                                    <div class="row g-3">
+                                        {% for field in form_edit_citation_information %}
+                                            {% if 'editor' in field.name and 'person' in field.name %}
+                                                <div class="col-12 col-md-6 mb-3">
+                                                    <label for="{{ field.id_for_label }}" class="form-label fw-semibold">
+                                                        {{ field.label }}
+                                                    </label>
+                                                    <div class="form-control-wrapper">{{ field }}</div>
+                                                    {% if field.help_text %}
+                                                        <small class="form-text text-muted">{{ field.help_text }}</small>
+                                                    {% endif %}
+                                                    {% for error in field.errors %}
+                                                        <div class="invalid-feedback d-block">{{ error }}</div>
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                </div>
+
+                                <!-- Organizations -->
+                                <div>
+                                    <h5 class="border-bottom pb-2 mb-3">
+                                        <i class="bi bi-building text-success me-1"></i> Organizations
+                                    </h5>
+                                    <div class="row g-3">
+                                        {% for field in form_edit_citation_information %}
+                                            {% if 'editor' in field.name and 'org' in field.name %}
+                                                <div class="col-12 col-md-6 mb-3">
+                                                    <label for="{{ field.id_for_label }}" class="form-label fw-semibold">
+                                                        {{ field.label }}
+                                                    </label>
+                                                    <div class="form-control-wrapper">{{ field }}</div>
+                                                    {% if field.help_text %}
+                                                        <small class="form-text text-muted">{{ field.help_text }}</small>
+                                                    {% endif %}
+                                                    {% for error in field.errors %}
+                                                        <div class="invalid-feedback d-block">{{ error }}</div>
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        
+
+                        <!-- Submit Buttons -->
                         <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
                             <button type="reset" class="btn btn-outline-secondary px-4 me-md-2">Reset</button>
                             <button type="submit" class="btn btn-success px-4">Submit</button>
@@ -61,35 +164,35 @@
     </div>
 </div>
 
-<!-- Go back to build bundle page -->
-<div class="row" style="margin-bottom: -10px">
-    <div class="col-md-12 d-flex align-items-center justify-content-center" style="margin-bottom: -10px">
-    <!-- Correct URL -->
-    <a href="{% url 'build:bundle' bundle.pk %}" class="btn bi bi-arrow-return-left" style="background-color: #008B8B; color: white;">
-        <i class="fa fa-arrow-circle-left"></i> Bundle Details
-    </a>
+<!-- Back Button -->
+<div class="row mt-3">
+    <div class="col-md-12 d-flex align-items-center justify-content-center">
+        <a href="{% url 'build:bundle' bundle.pk %}" class="btn" style="background-color: #008B8B; color: white;">
+            <i class="fa fa-arrow-circle-left me-2"></i> Bundle Details
+        </a>
     </div>
-</div> 
-
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-    (function() {
-        'use strict'
-        const forms = document.querySelectorAll('.needs-validation')
+    // Bootstrap validation
+    (function () {
+        'use strict';
+        const forms = document.querySelectorAll('.needs-validation');
         Array.from(forms).forEach(form => {
             form.addEventListener('submit', event => {
                 if (!form.checkValidity()) {
-                    event.preventDefault()
-                    event.stopPropagation()
+                    event.preventDefault();
+                    event.stopPropagation();
                 }
-                form.classList.add('was-validated')
-            }, false)
-        })
-    })()
-    
-    document.addEventListener('DOMContentLoaded', function() {
+                form.classList.add('was-validated');
+            }, false);
+        });
+    })();
+
+    // Class assignment
+    document.addEventListener('DOMContentLoaded', function () {
         const formControls = document.querySelectorAll('input, select, textarea');
         formControls.forEach(element => {
             element.classList.add('form-control');
@@ -97,7 +200,7 @@
                 element.classList.add('rounded-pill');
             }
         });
-        
+
         const checkboxes = document.querySelectorAll('input[type="checkbox"]');
         checkboxes.forEach(checkbox => {
             checkbox.classList.remove('form-control');
@@ -115,9 +218,26 @@
     .form-control-wrapper {
         width: 100%;
     }
-    
+
     input, select, textarea {
         display: block;
         width: 100%;
+    }
+
+    .nav-tabs .nav-link {
+        border-radius: 0.5rem 0.5rem 0 0;
+        font-weight: 600;
+    }
+
+    .tab-content {
+        border: 1px solid #dee2e6;
+        padding: 1.5rem;
+        border-radius: 0 0 0.5rem 0.5rem;
+        background-color: #f8f9fa;
+    }
+
+    .badge {
+        font-size: 0.75rem;
+        vertical-align: middle;
     }
 </style>
