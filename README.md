@@ -21,6 +21,8 @@ This section provides a timeline of ELSA's release history, highlighting key upd
 ### **Current Version** 
 > ### **Version 1.9.8 (June 27, 2025)**
 - Citation Information Form: Added separate tabs for authors and editors so it's easier to follow. Also, people and organizations are separated within the tabs.
+- Context Products Update: Updates context product models in database for bidirectionality with related products and updated to have most
+up-to-date product in registry.
 
 
 ### **Previous Versions** 
