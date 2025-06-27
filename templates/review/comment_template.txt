@@ -35,10 +35,10 @@
         <div class="content">{{ contact_name }}</div>
     </div>
 
-    <div class="section">
+    {% comment %} <div class="section">
         <span class="label">Email:</span>
         <div class="content">{{ contact_email }}</div>
-    </div>
+    </div> {% endcomment %}
 
     <div class="section">
         <span class="label">Derived Data:</span>
