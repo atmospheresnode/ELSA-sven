@@ -97,9 +97,9 @@ def index(request):
             subject="Derived Data Peer Review from {}".format(context_dict['contact_name']),
             #body=content,
             body="A new review has been submitted by {}. Please find the attached documents for details.".format(context_dict['contact_name']),
-            from_email='atm-elsa@nmsu.edu',
-            # t
-            to=['rupakdey@nmsu.edu'],
+            from_email= ['atm-elsa@nmsu.edu'],
+            to=['rupakdey@nmsu.edu', 'lneakras@nmsu.edu', 'sajomont@nmsu.edu', 'lhuber@nmsu.edu'],
+            #to=['rupakdey@nmsu.edu'],
             headers={'Reply-To': context_dict['contact_email']}
         )
 
