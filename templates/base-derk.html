@@ -2,6 +2,24 @@
 {% load static %}
 <html lang="en">
 
+<style>
+/* Only applies when .sticky-footer-page wrapper is present */
+.sticky-footer-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;  /* full viewport height */
+}
+
+.sticky-footer-page main {
+  flex: 1 0 auto;  /* main grows to fill available space */
+}
+
+/* Make footer not shrink */
+.sticky-footer-page footer {
+  flex-shrink: 0;
+}
+</style>
+
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -27,7 +45,7 @@
 </head>
 
 <body>
-    <div class="container-fluid">
+    <div class="container-fluid sticky-footer-page">
         <!-- Header -->
         {% if user.is_authenticated %}
         <header class="row">
