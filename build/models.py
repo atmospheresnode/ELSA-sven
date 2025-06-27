@@ -1141,6 +1141,8 @@ class Instrument(models.Model):
     instrument_hosts = models.ManyToManyField("Instrument_Host")
     investigations = models.ManyToManyField(Investigation)
 
+    facilities = models.ManyToManyField("Facility")
+
     # Attributes used for crawler
     # null=true's added 11/2022 
 

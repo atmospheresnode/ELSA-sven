@@ -71,7 +71,7 @@ def contact_from_login(request):
             subject="{} is contacting ELSA".format(context_dict['name']),
             body=content,
             from_email='atm-elsa@nmsu.edu',
-            to=['rupakdey@nmsu.edu'],
+            to = ['sajomont@nmsu.edu', 'pds-atm@nmsu.edu', 'rupakdey@nmsu.edu'],
             headers={'Reply-To': context_dict['email']}
         )
 
@@ -227,7 +227,7 @@ def context_products_contact(request):
             print('email confirmation sent')
             
             context_dict['email_sent'] = True
-            return HttpResponseRedirect('/contact') # redirects to the same page to clear the form after submission
+            return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/')) # redirects to the same page to clear the form after submission
 
             
             
