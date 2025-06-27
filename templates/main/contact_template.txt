@@ -4,10 +4,5 @@ Contact Name:
 Email:
 {{ email }}
 
-Company:
-{{ agency }}
-
-
-
 Message:
-{{ message }}
+{{ message|safe }}

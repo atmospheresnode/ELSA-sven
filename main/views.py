@@ -30,6 +30,7 @@ from django.http import HttpResponseRedirect, HttpResponse
 from .models import Joke
 from .forms import *
 from django.forms import modelformset_factory
+from django.urls import reverse
 
 # from .forms import ContactForm, UserContactForm, UploadedDocumentForm # I'm not sure uploaded document form should be here (k).
 import random
@@ -49,6 +50,45 @@ def index(request):
     }
     return render(request, 'main/index.html', context_dict)
 
+# contact_from_login is the view that allows users to contact elsa from the login page.
+def contact_from_login(request):
+    contact_form = ContactForm(request.POST or None)
+    context_dict = {
+        'contact_form': contact_form,
+        'email_sent': False,
+    }
+    template = get_template('main/contact_template.txt')
+
+    if request.method == 'POST' and contact_form.is_valid():
+        context_dict['name'] = contact_form.cleaned_data['name']
+        context_dict['email'] = contact_form.cleaned_data['email']
+        context_dict['agency'] = contact_form.cleaned_data['agency']
+        context_dict['message'] = contact_form.cleaned_data['message']
+
+        content = template.render(context_dict)
+
+        email = EmailMessage(
+            subject="{} is contacting ELSA".format(context_dict['name']),
+            body=content,
+            from_email='atm-elsa@nmsu.edu',
+            to = ['sajomont@nmsu.edu', 'pds-atm@nmsu.edu', 'rupakdey@nmsu.edu'],
+            headers={'Reply-To': context_dict['email']}
+        )
+
+        confirmation = EmailMessage(
+            subject="Thank you for contacting ELSA!",
+            body="Your message has been received. Please allow 24–48 hours for a response.\n\nRegards,\nTeam ELSA",
+            from_email='atm-elsa@nmsu.edu',
+            to=[context_dict['email']]
+        )
+
+        email.send()
+        confirmation.send()
+
+        return HttpResponseRedirect(reverse('main:index'))  # redirect back to login page
+
+    return render(request, 'main/index.html', context_dict)
+
 # about describes elsa's purpose, goal, etc.
 def about(request):
     return render(request, 'main/about.html', {})
@@ -57,11 +97,12 @@ def about(request):
 def contact(request):
     contact_form = ContactForm(request.POST or None)
     user_contact_form = UserContactForm(request.POST or None)
-    context_dict = {}
-    context_dict['contact_form'] = contact_form
-    context_dict['user_contact_form'] = user_contact_form
-    context_dict['email_sent'] = False
-    context_dict['user_logged_in'] = False
+    context_dict = { 
+        'contact_form': contact_form,
+        'user_contact_form': user_contact_form,
+        'email_sent': False,
+        'user_logged_in': False
+    }
     template = get_template('main/contact_template.txt')
     print('text')
 
@@ -75,7 +116,7 @@ def contact(request):
            
             context_dict['name'] = '{0}, {1}'.format(request.user.last_name, request.user.first_name)
             context_dict['email'] = request.user.email
-            context_dict['agency'] = request.user.userprofile.agency
+            # context_dict['agency'] = request.user.userprofile.agency
             context_dict['message'] = user_contact_form.cleaned_data['message']
             content = template.render(context_dict)
 
@@ -84,8 +125,7 @@ def contact(request):
                 subject = "{} is contacting ELSA".format(context_dict['name']),
                 body = content,
                 from_email = 'atm-elsa@nmsu.edu',
-                #to = ['elsa@atmos.nmsu.edu', 'sajomont@nmsu.edu', 'lneakras@nmsu.edu'],
-                to = ['rupakdey@nmsu.edu'],
+                to = ['sajomont@nmsu.edu', 'pds-atm@nmsu.edu', 'rupakdey@nmsu.edu'],
                 headers = {'Reply-To': 'atm-elsa@nmsu.edu' }
             )
 
@@ -137,7 +177,92 @@ def contact(request):
 
     return render(request, 'main/contact.html', context_dict)
 
-    
+#Context Products Contact Form
+def context_products_contact(request):
+    context_products_contact = ContextProductsContactForm(request.POST or None)
+    user_contact_form = UserContactForm(request.POST or None)
+    context_dict = {}
+    context_dict['contact_form'] = context_products_contact
+    context_dict['context_products_contact'] = context_products_contact
+    context_dict['user_contact_form'] = user_contact_form
+    context_dict['email_sent'] = False
+    context_dict['user_logged_in'] = False
+    template = get_template('main/contact_template.txt')
+    print('text')
+
+    if user_contact_form.is_valid():
+        print('user contact form is valid')
+           
+    if request.user.is_authenticated:
+        context_dict['user_logged_in'] = True
+        if user_contact_form.is_valid():
+            print('user_contact_form is valid')
+           
+            context_dict['name'] = '{0}, {1}'.format(request.user.last_name, request.user.first_name)
+            context_dict['email'] = request.user.email
+            context_dict['message'] = user_contact_form.cleaned_data['message']
+            content = template.render(context_dict)
+            print('before email')
+
+            #Email to ELSA from user
+            email = EmailMessage(
+                subject = "{} is contacting ELSA".format(context_dict['name']),
+                body = content,
+                from_email = 'atm-elsa@nmsu.edu',
+                to = ['sajomont@nmsu.edu', 'pds-atm@nmsu.edu', 'rupakdey@nmsu.edu'],
+                headers = {'Reply-To': 'atm-elsa@nmsu.edu' }
+            )
+
+            #Email confirmation to user
+            email_confirmation = EmailMessage(
+                subject = "Thank you for contacting ELSA!",
+                body = "Your message has been received. Please allow 24-48 hours to receive a response. Thank you for using ELSA! \n\nRegards,\nTeam ELSA",
+                from_email = 'atm-elsa@nmsu.edu',
+                to = [context_dict['email']]
+            )
+
+            email.send()
+            print('email sent')
+            email_confirmation.send()
+            print('email confirmation sent')
+            
+            context_dict['email_sent'] = True
+            return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/')) # redirects to the same page to clear the form after submission
+
+            
+            
+
+    #     #else:
+    #      #   logger.error('{}: user_contact_form is not valid'.format(date.today()))
+
+    # else:
+    #     if contact_form.is_valid():
+    #         print('contact_form is valid')
+
+    #         # Email the profile with the contact information
+    #         context_dict['name'] = contact_form.cleaned_data['name']
+    #         # context_dict['email'] = contact_form.cleaned_data['email']
+    #         context_dict['email'] = 'atm-elsa@nmsu.edu'
+    #         context_dict['agency'] = contact_form.cleaned_data['agency']
+    #         context_dict['message'] = contact_form.cleaned_data['message']
+    #         content = template.render(context_dict)
+    #         email = EmailMessage(
+    #             subject = "{} is contacting ELSA".format(context_dict['name']),
+    #             body = content,
+    #             # from_email = context_dict['email'],
+    #             from_email = 'atm-elsa@nmsu.edu',
+    #             # to = ['elsa@atmos.nmsu.edu',],
+    #             to = ['sajomont@nmsu.edu'],
+    #             # headers = {'Reply-To': context_dict['email'] }
+    #         )
+    #         email.send()
+    #         context_dict['email_sent'] = True
+
+        #else:
+            #logger.error('{}: contact_form is not valid.'.format(datetime.now()))
+
+    return render(request, 'main/contact.html', context_dict)
+
 
 # restricted_access is the page that displays if a user is travelling to an area they have no business being in.
 @login_required
