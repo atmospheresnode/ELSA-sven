@@ -25,35 +25,41 @@ class ReviewForm(forms.Form):
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter the reviewed data set name'})
     )
     
-    CHOICES = (
-        ('PDS3', 'PDS3'),
-        ('PDS4', 'PDS4'),
-    )
+    # Removed the archiving standard selector (as of July 2025 based on Lynn's suggestion- Rupak)
+    # CHOICES = (
+    #     ('PDS3', 'PDS3'),
+    #     ('PDS4', 'PDS4'),
+    # )
     
-    archive_standard = forms.ChoiceField(
-        choices=CHOICES,
-        label_suffix = '',
-        widget=forms.RadioSelect(attrs={'class': 'form-check-input'})
-    )
+    # archive_standard = forms.ChoiceField(
+    #     choices=CHOICES,
+    #     label_suffix = '',
+    #     widget=forms.RadioSelect(attrs={'class': 'form-check-input'})
+    # )
     
     question1 = forms.CharField(
         widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 4, 'placeholder': 'Provide your comments...'}),
-        label='Does the data provide clear and concise documentation adequate for its usage?'
+        label='Does the data set/bundle provide clear and concise documentation adequate for its usage?'
     )
     
     question2 = forms.CharField(
         widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 4, 'placeholder': 'Provide your comments...'}),
-        label='Are you able to manipulate and plot the data, interpret columns into tables, and understand the context and relationships of the data products?'
+        label='Are you able to manipulate and/or plot the data, interpret columns/rows into tables, and understand the context and relationships of the data products?'
     )
     
     question3 = forms.CharField(
         widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 4, 'placeholder': 'Provide your comments...'}),
         label='Are there any concerns about the creation/generation, calibration, or general usability of the data?'
     )
-    
+
     question4 = forms.CharField(
         widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 4, 'placeholder': 'Provide your comments...'}),
-        label='Any further comments to PDS Atmospheres Node about the data?'
+        label='Were there any issues with the data access website, related references, or any other accessibility concerns?'
+    )
+    
+    question5 = forms.CharField(
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 4, 'placeholder': 'Provide your comments...'}),
+        label='Do you have any further comments to the PDS Atmospheres Node about the data?'
     )
 
     captcha = ReCaptchaField(widget=ReCaptchaV2Checkbox(), label='')
