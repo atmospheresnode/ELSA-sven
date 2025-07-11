@@ -1702,6 +1702,7 @@ class Facility(models.Model):
 
     # Relational attribute
     instruments = models.ManyToManyField(Instrument)
+    # instruments = models.ManyToManyField('Instrument')
 
     investigations = models.ManyToManyField(Investigation)
 

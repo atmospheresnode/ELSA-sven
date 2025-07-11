@@ -23,6 +23,8 @@ This section provides a timeline of ELSA's release history, highlighting key upd
 - Citation Information Form: Added separate tabs for authors and editors so it's easier to follow. Also, people and organizations are separated within the tabs.
 - Context Products Update: Updates context product models in database for bidirectionality with related products and updated to have most
 up-to-date product in registry.
+- Context Products: Fixed the issue with the submit button for the contact form.
+- Footer now properly sticks to the bottom of all pages.
 
 
 ### **Previous Versions** 
