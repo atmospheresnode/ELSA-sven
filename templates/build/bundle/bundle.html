@@ -315,6 +315,22 @@
    </div>
 </div>
 
+{% if context_successful_submit %}
+    <script type="text/javascript">
+        $(document).ready(function(){
+            $("#context_modal").modal('show');
+        });
+    </script>
+{% endif %}
+
+{% if additional_collection_successful_submit %}
+    <script type="text/javascript">
+        $(document).ready(function(){
+            $("#collections_modal").modal('show');
+        });
+    </script>
+{% endif %}
+
 <!-- Context Modal -->
 <div class="modal fade" id="context_modal">
    <div class="modal-dialog modal-xl">
@@ -357,7 +373,7 @@
                      <div class="card-header">
                         <p> To begin, select an investigation product below to associate with your bundle. Investigations serve as the top level of the context system and will associate your bundle with a larger project.</br> <strong>Investigations are categorized as:</strong> Individual Investigations, Missions, Field Campaigns, Observing Campaigns, or Other Investigations. Selecting an investigation will pare down the list of components to the ones that go with that investigation (i.e., associated instruments, targets, etc.) </p>
                      </div>
-                     <form class="card-body black-text text-left z-depth-2" id="form_investigation" method="post" action="{% url 'build:context_search_investigation' bundle.pk  %}">
+                     <form class="card-body black-text text-left z-depth-2" id="form_investigation" method="post" action="{% url 'build:bundle' bundle.pk  %}">
                            {% csrf_token %}
                            {{ form_investigation }}
                            {{ form.errors }}
