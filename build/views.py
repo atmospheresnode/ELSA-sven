@@ -783,7 +783,8 @@ def bundle(request, pk_bundle):
             write_into_label(i, product_bundle, product_collections_list)
 
             context_dict['context_successful_submit'] = True
-            return render(request, 'build/bundle/bundle.html', context_dict)
+            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
+            # return render(request, 'build/bundle/bundle.html', context_dict)
 
         # After ELSAs friend hits submit, if the forms are completed correctly, we should enter
         # this conditional.
@@ -2602,14 +2603,82 @@ def Table_Creation(request, pk_bundle, pk_data):
             context_products.extend(bundle.targets.all())
             for context_product in context_products:
                 write_into_label(context_product, form, None)
+
+            return HttpResponseRedirect('/elsa/build/' + str(pk_bundle) + '/table_field_information/' + str(pk_data) + '/' + str(form.pk) + '/')
         else:
             print(data_form.errors.as_data())
 
         return render(request, 'build/data/Table_Creation.html', context_dict)
+        
     else:
         print('unauthorized user attempting to access a restricted area.')
         return redirect('main:restricted_access')
 
+def edit_table_field_information(request, pk_bundle, pk_data, pk_table):
+    bundle = Bundle.objects.get(pk=pk_bundle)
+    data = Data.objects.get(pk=pk_data)
+
+
+    # Secure ELSA by seeing if the user logged in is the same user associated with the Bundle
+    if request.user == bundle.user:
+        print('authorized user: {}'.format(request.user))
+
+        # Get forms
+        form_edit_table_field_information = EditTableFieldsForm(request.POST or None, pk_data=pk_data, pk_table=pk_table)
+        if data.data_type == 'Table Delimited':
+            table = Table_Delimited.objects.get(pk=pk_table)
+        elif data.data_type == 'Table Binary':
+            table = Table_Binary.objects.get(pk=pk_table)
+        elif data.data_type == 'Table Character':
+            table = Table_Fixed_Width.objects.get(pk=pk_table)
+
+        context_dict = {
+            'form_edit_table_field_information': form_edit_table_field_information,
+            'bundle': bundle,
+        }
+
+        if form_edit_table_field_information.is_valid():
+            cleaned_form = form_edit_table_field_information.cleaned_data
+
+            label_list = open_label_with_tree(table.label())
+            label_root = label_list[1]
+
+            label_root = table.fill_label_values(label_root, cleaned_form)
+
+            # Close appropriate label(s)
+            print(' ... Closing Label ... ')
+            close_label(table.label(), label_root, label_list[2])
+
+            # all_labels = []
+
+            # product_bundle = Product_Bundle.objects.get(bundle=bundle)
+            # product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+
+            # all_labels.append(product_bundle)
+            # all_labels.extend(product_collections_list)
+
+            # # fix this for filling table values
+            # for label in all_labels:
+            # # Open appropriate label(s).  
+            #     print('- Label: {}'.format(label))
+            #     print(' ... Opening Label ... ')
+            #     label_list = open_label_with_tree(label.label())
+            #     label_root = label_list[1]
+            #     print(' ... Building Label ... ')
+            #     label_root = table.fill_label_values(label_root, cleaned_form)
+
+            #     # Close appropriate label(s)
+            #     print(' ... Closing Label ... ')
+            #     close_label(label.label(), label_root, label_list[2])
+
+            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
+
+            # return render(request, 'build/citation_information/citation_information_current.html', context_dict)
+        return render(request, 'build/data/fields.html', context_dict)
+        
+    else:
+        print('unauthorized user attempting to access a restricted area.')
+        return redirect('main:restricted_access')
 
 '''
 def Table_Creation(request, pk_bundle):
