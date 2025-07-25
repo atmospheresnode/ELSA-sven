@@ -742,6 +742,8 @@ def bundle(request, pk_bundle):
             'documents':Product_Document.objects.filter(bundle=bundle),
             'additional_collections_set': additional_collections_set,
             'user':request.user,
+            'context_successful_submit': False,
+            'additional_collection_successful_submit': False
         }
 
         # Compute status for bundle progress checklist
@@ -760,6 +762,28 @@ def bundle(request, pk_bundle):
         context_dict['directory_name'] = directory_name
         context_dict['subfiles'] = c 
         context_dict['file_context'] = file_context
+
+        if form_investigation.is_valid():
+            print(form_investigation.cleaned_data['investigation'].file_ref)
+            print(Investigation.objects.filter(file_ref=form_investigation.cleaned_data['investigation'].file_ref).first().file_ref)
+            i = Investigation.objects.filter(file_ref=form_investigation.cleaned_data['investigation'].file_ref).first()
+            # i = Investigation.objects.get(
+            #     file_ref=form_investigation.cleaned_data['investigation'].file_ref)
+            context_dict['investigation'] = i
+            bundle.investigations.add(i)
+            print(i)
+
+            # Label Fix for context products - Said
+            product_bundle = Product_Bundle.objects.get(bundle=bundle)
+            # Ok this gets confusing, and will add documentation later. Let me briefly explain here. - Said
+            # Querying DB for product_collection objects such as document, context, and so on. Need a separate query for additional collections, so I do that query.
+            # Chain(query1, query2), creates a pseudo-union of both queries, then allows write_into_label to write into all necessary labels.
+            product_collections_list = chain(Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data'), AdditionalCollections.objects.filter(bundle=bundle))
+
+            write_into_label(i, product_bundle, product_collections_list)
+
+            context_dict['context_successful_submit'] = True
+            return render(request, 'build/bundle/bundle.html', context_dict)
 
         # After ELSAs friend hits submit, if the forms are completed correctly, we should enter
         # this conditional.
@@ -879,8 +903,11 @@ def bundle(request, pk_bundle):
             context_dict['additional_collections_set'] = additional_collections_set
             context_dict['additional_collections_count'] =  len(additional_collections_set)
 
+            context_dict['additional_collection_successful_submit'] = True
+            return render(request, 'build/bundle/bundle.html', context_dict)
+
             # # fixes the refresh duplication issue - deric
-            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
+            # return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
 
             # fixes the refresh duplication issue, use this one for offline testing - deric
             # return HttpResponseRedirect('/build/' + pk_bundle + '/')
@@ -1448,7 +1475,7 @@ def context_search_investigation(request, pk_bundle):
                 write_into_label(i, product_bundle, product_collections_list)
 
             messages.success(request, 'Investigation Product Added')
-            context_dict['messages'] = messages.get_messages(request)
+            context_dict['successful_submit'] = True
             # return render(request, 'build/context/context_search_investigation.html', context_dict)
             # return render(request, 'build/bundle/bundle.html', context_dict)
             return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
