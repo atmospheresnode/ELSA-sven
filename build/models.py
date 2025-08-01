@@ -3297,6 +3297,27 @@ class Table_Delimited(models.Model):
         
         return root
 
+    def fill_label_values(self, label_root, cleaned_form):
+        f = label_root.find('{}File_Area_Observational'.format(NAMESPACE))
+        td = f.find('{}Table_Delimited'.format(NAMESPACE))
+        rd = td.find('{}Record_Delimited'.format(NAMESPACE))
+
+        fields = rd.findall('{}Field_Delimited'.format(NAMESPACE))
+
+        field_count = 0
+
+        for field in fields:
+            name = field.find('{}name'.format(NAMESPACE)) 
+            name.text = cleaned_form.get(f'name_{field_count}')
+            field_number = field.find('{}field_number'.format(NAMESPACE))
+            field_number.text = str(cleaned_form.get(f'field_number_{field_count}'))
+            data_type = field.find('{}data_type'.format(NAMESPACE)) 
+            data_type.text = cleaned_form.get(f'data_type_{field_count}')
+            max_field_length = field.find('{}description'.format(NAMESPACE)) # Change this to the correct thing
+            max_field_length.text = str(cleaned_form.get(f'max_field_length_{field_count}'))
+
+        return label_root
+
     def __str__(self):
         return smart_str(self.id)
 
@@ -3423,8 +3444,37 @@ class Table_Binary(models.Model):
 
         groups = rb.find('{}groups'.format(NAMESPACE))
         groups.text = '0'
+
+        field_binary = rb.find('{}Field_Binary'.format(NAMESPACE))
+
+        for i in range(int(self.fields) - 1):
+            cloned_file = copy.deepcopy(field_binary)
+            rb.append(cloned_file)
         
         return root
+
+    def fill_label_values(self, label_root, cleaned_form):
+        Table_Binary = label_root
+
+        f = Table_Binary.find('{}File_Area_Observational'.format(NAMESPACE))
+        tb = f.find('{}Table_Binary'.format(NAMESPACE))
+        rb = tb.find('{}Record_Binary'.format(NAMESPACE))
+
+        fields = rb.findall('{}Field_Binary'.format(NAMESPACE))
+
+        field_count = 0
+
+        for field in fields:
+            name = field.find('{}name'.format(NAMESPACE)) 
+            name.text = cleaned_form.get(f'name_{field_count}')
+            field_number = field.find('{}field_number'.format(NAMESPACE))
+            field_number.text = str(cleaned_form.get(f'field_number_{field_count}'))
+            data_type = field.find('{}data_type'.format(NAMESPACE)) 
+            data_type.text = cleaned_form.get(f'data_type_{field_count}')
+            max_field_length = field.find('{}description'.format(NAMESPACE)) # Change this to the correct thing
+            max_field_length.text = str(cleaned_form.get(f'max_field_length_{field_count}'))
+
+        return label_root
 
     def __str__(self):
         return smart_str(self.id)
@@ -3569,8 +3619,37 @@ class Table_Fixed_Width(models.Model):
 
         groups = rc.find('{}groups'.format(NAMESPACE))
         groups.text = '0'
+
+        field_character = rc.find('{}Field_Character'.format(NAMESPACE))
+
+        for i in range(int(self.fields) - 1):
+            cloned_file = copy.deepcopy(field_character)
+            rc.append(cloned_file)
         
         return root
+    
+    def fill_label_values(self, label_root, cleaned_form):
+        Table_Character = label_root
+
+        f = Table_Character.find('{}File_Area_Observational'.format(NAMESPACE))
+        tc = f.find('{}Table_Character'.format(NAMESPACE))
+        rc = tc.find('{}Record_Character'.format(NAMESPACE))
+
+        fields = rc.findall('{}Field_Character'.format(NAMESPACE))
+
+        field_count = 0
+
+        for field in fields:
+            name = field.find('{}name'.format(NAMESPACE)) 
+            name.text = cleaned_form.get(f'name_{field_count}')
+            field_number = field.find('{}field_number'.format(NAMESPACE))
+            field_number.text = cleaned_form.get(f'field_number_{field_count}')
+            data_type = field.find('{}data_type'.format(NAMESPACE)) 
+            data_type.text = str(cleaned_form.get(f'data_type_{field_count}'))
+            max_field_length = field.find('{}description'.format(NAMESPACE)) # Change this to the correct thing
+            max_field_length.text = str(cleaned_form.get(f'max_field_length_{field_count}'))
+
+        return label_root
 
     def __str__(self):
         return smart_str(self.id)

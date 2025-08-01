@@ -99,6 +99,9 @@ urlpatterns = [
     re_path(r'^(?P<pk_bundle>\d+)/(?P<pk_data>\d+)/table_creation/$', views.Table_Creation, name='table_creation'),
     re_path(r'^(?P<pk_bundle>\d+)/(?P<table>[-/w]+)/field_creation/$', views.Field_Creation, name='field_creation'),
 
+    #Edit Table Field Information
+    re_path(r'^(?P<pk_bundle>\d+)/table_field_information/(?P<pk_data>\d+)/(?P<pk_table>\d+)/$', views.edit_table_field_information, name='edit_table_field_information'),
+
     # Dictionary
     re_path(r'^(?P<pk_bundle>\d+)/data/array/display_dictionary/$', views.display_dictionary, name='display_dictionary'),
     
