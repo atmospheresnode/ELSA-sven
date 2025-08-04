@@ -401,70 +401,75 @@ def build(request):
 
             print('---------------- End Build Product_Bundle Base Case -------------------------')
 
-            print('before initial save')
-            collections = form_collections.save(commit=False)
-            print('after initial save and before setting bundle')
-            collections.bundle = bundle
-            print('after setting bundle and before final save')
-            # collections.save(commit=True)
-            print('here')
-            print('\nCollections model object:    {}'.format(collections))
-            print('now here')
+            if bundle.bundle_type == 'External':
+                ama_investigation = Investigation.objects.filter(name='Atmospheric Modeling Annex').first()
+                print(ama_investigation)
+                write_into_label(ama_investigation, product_bundle, [])
+            else:
+                print('before initial save')
+                collections = form_collections.save(commit=False)
+                print('after initial save and before setting bundle')
+                collections.bundle = bundle
+                print('after setting bundle and before final save')
+                # collections.save(commit=True)
+                print('here')
+                print('\nCollections model object:    {}'.format(collections))
+                print('now here')
 
-            # Create PDS4 compliant directories for each collection within the bundle.
-            print('before build collections directories')
-            collections.build_directories()
-            print('after build collections directories')
+                # Create PDS4 compliant directories for each collection within the bundle.
+                print('before build collections directories')
+                collections.build_directories()
+                print('after build collections directories')
 
-            for collection in collections.list():
-                print(collection)
+                for collection in collections.list():
+                    print(collection)
 
-                # Create Product_Collection model for each collection
-                
-                if collection == 'document':
-                    product_collection = form_product_collection_document.save(commit=False)
-                    product_collection.bundle = bundle
-                    product_collection.collection = 'Document'
-                elif collection == 'context':
-                    product_collection = form_product_collection_context.save(commit=False)
-                    product_collection.bundle = bundle
-                    product_collection.collection = 'Context'
-                elif collection == 'xml_schema':
-                    product_collection = form_product_collection_schema.save(commit=False)
-                    product_collection.bundle = bundle
-                    product_collection.collection = 'XML_Schema'
-                product_collection.save()
+                    # Create Product_Collection model for each collection
+                    
+                    if collection == 'document':
+                        product_collection = form_product_collection_document.save(commit=False)
+                        product_collection.bundle = bundle
+                        product_collection.collection = 'Document'
+                    elif collection == 'context':
+                        product_collection = form_product_collection_context.save(commit=False)
+                        product_collection.bundle = bundle
+                        product_collection.collection = 'Context'
+                    elif collection == 'xml_schema':
+                        product_collection = form_product_collection_schema.save(commit=False)
+                        product_collection.bundle = bundle
+                        product_collection.collection = 'XML_Schema'
+                    product_collection.save()
 
-                # Fill Product_Bundle with Collection Bundle Member Entries
-                # list = [label_object, label_root]
-                label_list = open_label_with_tree(product_bundle.label())
-                label_root = label_list[1]
-                print(' ... Adding Bundle Member Entries ... ')
-                label_root = product_bundle.build_bundle_member_entry(
-                    label_root, product_collection)
-                close_label(product_bundle.label(), label_root, label_list[2])
-                print(' ... Bundle Member Entry Added: {} ...'.format(product_collection.lid))
-
-                # Build Product_Collection label for all labels other than those found in the data collection.
-                print('-------------Start Build Product_Collection Base Case-----------------')
-                if collection != 'data':
-                    product_collection.build_base_case()
-
-                    # Open Product_Collection label
-                    print(' ... Opening Label ... ')
-                    label_list = open_label_with_tree(
-                        product_collection.label())
+                    # Fill Product_Bundle with Collection Bundle Member Entries
+                    # list = [label_object, label_root]
+                    label_list = open_label_with_tree(product_bundle.label())
                     label_root = label_list[1]
+                    print(' ... Adding Bundle Member Entries ... ')
+                    label_root = product_bundle.build_bundle_member_entry(
+                        label_root, product_collection)
+                    close_label(product_bundle.label(), label_root, label_list[2])
+                    print(' ... Bundle Member Entry Added: {} ...'.format(product_collection.lid))
 
-                    # Fill label
-                    print(' ... Filling Label ... ')
-                    #label_root = bundle.version.fill_xml_schema(label_root)
-                    label_root = product_collection.fill_base_case(label_root)
+                    # Build Product_Collection label for all labels other than those found in the data collection.
+                    print('-------------Start Build Product_Collection Base Case-----------------')
+                    if collection != 'data':
+                        product_collection.build_base_case()
 
-                    # Close label
-                    print(' ... Closing Label ... ')
-                    close_label(product_collection.label(), label_root, label_list[2])
-                    print('-------------End Build Product_Collection Base Case-----------------')
+                        # Open Product_Collection label
+                        print(' ... Opening Label ... ')
+                        label_list = open_label_with_tree(
+                            product_collection.label())
+                        label_root = label_list[1]
+
+                        # Fill label
+                        print(' ... Filling Label ... ')
+                        #label_root = bundle.version.fill_xml_schema(label_root)
+                        label_root = product_collection.fill_base_case(label_root)
+
+                        # Close label
+                        print(' ... Closing Label ... ')
+                        close_label(product_collection.label(), label_root, label_list[2])
+                        print('-------------End Build Product_Collection Base Case-----------------')
 
             # Further develop context_dict entries for templates
             context_dict['Bundle'] = bundle
@@ -487,6 +492,8 @@ def build(request):
             else:
                 print('Walkthrough not enabled — redirecting to main bundle page.')
                 return redirect('build:no_intro_page', bundle_id=bundle.id)
+        else:
+            print('failed uniqueness')
 
 
     return render(request, 'build/build.html', context_dict)

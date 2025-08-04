@@ -2009,7 +2009,7 @@ class Bundle(models.Model):
     )
 
     bundle_type = models.CharField(max_length=12, default='Archive',)
-    name = models.CharField(max_length=MAX_CHAR_FIELD, unique=True)
+    name = models.CharField(max_length=MAX_CHAR_FIELD)
     status = models.CharField(max_length=1, choices=BUNDLE_STATUS, blank=False, default='b')
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     version = models.CharField(max_length=4)
@@ -2024,6 +2024,11 @@ class Bundle(models.Model):
     targets = models.ManyToManyField(Target)
     facilities = models.ManyToManyField(Facility)
     telescopes = models.ManyToManyField(Telescope)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['user', 'name'], name='unique_name_per_user')
+        ]
 
     def __str__(self):
         return self.name
@@ -2112,7 +2117,10 @@ class Bundle(models.Model):
         return self.name_file_case()
 
     def lid(self):
-        return 'urn:{0}:{1}'.format(self.user.userprofile.agency, self.name_lid_case())
+        if self.bundle_type == 'External':
+            return 'urn:pds-ama:{1}'.format(self.user.userprofile.agency, self.name_lid_case())
+        else:
+            return 'urn:{0}:{1}'.format(self.user.userprofile.agency, self.name_lid_case())
 
     """ 
         build_directory currently is not working.
@@ -3313,8 +3321,8 @@ class Table_Delimited(models.Model):
             field_number.text = str(cleaned_form.get(f'field_number_{field_count}'))
             data_type = field.find('{}data_type'.format(NAMESPACE)) 
             data_type.text = cleaned_form.get(f'data_type_{field_count}')
-            max_field_length = field.find('{}description'.format(NAMESPACE)) # Change this to the correct thing
-            max_field_length.text = str(cleaned_form.get(f'max_field_length_{field_count}'))
+            description = field.find('{}description'.format(NAMESPACE)) 
+            description.text = str(cleaned_form.get(f'description_{field_count}'))
 
         return label_root
 
@@ -3467,12 +3475,14 @@ class Table_Binary(models.Model):
         for field in fields:
             name = field.find('{}name'.format(NAMESPACE)) 
             name.text = cleaned_form.get(f'name_{field_count}')
-            field_number = field.find('{}field_number'.format(NAMESPACE))
-            field_number.text = str(cleaned_form.get(f'field_number_{field_count}'))
+            field_location = field.find('{}field_location'.format(NAMESPACE)) 
+            field_location.text = cleaned_form.get(f'field_location_{field_count}')
             data_type = field.find('{}data_type'.format(NAMESPACE)) 
             data_type.text = cleaned_form.get(f'data_type_{field_count}')
-            max_field_length = field.find('{}description'.format(NAMESPACE)) # Change this to the correct thing
-            max_field_length.text = str(cleaned_form.get(f'max_field_length_{field_count}'))
+            field_length = field.find('{}field_length'.format(NAMESPACE))
+            field_length.text = str(cleaned_form.get(f'max_field_length_{field_count}'))
+            description = field.find('{}description'.format(NAMESPACE)) 
+            description.text = str(cleaned_form.get(f'description_{field_count}'))
 
         return label_root
 
@@ -3642,12 +3652,14 @@ class Table_Fixed_Width(models.Model):
         for field in fields:
             name = field.find('{}name'.format(NAMESPACE)) 
             name.text = cleaned_form.get(f'name_{field_count}')
-            field_number = field.find('{}field_number'.format(NAMESPACE))
-            field_number.text = cleaned_form.get(f'field_number_{field_count}')
+            field_location = field.find('{}field_location'.format(NAMESPACE)) 
+            field_location.text = cleaned_form.get(f'field_location_{field_count}')
             data_type = field.find('{}data_type'.format(NAMESPACE)) 
             data_type.text = str(cleaned_form.get(f'data_type_{field_count}'))
-            max_field_length = field.find('{}description'.format(NAMESPACE)) # Change this to the correct thing
-            max_field_length.text = str(cleaned_form.get(f'max_field_length_{field_count}'))
+            field_number = field.find('{}field_number'.format(NAMESPACE))
+            field_number.text = cleaned_form.get(f'field_number_{field_count}')
+            description = field.find('{}description'.format(NAMESPACE)) 
+            description.text = str(cleaned_form.get(f'description_{field_count}'))
 
         return label_root
 
