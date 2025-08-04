@@ -912,10 +912,10 @@ def bundle(request, pk_bundle):
             context_dict['additional_collections_count'] =  len(additional_collections_set)
 
             context_dict['additional_collection_successful_submit'] = True
-            return render(request, 'build/bundle/bundle.html', context_dict)
+            # return render(request, 'build/bundle/bundle.html', context_dict)
 
             # # fixes the refresh duplication issue - deric
-            # return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
+            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
 
             # fixes the refresh duplication issue, use this one for offline testing - deric
             # return HttpResponseRedirect('/build/' + pk_bundle + '/')
