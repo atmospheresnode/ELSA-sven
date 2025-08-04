@@ -989,15 +989,15 @@ class EditTableFieldsForm(forms.Form):
         self.pk_table = kwargs.pop('pk_table')
         self.pk_data = kwargs.pop('pk_data')
 
-        data = Data.objects.get(pk=self.pk_data)
+        self.data = Data.objects.get(pk=self.pk_data)
 
         super(EditTableFieldsForm, self).__init__(*args, **kwargs)
 
-        if data.data_type == 'Table Delimited':
+        if self.data.data_type == 'Table Delimited':
             self.table = Table_Delimited.objects.get(pk=self.pk_table)
-        elif data.data_type == 'Table Binary':
+        elif self.data.data_type == 'Table Binary':
             self.table = Table_Binary.objects.get(pk=self.pk_table)
-        elif data.data_type == 'Table Character':
+        elif self.data.data_type == 'Table Character':
             self.table = Table_Fixed_Width.objects.get(pk=self.pk_table)
 
         # Add fields for table 
@@ -1011,29 +1011,85 @@ class EditTableFieldsForm(forms.Form):
             name_label = f"Field {i+1} Name"
             field_number_label = f"Field {i+1} Field Number"
             data_type_label = f"Field {i+1} Data Type"
+            field_location_label = f"Field {i + 1} Field Location"
+            description_label = f"Field {i + 1} Description"
             max_field_length_label = f"Field {i+1} Maximum Field Length"
-            
-            self.fields[f'name_{i}'] = forms.CharField(
-                required=False, 
-                label=name_label,
-                widget=forms.TextInput(attrs={'class': 'form-control form-outline'})
-            )
-            self.fields[f'field_number_{i}'] = forms.IntegerField(
-                required=False,
-                min_value=0,
-                label=field_number_label,
-                widget=forms.TextInput(attrs={'class': 'form-control form-outline'})
-            )
-            self.fields[f'data_type_{i}'] = forms.CharField(
-                required=False,
-                label=data_type_label,
-                widget=forms.TextInput(attrs={'class': 'form-control form-outline'})
-            )
-            self.fields[f'max_field_length_{i}'] = forms.IntegerField(
-                required=False,
-                label=max_field_length_label,
-                widget=forms.TextInput(attrs={'class': 'form-control form-outline'})
-            )
+
+            if self.data.data_type == 'Table Delimited':
+                self.fields[f'name_{i}'] = forms.CharField(
+                    required=False, 
+                    label=name_label,
+                    widget=forms.TextInput(attrs={'class': 'form-control form-outline'})
+                )
+                self.fields[f'field_number_{i}'] = forms.IntegerField(
+                    required=False,
+                    min_value=0,
+                    label=field_number_label,
+                    widget=forms.TextInput(attrs={'class': 'form-control form-outline'})
+                )
+                self.fields[f'data_type_{i}'] = forms.CharField(
+                    required=False,
+                    label=data_type_label,
+                    widget=forms.TextInput(attrs={'class': 'form-control form-outline'})
+                )
+                self.fields[f'description_{i}'] = forms.IntegerField(
+                    required=False,
+                    label=description_label,
+                    widget=forms.TextInput(attrs={'class': 'form-control form-outline'})
+                )
+            elif self.data.data_type == 'Table Binary':
+                self.fields[f'name_{i}'] = forms.CharField(
+                    required=False, 
+                    label=name_label,
+                    widget=forms.TextInput(attrs={'class': 'form-control form-outline'})
+                )
+                self.fields[f'field_location_{i}'] = forms.CharField(
+                    required=False, 
+                    label=field_location_label,
+                    widget=forms.TextInput(attrs={'class': 'form-control form-outline'})
+                )
+                self.fields[f'data_type_{i}'] = forms.CharField(
+                    required=False,
+                    label=data_type_label,
+                    widget=forms.TextInput(attrs={'class': 'form-control form-outline'})
+                )
+                self.fields[f'max_field_length_{i}'] = forms.IntegerField(
+                    required=False,
+                    label=max_field_length_label,
+                    widget=forms.TextInput(attrs={'class': 'form-control form-outline'})
+                )
+                self.fields[f'description_{i}'] = forms.IntegerField(
+                    required=False,
+                    label=description_label,
+                    widget=forms.TextInput(attrs={'class': 'form-control form-outline'})
+                )
+            elif self.data.data_type == 'Table Character':
+                self.fields[f'name_{i}'] = forms.CharField(
+                    required=False, 
+                    label=name_label,
+                    widget=forms.TextInput(attrs={'class': 'form-control form-outline'})
+                )
+                self.fields[f'field_location_{i}'] = forms.CharField(
+                    required=False, 
+                    label=field_location_label,
+                    widget=forms.TextInput(attrs={'class': 'form-control form-outline'})
+                )
+                self.fields[f'data_type_{i}'] = forms.CharField(
+                    required=False,
+                    label=data_type_label,
+                    widget=forms.TextInput(attrs={'class': 'form-control form-outline'})
+                )
+                self.fields[f'field_number_{i}'] = forms.IntegerField(
+                    required=False,
+                    min_value=0,
+                    label=field_number_label,
+                    widget=forms.TextInput(attrs={'class': 'form-control form-outline'})
+                )
+                self.fields[f'description_{i}'] = forms.IntegerField(
+                    required=False,
+                    label=description_label,
+                    widget=forms.TextInput(attrs={'class': 'form-control form-outline'})
+                )
 
 class Field_Delimited_Form(forms.ModelForm):
     class Meta(object):
