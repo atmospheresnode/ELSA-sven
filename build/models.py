@@ -797,7 +797,7 @@ class InvestigationManager(models.Manager):
 
 class Investigation(models.Model):
     INVESTIGATION_TYPES = [
-        ('individual', 'individual'),
+        ('individual_investigation', 'individual_investigation'),
         ('mission', 'mission'),
         ('observing_campaign', 'observing_campaign'),
         ('other_investigation', 'other_investigation'),
