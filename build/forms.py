@@ -587,24 +587,28 @@ class TargetForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         self.pk_ins = kwargs.pop('pk_ins')
+        self.pk_bundle = kwargs.pop('pk_bundle')
+
+        self.bundle = Bundle.objects.get(pk=self.pk_bundle)
         
-        self.bundle_type = kwargs.pop('bundle_type', None)
+        # self.bundle_type = kwargs.pop('bundle_type', None)
 
         super(TargetForm, self).__init__(*args, **kwargs)
-
 
         # self.fields['target'] = forms.ModelChoiceField(
         #     queryset=Target.objects.filter(investigation=self.pk_ins), required=True)
 
 
         # If the bundle type is 'External', we filter targets that start with 'urn:nasa:pds:context:target:laboratory_analog' -Rupak
-        if self.bundle_type == 'External':
-            self.fields['target'].queryset = Target.objects.filter(
-            lid__startswith='urn:nasa:pds:context:target:laboratory_analog'
-        )
+        if self.bundle.bundle_type == 'External':
+            self.fields['target'] = forms.ModelChoiceField(
+                queryset=Target.objects.filter(lid__startswith='urn:nasa:pds:context:target:laboratory_analog'),
+                required=True
+            )
         else:
-            self.fields['target'].queryset = Target.objects.filter(
-                investigation=self.pk_ins
+            self.fields['target'] = forms.ModelChoiceField(
+                Target.objects.filter(investigation=self.pk_ins),
+                required=True
             )
     
 class TargetFormAll(forms.Form):
@@ -614,15 +618,22 @@ class TargetFormAll(forms.Form):
     # target = forms.CharField(max_length=100, label='Search')
 
     def __init__(self, *args, **kwargs):
-        self.bundle_type = kwargs.pop('bundle_type', None)
+        self.pk_bundle = kwargs.pop('pk_bundle')
+
+        self.bundle = Bundle.objects.get(pk=self.pk_bundle)
+
         super(TargetFormAll, self).__init__(*args, **kwargs)
 
-        if self.bundle_type == 'External':
-            self.fields['target'].queryset = Target.objects.filter(
-                lid__startswith='urn:nasa:pds:context:target:laboratory_analog'
+        if self.bundle.bundle_type == 'External':
+            self.fields['target'] = forms.ModelChoiceField(
+                queryset=Target.objects.filter(lid__startswith='urn:nasa:pds:context:target:laboratory_analog'),
+                required=True
             )
         else:
-            self.fields['target'].queryset = Target.objects.all()
+            self.fields['target'] = forms.ModelChoiceField(
+                queryset=Target.objects.all(),
+                required=True
+            )
 
 
 

@@ -655,7 +655,7 @@ def bundle(request, pk_bundle):
         form_product_collection = ProductCollectionForm(request.POST or None)
         form_additional_collections = AdditionalCollectionForm(request.POST or None)
         form_investigation = InvestigationForm(request.POST or None)
-        form_target = TargetFormAll(request.POST or None)
+        form_target = TargetFormAll(request.POST or None, pk_bundle=pk_bundle)
         form_instrument_host = InstrumentHostForm(request.POST or None, pk_inv=None)
         form_facility = FacilityForm(request.POST or None)
 
@@ -1419,7 +1419,7 @@ def context_search(request, pk_bundle):
         print('authorized user: {}'.format(request.user))
 
         form_investigation = InvestigationForm(request.POST or None)
-        form_target = TargetFormAll(request.POST or None)
+        form_target = TargetFormAll(request.POST or None, pk_bundle=pk_bundle)
         contact_form = ContactForm(request.POST or None)
 
         context_products_contact = ContextProductsContactForm(request.POST or None)
@@ -1603,7 +1603,7 @@ def context_search_target(request, pk_bundle):
         print('authorized user: {}'.format(request.user))
 
         # Get form for observing system component
-        form_target = TargetFormAll(request.POST or None, bundle_type=bundle.bundle_type)
+        form_target = TargetFormAll(request.POST or None, pk_bundle=pk_bundle)
 
         # Context Dictionary
         context_dict = {
@@ -1657,7 +1657,7 @@ def context_search_target_inv(request, pk_bundle, pk_investigation):
         print('authorized user: {}'.format(request.user))
 
         # Get form for observing system component
-        form_target = TargetForm(request.POST or None, pk_ins=pk_investigation)
+        form_target = TargetForm(request.POST or None, pk_ins=pk_investigation, pk_bundle=pk_bundle)
 
         # Context Dictionary
         context_dict = {
@@ -1941,7 +1941,7 @@ def context_search_target_and_instrument(request, pk_bundle, pk_investigation, p
 
         # Get form for observing system component
         form_target = TargetForm(
-            request.POST or None, pk_ins=pk_investigation)
+            request.POST or None, pk_ins=pk_investigation, pk_bundle=pk_bundle)
         
         form_instrument = FacilityInstrumentForm(
             request.POST or None, pk_fac=pk_facility)
