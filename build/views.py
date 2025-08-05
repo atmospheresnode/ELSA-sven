@@ -405,6 +405,24 @@ def build(request):
                 ama_investigation = Investigation.objects.filter(name='Atmospheric Modeling Annex').first()
                 print(ama_investigation)
                 write_into_label(ama_investigation, product_bundle, [])
+
+                collection.has_context = False
+                collection.has_xml_schema = False
+
+                print('before initial save')
+                collections = form_collections.save(commit=False)
+                print('after initial save and before setting bundle')
+                collections.bundle = bundle
+                print('after setting bundle and before final save')
+                # collections.save(commit=True)
+                print('here')
+                print('\nCollections model object:    {}'.format(collections))
+                print('now here')
+
+                # Create PDS4 compliant directories for each collection within the bundle.
+                print('before build collections directories')
+                collections.build_directories()
+                print('after build collections directories')
             else:
                 print('before initial save')
                 collections = form_collections.save(commit=False)
