@@ -487,6 +487,7 @@ def build(request):
             enable_walkthrough = request.POST.get('enable_walkthrough') == 'on'
 
             if enable_walkthrough:
+                request.session['walkthrough_bundle_type'] = bundle.bundle_type #Rupak
                 print('Walkthrough enabled — redirecting to walkthrough page.')
                 return redirect('build:yes_intro_page', bundle_id=bundle.id)
             else:
@@ -750,7 +751,8 @@ def bundle(request, pk_bundle):
             'additional_collections_set': additional_collections_set,
             'user':request.user,
             'context_successful_submit': False,
-            'additional_collection_successful_submit': False
+            'additional_collection_successful_submit': False,
+            'bundle_type': bundle.bundle_type,  #Rupak
         }
 
         # Compute status for bundle progress checklist
@@ -1252,6 +1254,7 @@ def citation_information(request, pk_bundle):
         context_dict = {
             'form_citation_information': form_citation_information,
             'bundle': bundle,
+            'bundle_type': bundle.bundle_type, #Rupak
         }
 
         # After ELSAs friend hits submit, if the forms are completed correctly, we should enter
@@ -1326,7 +1329,14 @@ def edit_citation_information(request, pk_bundle, pk_citation_information):
                 print(' ... Closing Label ... ')
                 close_label(label.label(), label_root, label_list[2])
 
-            return redirect(reverse('build:context_search', args=[pk_bundle]))
+            #return redirect(reverse('build:context_search', args=[pk_bundle]))
+
+            #Adding a check for bundle type, so it skips context search if external selected - RUPAK
+            if bundle.bundle_type == 'External':
+                return redirect(reverse('build:bundle', args=[pk_bundle]))  
+            else:
+                return redirect(reverse('build:context_search', args=[pk_bundle]))
+
 
         context_dict = {
             'form_edit_citation_information': form_edit_citation_information,
@@ -1593,7 +1603,7 @@ def context_search_target(request, pk_bundle):
         print('authorized user: {}'.format(request.user))
 
         # Get form for observing system component
-        form_target = TargetFormAll(request.POST or None)
+        form_target = TargetFormAll(request.POST or None, bundle_type=bundle.bundle_type)
 
         # Context Dictionary
         context_dict = {
