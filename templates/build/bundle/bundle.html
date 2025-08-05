@@ -344,9 +344,14 @@
          <div class="modal-body">
             <!-- Tabs -->
             <ul class="nav nav-fill nav-underline nav-justified" role="tablist">
+               
+               <!-- If the bundle type is external, we don't need to show the investigation tab -Rupak -->
+               {% if bundle_type != "External" %} 
                <li class="nav-item" role="presentation">
                   <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#con_inv" type="button" role="tab" aria-selected="true">Investigation</button>
                </li>
+               {% endif %}
+
                {% if instrument_hosts %}
                <li class="nav-item" role="presentation">
                   <button class="nav-link " data-bs-toggle="tab" data-bs-target="#con_ih" type="button" role="tab" aria-selected="false">Instrument Hosts</button>
@@ -363,6 +368,8 @@
             </ul>
 
             <!-- Content -->
+
+            {% if bundle_type != "External" %} 
             <div class="tab-content">
                <!-- Investigation Tab -->
                <div class="tab-pane fade show active" id="con_inv" role="tabpanel" >
@@ -533,6 +540,7 @@
                   </div>
                   {% endif %}
                </div>
+
                <!-- Other Products -->
                <div class="tab-pane fade" id="con_tar" role="tabpanel">
                   <br>
@@ -605,6 +613,83 @@
                   {% endif %}
                </div>   
             </div>
+            <!-- End of Investigation and Targets Tab for all other than External -->
+            
+            {% else %}
+            <div class="tab-content">
+               <div class="tab-pane fade show active" id="con_tar" role="tabpanel">
+                  <br>
+
+                  <div class="col-md-12">
+                     <div class="card">
+                     <div class="card-header">
+                        <p>Choose the target(s) you wish to add to your bundle. This is a complete list of availabe targets, independent of any investigations chosen.</p>
+                     </div>
+                     <form class="card-header black-text text-left z-depth-2"id="query01" method="post" action="{% url 'build:context_search_target' bundle.pk %}">
+                        
+                             {% csrf_token %}
+                             {{ form_target }}
+                             {{ form.errors }}
+                             {{ form.non_field_errors }}
+                             
+                             <input type="submit" class="btn btn-light text-light" value="Submit"/>
+                             
+                         </form>  
+                     </br>
+                     </div>
+                  </div>
+
+                  <br>
+
+                  {% if targets %}
+                     {% for target in targets %}
+                     <div class="container mt-3">
+                        <div class="card">
+                           <div class="row no-gutters">
+                              <div class="col-md-2">
+                                 <img class="img-fluid" src="{% static 'images/target.png' %}" alt="Target Image" style="max-width: 65%;">
+                              </div>
+                              <div class="col-md-8">
+                                 <div class="card-body">
+                                    <h5 class="card-title">{{ target }}</h5>
+                                    <p class="card-text">Investigation(s):
+                                       {% for investigation in target.investigations.all %} 
+                                       <span>
+                                          {{ investigation.name }}
+                                       </span>
+                                       {% endfor %}
+                                    </p>
+                                    <p class="card-text">{{ target.lid }}</p>
+                                    <a type="button" class="btn btn-danger" href="{% url 'build:delete_target' bundle.pk target.pk %}">Remove</a>
+
+                                <!-- <p class="card-text"><small class="text-muted">Last updated 3 mins ago</small></p> -->
+                                 </div>
+                              </div>
+                           </div>
+                        </div>
+                     </div>
+                     {% endfor %}
+                  {% else %}
+                  <div class="container mt-2">
+                     <div class="sub-card card">
+                        <div class="row no-gutters">
+                           <div class="col-md-2">
+                              <img class="img-fluid" src="{% static 'images/null.png' %}" alt="Null" style="max-width: 65%;">
+                           </div>
+                           <div class="col-md-8">
+                              <div class="card-body">
+                                 <h4 class="card-title">No Targets</h5>
+                                 <!-- <p class="card-text">Add a Instrument Host</p> -->
+                              </div>
+                           </div>
+                        </div>
+                     </div>
+                  </div>
+                  {% endif %}
+               </div>   
+            </div>
+            {% endif %}
+
          </div>
       </div>
    </div>
