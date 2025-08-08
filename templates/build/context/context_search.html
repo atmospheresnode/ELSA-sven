@@ -162,6 +162,13 @@ h3.h3-responsive {
 </style>
 
 <div class="container-fluid">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-success mt-3" role="alert">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
     <div class="row justify-content-center align-items-center py-4">
         <div class="col-12 col-lg-9 col-xl-10">
             <div class="card">
@@ -177,6 +184,7 @@ h3.h3-responsive {
                             <p>If you have a new investigation or cannot find your investigation in the pull-down selector, you should contact the ATM node using the Contact button below.</p>
                             
                             <form class="card-body" id="form_investigation" method="post" action="{% url 'build:context_search_investigation' bundle.pk  %}">
+                                
                                 {% csrf_token %}
                                 <input type="hidden" name="form_name" value="investigation_form">
                                 <input type="hidden" name="form_name" value="contact_form">

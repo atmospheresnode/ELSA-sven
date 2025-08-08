@@ -31,6 +31,7 @@ from .models import Joke
 from .forms import *
 from django.forms import modelformset_factory
 from django.urls import reverse
+from django.contrib import messages
 
 # from .forms import ContactForm, UserContactForm, UploadedDocumentForm # I'm not sure uploaded document form should be here (k).
 import random
@@ -226,7 +227,8 @@ def context_products_contact(request):
             email_confirmation.send()
             print('email confirmation sent')
             
-            context_dict['email_sent'] = True
+           # context_dict['email_sent'] = True
+            messages.success(request, "✅ Your message was successfully sent!")
             return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/')) # redirects to the same page to clear the form after submission
 
             

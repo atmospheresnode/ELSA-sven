@@ -405,10 +405,35 @@ def build(request):
                 ama_investigation = Investigation.objects.filter(name='Atmospheric Modeling Annex').first()
                 print(ama_investigation)
                 write_into_label(ama_investigation, product_bundle, [])
+
+                print('before initial save')
+                collections = form_collections.save(commit=False)
+                print('after initial save and before setting bundle')
+
+                collections.has_context = False
+                collections.has_xml_schema = False
+                collections.has_document = True
+
+                collections.bundle = bundle
+                print('after setting bundle and before final save')
+                # collections.save(commit=True)
+                print('here')
+                print('\nCollections model object:    {}'.format(collections))
+                print('now here')
+
+                # Create PDS4 compliant directories for each collection within the bundle.
+                print('before build collections directories')
+                collections.build_directories()
+                print('after build collections directories')
             else:
                 print('before initial save')
                 collections = form_collections.save(commit=False)
                 print('after initial save and before setting bundle')
+
+                collection.has_context = True
+                collection.has_xml_schema = True
+                collection.has_document = True
+
                 collections.bundle = bundle
                 print('after setting bundle and before final save')
                 # collections.save(commit=True)
@@ -658,6 +683,8 @@ def bundle(request, pk_bundle):
         form_target = TargetFormAll(request.POST or None, pk_bundle=pk_bundle)
         form_instrument_host = InstrumentHostForm(request.POST or None, pk_inv=None)
         form_facility = FacilityForm(request.POST or None)
+        context_products_contact = ContextProductsContactForm(request.POST or None)
+        contact_form = ContactForm(request.POST or None)
 
         # creating sets of objects associated with the bundle to add to the bundle progress checklist
         investigations_set = bundle.investigations.all()
@@ -750,6 +777,8 @@ def bundle(request, pk_bundle):
             'documents':Product_Document.objects.filter(bundle=bundle),
             'additional_collections_set': additional_collections_set,
             'user':request.user,
+            'context_products_contact' : context_products_contact,
+            'contact_form' : contact_form,
             'context_successful_submit': False,
             'additional_collection_successful_submit': False,
             'bundle_type': bundle.bundle_type,  #Rupak
@@ -792,7 +821,8 @@ def bundle(request, pk_bundle):
             write_into_label(i, product_bundle, product_collections_list)
 
             context_dict['context_successful_submit'] = True
-            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
+            return render(request, 'build/bundle/bundle.html', context_dict)
+            # return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
             # return render(request, 'build/bundle/bundle.html', context_dict)
 
         # After ELSAs friend hits submit, if the forms are completed correctly, we should enter
@@ -1434,7 +1464,7 @@ def context_search(request, pk_bundle):
             'instrument_list': bundle.instruments.all(),
             'target_list': bundle.targets.all(),
             'facility_list': bundle.facilities.all(),
-            'telescope_list': bundle.telescopes.all(),\
+            'telescope_list': bundle.telescopes.all(),
             'contact_form': contact_form,
             'context_products_contact' : context_products_contact,
         }
@@ -1462,12 +1492,14 @@ def context_search_investigation(request, pk_bundle):
 
         # Get form for observing system component
         form_investigation = InvestigationForm(request.POST or None)
-
+        context_products_contact = ContextProductsContactForm(request.POST or None)
+        
         # Context Dictionary
         context_dict = {
             'bundle': bundle,
             'form_investigation': form_investigation,
             'bundle_investigation_set': bundle.investigations.all(),
+            'context_products_contact': context_products_contact,
         }
 
         # If the user just added an investigation, add it to the context dictionary
@@ -1495,12 +1527,12 @@ def context_search_investigation(request, pk_bundle):
             messages.success(request, 'Investigation Product Added')
             context_dict['successful_submit'] = True
             # return render(request, 'build/context/context_search_investigation.html', context_dict)
-            # return render(request, 'build/bundle/bundle.html', context_dict)
-            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
+            return render(request, 'build/bundle/bundle.html', context_dict)
+            #return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
         
         context_dict['messages'] = messages.get_messages(request)
-        # return render(request, 'build/bundle/bundle.html', context_dict)
-        return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
+        return render(request, 'build/bundle/bundle.html', context_dict)
+        #return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
         # return HttpResponseRedirect('/build/' + pk_bundle + '/')
         # return render(request, 'build/context/context_search_investigation.html', context_dict)
 
