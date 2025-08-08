@@ -403,6 +403,9 @@ def add_reference_links(reference_pairs):
     for pair in reference_pairs:
         if pair[0] in problem_products or pair[1] in problem_products:
             continue
+
+        if len(pair[0].split(':')) < 4 or len(pair[1].split(':')) < 4:
+            continue
         
         model1 = get_model(pair[0].split(':')[4])
         model2 = get_model(pair[1].split(':')[4])
@@ -415,7 +418,7 @@ def add_reference_links(reference_pairs):
         
         for obj, other_obj in [(obj1, obj2), (obj2, obj1)]:
             for field in obj._meta.get_fields():
-                if field.is_relation and field.many_to_many and field.related_model == other_obj._meta.model:
+                if field.is_relation and field.many_to_many and isinstance(field, ManyToManyField) and field.related_model == other_obj._meta.model:
                     getattr(obj, field.name).add(other_obj)
                     print(f'Internal reference added: {obj.lid} -> {other_obj.lid}', file=outlog)
 
