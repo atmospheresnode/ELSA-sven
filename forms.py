@@ -73,7 +73,7 @@ class BundleForm(forms.ModelForm):
 
     class Meta(object):
         model = Bundle              
-        fields = ('name', 'bundle_type', 'version', )
+        fields = ('name', 'bundleID', 'bundle_type', 'version', )
 
 
     """

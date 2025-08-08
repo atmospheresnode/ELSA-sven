@@ -2006,6 +2006,7 @@ class Bundle(models.Model):
     )
 
     bundle_type = models.CharField(max_length=12, default='Archive',)
+    #bundleID = models.CharField(max_length=MAX_CHAR_FIELD, unique=True, verbose_name="Bundle ID")
     name = models.CharField(max_length=MAX_CHAR_FIELD, unique=True)
     status = models.CharField(max_length=1, choices=BUNDLE_STATUS, blank=False, default='b')
     user = models.ForeignKey(User, on_delete=models.CASCADE)

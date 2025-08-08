@@ -650,6 +650,8 @@ def bundle(request, pk_bundle):
         form_target = TargetFormAll(request.POST or None)
         form_instrument_host = InstrumentHostForm(request.POST or None, pk_inv=None)
         form_facility = FacilityForm(request.POST or None)
+        context_products_contact = ContextProductsContactForm(request.POST or None)
+        contact_form = ContactForm(request.POST or None)
 
         # creating sets of objects associated with the bundle to add to the bundle progress checklist
         investigations_set = bundle.investigations.all()
@@ -742,6 +744,8 @@ def bundle(request, pk_bundle):
             'documents':Product_Document.objects.filter(bundle=bundle),
             'additional_collections_set': additional_collections_set,
             'user':request.user,
+            'context_products_contact' : context_products_contact,
+            'contact_form' : contact_form,
         }
 
         # Compute status for bundle progress checklist
@@ -760,6 +764,28 @@ def bundle(request, pk_bundle):
         context_dict['directory_name'] = directory_name
         context_dict['subfiles'] = c 
         context_dict['file_context'] = file_context
+
+        if form_investigation.is_valid():
+            print(form_investigation.cleaned_data['investigation'].file_ref)
+            print(Investigation.objects.filter(file_ref=form_investigation.cleaned_data['investigation'].file_ref).first().file_ref)
+            i = Investigation.objects.filter(file_ref=form_investigation.cleaned_data['investigation'].file_ref).first()
+            # i = Investigation.objects.get(
+            #     file_ref=form_investigation.cleaned_data['investigation'].file_ref)
+            context_dict['investigation'] = i
+            bundle.investigations.add(i)
+            print(i)
+
+            # Label Fix for context products - Said
+            product_bundle = Product_Bundle.objects.get(bundle=bundle)
+            # Ok this gets confusing, and will add documentation later. Let me briefly explain here. - Said
+            # Querying DB for product_collection objects such as document, context, and so on. Need a separate query for additional collections, so I do that query.
+            # Chain(query1, query2), creates a pseudo-union of both queries, then allows write_into_label to write into all necessary labels.
+            product_collections_list = chain(Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data'), AdditionalCollections.objects.filter(bundle=bundle))
+
+            write_into_label(i, product_bundle, product_collections_list)
+
+            context_dict['context_successful_submit'] = True
+            return render(request, 'build/bundle/bundle.html', context_dict)
 
         # After ELSAs friend hits submit, if the forms are completed correctly, we should enter
         # this conditional.
@@ -1389,7 +1415,7 @@ def context_search(request, pk_bundle):
             'instrument_list': bundle.instruments.all(),
             'target_list': bundle.targets.all(),
             'facility_list': bundle.facilities.all(),
-            'telescope_list': bundle.telescopes.all(),\
+            'telescope_list': bundle.telescopes.all(),
             'contact_form': contact_form,
             'context_products_contact' : context_products_contact,
         }
@@ -1417,12 +1443,14 @@ def context_search_investigation(request, pk_bundle):
 
         # Get form for observing system component
         form_investigation = InvestigationForm(request.POST or None)
-
+        context_products_contact = ContextProductsContactForm(request.POST or None)
+        
         # Context Dictionary
         context_dict = {
             'bundle': bundle,
             'form_investigation': form_investigation,
             'bundle_investigation_set': bundle.investigations.all(),
+            'context_products_contact': context_products_contact,
         }
 
         # If the user just added an investigation, add it to the context dictionary
@@ -1450,12 +1478,12 @@ def context_search_investigation(request, pk_bundle):
             messages.success(request, 'Investigation Product Added')
             context_dict['messages'] = messages.get_messages(request)
             # return render(request, 'build/context/context_search_investigation.html', context_dict)
-            # return render(request, 'build/bundle/bundle.html', context_dict)
-            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
+            return render(request, 'build/bundle/bundle.html', context_dict)
+            #return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
         
         context_dict['messages'] = messages.get_messages(request)
-        # return render(request, 'build/bundle/bundle.html', context_dict)
-        return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
+        return render(request, 'build/bundle/bundle.html', context_dict)
+        #return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
         # return HttpResponseRedirect('/build/' + pk_bundle + '/')
         # return render(request, 'build/context/context_search_investigation.html', context_dict)
 
