@@ -401,70 +401,75 @@ def build(request):
 
             print('---------------- End Build Product_Bundle Base Case -------------------------')
 
-            print('before initial save')
-            collections = form_collections.save(commit=False)
-            print('after initial save and before setting bundle')
-            collections.bundle = bundle
-            print('after setting bundle and before final save')
-            # collections.save(commit=True)
-            print('here')
-            print('\nCollections model object:    {}'.format(collections))
-            print('now here')
+            if bundle.bundle_type == 'External':
+                ama_investigation = Investigation.objects.filter(name='Atmospheric Modeling Annex').first()
+                print(ama_investigation)
+                write_into_label(ama_investigation, product_bundle, [])
+            else:
+                print('before initial save')
+                collections = form_collections.save(commit=False)
+                print('after initial save and before setting bundle')
+                collections.bundle = bundle
+                print('after setting bundle and before final save')
+                # collections.save(commit=True)
+                print('here')
+                print('\nCollections model object:    {}'.format(collections))
+                print('now here')
 
-            # Create PDS4 compliant directories for each collection within the bundle.
-            print('before build collections directories')
-            collections.build_directories()
-            print('after build collections directories')
+                # Create PDS4 compliant directories for each collection within the bundle.
+                print('before build collections directories')
+                collections.build_directories()
+                print('after build collections directories')
 
-            for collection in collections.list():
-                print(collection)
+                for collection in collections.list():
+                    print(collection)
 
-                # Create Product_Collection model for each collection
-                
-                if collection == 'document':
-                    product_collection = form_product_collection_document.save(commit=False)
-                    product_collection.bundle = bundle
-                    product_collection.collection = 'Document'
-                elif collection == 'context':
-                    product_collection = form_product_collection_context.save(commit=False)
-                    product_collection.bundle = bundle
-                    product_collection.collection = 'Context'
-                elif collection == 'xml_schema':
-                    product_collection = form_product_collection_schema.save(commit=False)
-                    product_collection.bundle = bundle
-                    product_collection.collection = 'XML_Schema'
-                product_collection.save()
+                    # Create Product_Collection model for each collection
+                    
+                    if collection == 'document':
+                        product_collection = form_product_collection_document.save(commit=False)
+                        product_collection.bundle = bundle
+                        product_collection.collection = 'Document'
+                    elif collection == 'context':
+                        product_collection = form_product_collection_context.save(commit=False)
+                        product_collection.bundle = bundle
+                        product_collection.collection = 'Context'
+                    elif collection == 'xml_schema':
+                        product_collection = form_product_collection_schema.save(commit=False)
+                        product_collection.bundle = bundle
+                        product_collection.collection = 'XML_Schema'
+                    product_collection.save()
 
-                # Fill Product_Bundle with Collection Bundle Member Entries
-                # list = [label_object, label_root]
-                label_list = open_label_with_tree(product_bundle.label())
-                label_root = label_list[1]
-                print(' ... Adding Bundle Member Entries ... ')
-                label_root = product_bundle.build_bundle_member_entry(
-                    label_root, product_collection)
-                close_label(product_bundle.label(), label_root, label_list[2])
-                print(' ... Bundle Member Entry Added: {} ...'.format(product_collection.lid))
-
-                # Build Product_Collection label for all labels other than those found in the data collection.
-                print('-------------Start Build Product_Collection Base Case-----------------')
-                if collection != 'data':
-                    product_collection.build_base_case()
-
-                    # Open Product_Collection label
-                    print(' ... Opening Label ... ')
-                    label_list = open_label_with_tree(
-                        product_collection.label())
+                    # Fill Product_Bundle with Collection Bundle Member Entries
+                    # list = [label_object, label_root]
+                    label_list = open_label_with_tree(product_bundle.label())
                     label_root = label_list[1]
+                    print(' ... Adding Bundle Member Entries ... ')
+                    label_root = product_bundle.build_bundle_member_entry(
+                        label_root, product_collection)
+                    close_label(product_bundle.label(), label_root, label_list[2])
+                    print(' ... Bundle Member Entry Added: {} ...'.format(product_collection.lid))
 
-                    # Fill label
-                    print(' ... Filling Label ... ')
-                    #label_root = bundle.version.fill_xml_schema(label_root)
-                    label_root = product_collection.fill_base_case(label_root)
+                    # Build Product_Collection label for all labels other than those found in the data collection.
+                    print('-------------Start Build Product_Collection Base Case-----------------')
+                    if collection != 'data':
+                        product_collection.build_base_case()
 
-                    # Close label
-                    print(' ... Closing Label ... ')
-                    close_label(product_collection.label(), label_root, label_list[2])
-                    print('-------------End Build Product_Collection Base Case-----------------')
+                        # Open Product_Collection label
+                        print(' ... Opening Label ... ')
+                        label_list = open_label_with_tree(
+                            product_collection.label())
+                        label_root = label_list[1]
+
+                        # Fill label
+                        print(' ... Filling Label ... ')
+                        #label_root = bundle.version.fill_xml_schema(label_root)
+                        label_root = product_collection.fill_base_case(label_root)
+
+                        # Close label
+                        print(' ... Closing Label ... ')
+                        close_label(product_collection.label(), label_root, label_list[2])
+                        print('-------------End Build Product_Collection Base Case-----------------')
 
             # Further develop context_dict entries for templates
             context_dict['Bundle'] = bundle
@@ -482,11 +487,14 @@ def build(request):
             enable_walkthrough = request.POST.get('enable_walkthrough') == 'on'
 
             if enable_walkthrough:
+                request.session['walkthrough_bundle_type'] = bundle.bundle_type #Rupak
                 print('Walkthrough enabled — redirecting to walkthrough page.')
                 return redirect('build:yes_intro_page', bundle_id=bundle.id)
             else:
                 print('Walkthrough not enabled — redirecting to main bundle page.')
                 return redirect('build:no_intro_page', bundle_id=bundle.id)
+        else:
+            print('failed uniqueness')
 
 
     return render(request, 'build/build.html', context_dict)
@@ -647,7 +655,7 @@ def bundle(request, pk_bundle):
         form_product_collection = ProductCollectionForm(request.POST or None)
         form_additional_collections = AdditionalCollectionForm(request.POST or None)
         form_investigation = InvestigationForm(request.POST or None)
-        form_target = TargetFormAll(request.POST or None)
+        form_target = TargetFormAll(request.POST or None, pk_bundle=pk_bundle)
         form_instrument_host = InstrumentHostForm(request.POST or None, pk_inv=None)
         form_facility = FacilityForm(request.POST or None)
         context_products_contact = ContextProductsContactForm(request.POST or None)
@@ -744,8 +752,14 @@ def bundle(request, pk_bundle):
             'documents':Product_Document.objects.filter(bundle=bundle),
             'additional_collections_set': additional_collections_set,
             'user':request.user,
+<<<<<<< HEAD
             'context_products_contact' : context_products_contact,
             'contact_form' : contact_form,
+=======
+            'context_successful_submit': False,
+            'additional_collection_successful_submit': False,
+            'bundle_type': bundle.bundle_type,  #Rupak
+>>>>>>> 7e788d8eecc45cf0c3d410b41a669d29256abe2f
         }
 
         # Compute status for bundle progress checklist
@@ -785,7 +799,12 @@ def bundle(request, pk_bundle):
             write_into_label(i, product_bundle, product_collections_list)
 
             context_dict['context_successful_submit'] = True
+<<<<<<< HEAD
             return render(request, 'build/bundle/bundle.html', context_dict)
+=======
+            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
+            # return render(request, 'build/bundle/bundle.html', context_dict)
+>>>>>>> 7e788d8eecc45cf0c3d410b41a669d29256abe2f
 
         # After ELSAs friend hits submit, if the forms are completed correctly, we should enter
         # this conditional.
@@ -904,6 +923,9 @@ def bundle(request, pk_bundle):
             additional_collections_set = AdditionalCollections.objects.filter(bundle=bundle)
             context_dict['additional_collections_set'] = additional_collections_set
             context_dict['additional_collections_count'] =  len(additional_collections_set)
+
+            context_dict['additional_collection_successful_submit'] = True
+            # return render(request, 'build/bundle/bundle.html', context_dict)
 
             # # fixes the refresh duplication issue - deric
             return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
@@ -1243,6 +1265,7 @@ def citation_information(request, pk_bundle):
         context_dict = {
             'form_citation_information': form_citation_information,
             'bundle': bundle,
+            'bundle_type': bundle.bundle_type, #Rupak
         }
 
         # After ELSAs friend hits submit, if the forms are completed correctly, we should enter
@@ -1317,7 +1340,14 @@ def edit_citation_information(request, pk_bundle, pk_citation_information):
                 print(' ... Closing Label ... ')
                 close_label(label.label(), label_root, label_list[2])
 
-            return redirect(reverse('build:context_search', args=[pk_bundle]))
+            #return redirect(reverse('build:context_search', args=[pk_bundle]))
+
+            #Adding a check for bundle type, so it skips context search if external selected - RUPAK
+            if bundle.bundle_type == 'External':
+                return redirect(reverse('build:bundle', args=[pk_bundle]))  
+            else:
+                return redirect(reverse('build:context_search', args=[pk_bundle]))
+
 
         context_dict = {
             'form_edit_citation_information': form_edit_citation_information,
@@ -1400,7 +1430,7 @@ def context_search(request, pk_bundle):
         print('authorized user: {}'.format(request.user))
 
         form_investigation = InvestigationForm(request.POST or None)
-        form_target = TargetFormAll(request.POST or None)
+        form_target = TargetFormAll(request.POST or None, pk_bundle=pk_bundle)
         contact_form = ContactForm(request.POST or None)
 
         context_products_contact = ContextProductsContactForm(request.POST or None)
@@ -1476,7 +1506,7 @@ def context_search_investigation(request, pk_bundle):
                 write_into_label(i, product_bundle, product_collections_list)
 
             messages.success(request, 'Investigation Product Added')
-            context_dict['messages'] = messages.get_messages(request)
+            context_dict['successful_submit'] = True
             # return render(request, 'build/context/context_search_investigation.html', context_dict)
             return render(request, 'build/bundle/bundle.html', context_dict)
             #return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
@@ -1586,7 +1616,7 @@ def context_search_target(request, pk_bundle):
         print('authorized user: {}'.format(request.user))
 
         # Get form for observing system component
-        form_target = TargetFormAll(request.POST or None)
+        form_target = TargetFormAll(request.POST or None, pk_bundle=pk_bundle)
 
         # Context Dictionary
         context_dict = {
@@ -1640,7 +1670,7 @@ def context_search_target_inv(request, pk_bundle, pk_investigation):
         print('authorized user: {}'.format(request.user))
 
         # Get form for observing system component
-        form_target = TargetForm(request.POST or None, pk_ins=pk_investigation)
+        form_target = TargetForm(request.POST or None, pk_ins=pk_investigation, pk_bundle=pk_bundle)
 
         # Context Dictionary
         context_dict = {
@@ -1924,7 +1954,7 @@ def context_search_target_and_instrument(request, pk_bundle, pk_investigation, p
 
         # Get form for observing system component
         form_target = TargetForm(
-            request.POST or None, pk_ins=pk_investigation)
+            request.POST or None, pk_ins=pk_investigation, pk_bundle=pk_bundle)
         
         form_instrument = FacilityInstrumentForm(
             request.POST or None, pk_fac=pk_facility)
@@ -2603,14 +2633,82 @@ def Table_Creation(request, pk_bundle, pk_data):
             context_products.extend(bundle.targets.all())
             for context_product in context_products:
                 write_into_label(context_product, form, None)
+
+            return HttpResponseRedirect('/elsa/build/' + str(pk_bundle) + '/table_field_information/' + str(pk_data) + '/' + str(form.pk) + '/')
         else:
             print(data_form.errors.as_data())
 
         return render(request, 'build/data/Table_Creation.html', context_dict)
+        
     else:
         print('unauthorized user attempting to access a restricted area.')
         return redirect('main:restricted_access')
 
+def edit_table_field_information(request, pk_bundle, pk_data, pk_table):
+    bundle = Bundle.objects.get(pk=pk_bundle)
+    data = Data.objects.get(pk=pk_data)
+
+
+    # Secure ELSA by seeing if the user logged in is the same user associated with the Bundle
+    if request.user == bundle.user:
+        print('authorized user: {}'.format(request.user))
+
+        # Get forms
+        form_edit_table_field_information = EditTableFieldsForm(request.POST or None, pk_data=pk_data, pk_table=pk_table)
+        if data.data_type == 'Table Delimited':
+            table = Table_Delimited.objects.get(pk=pk_table)
+        elif data.data_type == 'Table Binary':
+            table = Table_Binary.objects.get(pk=pk_table)
+        elif data.data_type == 'Table Character':
+            table = Table_Fixed_Width.objects.get(pk=pk_table)
+
+        context_dict = {
+            'form_edit_table_field_information': form_edit_table_field_information,
+            'bundle': bundle,
+        }
+
+        if form_edit_table_field_information.is_valid():
+            cleaned_form = form_edit_table_field_information.cleaned_data
+
+            label_list = open_label_with_tree(table.label())
+            label_root = label_list[1]
+
+            label_root = table.fill_label_values(label_root, cleaned_form)
+
+            # Close appropriate label(s)
+            print(' ... Closing Label ... ')
+            close_label(table.label(), label_root, label_list[2])
+
+            # all_labels = []
+
+            # product_bundle = Product_Bundle.objects.get(bundle=bundle)
+            # product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+
+            # all_labels.append(product_bundle)
+            # all_labels.extend(product_collections_list)
+
+            # # fix this for filling table values
+            # for label in all_labels:
+            # # Open appropriate label(s).  
+            #     print('- Label: {}'.format(label))
+            #     print(' ... Opening Label ... ')
+            #     label_list = open_label_with_tree(label.label())
+            #     label_root = label_list[1]
+            #     print(' ... Building Label ... ')
+            #     label_root = table.fill_label_values(label_root, cleaned_form)
+
+            #     # Close appropriate label(s)
+            #     print(' ... Closing Label ... ')
+            #     close_label(label.label(), label_root, label_list[2])
+
+            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
+
+            # return render(request, 'build/citation_information/citation_information_current.html', context_dict)
+        return render(request, 'build/data/fields.html', context_dict)
+        
+    else:
+        print('unauthorized user attempting to access a restricted area.')
+        return redirect('main:restricted_access')
 
 '''
 def Table_Creation(request, pk_bundle):

@@ -108,6 +108,7 @@ BUNDLE_TYPE_CHOICES = (
 )
 
 VERSION_CHOICES = (
+    ('1O00', '1O00'),
     ('1N00', '1N00'),
     ('1K00', '1K00'),
     ('1J00', '1J00'),
@@ -586,15 +587,53 @@ class TargetForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         self.pk_ins = kwargs.pop('pk_ins')
-        super(TargetForm, self).__init__(*args, **kwargs)
-        self.fields['target'] = forms.ModelChoiceField(
-            queryset=Target.objects.filter(investigation=self.pk_ins), required=True)
+        self.pk_bundle = kwargs.pop('pk_bundle')
+
+        self.bundle = Bundle.objects.get(pk=self.pk_bundle)
         
+        # self.bundle_type = kwargs.pop('bundle_type', None)
+
+        super(TargetForm, self).__init__(*args, **kwargs)
+
+        # self.fields['target'] = forms.ModelChoiceField(
+        #     queryset=Target.objects.filter(investigation=self.pk_ins), required=True)
+
+
+        # If the bundle type is 'External', we filter targets that start with 'urn:nasa:pds:context:target:laboratory_analog' -Rupak
+        if self.bundle.bundle_type == 'External':
+            self.fields['target'] = forms.ModelChoiceField(
+                queryset=Target.objects.filter(lid__startswith='urn:nasa:pds:context:target:laboratory_analog'),
+                required=True
+            )
+        else:
+            self.fields['target'] = forms.ModelChoiceField(
+                Target.objects.filter(investigation=self.pk_ins),
+                required=True
+            )
+    
 class TargetFormAll(forms.Form):
 
     target = forms.ModelChoiceField(
         queryset=Target.objects.all(), required=True)
     # target = forms.CharField(max_length=100, label='Search')
+
+    def __init__(self, *args, **kwargs):
+        self.pk_bundle = kwargs.pop('pk_bundle')
+
+        self.bundle = Bundle.objects.get(pk=self.pk_bundle)
+
+        super(TargetFormAll, self).__init__(*args, **kwargs)
+
+        if self.bundle.bundle_type == 'External':
+            self.fields['target'] = forms.ModelChoiceField(
+                queryset=Target.objects.filter(lid__startswith='urn:nasa:pds:context:target:laboratory_analog'),
+                required=True
+            )
+        else:
+            self.fields['target'] = forms.ModelChoiceField(
+                queryset=Target.objects.all(),
+                required=True
+            )
 
 
 
@@ -983,6 +1022,113 @@ class Table_Fixed_Width_Form(forms.ModelForm):
         self.fields['data'] = forms.ModelChoiceField(queryset=Data.objects.filter(name=self.pk_ins), required = True)
         self.fields['collection'] = forms.ModelChoiceField(queryset=AdditionalCollections.objects.filter(bundle=self.pk_bun), required = True)
 
+class EditTableFieldsForm(forms.Form):
+
+    def __init__(self, *args, **kwargs):
+        self.pk_table = kwargs.pop('pk_table')
+        self.pk_data = kwargs.pop('pk_data')
+
+        self.data = Data.objects.get(pk=self.pk_data)
+
+        super(EditTableFieldsForm, self).__init__(*args, **kwargs)
+
+        if self.data.data_type == 'Table Delimited':
+            self.table = Table_Delimited.objects.get(pk=self.pk_table)
+        elif self.data.data_type == 'Table Binary':
+            self.table = Table_Binary.objects.get(pk=self.pk_table)
+        elif self.data.data_type == 'Table Character':
+            self.table = Table_Fixed_Width.objects.get(pk=self.pk_table)
+
+        # Add fields for table 
+        self._add_fields(self.table.fields)
+
+    def _add_fields(self, count):
+        """Helper method to add fields for a Table."""
+        for i in range(count):
+            print('in adding firls loop')
+            # Creating labels so that the words are capitalized
+            name_label = f"Field {i+1} Name"
+            field_number_label = f"Field {i+1} Field Number"
+            data_type_label = f"Field {i+1} Data Type"
+            field_location_label = f"Field {i + 1} Field Location"
+            description_label = f"Field {i + 1} Description"
+            max_field_length_label = f"Field {i+1} Maximum Field Length"
+
+            if self.data.data_type == 'Table Delimited':
+                self.fields[f'name_{i}'] = forms.CharField(
+                    required=False, 
+                    label=name_label,
+                    widget=forms.TextInput(attrs={'class': 'form-control form-outline'})
+                )
+                self.fields[f'field_number_{i}'] = forms.IntegerField(
+                    required=False,
+                    min_value=0,
+                    label=field_number_label,
+                    widget=forms.TextInput(attrs={'class': 'form-control form-outline'})
+                )
+                self.fields[f'data_type_{i}'] = forms.CharField(
+                    required=False,
+                    label=data_type_label,
+                    widget=forms.TextInput(attrs={'class': 'form-control form-outline'})
+                )
+                self.fields[f'description_{i}'] = forms.IntegerField(
+                    required=False,
+                    label=description_label,
+                    widget=forms.TextInput(attrs={'class': 'form-control form-outline'})
+                )
+            elif self.data.data_type == 'Table Binary':
+                self.fields[f'name_{i}'] = forms.CharField(
+                    required=False, 
+                    label=name_label,
+                    widget=forms.TextInput(attrs={'class': 'form-control form-outline'})
+                )
+                self.fields[f'field_location_{i}'] = forms.CharField(
+                    required=False, 
+                    label=field_location_label,
+                    widget=forms.TextInput(attrs={'class': 'form-control form-outline'})
+                )
+                self.fields[f'data_type_{i}'] = forms.CharField(
+                    required=False,
+                    label=data_type_label,
+                    widget=forms.TextInput(attrs={'class': 'form-control form-outline'})
+                )
+                self.fields[f'max_field_length_{i}'] = forms.IntegerField(
+                    required=False,
+                    label=max_field_length_label,
+                    widget=forms.TextInput(attrs={'class': 'form-control form-outline'})
+                )
+                self.fields[f'description_{i}'] = forms.IntegerField(
+                    required=False,
+                    label=description_label,
+                    widget=forms.TextInput(attrs={'class': 'form-control form-outline'})
+                )
+            elif self.data.data_type == 'Table Character':
+                self.fields[f'name_{i}'] = forms.CharField(
+                    required=False, 
+                    label=name_label,
+                    widget=forms.TextInput(attrs={'class': 'form-control form-outline'})
+                )
+                self.fields[f'field_location_{i}'] = forms.CharField(
+                    required=False, 
+                    label=field_location_label,
+                    widget=forms.TextInput(attrs={'class': 'form-control form-outline'})
+                )
+                self.fields[f'data_type_{i}'] = forms.CharField(
+                    required=False,
+                    label=data_type_label,
+                    widget=forms.TextInput(attrs={'class': 'form-control form-outline'})
+                )
+                self.fields[f'field_number_{i}'] = forms.IntegerField(
+                    required=False,
+                    min_value=0,
+                    label=field_number_label,
+                    widget=forms.TextInput(attrs={'class': 'form-control form-outline'})
+                )
+                self.fields[f'description_{i}'] = forms.IntegerField(
+                    required=False,
+                    label=description_label,
+                    widget=forms.TextInput(attrs={'class': 'form-control form-outline'})
+                )
 
 class Field_Delimited_Form(forms.ModelForm):
     class Meta(object):

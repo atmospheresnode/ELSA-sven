@@ -797,7 +797,7 @@ class InvestigationManager(models.Manager):
 
 class Investigation(models.Model):
     INVESTIGATION_TYPES = [
-        ('individual', 'individual'),
+        ('individual_investigation', 'individual_investigation'),
         ('mission', 'mission'),
         ('observing_campaign', 'observing_campaign'),
         ('other_investigation', 'other_investigation'),
@@ -1140,6 +1140,8 @@ class Instrument(models.Model):
     # Relational Attributes
     instrument_hosts = models.ManyToManyField("Instrument_Host")
     investigations = models.ManyToManyField(Investigation)
+
+    facilities = models.ManyToManyField("Facility")
 
     # Attributes used for crawler
     # null=true's added 11/2022 
@@ -1700,6 +1702,7 @@ class Facility(models.Model):
 
     # Relational attribute
     instruments = models.ManyToManyField(Instrument)
+    # instruments = models.ManyToManyField('Instrument')
 
     investigations = models.ManyToManyField(Investigation)
 
@@ -2006,8 +2009,12 @@ class Bundle(models.Model):
     )
 
     bundle_type = models.CharField(max_length=12, default='Archive',)
+<<<<<<< HEAD
     #bundleID = models.CharField(max_length=MAX_CHAR_FIELD, unique=True, verbose_name="Bundle ID")
     name = models.CharField(max_length=MAX_CHAR_FIELD, unique=True)
+=======
+    name = models.CharField(max_length=MAX_CHAR_FIELD)
+>>>>>>> 7e788d8eecc45cf0c3d410b41a669d29256abe2f
     status = models.CharField(max_length=1, choices=BUNDLE_STATUS, blank=False, default='b')
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     version = models.CharField(max_length=4)
@@ -2022,6 +2029,11 @@ class Bundle(models.Model):
     targets = models.ManyToManyField(Target)
     facilities = models.ManyToManyField(Facility)
     telescopes = models.ManyToManyField(Telescope)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['user', 'name'], name='unique_name_per_user')
+        ]
 
     def __str__(self):
         return self.name
@@ -2110,7 +2122,10 @@ class Bundle(models.Model):
         return self.name_file_case()
 
     def lid(self):
-        return 'urn:{0}:{1}'.format(self.user.userprofile.agency, self.name_lid_case())
+        if self.bundle_type == 'External':
+            return 'urn:pds-ama:{1}'.format(self.user.userprofile.agency, self.name_lid_case())
+        else:
+            return 'urn:{0}:{1}'.format(self.user.userprofile.agency, self.name_lid_case())
 
     """ 
         build_directory currently is not working.
@@ -3295,6 +3310,27 @@ class Table_Delimited(models.Model):
         
         return root
 
+    def fill_label_values(self, label_root, cleaned_form):
+        f = label_root.find('{}File_Area_Observational'.format(NAMESPACE))
+        td = f.find('{}Table_Delimited'.format(NAMESPACE))
+        rd = td.find('{}Record_Delimited'.format(NAMESPACE))
+
+        fields = rd.findall('{}Field_Delimited'.format(NAMESPACE))
+
+        field_count = 0
+
+        for field in fields:
+            name = field.find('{}name'.format(NAMESPACE)) 
+            name.text = cleaned_form.get(f'name_{field_count}')
+            field_number = field.find('{}field_number'.format(NAMESPACE))
+            field_number.text = str(cleaned_form.get(f'field_number_{field_count}'))
+            data_type = field.find('{}data_type'.format(NAMESPACE)) 
+            data_type.text = cleaned_form.get(f'data_type_{field_count}')
+            description = field.find('{}description'.format(NAMESPACE)) 
+            description.text = str(cleaned_form.get(f'description_{field_count}'))
+
+        return label_root
+
     def __str__(self):
         return smart_str(self.id)
 
@@ -3421,8 +3457,39 @@ class Table_Binary(models.Model):
 
         groups = rb.find('{}groups'.format(NAMESPACE))
         groups.text = '0'
+
+        field_binary = rb.find('{}Field_Binary'.format(NAMESPACE))
+
+        for i in range(int(self.fields) - 1):
+            cloned_file = copy.deepcopy(field_binary)
+            rb.append(cloned_file)
         
         return root
+
+    def fill_label_values(self, label_root, cleaned_form):
+        Table_Binary = label_root
+
+        f = Table_Binary.find('{}File_Area_Observational'.format(NAMESPACE))
+        tb = f.find('{}Table_Binary'.format(NAMESPACE))
+        rb = tb.find('{}Record_Binary'.format(NAMESPACE))
+
+        fields = rb.findall('{}Field_Binary'.format(NAMESPACE))
+
+        field_count = 0
+
+        for field in fields:
+            name = field.find('{}name'.format(NAMESPACE)) 
+            name.text = cleaned_form.get(f'name_{field_count}')
+            field_location = field.find('{}field_location'.format(NAMESPACE)) 
+            field_location.text = cleaned_form.get(f'field_location_{field_count}')
+            data_type = field.find('{}data_type'.format(NAMESPACE)) 
+            data_type.text = cleaned_form.get(f'data_type_{field_count}')
+            field_length = field.find('{}field_length'.format(NAMESPACE))
+            field_length.text = str(cleaned_form.get(f'max_field_length_{field_count}'))
+            description = field.find('{}description'.format(NAMESPACE)) 
+            description.text = str(cleaned_form.get(f'description_{field_count}'))
+
+        return label_root
 
     def __str__(self):
         return smart_str(self.id)
@@ -3567,8 +3634,39 @@ class Table_Fixed_Width(models.Model):
 
         groups = rc.find('{}groups'.format(NAMESPACE))
         groups.text = '0'
+
+        field_character = rc.find('{}Field_Character'.format(NAMESPACE))
+
+        for i in range(int(self.fields) - 1):
+            cloned_file = copy.deepcopy(field_character)
+            rc.append(cloned_file)
         
         return root
+    
+    def fill_label_values(self, label_root, cleaned_form):
+        Table_Character = label_root
+
+        f = Table_Character.find('{}File_Area_Observational'.format(NAMESPACE))
+        tc = f.find('{}Table_Character'.format(NAMESPACE))
+        rc = tc.find('{}Record_Character'.format(NAMESPACE))
+
+        fields = rc.findall('{}Field_Character'.format(NAMESPACE))
+
+        field_count = 0
+
+        for field in fields:
+            name = field.find('{}name'.format(NAMESPACE)) 
+            name.text = cleaned_form.get(f'name_{field_count}')
+            field_location = field.find('{}field_location'.format(NAMESPACE)) 
+            field_location.text = cleaned_form.get(f'field_location_{field_count}')
+            data_type = field.find('{}data_type'.format(NAMESPACE)) 
+            data_type.text = str(cleaned_form.get(f'data_type_{field_count}'))
+            field_number = field.find('{}field_number'.format(NAMESPACE))
+            field_number.text = cleaned_form.get(f'field_number_{field_count}')
+            description = field.find('{}description'.format(NAMESPACE)) 
+            description.text = str(cleaned_form.get(f'description_{field_count}'))
+
+        return label_root
 
     def __str__(self):
         return smart_str(self.id)

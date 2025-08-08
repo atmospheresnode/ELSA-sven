@@ -1,68 +1,86 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="utf-8">
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: Georgia, "Times New Roman", serif;
             font-size: 12pt;
             margin: 2em;
-            line-height: 1.6;
+            color: #000;
         }
+
         h1 {
-            text-align: center;
+           text-align: center;
             font-size: 18pt;
-            margin-bottom: 1em;
-        }
-        .section {
-            margin-bottom: 1em;
-        }
-        .label {
             font-weight: bold;
-            display: block;
-            margin-bottom: 0.2em;
+            color: #003366; 
+            margin-bottom: 0.3em;
+            
         }
-        .content {
-            white-space: pre-wrap; /* ensures line breaks in long text are preserved */
+
+        .question {
+            font-weight: bold;
+            margin: 0;         
+            padding: 0;          
+        }
+
+        .answer {
+            white-space: pre-wrap;
+            margin: 0;         
+            padding: 0;
+        }
+
+        .block-review {
+            margin-top: 1em;
+            margin-bottom: 20px;
+            padding: 10px;
         }
     </style>
 </head>
 <body>
-    <h1>Derived Data Peer Review</h1>
 
-    <div class="section">
-        <span class="label">Name:</span>
-        <div class="content">{{ contact_name }}</div>
+    <h1>PDS Data Set Peer Review</h1>
+
+    <div class="block-review">
+        <div class="question">Name:</div>
+        <div class="answer">{{ contact_name }}</div>
     </div>
 
-    {% comment %} <div class="section">
-        <span class="label">Email:</span>
-        <div class="content">{{ contact_email }}</div>
-    </div> {% endcomment %}
-
-    <div class="section">
-        <span class="label">Derived Data:</span>
-        <div class="content">{{ derived_data }}</div>
+    <div class="block-review">
+        <div class="question">Email:</div>
+        <div class="answer">{{ contact_email }}</div>
     </div>
 
-    <div class="section">
-        <span class="label">Does the data provide clear and concise documentation adequate for its usage?</span>
-        <div class="content">{{ question1 }}</div>
+    <div class="block-review">
+        <div class="question">Reviewed PDS Data Set:</div>
+        <div class="answer">{{ derived_data }}</div>
     </div>
 
-    <div class="section">
-        <span class="label">Are you able to manipulate and plot the data, interpret columns into tables, and understand the context and relationships of the data products?</span>
-        <div class="content">{{ question2 }}</div>
+    <div class="block-review">
+        <div class="question">Does the data set/bundle provide clear and concise documentation adequate for its usage?</div>
+        <div class="answer">{{ question1 }}</div>
     </div>
 
-    <div class="section">
-        <span class="label">Are there any concerns about the creation/generation, calibration, or general usability of the data?</span>
-        <div class="content">{{ question3 }}</div>
+    <div class="block-review">
+        <div class="question">Are you able to manipulate and/or plot the data, interpret columns/rows into tables, and understand the context and relationships of the data products?</div>
+        <div class="answer">{{ question2 }}</div>
     </div>
 
-    <div class="section">
-        <span class="label">Any further comments to PDS Atmospheres Node about the data?</span>
-        <div class="content">{{ question4 }}</div>
+    <div class="block-review">
+        <div class="question">Are there any concerns about the creation/generation, calibration, or general usability of the data?</div>
+        <div class="answer">{{ question3 }}</div>
     </div>
+
+    <div class="block-review">
+        <div class="question">Were there any issues with the data access website, related references, or any other accessibility concerns?</div>
+        <div class="answer">{{ question4 }}</div>
+    </div>
+
+    <div class="block-review">
+        <div class="question">Do you have any further comments to the PDS Atmospheres Node about the data?</div>
+        <div class="answer">{{ question5 }}</div>
+    </div>
+
 </body>
 </html>

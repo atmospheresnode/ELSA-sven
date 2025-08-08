@@ -19,20 +19,54 @@ from .models import ReviewDraft
 import json
 import uuid
 import traceback
+import re
 
 
 # Function to generate a DOCX document from the context dictionary
 def generate_docx(context_dict):
     doc = Document()
-    doc.add_heading('Derived Data Review', 0)
+    doc.add_heading('PDS Data Set Peer Review', 0)
 
-    doc.add_paragraph(f"Name: {context_dict['contact_name']}")
-    doc.add_paragraph(f"Email: {context_dict['contact_email']}")
-    doc.add_paragraph(f"Derived Data: {context_dict['derived_data']}")
-    doc.add_paragraph("Does the data provide clear and concise documentation adequate for its usage? " + context_dict['question1'])
-    doc.add_paragraph("Are you able to manipulate and plot the data, interpret columns into tables, and understand the context and relationships of the data products? " + context_dict['question2'])
-    doc.add_paragraph("Are there any concerns about the creation/generation, calibration, or general usability of the data? " + context_dict['question3'])
-    doc.add_paragraph("Any further comments to PDS Atmospheres Node about the data? " + context_dict['question4'])
+   # Helper function to add a bold label and normal text value
+    def add_bold_label(label, value):
+        p = doc.add_paragraph()
+        run_label = p.add_run(f"{label}: ")
+        run_label.bold = True
+        p.add_run(value)
+
+    # Helper function to add a bold question and normal answer
+    def add_bold_question_with_answer(question, answer):
+        p = doc.add_paragraph()
+        run_q = p.add_run(question + '\n')
+        run_q.bold = True
+        p.add_run(answer)
+
+    # Add contact info
+    add_bold_label("Name", context_dict.get('contact_name', ''))
+    add_bold_label("Email", context_dict.get('contact_email', ''))
+    add_bold_label("Reviewed PDS Data Set", context_dict.get('derived_data', ''))
+
+    # Add questions with responses
+    add_bold_question_with_answer(
+        "Does the data set/bundle provide clear and concise documentation adequate for its usage?",
+        context_dict.get('question1', '')
+    )
+    add_bold_question_with_answer(
+        "Are you able to manipulate and/or plot the data, interpret columns/rows into tables, and understand the context and relationships of the data products?",
+        context_dict.get('question2', '')
+    )
+    add_bold_question_with_answer(
+        "Are there any concerns about the creation/generation, calibration, or general usability of the data?",
+        context_dict.get('question3', '')
+    )
+    add_bold_question_with_answer(
+        "Were there any issues with the data access website, related references, or any other accessibility concerns?",
+        context_dict.get('question4', '')
+    )
+    add_bold_question_with_answer(
+        "Do you have any further comments to the PDS Atmospheres Node about the data?",
+        context_dict.get('question5', '')
+    )
 
     buffer = BytesIO()
     doc.save(buffer)
@@ -84,6 +118,7 @@ def index(request):
         context_dict['question2'] = review_form.cleaned_data['question2']
         context_dict['question3'] = review_form.cleaned_data['question3']
         context_dict['question4'] = review_form.cleaned_data['question4']
+        context_dict['question5'] = review_form.cleaned_data['question5']
 
         # Find template used for email confirmation
         template = get_template('review/comment_template.txt')
@@ -94,32 +129,45 @@ def index(request):
         pdf_file = generate_pdf(context_dict)
 
         email = EmailMessage(
-            subject="Derived Data Peer Review from {}".format(context_dict['contact_name']),
+            subject="PDS Data Set Peer Review from {}".format(context_dict['contact_name']),
             #body=content,
             body="A new review has been submitted by {}. Please find the attached documents for details.".format(context_dict['contact_name']),
-            from_email= ['atm-elsa@nmsu.edu'],
+            from_email= 'atm-elsa@nmsu.edu',
             to=['rupakdey@nmsu.edu', 'lneakras@nmsu.edu', 'sajomont@nmsu.edu', 'lhuber@nmsu.edu'],
             #to=['rupakdey@nmsu.edu'],
             headers={'Reply-To': context_dict['contact_email']}
         )
 
+        #Naming the files based on the Reviewed Data Set
+        def sanitize_filename(name):
+            # Lowercase, replace spaces with underscores, remove non-alphanumeric/underscore chars
+            safe_name = name.lower()
+            safe_name = safe_name.replace(' ', '_')
+            safe_name = re.sub(r'[^a-z0-9_]+', '', safe_name)
+            return safe_name or "review"
+        
+        derived_data_name = sanitize_filename(context_dict.get('derived_data', 'review'))
+
+        docx_filename = f"{derived_data_name}_review.docx"
+        pdf_filename = f"{derived_data_name}_review.pdf"
+
         # Attach the generated DOCX and PDF files
-        email.attach('review.docx', docx_file.read(), 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
-        email.attach('review.pdf', pdf_file.read(), 'application/pdf')
+        email.attach(docx_filename, docx_file.read(), 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+        email.attach(pdf_filename, pdf_file.read(), 'application/pdf')
         print("Before sending email to ELSA team")
         email.send()
         print("After sending email to ELSA team")
 
         email_confirmation = EmailMessage(
-            subject="Thank you for submitting a Derived Data Peer Review!",
-            body="Your review has been received. Your review copy is included for your record. Please find the attachments! \nThank you for using ELSA!\n\nRegards,\nTeam ELSA",
+            subject="Thank you for submitting a PDS Data Set Peer Review!",
+            body="Your review has been received. A copy of the review is included here for your record. Please find the attachments! \nThank you for using ELSA!\n\nRegards,\nTeam ELSA",
             from_email='atm-elsa@nmsu.edu',
             to=[context_dict['contact_email']]
         )
 
         # Attach the same DOCX and PDF files to the confirmation email
-        email_confirmation.attach('review.docx', docx_file.getvalue(), 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
-        email_confirmation.attach('review.pdf', pdf_file.getvalue(), 'application/pdf')
+        email_confirmation.attach(docx_filename, docx_file.getvalue(), 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+        email_confirmation.attach(pdf_filename, pdf_file.getvalue(), 'application/pdf')
         print("Before sending email confirmation to user")
         email_confirmation.send()
         print("After sending email")
