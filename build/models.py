@@ -2118,7 +2118,7 @@ class Bundle(models.Model):
 
     def lid(self):
         if self.bundle_type == 'External':
-            return 'urn:pds-ama:{1}'.format(self.user.userprofile.agency, self.name_lid_case())
+            return 'urn:{0}:pds-ama:{1}'.format(self.user.userprofile.agency, self.name_lid_case())
         else:
             return 'urn:{0}:{1}'.format(self.user.userprofile.agency, self.name_lid_case())
 

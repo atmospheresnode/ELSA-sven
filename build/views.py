@@ -406,12 +406,14 @@ def build(request):
                 print(ama_investigation)
                 write_into_label(ama_investigation, product_bundle, [])
 
-                collection.has_context = False
-                collection.has_xml_schema = False
-
                 print('before initial save')
                 collections = form_collections.save(commit=False)
                 print('after initial save and before setting bundle')
+
+                collections.has_context = False
+                collections.has_xml_schema = False
+                collections.has_document = True
+
                 collections.bundle = bundle
                 print('after setting bundle and before final save')
                 # collections.save(commit=True)
@@ -427,6 +429,11 @@ def build(request):
                 print('before initial save')
                 collections = form_collections.save(commit=False)
                 print('after initial save and before setting bundle')
+
+                collection.has_context = True
+                collection.has_xml_schema = True
+                collection.has_document = True
+                
                 collections.bundle = bundle
                 print('after setting bundle and before final save')
                 # collections.save(commit=True)
