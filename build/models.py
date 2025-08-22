@@ -2119,7 +2119,7 @@ class Bundle(models.Model):
 
     def lid(self):
         if self.bundle_type == 'External':
-            return 'urn:pds-ama:{1}'.format(self.user.userprofile.agency, self.name_lid_case())
+            return 'urn:{0}:pds-ama:{1}'.format(self.user.userprofile.agency, self.name_lid_case())
         else:
             return 'urn:{0}:{1}'.format(self.user.userprofile.agency, self.name_lid_case())
 
@@ -2219,12 +2219,12 @@ class Collections(models.Model):
 
     def list(self):
         collections_list = []
-      #  if self.has_document:
-        collections_list.append("document")
-       # if self.has_context:
-        collections_list.append("context")
-       # if self.has_xml_schema:
-        collections_list.append("xml_schema")
+        if self.has_document:
+            collections_list.append("document")
+        if self.has_context:
+            collections_list.append("context")
+        if self.has_xml_schema:
+            collections_list.append("xml_schema")
         if self.has_data:
             collections_list.append("data")
         return collections_list

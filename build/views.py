@@ -405,10 +405,35 @@ def build(request):
                 ama_investigation = Investigation.objects.filter(name='Atmospheric Modeling Annex').first()
                 print(ama_investigation)
                 write_into_label(ama_investigation, product_bundle, [])
+
+                print('before initial save')
+                collections = form_collections.save(commit=False)
+                print('after initial save and before setting bundle')
+
+                collections.has_context = False
+                collections.has_xml_schema = False
+                collections.has_document = True
+
+                collections.bundle = bundle
+                print('after setting bundle and before final save')
+                # collections.save(commit=True)
+                print('here')
+                print('\nCollections model object:    {}'.format(collections))
+                print('now here')
+
+                # Create PDS4 compliant directories for each collection within the bundle.
+                print('before build collections directories')
+                collections.build_directories()
+                print('after build collections directories')
             else:
                 print('before initial save')
                 collections = form_collections.save(commit=False)
                 print('after initial save and before setting bundle')
+
+                collection.has_context = True
+                collection.has_xml_schema = True
+                collection.has_document = True
+
                 collections.bundle = bundle
                 print('after setting bundle and before final save')
                 # collections.save(commit=True)
@@ -752,13 +777,11 @@ def bundle(request, pk_bundle):
             'documents':Product_Document.objects.filter(bundle=bundle),
             'additional_collections_set': additional_collections_set,
             'user':request.user,
-
             'context_products_contact' : context_products_contact,
             'contact_form' : contact_form,
             'context_successful_submit': False,
             'additional_collection_successful_submit': False,
             'bundle_type': bundle.bundle_type,  #Rupak
-
         }
 
         # Compute status for bundle progress checklist
