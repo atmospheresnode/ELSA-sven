@@ -752,14 +752,13 @@ def bundle(request, pk_bundle):
             'documents':Product_Document.objects.filter(bundle=bundle),
             'additional_collections_set': additional_collections_set,
             'user':request.user,
-<<<<<<< HEAD
+
             'context_products_contact' : context_products_contact,
             'contact_form' : contact_form,
-=======
             'context_successful_submit': False,
             'additional_collection_successful_submit': False,
             'bundle_type': bundle.bundle_type,  #Rupak
->>>>>>> 7e788d8eecc45cf0c3d410b41a669d29256abe2f
+
         }
 
         # Compute status for bundle progress checklist
@@ -799,12 +798,11 @@ def bundle(request, pk_bundle):
             write_into_label(i, product_bundle, product_collections_list)
 
             context_dict['context_successful_submit'] = True
-<<<<<<< HEAD
+
             return render(request, 'build/bundle/bundle.html', context_dict)
-=======
             return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
             # return render(request, 'build/bundle/bundle.html', context_dict)
->>>>>>> 7e788d8eecc45cf0c3d410b41a669d29256abe2f
+
 
         # After ELSAs friend hits submit, if the forms are completed correctly, we should enter
         # this conditional.
