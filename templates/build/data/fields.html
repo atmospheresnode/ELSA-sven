@@ -93,6 +93,12 @@ Specify Some Data
                             {% csrf_token %}
 
                             {% for field in form_edit_table_field_information %}
+                                {% if 'name' in field.name %}
+                                    <h5 class="border-bottom pb-2 mb-3">
+                                        {{ field.label|slice:"0:8" }}
+                                    </h5>
+                                {% endif %}
+                                
                                 <div class="col-12 col-md-6 mb-3">
                                     <label for="{{ field.id_for_label }}" class="form-label fw-semibold">
                                         {{ field.label }}

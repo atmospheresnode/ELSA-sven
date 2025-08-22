@@ -428,21 +428,6 @@
                         <p> To begin, select an investigation product below to associate with your bundle. Investigations serve as the top level of the context system and will associate your bundle with a larger project.</br> <strong>Investigations are categorized as:</strong> Individual Investigations, Missions, Field Campaigns, Observing Campaigns, or Other Investigations. Selecting an investigation will pare down the list of components to the ones that go with that investigation (i.e., associated instruments, targets, etc.) </p>
                      </div>
                      <form class="card-body black-text text-left z-depth-2" id="form_investigation" method="post" action="{% url 'build:bundle' bundle.pk  %}">
-<<<<<<< HEAD
-                        {% csrf_token %}
-                        <input type="hidden" name="form_name" value="investigation_form">
-                        <input type="hidden" name="form_name" value="contact_form">
-                        {% for field in form_investigation %}
-                           <div class="form-group">
-                                 {{ field.label_tag }}
-                                 {{ field }}
-                                 {% if field.errors %}
-                                 <div class="text-danger">{{ field.errors }}</div>
-                                 {% endif %}
-                           </div>
-                        {% endfor %}
-                        <!-- <input type="hidden" name="form_name" value="investigation_form"> -->
-=======
                            {% csrf_token %}
                            {{ form_investigation }}
                            {{ form.errors }}
@@ -453,7 +438,6 @@
                      </br>
                      </div>
                   </div>
->>>>>>> 7e788d8eecc45cf0c3d410b41a669d29256abe2f
 
                         <div class="d-flex">
                            <input type="submit" class="btn btn-light text-light mt-4" value="Submit"/>
