@@ -71,7 +71,8 @@
                             {{ review_form.derived_data.label_tag }}
                             {{ review_form.derived_data }}
                         </div>
-                        <div class="mb-3">
+
+                        {% comment %} <div class="mb-3">
                             {{ review_form.archive_standard.label_tag }}
                             {% for radio in review_form.archive_standard %}
                                 <div class="form-check">
@@ -79,7 +80,19 @@
                                     {{ radio.choice_label }}
                                 </div>
                             {% endfor %}
+                        </div>   NO LONGER REQUIRED- RUPAK {% endcomment %}  
+
+                        <div class="mb-3">
+                            <label class="form-label">{{ review_form.recipient.label }}</label>
+                            {% for radio in review_form.recipient %}
+                                <div class="form-check">
+                                    {{ radio.tag }}
+                                    <label class="form-check-label">{{ radio.choice_label }}</label>
+                                </div>
+                            {% endfor %}
                         </div>
+                        
+
                         <div class="mb-3">
                             {{ review_form.question1.label_tag }}
                             {{ review_form.question1 }}
