@@ -7,22 +7,36 @@ from django_recaptcha.widgets import ReCaptchaV2Checkbox
 
 class ReviewForm(forms.Form):
     user_name = forms.CharField(
-        label='Full Name',
+        label='Full Name:',
         label_suffix = '',
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter your full name'})
     )
     
     user_email = forms.EmailField(
-        label='Email Address',
+        label='Email Address:',
         label_suffix = '',
         widget=forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'Enter your email address'})
     )
 
     derived_data = forms.CharField(
         required=True,
-        label='Reviewed PDS Data Set',
+        label='Reviewed PDS Data Set:',
         label_suffix = '',
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter the reviewed data set name'})
+    )
+    
+    # Added recipient choices as we will use a unified ELSA email that would have Nancy, Lyle and Lynn. So, for simplicity, we ask for the recipient. 
+
+    RECIPIENT_CHOICES = (
+        ('lynn', 'Lynn Neakrase'),
+        ('lyle', 'Lyle Huber'),
+    )
+
+    recipient = forms.ChoiceField(
+        choices=RECIPIENT_CHOICES,
+        widget=forms.RadioSelect(attrs={'class': 'form-check-input'}),
+        label='Recipient of the Review:',
+        label_suffix=''
     )
     
     # Removed the archiving standard selector (as of July 2025 based on Lynn's suggestion- Rupak)

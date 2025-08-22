@@ -340,7 +340,12 @@ class EditCitationInformationForm(forms.Form):
             self.fields[f'{prefix}_person_{i}_orcid'] = forms.CharField(
                 required=False,
                 label=orcid_label,
-                widget=forms.TextInput(attrs={'class': 'form-control form-outline'})
+                widget=forms.TextInput(attrs={
+                    'class': 'form-control form-outline',
+                    'data-bs-toggle': 'tooltip',
+                    'data-bs-placement': 'right',
+                    'title': 'Find your ORCID at https://orcid.org/orcid-search/search'
+                })
             )
             self.fields[f'{prefix}_person_{i}_affiliation'] = forms.CharField(
                 required=False,

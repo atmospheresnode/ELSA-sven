@@ -119,6 +119,7 @@ def index(request):
         context_dict['question3'] = review_form.cleaned_data['question3']
         context_dict['question4'] = review_form.cleaned_data['question4']
         context_dict['question5'] = review_form.cleaned_data['question5']
+        context_dict['recipient'] = review_form.cleaned_data['recipient']
 
         # Find template used for email confirmation
         template = get_template('review/comment_template.txt')
@@ -130,9 +131,17 @@ def index(request):
 
         email = EmailMessage(
             subject="PDS Data Set Peer Review from {}".format(context_dict['contact_name']),
-            #body=content,
-            body="A new review has been submitted by {}. Please find the attached documents for details.".format(context_dict['contact_name']),
-            from_email= 'atm-elsa@nmsu.edu',
+            body=(
+                "A new review has been submitted by {name}.\n\n"
+                "Reviewed Data Set: {data}\n"
+                "Recipient: {recipient}\n\n"
+                "Please find the attached documents for details."
+            ).format(
+                name=context_dict['contact_name'],
+                data=context_dict['derived_data'],
+                recipient="Lynn Neakrase" if context_dict['recipient'] == "lynn" else "Lyle Huber"
+            ),
+            from_email='atm-elsa@nmsu.edu',
             to=['rupakdey@nmsu.edu', 'lneakras@nmsu.edu', 'sajomont@nmsu.edu', 'lhuber@nmsu.edu'],
             #to=['rupakdey@nmsu.edu'],
             headers={'Reply-To': context_dict['contact_email']}
