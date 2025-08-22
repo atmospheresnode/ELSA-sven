@@ -176,6 +176,7 @@
 
 {% block extra_js %}
 <script>
+
     // Bootstrap validation
     (function () {
         'use strict';
@@ -193,6 +194,12 @@
 
     // Class assignment
     document.addEventListener('DOMContentLoaded', function () {
+
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        tooltipTriggerList.forEach(function (tooltipTriggerEl) {
+        new bootstrap.Tooltip(tooltipTriggerEl)
+        })
+
         const formControls = document.querySelectorAll('input, select, textarea');
         formControls.forEach(element => {
             element.classList.add('form-control');
