@@ -430,9 +430,9 @@ def build(request):
                 collections = form_collections.save(commit=False)
                 print('after initial save and before setting bundle')
 
-                collection.has_context = True
-                collection.has_xml_schema = True
-                collection.has_document = True
+                # collection.has_context = True
+                # collection.has_xml_schema = True
+                # collection.has_document = True
 
                 collections.bundle = bundle
                 print('after setting bundle and before final save')
