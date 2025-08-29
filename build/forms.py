@@ -1031,11 +1031,11 @@ class EditTableFieldsForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         self.pk_table = kwargs.pop('pk_table')
-        self.pk_data = kwargs.pop('pk_data')
-
-        self.data = Data.objects.get(pk=self.pk_data)
+        self.pk_data = kwargs.pop('pk_data')      
 
         super(EditTableFieldsForm, self).__init__(*args, **kwargs)
+
+        self.data = Data.objects.get(pk=self.pk_data)
 
         if self.data.data_type == 'Table Delimited':
             self.table = Table_Delimited.objects.get(pk=self.pk_table)
