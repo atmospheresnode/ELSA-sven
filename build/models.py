@@ -2124,10 +2124,21 @@ class Bundle(models.Model):
         return self.name_file_case()
 
     def lid(self):
-        if self.bundle_type == 'External':
-            return 'urn:nasa:pds-ama:{0}'.format(self.name_lid_case()) 
+
+        # if self.bundle_type == 'External':
+        #     return 'urn:nasa:pds-ama:{0}'.format(self.name_lid_case()) 
+        # else:
+        #     return 'urn:{0}:{1}'.format(self.user.userprofile.agency, self.name_lid_case())
+
+        if self.bundleID:
+            bundle_id = self.bundleID.strip().lower().replace(' ', '_')
         else:
-            return 'urn:{0}:{1}'.format(self.user.userprofile.agency, self.name_lid_case())
+            bundle_id = self.name_lid_case()
+
+        if self.bundle_type == 'External':
+            return 'urn:nasa:pds-ama:{0}'.format(bundle_id)
+        else:
+            return 'urn:{0}:{1}'.format(self.user.userprofile.agency, bundle_id)
 
     """ 
         build_directory currently is not working.
