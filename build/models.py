@@ -2009,7 +2009,7 @@ class Bundle(models.Model):
     )
 
     bundle_type = models.CharField(max_length=12, default='Archive',)
-    #bundleID = models.CharField(max_length=MAX_CHAR_FIELD, unique=True, verbose_name="Bundle ID")
+    bundleID = models.CharField(max_length=MAX_CHAR_FIELD, verbose_name="Bundle ID", null=True, blank=True)
     name = models.CharField(max_length=MAX_CHAR_FIELD, unique=True)
     status = models.CharField(max_length=1, choices=BUNDLE_STATUS, blank=False, default='b')
     user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -2030,6 +2030,12 @@ class Bundle(models.Model):
         constraints = [
             models.UniqueConstraint(fields=['user', 'name'], name='unique_name_per_user')
         ]
+
+    def save(self, *args, **kwargs):
+        if not self.bundleID:
+            # Auto-generate bundleID from bundle_name
+            self.bundleID = self.bundle_name.lower().replace(" ", "_")
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.name
@@ -2118,10 +2124,21 @@ class Bundle(models.Model):
         return self.name_file_case()
 
     def lid(self):
-        if self.bundle_type == 'External':
-            return 'urn:nasa:pds-ama:{0}'.format(self.name_lid_case()) 
+
+        # if self.bundle_type == 'External':
+        #     return 'urn:nasa:pds-ama:{0}'.format(self.name_lid_case()) 
+        # else:
+        #     return 'urn:{0}:{1}'.format(self.user.userprofile.agency, self.name_lid_case())
+
+        if self.bundleID:
+            bundle_id = self.bundleID.strip().lower().replace(' ', '_')
         else:
-            return 'urn:{0}:{1}'.format(self.user.userprofile.agency, self.name_lid_case())
+            bundle_id = self.name_lid_case()
+
+        if self.bundle_type == 'External':
+            return 'urn:nasa:pds-ama:{0}'.format(bundle_id)
+        else:
+            return 'urn:{0}:{1}'.format(self.user.userprofile.agency, bundle_id)
 
     """ 
         build_directory currently is not working.
