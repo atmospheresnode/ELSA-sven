@@ -29,4 +29,9 @@ urlpatterns = [
     re_path(r'^reset/done/$', 
             auth_views.PasswordResetCompleteView.as_view(template_name='friends/registration/password_reset_complete.html'), 
             name='password_reset_complete'),
+
+    re_path(r'^delete-bundles/$', views.delete_bundles, name='delete_bundles'),
+    re_path(r'^bundles/$', views.bundle_hub, name='bundle_hub'),
+
+
 ]

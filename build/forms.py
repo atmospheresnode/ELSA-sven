@@ -2,6 +2,8 @@ from builtins import object
 from django import forms
 from django.contrib.auth.models import User
 from .chocolate import replace_all
+from django.utils.safestring import mark_safe
+
 #from django.forms import modelformset_factory
 
 from lxml import etree
@@ -324,7 +326,16 @@ class EditCitationInformationForm(forms.Form):
             # Creating labels so that the words are capitalized
             given_name_label = f"{prefix.capitalize()} Person {i+1} Given Name"
             family_name_label = f"{prefix.capitalize()} Person {i+1} Family Name"
-            orcid_label = f"{prefix.capitalize()} Person {i+1} ORCID"
+
+            # Adding ORCID field with lookup link -RUPAK
+            orcid_label = mark_safe(
+                f'{prefix.capitalize()} Person {i+1} ORCID '
+                f'<a href="https://orcid.org/orcid-search/search?searchQuery=" '
+                f'target="_blank" class="ms-2" '
+                f'title="Click to search for your ORCID ID">'
+                f'Lookup ORCID <i class="bi bi-search"></i></a>'
+            )
+
             affiliation_label = f"{prefix.capitalize()} Person {i+1} Affiliation"
             
             self.fields[f'{prefix}_person_{i}_given_name'] = forms.CharField(
@@ -358,7 +369,16 @@ class EditCitationInformationForm(forms.Form):
         for i in range(count):
             # Creating labels so that the words are capitalized
             name_label = f"{prefix.capitalize()} Organization {i+1} Name"
-            rorid_label = f"{prefix.capitalize()} Organization {i+1} RORID"
+            
+            # Adding RORID field with lookup link
+            rorid_label = mark_safe(
+                f'{prefix.capitalize()} Organization {i+1} RORID '
+                f'<a href="https://ror.org/search" '
+                f'target="_blank" class="ms-2" '
+                f'title="Click to search for your ROR ID">'
+                f'Lookup RORID <i class="bi bi-search"></i></a>'
+            )
+
             sequence_label = f"{prefix.capitalize()} Organization {i+1} Sequence Number"
             parent_org_label = f"{prefix.capitalize()} Organization {i+1} Parent Organization Name"
             

@@ -183,7 +183,7 @@ h3.h3-responsive {
                             <p> To begin, select an investigation product below to associate with your bundle. Investigations serve as the top level of the context system and will associate your bundle with a larger project.</br> <strong>Investigations are categorized as:</strong> Individual Investigations, Missions, Field Campaigns, Observing Campaigns, or Other Investigations. Selecting an investigation will pare down the list of components to the ones that go with that investigation (i.e., associated instruments, targets, etc.).</p>
                             <p>If you have a new investigation or cannot find your investigation in the pull-down selector, you should contact the ATM node using the Contact button below.</p>
                             
-                            <form class="card-body" id="form_investigation" method="post" action="{% url 'build:context_search_investigation' bundle.pk  %}">
+                            <form class="card-body" id="form_investigation" method="post" action="{% url 'build:bundle' bundle.pk  %}">
                                 
                                 {% csrf_token %}
                                 <input type="hidden" name="form_name" value="investigation_form">
