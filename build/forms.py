@@ -142,9 +142,16 @@ class BundleForm(forms.ModelForm):
         })
     )
 
+    bundleID = forms.CharField(required=False, max_length=50, widget=forms.TextInput(attrs={
+            'class' : 'form-control',
+            'id': 'bundleID',
+            'placeholder': 'Bundle ID (Optional - Leave blank to auto generate)'
+        })
+    )
+
     class Meta(object):
         model = Bundle
-        fields = ('name', 'bundle_type', 'version', )
+        fields = ('name', 'bundle_type', 'version', 'bundleID')
 
     """
         clean should ensure the following:

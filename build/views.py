@@ -368,7 +368,21 @@ def build(request):
             bundle.user = request.user
             # b for build.  New Bundles are always in build stage first.
             bundle.status = 'b'
+            
+            
+            #bundle.save()
+
+            #TESTING OPTIONAL BUNDLE ID
+
+            user_bundleID = form_bundle.cleaned_data.get('bundleID', '').strip()
+            if user_bundleID:
+                bundle.bundleID = user_bundleID
+            else:
+                bundle.bundleID = bundle.name.lower().replace(' ', '_')
+
             bundle.save()
+
+
             print('Bundle model object: {}'.format(bundle))
 
             # Build PDS4 Compliant Bundle directory in User Directory.
@@ -416,7 +430,7 @@ def build(request):
 
                 collections.bundle = bundle
                 print('after setting bundle and before final save')
-                # collections.save(commit=True)
+                collections.save()
                 print('here')
                 print('\nCollections model object:    {}'.format(collections))
                 print('now here')
@@ -430,13 +444,13 @@ def build(request):
                 collections = form_collections.save(commit=False)
                 print('after initial save and before setting bundle')
 
-                collection.has_context = True
-                collection.has_xml_schema = True
-                collection.has_document = True
+                collections.has_context = True
+                collections.has_xml_schema = True
+                collections.has_document = True
 
                 collections.bundle = bundle
                 print('after setting bundle and before final save')
-                # collections.save(commit=True)
+                collections.save()
                 print('here')
                 print('\nCollections model object:    {}'.format(collections))
                 print('now here')
