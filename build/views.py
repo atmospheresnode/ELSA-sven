@@ -416,7 +416,7 @@ def build(request):
 
                 collections.bundle = bundle
                 print('after setting bundle and before final save')
-                # collections.save(commit=True)
+                collections.save()
                 print('here')
                 print('\nCollections model object:    {}'.format(collections))
                 print('now here')
@@ -430,13 +430,13 @@ def build(request):
                 collections = form_collections.save(commit=False)
                 print('after initial save and before setting bundle')
 
-                # collection.has_context = True
-                # collection.has_xml_schema = True
-                # collection.has_document = True
+                collections.has_context = True
+                collections.has_xml_schema = True
+                collections.has_document = True
 
                 collections.bundle = bundle
                 print('after setting bundle and before final save')
-                # collections.save(commit=True)
+                collections.save()
                 print('here')
                 print('\nCollections model object:    {}'.format(collections))
                 print('now here')
@@ -737,6 +737,12 @@ def bundle(request, pk_bundle):
 
         directory_name, c, file_context = index(request, bundle.relative_dir())
 
+        table_set = []
+        print(Table_Binary.objects.filter(bundle=bundle))
+        table_set.append(Table_Delimited.objects.filter(bundle=bundle))
+        table_set.append(Table_Binary.objects.filter(bundle=bundle))
+        table_set.append(Table_Fixed_Width.objects.filter(bundle=bundle))
+
         # Context dictionary for template
         context_dict = {
             'xml_content_set': xml_content_set,
@@ -748,6 +754,7 @@ def bundle(request, pk_bundle):
             'modification_history_set':modification_history_set,  
             'modification_history_set_count':len(modification_history_set),     
             'data_set':data_set,
+            'table_set': table_set,
             'form_alias':form_alias,
             'form_bundle':form_bundle,
             'form_citation_information':form_citation_information,
@@ -783,6 +790,8 @@ def bundle(request, pk_bundle):
             'additional_collection_successful_submit': False,
             'bundle_type': bundle.bundle_type,  #Rupak
         }
+
+        print(table_set)
 
         # Compute status for bundle progress checklist
         status_dict = {
