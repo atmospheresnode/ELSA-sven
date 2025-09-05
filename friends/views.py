@@ -5,6 +5,7 @@ from email.message import EmailMessage
 
 from django.core.mail import EmailMessage
 from django.conf import settings 
+from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
@@ -72,12 +73,15 @@ def redirect_to_elsa_home(request):
 # Normal profile page for users.  Displays the user, associated userprofile, and a list of related bundles.
 @login_required
 def profile(request, pk_user):
+    
     context_dict = {}
     context_dict['userprofile'] = UserProfile.objects.get(pk=pk_user)
     context_dict['user'] = User.objects.get(userprofile=context_dict['userprofile'])
     context_dict['bundles'] = Bundle.objects.filter(user=context_dict['user'])
     context_dict['bundle_count'] = Bundle.objects.filter(user=context_dict['user']).count()
-    
+    context_dict['archive_bundles'] = context_dict['bundles'].filter(bundle_type='Archive')
+    context_dict['external_bundles'] = context_dict['bundles'].filter(bundle_type='External')
+
     #This block checks that all bundles actually exist in the archive-
     #if not, it deletes that bundle from the database.
     for b in context_dict['bundles']:
@@ -246,3 +250,32 @@ def friend_settings(request, pk_user):
     else:
         return redirect('main:restricted_access')
     
+
+@login_required
+def bundle_hub(request):
+    bundles = Bundle.objects.filter(user=request.user)
+    return render(request, 'friends/bundle_hub.html', {'bundles': bundles})
+
+@login_required
+def delete_bundles(request):
+    if request.method == "POST":
+        bundle_ids = request.POST.getlist('bundle_ids')
+        if not bundle_ids:
+            messages.warning(request, "No bundles were selected.")
+            return redirect('friends:bundle_hub')  # redirect back to hub
+
+        bundles = Bundle.objects.filter(id__in=bundle_ids, user=request.user)
+        if not bundles.exists():
+            messages.error(request, "You cannot delete bundles that do not belong to you.")
+            return redirect('friends:bundle_hub')
+
+        # call remove_bundle() for each before deleting
+        for bundle in bundles:
+            bundle.remove_bundle()
+        count = bundles.count()
+        bundles.delete()
+
+        messages.success(request, f"{count} bundle(s) deleted successfully.")
+        return redirect('friends:bundle_hub')
+
+    return redirect('friends:bundle_hub')
