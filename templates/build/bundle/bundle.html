@@ -1192,7 +1192,15 @@
                            <h5 class="card-title">{{ data.name }}</h5>
                            <p class="card-text">Processing Level: {{ data.processing_level }}</p>
                            <p class="card-text">Data Type: {{ data.data_type }}</p>
-                           <a href="{%  url 'build:table_creation' bundle.pk data.pk %}" class="btn btn-light text-light d-flex justify-content-center">Edit</a>
+                           <div class="btn-group">
+                              <a href="{%  url 'build:table_creation' bundle.pk data.pk %}" class="btn btn-light text-light d-flex justify-content-center me-1">Edit Table</a>
+                              {% for table in table_set%}
+                                 {% if table.data == data %}
+                                    <a href="{%  url 'build:edit_table_field_information' bundle.pk data.pk table.pk %}" class="btn btn-light text-light d-flex justify-content-center">Edit Field(s)</a>
+                                 {% endif %}
+                              {% endfor %}
+                              
+                           </div>
                         </div>
                      </div>
                      {% endif %}
