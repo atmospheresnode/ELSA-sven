@@ -23,6 +23,7 @@ This section provides a timeline of ELSA's release history, highlighting key upd
 - Bundle Hub: The Select and delete feature has been introduced. Now, users can delete multiple bundles from the bundle hub.
 - Bundle Hub: Separate images for Archive and External Bundles have been added to the carousel.
 - Citation Information: Lookup ORCID and RORID are added to the detailed citation information page.
+- Bundle ID: An alternate ID can be specified to override the default ID generated from the bundle name.
 
 
 ### **Previous Versions** 
