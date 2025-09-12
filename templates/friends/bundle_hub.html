@@ -1,7 +1,6 @@
 {% extends 'base-derk.html' %}
 {% load static %}
 
-
 {% block title_block %}
 {{ userprofile }}
 {% endblock %}
@@ -29,6 +28,7 @@
         </div>
     {% endif %}
 
+    <!-- Welcome Card -->
     <div class="row justify-content-center align-items-center mt-4">
         <div class="col-md-9">
             <div class="card">
@@ -55,6 +55,7 @@
         </div>
     </div>
 
+    <!-- Add Bundle Button -->
     <div class="row justify-content-center align-items-center mt-4 mx-8 px-8">
         <div class="col-md-9">
             <a href="{% url 'build:build' %}" class="btn btn-light text-light w-100" style="font-style: normal;"> 
@@ -77,14 +78,20 @@
                 <form method="POST" action="{% url 'friends:delete_bundles' %}">
                     {% csrf_token %}
 
-                    <!-- Select All Toggle -->
-                    <div class="p-2">
-                        <label>
-                            <input type="checkbox" id="select-all"> Select All Bundles
-                        </label>
+                    <!-- Select All / Delete Toolbar -->
+                    <div class="d-flex justify-content-between align-items-center p-3 mb-3 bg-light rounded shadow-sm">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="select-all-modern">
+                            <label class="form-check-label fw-semibold" for="select-all-modern">
+                                Select All Bundles
+                            </label>
+                        </div>
+                        <button type="button" id="delete-selected-btn" class="btn btn-danger d-none shadow-sm">
+                            <i class="fa fa-trash me-2"></i>Delete Selected
+                        </button>
                     </div>
 
-                    <!-- Bundle List -->
+                    <!-- Bundle Carousel -->
                     <div class="row">
                         <div class="carousel" id="bundle-carousel">
                             <div class="carousel-inner" role="listbox">
@@ -98,7 +105,6 @@
                                                     <input type="checkbox" name="bundle_ids" value="{{ bundle.id }}" class="bundle-checkbox" onclick="event.stopPropagation();">
                                                 </div>
 
-                                                <!-- Bundle link -->
                                                 <a href="{{ bundle.absolute_url }}">
                                                     {% if bundle.bundle_type == 'Archive' %}
                                                         <img class="img-fluid" src="{% static 'images/bundle_archive.png' %}" alt="Archive Bundle">
@@ -139,14 +145,6 @@
                             </button>
                         </div>
                     </div>
-
-                    <!-- Delete button -->
-                    <div class="p-3 text-center">
-                        <button type="submit" class="btn btn-danger"
-                                onclick="return confirm('Are you sure you want to delete the selected bundles?')">
-                            Delete Selected Bundles
-                        </button>
-                    </div>
                 </form>
 
             </div>
@@ -154,11 +152,36 @@
     </div>
 </div>
 
-<!-- JS for Select All -->
+<!-- JS for Select All + Delete -->
 <script>
-    document.getElementById('select-all').addEventListener('change', function(e) {
-        document.querySelectorAll('.bundle-checkbox').forEach(cb => cb.checked = e.target.checked);
-    });
+const selectAll = document.getElementById('select-all-modern');
+const bundleCheckboxes = document.querySelectorAll('.bundle-checkbox');
+const deleteBtn = document.getElementById('delete-selected-btn');
+
+// Toggle all checkboxes
+selectAll.addEventListener('change', () => {
+    bundleCheckboxes.forEach(cb => cb.checked = selectAll.checked);
+    toggleDeleteButton();
+});
+
+// Show/hide delete button based on selection
+bundleCheckboxes.forEach(cb => cb.addEventListener('change', toggleDeleteButton));
+
+function toggleDeleteButton() {
+    const anyChecked = [...bundleCheckboxes].some(cb => cb.checked);
+    deleteBtn.classList.toggle('d-none', !anyChecked);
+}
+
+// Confirm delete
+deleteBtn.addEventListener('click', () => {
+
+    const anyChecked = [...bundleCheckboxes].some(cb => cb.checked);
+    if (!anyChecked) return; 
+    
+    if (confirm('Are you sure you want to delete the selected bundles?')) {
+        document.querySelector('form').submit();
+    }
+});
 </script>
 
 {% endblock %}
