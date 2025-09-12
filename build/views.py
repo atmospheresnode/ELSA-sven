@@ -2655,6 +2655,7 @@ def Table_Creation(request, pk_bundle, pk_data):
         if data_form.is_valid():
             print('data form valid')
             form = data_form.save(commit=False)
+            form.bundle = bundle
             form.save()
             cleaned_form = data_form.cleaned_data
 

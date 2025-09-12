@@ -1194,10 +1194,12 @@
                            <p class="card-text">Data Type: {{ data.data_type }}</p>
                            <div class="btn-group">
                               <a href="{%  url 'build:table_creation' bundle.pk data.pk %}" class="btn btn-light text-light d-flex justify-content-center me-1">Edit Table</a>
-                              {% for table in table_set%}
-                                 {% if table.data == data %}
-                                    <a href="{%  url 'build:edit_table_field_information' bundle.pk data.pk table.pk %}" class="btn btn-light text-light d-flex justify-content-center">Edit Field(s)</a>
-                                 {% endif %}
+                              {% for table_type in table_set %}
+                                 {% for table in table_type %}
+                                    {% if table.data == data %}
+                                       <a href="{%  url 'build:edit_table_field_information' bundle.pk data.pk table.pk %}" class="btn btn-light text-light d-flex justify-content-center">Edit Field(s)</a>
+                                    {% endif %}
+                                 {% endfor %}
                               {% endfor %}
                               
                            </div>
