@@ -3313,3 +3313,286 @@ def index(request, path):
     c = index_maker()
     file_context = retrieve_content(eventual_path)
     return directory_name, c, file_context
+
+# NETCDF (Victoria's Code)
+import xarray as xr
+import pandas as pd
+import xml.etree.ElementTree as ET
+from xml.dom import minidom
+
+# to search for files in working directory
+import os
+import glob
+
+# to extract information from online ldd
+import urllib.request
+
+# =========================================================================================
+# Define Functions
+# =========================================================================================
+# Function to Load & Parse the  AMA LDD so that we know
+# what Coordinate Elements are permitted and in what order they are expected
+def get_allowed_coord_fields_from_ldd_url(ldd_url: str, ns: dict) -> list:
+    with urllib.request.urlopen(ldd_url) as response:
+        xml_content = response.read()
+
+    root = ET.fromstring(xml_content)
+
+    # Locate the ama:Variable complexType definition
+    coord_type = root.find(".//xs:complexType[@name='Coordinate']/xs:sequence", namespaces=ns)
+    if coord_type is None:
+        raise ValueError("Could not find Coordinate definition in LDD from URL.")
+
+    return [
+        elem.attrib["name"]
+        for elem in coord_type.findall("xs:element", namespaces=ns) ]
+
+# Function to convert DataFrame to XML variable elements
+def dataframe_to_variable_elements(variable_metadata: pd.DataFrame, NS: dict, allowed_fields: list) -> list:
+    variable_elements = []
+
+    # Map normalized metadata field → original metadata field
+    metadata_fields_normalized = {
+        normalize(field): field for field in variable_metadata.index
+    }
+
+    for variable_name in variable_metadata.columns:
+        variable_elem = ET.Element(f"{{{NS['ama']}}}Variable")
+
+        # Always add variable_name
+        name_elem = ET.SubElement(variable_elem, f"{{{NS['ama']}}}variable_name")
+        name_elem.text = variable_name
+
+        # Iterate in the order from the LDD
+        for field in allowed_fields:
+            if field == "variable_name":
+                continue  # already added
+
+            # normalize name of allowed fields (e.g. lowercase, remove "_")
+            norm_field = normalize(field)
+
+            # check if allowed normalized fields exist in the extracted variable fields
+            if norm_field in metadata_fields_normalized:
+                original_metadata_field = metadata_fields_normalized[norm_field]
+                val = variable_metadata.loc[original_metadata_field, variable_name]
+
+                # replace empty strings for units with "[]"
+                if pd.notna(val):
+                    if field == "units" and str(val).strip() == "":
+                        val = "[]"
+
+                # Place in appropriate allowed field (not normalized version since just using field)
+                sub_elem = ET.SubElement(variable_elem, f"{{{NS['ama']}}}{field}")
+                sub_elem.text = str(val)
+
+        variable_elements.append(variable_elem)
+
+    return variable_elements
+
+# Function to convert DataFrame to XML coordinate elements
+def dataframe_to_coord_elements(coord_metadata: pd.DataFrame, NS: dict, allowed_fields: list) -> list:
+    coord_elements = []
+
+    # Map normalized metadata field → original metadata field
+    metadata_fields_normalized = {
+        normalize(field): field for field in coord_metadata.index
+    }
+
+    for coord_name in coord_metadata.columns:
+        coord_elem = ET.Element(f"{{{NS['ama']}}}Coordinate")
+
+        # Always add variable_name
+        name_elem = ET.SubElement(coord_elem, f"{{{NS['ama']}}}coord_name")
+        name_elem.text = coord_name
+
+        # Iterate in the order from the LDD
+        for field in allowed_fields:
+            if field == "coord_name":
+                continue  # already added
+
+            # normalize name of allowed fields (e.g. lowercase, remove "_")
+            norm_field = normalize(field)
+
+            # check if allowed normalized fields exist in the extracted coordinate fields
+            if norm_field in metadata_fields_normalized:
+                original_metadata_field = metadata_fields_normalized[norm_field]
+                val = coord_metadata.loc[original_metadata_field, coord_name]
+
+                # replace empty strings for units with "[]"
+                if pd.notna(val):
+                    if field == "units" and str(val).strip() == "":
+                        val = "[]"
+
+                # Place in appropriate allowed field (not normalized version since just using field)
+                sub_elem = ET.SubElement(coord_elem, f"{{{NS['ama']}}}{field}")
+                sub_elem.text = str(val)
+
+        coord_elements.append(coord_elem)
+
+    return coord_elements
+
+# Normalize function: Set all variable and coordinate fields to lowercase and remove underscores
+def normalize(field):
+    return field.lower().replace("_", "")
+
+def variable_coord_to_product():
+    # =========================================================================================
+    # Set Up XML Namespace
+    # =========================================================================================
+    NS = {
+        'xs' : 'http://www.w3.org/2001/XMLSchema',
+        'pds': 'http://pds.nasa.gov/pds4/pds/v1',
+        'xsi': 'http://www.w3.org/2001/XMLSchema-instance',
+        'ama': 'http://pds.nasa.gov/pds4/ama/v1'
+        }
+    ET.register_namespace('ama', NS['ama'])  # Needed to preserve ama prefix in output
+    ET.register_namespace('pds', NS['pds'])  # Add this alongside ama
+
+
+    # =========================================================================================
+    # Load Online Local Data Dictionary & Extract Permitted Variable/Coordinate Fields
+    # =========================================================================================
+    ldd_url = 'https://pds.nasa.gov/pds4/ama/v1/PDS4_AMA_1O00_1300.xsd'
+    allowed_variable_fields = get_allowed_variable_fields_from_ldd_url(ldd_url, NS)
+    allowed_coord_fields = get_allowed_coord_fields_from_ldd_url(ldd_url, NS)
+    
+    # =========================================================================================
+    # MAIN PROGRAM FUNCTIONALITY:
+    # =========================================================================================
+
+    # =========================================================================================
+    # Search for All netCDF Files in A Specified Working Directory
+    # Include Sub-Directories
+    # =========================================================================================
+    # 1. Set the top-level working directory
+    working_dir = "/Users/vhartwick/Documents/Projects/PDS Atmospheres Node Model Annex/pds_ama_sample_bundle/"
+
+    # 2. Recursively find all .nc files
+    netcdf_files = glob.glob(os.path.join(working_dir, "**", "*.nc"), recursive=True)
+
+    # =========================================================================================
+    # Loop Through NetCDF Files
+    # =========================================================================================
+    for nc_path in netcdf_files:
+        # Define output file name (e.g. 00000_atmos_average.nc → 00000.atmos_average.xml)
+        base = os.path.basename(nc_path)
+        xml_name = base.replace(".nc", ".xml")
+
+        # Extract base filename and directory
+        nc_filename = os.path.basename(nc_path)  # e.g., 00000.atmos_average.nc
+        nc_name, _ = os.path.splitext(nc_filename)  # e.g., 00000.atmos_average
+        subdir_name = os.path.basename(os.path.dirname(nc_path))  # e.g., Simulation02
+
+        # Write XML to the same subdirectory as the .nc file
+        output_dir = os.path.dirname(nc_path)
+        output_path = os.path.join(output_dir, xml_name)
+
+        # =====================================================================================
+        # 1. Open NetCDF File and Extract Variable & Coordinate Metadata into a Pandas Table
+        # =====================================================================================
+        DS = xr.open_dataset(nc_path, decode_times=False)
+
+        # variable metadata
+        metadata = {}
+        for var_name, var in DS.variables.items():
+
+            metadata[var_name] = var.attrs
+
+            # Add dimensions to the metadata dictionary
+            metadata[var_name]['dimensions'] = ', '.join(var.dims)
+
+        # Convert metadata to a DataFrame
+        variable_metadata = pd.DataFrame(metadata)
+
+
+        # now coordinate metadata
+        # Get additional "Derived" metadata (e.g. bhttps://nmsu.zoom.us/j/81293352754oundaries, grid spacing, etc)
+        metadata = {}
+
+        # Iterate over coordinates
+        for coord_name, coord in DS.coords.items():
+
+            # Initialize a dictionary for the coordinate's metadata
+            coord_metadata = {}
+
+            # Add the minimum_boundary key to the coordinate's metadata
+            coord_metadata['minimum_boundary'] = DS[coord_name].min().item()
+            coord_metadata['maximum_boundary'] = DS[coord_name].max().item()
+
+            # Check if coordinate is an array (if yes, find spacing assuming spacing is the same)
+            #if len(coord) > 1:
+            #    coord_metadata['grid_spacing'] = DS[coord_name][1].values - DS[coord_name][0].values
+            #else:
+            #    coord_metadata['grid_spacing'] = None
+
+            # Check if coordinate has units attribute
+            if 'units' in coord.attrs:
+                coord_metadata['units'] = coord.attrs['units']
+            else:
+                coord_metadata['units'] = None
+
+            # Add the coordinate's metadata to the metadata dictionary
+            metadata[coord_name] = coord_metadata
+
+        # Create a DataFrame from the metadata dictionary
+        coord_metadata= pd.DataFrame(metadata)
+
+        # =====================================================================================
+        # 2. Load & Parse Template XML
+        # =====================================================================================
+        tree = ET.parse("/Users/vhartwick/Documents/Projects/PDS Atmospheres Node Model Annex/Template_PE.xml")
+        root = tree.getroot()
+
+        # =====================================================================================
+        # 3. Locate <Identification_Area> and Insert <pds:logical_identifier>, <pds:title>
+        # =====================================================================================
+        # Find the Identification_Area
+        id_area = root.find(".//pds:Identification_Area", namespaces=NS)
+
+        if id_area is not None:
+
+            # Find Existing Element <pds:logical_identifier> and Append to It
+            lid_elem = id_area.find("pds:logical_identifier", namespaces=NS)
+            if lid_elem is not None and lid_elem.text:
+                # Append your suffix
+                lid_elem.text = f"{lid_elem.text}:{subdir_name.lower()}:{nc_filename}"
+            else:
+                # If missing or empty, just set it
+                lid_elem = ET.SubElement(id_area, f"{{{NS['pds']}}}logical_identifier")
+                lid_elem.text = f"urn:nasa:pds-ama:sample_bundle:{subdir_name.lower()}:{nc_filename}"
+
+            # Find the <pds:title> Element and Populate
+            title_elem = id_area.find("pds:title", namespaces=NS)
+            if title_elem is None:
+                title_elem = ET.SubElement(id_area, f"{{{NS['pds']}}}title")
+            title_elem.text = f"{nc_name}"
+
+        # =====================================================================================
+        # 4. Locate <ama:Model_Output> inside <Discipline_Area>/<ama:AMA>
+        # =====================================================================================
+        model_output = root.find(
+            ".//pds:Context_Area/pds:Discipline_Area/ama:AMA/ama:Model_Output",
+            namespaces=NS
+        )
+
+        if model_output is None:
+            raise ValueError("Could not find <ama:Model_Output> under <ama:AMA> in template.")
+
+        # =====================================================================================
+        # 5. Insert New Variable & Coordinate Metadata
+        # =====================================================================================
+        variable_elements = dataframe_to_variable_elements(variable_metadata, NS, allowed_variable_fields)
+
+        for elem in variable_elements:
+            model_output.append(elem)
+
+        coord_elements = dataframe_to_coord_elements(coord_metadata, NS, allowed_coord_fields)
+
+        for elem in coord_elements:
+            model_output.append(elem)
+
+        # =====================================================================================
+        # 6. Write to Output File
+        # =====================================================================================
+        with open(output_path, "w", encoding="utf-8") as f:
+            f.write(prettify_no_blank_lines(root))
