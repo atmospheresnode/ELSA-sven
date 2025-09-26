@@ -21,7 +21,8 @@ This section provides a timeline of ELSA's release history, highlighting key upd
 ### **Current Version** 
 > ### **Version 1.15.0 (September 26, 2025)**
 - About Page: The page has been redesigned and now includes a tab feature for different sections.
-- 
+- Table Products: Fixed being able to access table and field pages for table products.
+- Data Products: Reformatted the models of data products to be able to support more types in the future.
 
 
 ### **Previous Versions** 
