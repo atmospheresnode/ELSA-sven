@@ -117,8 +117,8 @@ urlpatterns = [
     # XML_Schema --> A view that no one sees.  So no xml_schema url.  This might even be removed 
     # completely from PDS4
 
-
-
+    # NetCDF Upload
+    re_path(r'^(?P<pk_bundle>\d+)/upload_netcdf/$', views.upload_netcdf, name='upload_netcdf'),
 
 
     # TEST
