@@ -805,8 +805,6 @@ def bundle(request, pk_bundle):
             'bundle_type': bundle.bundle_type,  #Rupak
         }
 
-        print(table_set)
-
         # Compute status for bundle progress checklist
         status_dict = {
             'Alias': bundle.alias_set.exists(),
@@ -846,7 +844,6 @@ def bundle(request, pk_bundle):
             context_dict['context_successful_submit'] = True
 
             return render(request, 'build/bundle/bundle.html', context_dict)
-            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
             # return render(request, 'build/bundle/bundle.html', context_dict)
 
 
@@ -3465,7 +3462,7 @@ def variable_coord_to_product():
     # Include Sub-Directories
     # =========================================================================================
     # 1. Set the top-level working directory
-    working_dir = "/Users/vhartwick/Documents/Projects/PDS Atmospheres Node Model Annex/pds_ama_sample_bundle/"
+    working_dir = ""
 
     # 2. Recursively find all .nc files
     netcdf_files = glob.glob(os.path.join(working_dir, "**", "*.nc"), recursive=True)
