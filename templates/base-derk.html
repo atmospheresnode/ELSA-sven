@@ -79,7 +79,7 @@
                         <li class="nav-item">
                             <a class="nav-link" href="{% url 'main:services' %}">
                                 <i class="fa fa-briefcase"></i> 
-                                Bundle Apps 
+                                Apps 
                             </a>
                         </li>
                         
@@ -93,13 +93,14 @@
                             </a>
                         </li> {% endcomment %}
                         
-
-                        <li class="nav-item">
+                        
+                         <!-- Removed the ELSA team button to avoid redundancy. We already have ELSA team information in the About section. !-->
+                        {% comment %} <li class="nav-item">
                             <a class="nav-link" href="{% url 'main:about'%}#Staff">
                                 <i class="fa fa-user-circle"></i>
                                 ELSA Team
                             </a>
-                        </li>
+                        </li> {% endcomment %}
 
                         <li class="nav-item">
                             <a class="nav-link" href="{% url 'main:contact'%}">

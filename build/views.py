@@ -12,7 +12,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
 from django.http import HttpResponse, HttpRequest
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.template import RequestContext
 from django import forms
 from django.forms import modelformset_factory
@@ -21,6 +21,9 @@ from django.contrib import messages
 import lxml.etree as ET # for XML parsing- Added by Rupak
 # from lxml import etree # debug product obs only
 
+# Libraries for handilng netCDF files
+import io
+#import netCDF4
 
 # -------------------------------------------------------------------------------------------------- #
 # -------------------------------------------------------------------------------------------------- #
@@ -802,7 +805,7 @@ def bundle(request, pk_bundle):
             'contact_form' : contact_form,
             'context_successful_submit': False,
             'additional_collection_successful_submit': False,
-            'bundle_type': bundle.bundle_type,  #Rupak
+            'bundle_type': bundle.bundle_type,
         }
 
         print(table_set)
@@ -3596,3 +3599,42 @@ def variable_coord_to_product():
         # =====================================================================================
         with open(output_path, "w", encoding="utf-8") as f:
             f.write(prettify_no_blank_lines(root))
+
+
+
+
+
+
+# Upload NetCDF View
+def upload_netcdf(request, bundle_pk):
+    bundle = get_object_or_404(Bundle, pk=bundle_pk)
+    context = {'bundle': bundle}
+
+    if request.method == 'POST':
+        # Files are in request.FILES, not request.POST
+        uploaded_file = request.FILES.get('netcdf_file') 
+
+        if uploaded_file:
+            # Check if the file has a .nc extension
+            if not uploaded_file.name.endswith('.nc'):
+                context['error_message'] = "Error: Please upload a valid NetCDF (.nc) file."
+                return render(request, 'build/bundle/bundle.html', context)
+
+            try:
+                # Read the file content into memory
+                file_bytes = uploaded_file.read()
+
+                # Use netCDF4 to open the dataset from the in-memory bytes
+                # The 'memory' argument is key here
+                with netCDF4.Dataset('in_memory_file.nc', memory=file_bytes) as ds:
+                    
+                    #XML code will go here...
+                    
+                    # Add the extracted data to the context to display it
+                    context['netcdf_data'] = info_buffer.getvalue()
+
+            except Exception as e:
+                # Handle cases where the file is not a valid NetCDF file
+                context['error_message'] = f"Error processing file: {e}"
+
+    return render(request, 'build/bundle/bundle.html', context)
