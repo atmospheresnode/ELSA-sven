@@ -19,7 +19,7 @@ This approach takes advantage of Atmospheres Node expertise to ensure all connec
 This section provides a timeline of ELSA's release history, highlighting key updates, new features, bug fixes, and improvements, with the most recent release listed first.
 
 ### **Current Version** 
-> ### **Version 1.13.0 (September 05, 2025)**
+> ### **Version 1.14.0 (September 05, 2025)**
 - Bundle Hub: The Select and delete feature has been introduced. Now, users can delete multiple bundles from the bundle hub.
 - Bundle Hub: Separate images for Archive and External Bundles have been added to the carousel.
 - Citation Information: Lookup ORCID and RORID are added to the detailed citation information page.
