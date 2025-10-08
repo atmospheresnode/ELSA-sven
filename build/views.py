@@ -687,6 +687,8 @@ def bundle(request, pk_bundle):
                 product_observational_set.extend(Product_Observational.objects.filter(data=data))
 
         # Forms present on bundle detail page
+        form_netcdf = NetCDFForm(request.POST or None, request.FILES or None) # To handle NetCDF files
+
         form_alias = AliasForm(request.POST or None) 
         form_bundle = BundleForm(request.POST or None) 
         form_citation_information = CitationInformationForm(request.POST or None)
@@ -806,6 +808,10 @@ def bundle(request, pk_bundle):
             'context_successful_submit': False,
             'additional_collection_successful_submit': False,
             'bundle_type': bundle.bundle_type,
+            
+            # To handle NetCDF files
+            'form_netcdf': form_netcdf,
+            'netcdf_files': NetCDFFile.objects.filter(bundle=bundle)
         }
 
         # Compute status for bundle progress checklist
@@ -824,6 +830,14 @@ def bundle(request, pk_bundle):
         context_dict['directory_name'] = directory_name
         context_dict['subfiles'] = c 
         context_dict['file_context'] = file_context
+
+        # To handle NetCDF files
+        if form_netcdf.is_valid():
+            netcdf_obj = form_netcdf.save(commit=False)
+            netcdf_obj.bundle = bundle
+            netcdf_obj.save()
+    
+            return HttpResponseRedirect('/elsa/build/' + str(bundle.pk) + '/')
 
         if form_investigation.is_valid():
             print(form_investigation.cleaned_data['investigation'].file_ref)
@@ -3596,42 +3610,3 @@ def variable_coord_to_product():
         # =====================================================================================
         with open(output_path, "w", encoding="utf-8") as f:
             f.write(prettify_no_blank_lines(root))
-
-
-
-
-
-
-# Upload NetCDF View
-def upload_netcdf(request, bundle_pk):
-    bundle = get_object_or_404(Bundle, pk=bundle_pk)
-    context = {'bundle': bundle}
-
-    if request.method == 'POST':
-        # Files are in request.FILES, not request.POST
-        uploaded_file = request.FILES.get('netcdf_file') 
-
-        if uploaded_file:
-            # Check if the file has a .nc extension
-            if not uploaded_file.name.endswith('.nc'):
-                context['error_message'] = "Error: Please upload a valid NetCDF (.nc) file."
-                return render(request, 'build/bundle/bundle.html', context)
-
-            try:
-                # Read the file content into memory
-                file_bytes = uploaded_file.read()
-
-                # Use netCDF4 to open the dataset from the in-memory bytes
-                # The 'memory' argument is key here
-                with netCDF4.Dataset('in_memory_file.nc', memory=file_bytes) as ds:
-                    
-                    #XML code will go here...
-                    
-                    # Add the extracted data to the context to display it
-                    context['netcdf_data'] = info_buffer.getvalue()
-
-            except Exception as e:
-                # Handle cases where the file is not a valid NetCDF file
-                context['error_message'] = f"Error processing file: {e}"
-
-    return render(request, 'build/bundle/bundle.html', context)

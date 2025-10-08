@@ -1591,36 +1591,42 @@
             </div>
 
             <div class="container-fluid pt-3">
-    {# ... other external bundle content ... #}
-
-    {% comment %} <div class="card mt-4">
-        <h5 class="card-header bg-secondary text-light">Upload NetCDF File</h5>
-        <div class="card-body">
-            <p>Select a NetCDF (.nc) file from your local machine to extract its metadata.</p>
-            
-            <form method="post" enctype="multipart/form-data" action="{% url 'build:upload_netcdf' bundle.pk %}">
-                {% csrf_token %}
-                <div class="mb-3">
-                    <label for="netcdf_file_input" class="form-label">NetCDF File</label>
-                    
-                    <input class="form-control" type="file" name="netcdf_file" id="netcdf_file_input" accept=".nc" required>
-                </div>
-                
-                <button type="submit" class="btn btn-primary">Upload and Read File</button>
-            </form>
-        </div>
-    </div>
     
-    {# You can add a space to display results after a successful upload #}
-    {% if netcdf_data %}
-        <div class="card mt-4">
-            <h5 class="card-header">File Information</h5>
-            <div class="card-body">
-                <p><strong>File Uploaded Successfully!</strong></p>
-                <pre><code>{{ netcdf_data|safe }}</code></pre>
-            </div>
-        </div>
-    {% endif %} {% endcomment %}
+
+<!-- NetCDF Upload Section -->
+<div class="card mt-3 mb-3">
+   <h5 class="card-header bg-info text-light text-center">Upload NetCDF File</h5>
+   <div class="card-body">
+      <form method="post" enctype="multipart/form-data">
+         {% csrf_token %}
+         <div class="mb-3">
+            {{ form_netcdf.title.label_tag }}<br>
+            {{ form_netcdf.title }}
+         </div>
+         <div class="mb-3">
+            {{ form_netcdf.file.label_tag }}<br>
+            {{ form_netcdf.file }}
+         </div>
+         <button type="submit" class="btn btn-success">Upload</button>
+      </form>
+   </div>
+</div>
+
+<div class="card mt-3">
+   <h5 class="card-header bg-secondary text-light text-center">Uploaded NetCDF Files</h5>
+   <div class="card-body">
+      <ul class="list-group">
+         {% for nc_file in netcdf_files %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+               <a href="{{ nc_file.file.url }}" target="_blank">{{ nc_file.title }}</a>
+               <span class="text-muted">{{ nc_file.uploaded_at|date:"Y-m-d H:i" }}</span>
+            </li>
+         {% empty %}
+            <li class="list-group-item">No NetCDF files uploaded yet.</li>
+         {% endfor %}
+      </ul>
+   </div>
+</div>
 
 </div>
             </div>
