@@ -2231,7 +2231,7 @@ class Collections(models.Model):
     #has_calibrated_data = models.BooleanField(default=False)
     #has_derived_data = models.BooleanField(default=False)
     #data_enum = models.PositiveIntegerField(default = 0)
-
+    
     # Cleaners
 
     def list(self):
