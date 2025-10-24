@@ -780,7 +780,6 @@ def bundle(request, pk_bundle):
             'form_data':form_data,
             'form_modification_history':form_modification_history,
             'form_document':form_document,
-            # 'collections': Collections.objects.get(bundle=bundle),
             'form_collections':form_collections,
             'form_product_collection': form_product_collection,
             'form_additional_collections': form_additional_collections,
@@ -1022,7 +1021,7 @@ def bundle(request, pk_bundle):
             # Fill label - fills 
             print(' ... Filling Label ... ')
             #label_root = bundle.version.fill_xml_schema(label_root)
-            label_root = product_document.fill_base_case(label_root)
+            label_root = product_document.fill_label(label_root)
             # Close label    
             print(' ... Closing Label ... ')
             close_label(label_list[0], label_root, label_list[2])          
@@ -1408,7 +1407,7 @@ def edit_citation_information(request, pk_bundle, pk_citation_information):
 
             #Adding a check for bundle type, so it skips context search if external selected - RUPAK
             if bundle.bundle_type == 'External':
-                return redirect(reverse('build:bundle', args=[pk_bundle]))  
+                return redirect(reverse('build:collection_document', args=[pk_bundle]))  
             else:
                 return redirect(reverse('build:context_search', args=[pk_bundle]))
 
@@ -2076,6 +2075,77 @@ def context_search_target_and_instrument(request, pk_bundle, pk_investigation, p
 
         return render(request, 'build/context/context_search_target_and_instrument.html', context_dict)
 
+
+# def collections(request, pk_bundle):
+#     bundle = Bundle.objects.get(pk=pk_bundle)
+#     form_additional_collections = AdditionalCollectionForm(request.POST or None)
+#     form_document = ProductDocumentForm(request.POST or None)
+
+#    # stage = request.GET.get('stage', 'document') # defaults to document
+
+#     #bundle = Bundle.objects.get(pk=pk_bundle)
+#     # if request.method == "POST" and request.POST.get("form_name") == "document_form":
+#     #     document = form_document.save(commit = False)
+#     #     document.bundle = bundle
+#     #     document.save()
+#     #     # redirect to the next page after saving
+#     #     return redirect('build:collections_additional', pk_bundle=bundle.pk)
+
+
+#     # decide which page we need to render
+#     # if stage == 'additional':
+#     #     template = 'build/collections/collections_additional.html'
+#     # else:
+#     #     template = 'build/collections/collections_document.html'
+
+#     # current_stage = request.resolver_match.url_name
+
+#     # if current_stage == 'collections_document':
+#     #     template = 'build/collections/collections_document.html'
+#     # elif current_stage == 'collections_additional':
+#     #     template = 'build/collections/collections_additional.html'
+#     # else:
+#     #     template = 'build/collections/collections_document.html' # default to this
+
+#     return render(request, 'build/collections/collections_additional.html', {"pk_bundle": pk_bundle, "bundle": bundle, "form_additional_collections": form_additional_collections, "form_document": form_document})
+#     #return render(request, template, {"pk_bundle": pk_bundle, "bundle": bundle, "form_additional_collections": form_additional_collections, "form_document": form_document})
+
+def collection_document(request, pk_bundle):
+    bundle = Bundle.objects.get(pk=pk_bundle)
+    form_document = ProductDocumentForm(request.POST or None)
+
+    if form_document.is_valid():        
+        document = form_document.save(commit=False)
+        document.bundle = bundle
+        document.save()
+        document.build_base_case()
+
+        print(document.label())
+        # Open label - returns a list where index 0 is the label object and 1 is the tree
+        print(' ... Opening Label ... ')
+        label_list = open_label_with_tree(document.label())
+        label_root = label_list[1]
+        # Fill label - fills 
+        print(' ... Filling Label ... ')
+        #label_root = bundle.version.fill_xml_schema(label_root)
+        label_root = document.fill_label(label_root)
+        # Close label    
+        print(' ... Closing Label ... ')
+        close_label(label_list[0], label_root, label_list[2])          
+        print('---------------- End Build Product_Document Base Case -------')                     
+
+        product_bundle = Product_Bundle.objects.get(bundle=bundle)
+        product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+
+        return redirect(reverse('build:collection_additional', args=[pk_bundle]))
+
+        #write_into_label(document, product_bundle, product_collections_list)
+
+    return render(request, 'build/collections/collection_document.html', {"pk_bundle": pk_bundle, "bundle": bundle, "form_document": form_document})
+
+def collection_additional(request, pk_bundle):
+    form_additional_collections = AdditionalCollectionForm(request.POST or None)
+    return render(request, 'build/collections/collection_additional.html', {"pk_bundle": pk_bundle, "bundle": bundle, "form_additional_collections": form_additional_collections})
 
 @login_required
 def data(request, pk_bundle, pk_data):
