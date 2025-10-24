@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-model href="https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_1O00.sch" schematypens="http://purl.oclc.org/dsdl/schematron"?>
+<?xml-model href="https://pds.nasa.gov/pds4/ama/v1/PDS4_AMA_1O00_1300.sch" schematypens="http://purl.oclc.org/dsdl/schematron"?>
+<Product_External xmlns="http://pds.nasa.gov/pds4/pds/v1"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:ama="http://pds.nasa.gov/pds4/ama/v1"
+	xsi:schemaLocation="http://pds.nasa.gov/pds4/pds/v1 http://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_1O00.xsd
+    http://pds.nasa.gov/pds4/ama/v1 https://pds.nasa.gov/pds4/ama/v1/PDS4_AMA_1O00_1300.xsd">
+	<Identification_Area>
+		<logical_identifier>urn:nasa:pds-ama:sample_bundle</logical_identifier>
+		<version_id>1.0</version_id>
+		<title></title>
+		<information_model_version>1.24.0.0</information_model_version>
+		<product_class>Product_External</product_class>
+		<Citation_Information>
+			<publication_year>2023</publication_year>
+			<keyword>model output</keyword>
+			<description>description</description>
+			<List_Author>
+				<Person>
+					<given_name>Victoria</given_name>
+					<family_name>Hartwick</family_name>
+					<person_orcid>https://orcid.org/0000-0002-2082-8986</person_orcid>
+					<Affiliation>
+						<organization_name>Southwest Research Institute</organization_name>
+						<sequence_number>1</sequence_number>
+					</Affiliation>
+				</Person>
+			</List_Author>
+			<List_Editor>
+				<Person>
+					<given_name>Lyle</given_name>
+					<family_name>Huber</family_name>
+					<person_orcid>https://orcid.org/0000-0002-1232-1982</person_orcid>
+					<Affiliation>
+						<organization_name>New Mexico State University</organization_name>
+					</Affiliation>
+					<Affiliation>
+						<organization_name>NASA Planetary Data System Atmospheres Node</organization_name>
+					</Affiliation>
+				</Person>
+				<Person>
+					<given_name>Lynn</given_name>
+					<family_name>Neakrase</family_name>
+					<person_orcid>https://orcid.org/0000-0002-6370-5791</person_orcid>
+					<Affiliation>
+						<organization_name>New Mexico State University</organization_name>
+					</Affiliation>
+					<Affiliation>
+						<organization_name>NASA Planetary Data System Atmospheres Node</organization_name>
+					</Affiliation>
+				</Person>
+			</List_Editor>
+		</Citation_Information>
+		<Modification_History>
+			<Modification_Detail>
+				<modification_date>2024-01-30</modification_date>
+				<version_id>1.0</version_id>
+				<description>Initial label setup</description>
+			</Modification_Detail>
+		</Modification_History>
+	</Identification_Area>
+	<Context_Area>
+		<Investigation_Area>
+			<name>Atmospheric Modeling Annex</name>
+			<type>Individual Investigation</type>
+			<Internal_Reference>
+				<lid_reference>urn:nasa:pds:context:investigation:individual_investigation.atmospheric_modeling_annex</lid_reference>
+				<reference_type>external_to_investigation</reference_type>
+			</Internal_Reference>
+		</Investigation_Area>
+		<Target_Identification>
+			<!-- All modeling targets should probably be Laboratory Analog versions of bodies -->
+			<name>Proxima Centauri b</name>
+			<type>Laboratory Analog</type>
+			<Internal_Reference>
+				<lid_reference>urn:nasa:pds:context:target:laboratory_analog.venus</lid_reference>
+				<reference_type>external_to_target</reference_type>
+			</Internal_Reference>
+		</Target_Identification>
+		<Discipline_Area>
+			<ama:AMA>
+				<ama:Model_Metadata>
+					<!-- first 2 classes are required in every file. -->
+					<ama:type>GCM</ama:type>
+					<ama:name>NASA Ames FV3-based Mars GCM</ama:name>
+					<ama:version>3.1</ama:version>
+					<ama:institution>NASA Ames Research Center, Mars Climate Modeling
+						Center</ama:institution>
+				</ama:Model_Metadata>
+				<ama:Simulation_Configuration>
+					<ama:horizontal_grid_type>cube-sphere</ama:horizontal_grid_type>
+					<ama:model_resolution>1.875</ama:model_resolution>
+					<ama:model_resolution_unit>degrees</ama:model_resolution_unit>
+					<ama:vertical_grid_type>Hybrid-Sigma</ama:vertical_grid_type>
+					<ama:vertical_grid_unit>Pa</ama:vertical_grid_unit>
+					<ama:model_timestep>600</ama:model_timestep>
+					<ama:model_timestep_unit>seconds</ama:model_timestep_unit>
+					<ama:upper_boundary>3.25e-05</ama:upper_boundary>
+					<ama:lower_boundary>7.05e+00</ama:lower_boundary>
+					<ama:northern_boundary unit="deg">88.125</ama:northern_boundary>
+					<ama:southern_boundary unit="deg">-88.125</ama:southern_boundary>
+					<ama:eastern_boundary unit="deg">358.125</ama:eastern_boundary>
+					<ama:western_boundary unit="deg">1.875</ama:western_boundary>
+					<ama:start_time>3.0</ama:start_time>
+					<ama:end_time>147.0</ama:end_time>
+					<ama:time_unit>days since 0000-00-00 00:00:00</ama:time_unit>
+					<ama:description>Simulations based on the exoplanet configuration of the MGCM,
+						here for Trappist-1e. Code changes described in document X, in document
+						collection. The simulation has no surface topography and uniform surface
+						thermal properties. The orbit is circular with zero obliquity. The clear sky
+						simulation has no radiatively active dust aerosols and clouds are not
+						modeled. The atmosphere is 100% CO2 with an initial surface pressure = 7.05
+						mb. Atmospheric Co2 is allowed to condense into surface
+						deposits</ama:description>
+				</ama:Simulation_Configuration>
+				<ama:Model_Output>
+					<ama:File_Description>
+						<ama:top_level>1.0e-02</ama:top_level>
+						<ama:bottom_level>1.0e+03</ama:bottom_level>
+						<ama:level_unit>Pa</ama:level_unit>
+						<ama:start_time>3.0</ama:start_time>
+						<ama:end_time>147.0</ama:end_time>
+						<ama:time_unit>days since 0000-00-00 00:00:00</ama:time_unit>
+						<ama:postprocessing_methods>time:mean(interval:6 sols),pstd:vertically
+							interpolated to standard pressure grid
+							w/CAP</ama:postprocessing_methods>
+					</ama:File_Description>
+
+					
+				</ama:Model_Output>
+			</ama:AMA>
+		</Discipline_Area>
+	</Context_Area>
+	<Reference_List>
+		<External_Reference>
+			<reference_text>urn:nasa:pds-ama:sample_bundle:document:user-guide</reference_text>
+			<description>User Guide in the document collection of this bundle</description>
+		</External_Reference>
+	</Reference_List>
+	<File_Area_External>
+		<File>
+			<file_name>Filename_output.nc</file_name>
+			<creation_date_time>2023-07-09T15:45Z</creation_date_time>
+			<file_size unit="byte">312983</file_size>
+			<records>1</records>
+			<comment>netCDF file for output --- </comment>
+		</File>
+		<Encoded_External>
+			<name>filename_output</name>
+			<offset unit="byte">0</offset>
+			<encoding_standard_id>netCDF</encoding_standard_id>
+		</Encoded_External>
+	</File_Area_External>
+</Product_External>

@@ -1459,3 +1459,11 @@ class DictionaryForm(forms.Form):
     CHOICES = [('Display', 'Display'), ('testing', 'testing'), ]
     dictionary_type = forms.MultipleChoiceField(
         choices=CHOICES, widget=forms.CheckboxSelectMultiple())
+
+
+
+# To handle NetCDF files
+class NetCDFForm(forms.ModelForm):
+    class Meta:
+        model = NetCDFFile
+        fields = ['title', 'file']

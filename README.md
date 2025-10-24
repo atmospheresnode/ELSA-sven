@@ -19,15 +19,20 @@ This approach takes advantage of Atmospheres Node expertise to ensure all connec
 This section provides a timeline of ELSA's release history, highlighting key updates, new features, bug fixes, and improvements, with the most recent release listed first.
 
 ### **Current Version** 
-> ### **Version 1.13.0 (September 05, 2025)**
-- Bundle Hub: The Select and delete feature has been introduced. Now, users can delete multiple bundles from the bundle hub.
-- Bundle Hub: Separate images for Archive and External Bundles have been added to the carousel.
-- Citation Information: Lookup ORCID and RORID are added to the detailed citation information page.
-- Bundle ID: An alternate ID can be specified to override the default ID generated from the bundle name.
+> ### **Version 1.15.0 (September 26, 2025)**
+- About Page: The page has been redesigned and now includes a tab feature for different sections.
+- Table Products: Fixed being able to access table and field pages for table products.
+- Data Products: Reformatted the models of data products to be able to support more types in the future.
 
 
 ### **Previous Versions** 
 
+> ### **Version 1.14.0 (September 05, 2025)**
+- Bundle Hub: The Select and delete feature has been introduced. Now, users can delete multiple bundles from the bundle hub.
+- Bundle Hub: Separate images for Archive and External Bundles have been added to the carousel.
+- Citation Information: Lookup ORCID and RORID are added to the detailed citation information page.
+- Bundle ID: An alternate ID can be specified to override the default ID generated from the bundle name.
+  
 > ### **Version 1.9.8 (June 27, 2025)**
 - Citation Information Form: Added separate tabs for authors and editors so it's easier to follow. Also, people and organizations are separated within the tabs.
 - Context Products Update: Updates context product models in database for bidirectionality with related products and updated to have most

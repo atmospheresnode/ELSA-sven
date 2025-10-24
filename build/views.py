@@ -12,7 +12,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
 from django.http import HttpResponse, HttpRequest
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.template import RequestContext
 from django import forms
 from django.forms import modelformset_factory
@@ -21,6 +21,9 @@ from django.contrib import messages
 import lxml.etree as ET # for XML parsing- Added by Rupak
 # from lxml import etree # debug product obs only
 
+# Libraries for handilng netCDF files
+import io
+#import netCDF4
 
 # -------------------------------------------------------------------------------------------------- #
 # -------------------------------------------------------------------------------------------------- #
@@ -684,6 +687,8 @@ def bundle(request, pk_bundle):
                 product_observational_set.extend(Product_Observational.objects.filter(data=data))
 
         # Forms present on bundle detail page
+        form_netcdf = NetCDFForm(request.POST or None, request.FILES or None) # To handle NetCDF files
+
         form_alias = AliasForm(request.POST or None) 
         form_bundle = BundleForm(request.POST or None) 
         form_citation_information = CitationInformationForm(request.POST or None)
@@ -801,10 +806,12 @@ def bundle(request, pk_bundle):
             'contact_form' : contact_form,
             'context_successful_submit': False,
             'additional_collection_successful_submit': False,
-            'bundle_type': bundle.bundle_type,  #Rupak
+            'bundle_type': bundle.bundle_type,
+            
+            # To handle NetCDF files
+            'form_netcdf': form_netcdf,
+            'netcdf_files': NetCDFFile.objects.filter(bundle=bundle)
         }
-
-        print(table_set)
 
         # Compute status for bundle progress checklist
         status_dict = {
@@ -822,6 +829,20 @@ def bundle(request, pk_bundle):
         context_dict['directory_name'] = directory_name
         context_dict['subfiles'] = c 
         context_dict['file_context'] = file_context
+
+        # To handle NetCDF files
+        if form_netcdf.is_valid():
+            netcdf_obj = form_netcdf.save(commit=False)
+            netcdf_obj.bundle = bundle
+            netcdf_obj.save()
+
+            print('before call')
+
+            variable_coord_to_product(bundle=bundle)
+
+            print('after call')
+    
+            return HttpResponseRedirect('/elsa/build/' + str(bundle.pk) + '/')
 
         if form_investigation.is_valid():
             print(form_investigation.cleaned_data['investigation'].file_ref)
@@ -845,7 +866,6 @@ def bundle(request, pk_bundle):
             context_dict['context_successful_submit'] = True
 
             return render(request, 'build/bundle/bundle.html', context_dict)
-            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
             # return render(request, 'build/bundle/bundle.html', context_dict)
 
 
@@ -3417,6 +3437,25 @@ def get_allowed_coord_fields_from_ldd_url(ldd_url: str, ns: dict) -> list:
         elem.attrib["name"]
         for elem in coord_type.findall("xs:element", namespaces=ns) ]
 
+# Function to Load & Parse the AMA LDD so that we know 
+# what Variable Elements are permitted and in what order they are expected
+def get_allowed_variable_fields_from_ldd_url(ldd_url: str, ns: dict) -> list:
+    with urllib.request.urlopen(ldd_url) as response:
+        xml_content = response.read()
+
+    root = ET.fromstring(xml_content)
+
+    # Locate the ama:Variable complexType definition
+    variable_type = root.find(".//xs:complexType[@name='Variable']/xs:sequence", namespaces=ns)
+    if variable_type is None:
+        raise ValueError("Could not find Variable definition in LDD from URL.")
+
+    return [
+        elem.attrib["name"]
+        for elem in variable_type.findall("xs:element", namespaces=ns)
+    ]
+
+
 # Function to convert DataFrame to XML variable elements
 def dataframe_to_variable_elements(variable_metadata: pd.DataFrame, NS: dict, allowed_fields: list) -> list:
     variable_elements = []
@@ -3505,7 +3544,7 @@ def dataframe_to_coord_elements(coord_metadata: pd.DataFrame, NS: dict, allowed_
 def normalize(field):
     return field.lower().replace("_", "")
 
-def variable_coord_to_product():
+def variable_coord_to_product(bundle):
     # =========================================================================================
     # Set Up XML Namespace
     # =========================================================================================
@@ -3535,11 +3574,10 @@ def variable_coord_to_product():
     # Include Sub-Directories
     # =========================================================================================
     # 1. Set the top-level working directory
-    working_dir = "/Users/vhartwick/Documents/Projects/PDS Atmospheres Node Model Annex/pds_ama_sample_bundle/"
+    working_dir = os.path.join(settings.ARCHIVE_DIR, 'netcdf')
 
     # 2. Recursively find all .nc files
     netcdf_files = glob.glob(os.path.join(working_dir, "**", "*.nc"), recursive=True)
-
     # =========================================================================================
     # Loop Through NetCDF Files
     # =========================================================================================
@@ -3554,13 +3592,14 @@ def variable_coord_to_product():
         subdir_name = os.path.basename(os.path.dirname(nc_path))  # e.g., Simulation02
 
         # Write XML to the same subdirectory as the .nc file
-        output_dir = os.path.dirname(nc_path)
+        # output_dir = os.path.dirname(nc_path)
+        output_dir = bundle.directory()
         output_path = os.path.join(output_dir, xml_name)
 
         # =====================================================================================
         # 1. Open NetCDF File and Extract Variable & Coordinate Metadata into a Pandas Table
         # =====================================================================================
-        DS = xr.open_dataset(nc_path, decode_times=False)
+        DS = xr.open_dataset(nc_path, decode_times=False, engine='netcdf4')
 
         # variable metadata
         metadata = {}
@@ -3610,7 +3649,9 @@ def variable_coord_to_product():
         # =====================================================================================
         # 2. Load & Parse Template XML
         # =====================================================================================
-        tree = ET.parse("/Users/vhartwick/Documents/Projects/PDS Atmospheres Node Model Annex/Template_PE.xml")
+        source_file = os.path.join(PDS4_LABEL_TEMPLATE_DIRECTORY, 'base_templates')
+        source_file = os.path.join(source_file, 'Template_PE.xml')
+        tree = ET.parse(source_file)
         root = tree.getroot()
 
         # =====================================================================================
@@ -3652,6 +3693,7 @@ def variable_coord_to_product():
         # 5. Insert New Variable & Coordinate Metadata
         # =====================================================================================
         variable_elements = dataframe_to_variable_elements(variable_metadata, NS, allowed_variable_fields)
+        variable_elements = dataframe_to_variable_elements(variable_metadata, NS, [])
 
         for elem in variable_elements:
             model_output.append(elem)
@@ -3665,4 +3707,4 @@ def variable_coord_to_product():
         # 6. Write to Output File
         # =====================================================================================
         with open(output_path, "w", encoding="utf-8") as f:
-            f.write(prettify_no_blank_lines(root))
+            f.write(ET.tostring(root, encoding='unicode'))
