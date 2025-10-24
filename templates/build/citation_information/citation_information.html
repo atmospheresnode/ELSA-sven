@@ -28,8 +28,9 @@
                             <input type="submit" class="btn btn-light text-light" value="Create Citation Information"/>
                             
                             {% comment %} Added a check for bundle type here. If it's external, it takes the user directly to the bundle page. Because, we don't have any investigation choices if it's external. So, no need to skip to context_search. - Rupak {% endcomment %}
+                            {% comment %} This part now goes to collections instead of the bundle page since collections is only need for the external bundle walkthrough for NetCDF files (for right now).  {% endcomment %}
                             {% if bundle.bundle_type == 'External' %}
-                                <a href="{% url 'build:bundle' bundle.pk %}" class="btn btn-light text-light ms-3">
+                                <a href="{% url 'build:collection_document' bundle.pk %}" class="btn btn-light text-light ms-3">
                                     Skip
                                     <i class="fa fa-arrow-right ms-2"></i>
                                 </a>
@@ -39,6 +40,7 @@
                                     <i class="fa fa-arrow-right ms-2"></i>
                                 </a>
                             {% endif %}
+
                         </div>
                         
                     </form>

@@ -76,6 +76,13 @@ urlpatterns = [
     re_path(r'^instruments/$', views.instruments, name='instruments'),
     re_path(r'^instrument_hosts/$', views.instrument_hosts, name='instrument_hosts'),
 
+    # Collections
+    # re_path(r'^(?P<pk_bundle>\d+)/collections/$', views.collections, name='collections'),
+    # re_path(r'^(?P<pk_bundle>\d+)/collections/$', views.collections, name='collections_document'),
+    # re_path(r'^(?P<pk_bundle>\d+)/collections/$', views.collections, name='collections_additional'),
+    re_path(r'^(?P<pk_bundle>\d+)/collection_document/$', views.collection_document, name='collection_document'),
+    re_path(r'^(?P<pk_bundle>\d+)/collection_additional/$', views.collection_additional, name='collection_additional'),
+
 
 
     # Data
