@@ -836,6 +836,12 @@ def bundle(request, pk_bundle):
             netcdf_obj = form_netcdf.save(commit=False)
             netcdf_obj.bundle = bundle
             netcdf_obj.save()
+
+            print('before call')
+
+            variable_coord_to_product(bundle=bundle)
+
+            print('after call')
     
             return HttpResponseRedirect('/elsa/build/' + str(bundle.pk) + '/')
 
@@ -3361,6 +3367,25 @@ def get_allowed_coord_fields_from_ldd_url(ldd_url: str, ns: dict) -> list:
         elem.attrib["name"]
         for elem in coord_type.findall("xs:element", namespaces=ns) ]
 
+# Function to Load & Parse the AMA LDD so that we know 
+# what Variable Elements are permitted and in what order they are expected
+def get_allowed_variable_fields_from_ldd_url(ldd_url: str, ns: dict) -> list:
+    with urllib.request.urlopen(ldd_url) as response:
+        xml_content = response.read()
+
+    root = ET.fromstring(xml_content)
+
+    # Locate the ama:Variable complexType definition
+    variable_type = root.find(".//xs:complexType[@name='Variable']/xs:sequence", namespaces=ns)
+    if variable_type is None:
+        raise ValueError("Could not find Variable definition in LDD from URL.")
+
+    return [
+        elem.attrib["name"]
+        for elem in variable_type.findall("xs:element", namespaces=ns)
+    ]
+
+
 # Function to convert DataFrame to XML variable elements
 def dataframe_to_variable_elements(variable_metadata: pd.DataFrame, NS: dict, allowed_fields: list) -> list:
     variable_elements = []
@@ -3449,7 +3474,7 @@ def dataframe_to_coord_elements(coord_metadata: pd.DataFrame, NS: dict, allowed_
 def normalize(field):
     return field.lower().replace("_", "")
 
-def variable_coord_to_product():
+def variable_coord_to_product(bundle):
     # =========================================================================================
     # Set Up XML Namespace
     # =========================================================================================
@@ -3479,11 +3504,10 @@ def variable_coord_to_product():
     # Include Sub-Directories
     # =========================================================================================
     # 1. Set the top-level working directory
-    working_dir = ""
+    working_dir = os.path.join(settings.ARCHIVE_DIR, 'netcdf')
 
     # 2. Recursively find all .nc files
     netcdf_files = glob.glob(os.path.join(working_dir, "**", "*.nc"), recursive=True)
-
     # =========================================================================================
     # Loop Through NetCDF Files
     # =========================================================================================
@@ -3498,13 +3522,14 @@ def variable_coord_to_product():
         subdir_name = os.path.basename(os.path.dirname(nc_path))  # e.g., Simulation02
 
         # Write XML to the same subdirectory as the .nc file
-        output_dir = os.path.dirname(nc_path)
+        # output_dir = os.path.dirname(nc_path)
+        output_dir = bundle.directory()
         output_path = os.path.join(output_dir, xml_name)
 
         # =====================================================================================
         # 1. Open NetCDF File and Extract Variable & Coordinate Metadata into a Pandas Table
         # =====================================================================================
-        DS = xr.open_dataset(nc_path, decode_times=False)
+        DS = xr.open_dataset(nc_path, decode_times=False, engine='netcdf4')
 
         # variable metadata
         metadata = {}
@@ -3554,7 +3579,9 @@ def variable_coord_to_product():
         # =====================================================================================
         # 2. Load & Parse Template XML
         # =====================================================================================
-        tree = ET.parse("/Users/vhartwick/Documents/Projects/PDS Atmospheres Node Model Annex/Template_PE.xml")
+        source_file = os.path.join(PDS4_LABEL_TEMPLATE_DIRECTORY, 'base_templates')
+        source_file = os.path.join(source_file, 'Template_PE.xml')
+        tree = ET.parse(source_file)
         root = tree.getroot()
 
         # =====================================================================================
@@ -3596,6 +3623,7 @@ def variable_coord_to_product():
         # 5. Insert New Variable & Coordinate Metadata
         # =====================================================================================
         variable_elements = dataframe_to_variable_elements(variable_metadata, NS, allowed_variable_fields)
+        variable_elements = dataframe_to_variable_elements(variable_metadata, NS, [])
 
         for elem in variable_elements:
             model_output.append(elem)
@@ -3609,4 +3637,4 @@ def variable_coord_to_product():
         # 6. Write to Output File
         # =====================================================================================
         with open(output_path, "w", encoding="utf-8") as f:
-            f.write(prettify_no_blank_lines(root))
+            f.write(ET.tostring(root, encoding='unicode'))
