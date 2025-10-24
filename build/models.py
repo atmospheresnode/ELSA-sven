@@ -10,7 +10,7 @@ from queue import Empty
 from django.db import models
 from django.conf import settings
 from django.contrib.auth.models import User
-from django.core.validators import MaxValueValidator, MinValueValidator
+from django.core.validators import MaxValueValidator, MinValueValidator, FileExtensionValidator
 from django.http import HttpResponseRedirect
 from django.shortcuts import render, redirect
 from django.urls import reverse
@@ -2231,7 +2231,7 @@ class Collections(models.Model):
     #has_calibrated_data = models.BooleanField(default=False)
     #has_derived_data = models.BooleanField(default=False)
     #data_enum = models.PositiveIntegerField(default = 0)
-
+    
     # Cleaners
 
     def list(self):
@@ -5202,3 +5202,19 @@ class DisplayDictionary(models.Model):
 
 
 #    To Be Garbage Here✲
+
+
+
+# To handle NetCDF files
+
+class NetCDFFile(models.Model):
+    title = models.CharField(max_length=100)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    file = models.FileField(
+        upload_to='archive/netcdf/',
+        validators=[FileExtensionValidator(allowed_extensions=['nc'])],
+        )
+    bundle = models.ForeignKey(Bundle, on_delete=models.CASCADE, related_name='netcdf_files', null=True, blank=True)
+
+    def __str__(self):
+        return self.title
