@@ -182,8 +182,8 @@ h3.h3-responsive {
                         <div class="col-md-12 tab-pane fade show active" id="con_inv" role="tabpanel">
                             <p> To begin, select an investigation product below to associate with your bundle. Investigations serve as the top level of the context system and will associate your bundle with a larger project.</br> <strong>Investigations are categorized as:</strong> Individual Investigations, Missions, Field Campaigns, Observing Campaigns, or Other Investigations. Selecting an investigation will pare down the list of components to the ones that go with that investigation (i.e., associated instruments, targets, etc.).</p>
                             <p>If you have a new investigation or cannot find your investigation in the pull-down selector, you should contact the ATM node using the Contact button below.</p>
-                            
-                            <form class="card-body" id="form_investigation" method="post" action="{% url 'build:bundle' bundle.pk  %}">
+
+                                <form class="card-body" id="form_investigation" method="post" action="{% url 'build:bundle' bundle.pk  %}">
                                 
                                 {% csrf_token %}
                                 <input type="hidden" name="form_name" value="investigation_form">
@@ -204,6 +204,7 @@ h3.h3-responsive {
                                 {% endfor %}
 
                                 <div class="d-flex">
+                                    
                                     <input type="submit" class="btn btn-light text-light mt-4" value="Submit"/>
                                     <input type="button" class="btn btn-light text-light mt-4 ms-auto" data-bs-toggle="modal" data-bs-target="#contactModal" value="Contact">
                                 </div>
@@ -249,3 +250,9 @@ h3.h3-responsive {
     </div>
 </div>
 {% endblock %}
+
+
+                            <!-- <a href="{% url 'build:collections' bundle.pk %}" class="btn btn-light text-light ms-3">
+                                Skip
+                                <i class="fa fa-arrow-right ms-2"></i>
+                            </a> -->
