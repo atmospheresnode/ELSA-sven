@@ -4161,7 +4161,7 @@ class Product_Document(models.Model):
                   self (like itself).
     """
 
-    def fill_base_case(self, root):
+    def fill_label(self, root):
 
         Product_Document = root
 

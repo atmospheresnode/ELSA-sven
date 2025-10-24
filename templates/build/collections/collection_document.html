@@ -1,0 +1,103 @@
+{% extends 'base-derk.html' %}
+{% load static %}
+
+{% block title_block %}Document Collections{% endblock %}
+
+{% block body_block %}
+
+<style>
+.card {
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    border-radius: 10px;
+}
+.card-body {
+    padding: 20px;
+}
+.btn {
+    display: inline-flex;
+    align-items: center; 
+    justify-content: center; 
+    color: white;
+    padding: 6px 12px;
+    background-color: #2bbbad;
+    border-radius: 5px;
+    text-decoration: none; 
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+.btn:hover {
+    background-color: #26a498;
+}
+</style>
+
+<div class="container-fluid mt-4">
+
+    <!-- Messages -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-success">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Section Heading -->
+    <h2 class="mb-4 text-center">Document Collections</h2>
+
+    <!-- Document Collection Section -->
+    <div class="card mb-3">
+        <div class="card-header">
+            <p>This is your document collection. Add documentation like user guides, graphics, or other helpful archive materials.</p>
+        </div>
+
+        <div class="card-body">
+            <form method="post" action="{% url 'build:collection_document' bundle.pk %}">
+                {% csrf_token %}
+                <input type="hidden" name="form_name" value="document_form">
+                {% for field in form_document %}
+                    <div class="mb-3">
+                        {{ field.label_tag }}
+                        {{ field }}
+                        {% if field.errors %}
+                            <div class="text-danger">{{ field.errors }}</div>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+                <button type="submit" class="btn">Add Document</button>
+            </form>
+
+            <a href="{% url 'build:collection_additional' bundle.pk %}" class="btn btn-light text-light ms-3">
+                Skip
+                <i class="fa fa-arrow-right ms-2"></i>
+            </a>            
+        </div>
+    </div>
+
+    <!-- List of Documents -->
+    {% if documents %}
+    <div class="row">
+        {% for document in documents %}
+        <div class="col-md-6">
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">{{ document.document_name }}</h5>
+                    <p>Acknowledgment list: {{ document.acknowledgement_text }}</p>
+                    <p>Author list: {{ document.author_list }}</p>
+                    <p>Copyright: {{ document.copyright }}</p>
+                    <p>Description: {{ document.description }}</p>
+                    <p>Document editions: {{ document.document_editions }}</p>
+                    <p>DOI: {{ document.doi }}</p>
+                    <p>Editor list: {{ document.editor_list }}</p>
+                    <p>Publication date: {{ document.publication_date }}</p>
+                    <p>Revision ID: {{ document.revision_id }}</p>
+                    <a href="{% url 'build:product_document' pk_bundle document.pk %}" class="btn">Edit</a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p>No Documents Found</p>
+    {% endif %}
+</div>
+
+{% endblock %}

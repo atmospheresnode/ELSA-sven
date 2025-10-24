@@ -1279,7 +1279,7 @@
                      </div>
                      {% endfor %}
 
-                     <!-- Add s Collections -->
+                     <!-- Add Collections -->
                      <div class="tab-pane fade" id="add_a_collection" role="tabpanel">
                         <!-- Form -->
                         <div class="row px-2">
@@ -1304,7 +1304,7 @@
                         </div>
 
                         <!-- List of Collections -->
-                        <div class="modal-footer justify-content-start">
+                        {% comment %} <div class="modal-footer justify-content-start">
                            {% if additional_collections_count != 0 %}
                               {% for additional_collection in additional_collections_set %}
                                  {% for collection in additional_collection.collections_list %}
@@ -1322,7 +1322,7 @@
                            {% else %}
                               <p>No Collections Found</p>
                            {% endif %}
-                        </div>
+                        </div> {% endcomment %}
                      </div>
 
                   </div>
@@ -1435,84 +1435,98 @@
 
          <!-- Data Product Modal -->
          <div class="modal fade" id="data_product_modal">
-            <div class="modal-dialog modal-xl">
-               <div class="modal-content">
-                  <!-- Title -->
-                  <div class="modal-header">
-                     <h5 class="modal-title">Add Data Product</h5>
-                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                  </div>
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add Data Product</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
 
-                  <div class="modal-body pt-0">
-                     <div class="row px-2">
-                        <form action="{% url 'build:bundle' bundle.pk %}" method="post" id="form_data">
-                           {% csrf_token %}
+            <div class="modal-body pt-0">
+                <div class="row px-2">
+                    <form action="{% url 'build:bundle' bundle.pk %}" method="post" id="form_data">
+                        {% csrf_token %}
 
-                           <!-- Name-->
-                           <div class="mt-3">
-                              <label for="data_name">Name<span class="text-danger" title="This field is required">*</span></label>
-                              {{ form_data.name }}
-                           </div>
+                        <div class="mt-3">
+                            <label for="data_name">Name<span class="text-danger" title="This field is required">*</span></label>
+                            {{ form_data.name }}
+                        </div>
 
-                           <!-- Processing Level -->
-                           <div class="mt-3">
-                              <label for="processing_level">Processing Level</label>
-                              {{ form_data.processing_level }}
-                           </div>
+                        <div class="mt-3">
+                            <label for="processing_level">Processing Level</label>
+                            {{ form_data.processing_level }}
+                        </div>
 
-                           <!-- Data Type -->
-                           <div class="mt-3">
-                              <label for="data_type">Data Type</label>
-                              {{ form_data.data_type }}
-                           </div>
+                        <div class="mt-1 mb-2">
+                            <a class="small text-decoration-none" 
+                               data-bs-toggle="collapse" 
+                               href="#processing-help" 
+                               role="button" 
+                               aria-expanded="false" 
+                               aria-controls="processing-help">
+                                
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle" viewBox="0 0 16 16" style="vertical-align: -0.125em;">
+                                  <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                                  <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.064.293.006.399.287.47l.45.083.082.38-2.29-.287-.082-.38.45-.083c.294-.07.352-.176.288-.469l.738-3.468c.064-.293-.006-.399-.287-.47l-.45-.083-.082-.38 2.29.287zM8 5.5a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/>
+                                </svg>
+                                What do these processing levels mean?
+                            </a>
+                        </div>
+                        
+                        <div class="collapse" id="processing-help">
+                            <div class="card card-body bg-light" style="font-size: 0.9em;">
+                                <dl class="mb-0">
+                                    <dt>Raw</dt>
+                                    <dd class="mb-2">
+                                        Original data from an instrument. If compression, reformatting, packetization, or other translation has been applied to facilitate data transmission or storage, those processes will be reversed so that the archived data are in a PDS approved archive format.
+                                    </dd>
 
-                           <!-- <script>
-                              document.addEventListener("DOMContentLoaded", function () {
-                                 var dropdown = document.getElementById("id_data_type");
-                                 var checkboxContainer = document.getElementById("header_field");
-                                 var checkbox = document.getElementById("id_header");
-                     
-                                 function toggleCheckboxVisibility() {
-                                    if (dropdown.value === "Table Delimited") {  // Adjust to match the triggering option
-                                          checkboxContainer.style.display = "block";
-                                    } else {
-                                          checkboxContainer.style.display = "none";
-                                          checkbox.checked = false;  // Uncheck when hidden
-                                    }
-                                 }
-                     
-                                 dropdown.addEventListener("change", toggleCheckboxVisibility);
-                                 toggleCheckboxVisibility(); // Call on page load to ensure correct state
-                              });
-                        </script> -->
+                                    <dt>Reduced</dt>
+                                    <dd class="mb-2">
+                                        Data that have been processed beyond the raw stage but which have not yet reached calibrated status.
+                                    </dd>
+                                
+                                    <dt>Calibrated</dt>
+                                    <dd class="mb-2">
+                                        Data converted to physical units, which makes values independent of the instrument.
+                                    </dd>
+                                
+                                    <dt>Derived</dt>
+                                    <dd class="mb-0">
+                                        Results that have been distilled from one or more calibrated data products (for example, maps, gravity or magnetic fields, or ring particle size distributions). Supplementary data, such as calibration tables or tables of viewing geometry, used to interpret observational data should also be classified as 'derived' data if not easily matched to one of the other three categories.
+                                    </dd>
+                                </dl>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <label for="data_type">Data Type</label>
+                            {{ form_data.data_type }}
+                        </div>
 
                         <style>
-                              #checkbox-container {
-                                 display: none;
-                              }
+                            #checkbox-container {
+                                display: none;
+                            }
                         </style>
 
-                           <!-- Data Type Header -->
-                           <div id="header_field" class="mt-3">
-                              <label for="header">Header?</label>
-                              {{ form_data.header }}
-                           </div>
+                        <div id="header_field" class="mt-3">
+                            <label for="header">Header?</label>
+                            {{ form_data.header }}
+                        </div>
 
-                           <!-- Collection -->
-                           <div class="mt-3">
-                              <label for="collection">Collection<span class="text-danger" title="This field is required">*</span></label>
-                              {{ form_data.collection }}
-                           </div>
+                        <div class="mt-3">
+                            <label for="collection">Collection<span class="text-danger" title="This field is required">*</span></label>
+                            {{ form_data.collection }}
+                        </div>
 
-                           <!-- Create Product Document -->
-                           <button type="submit" class="btn btn-light text-light my-4">Add Data</button>
-                        </form>
-                     </div>
-                  </div>
-               </div>
+                        <button type="submit" class="btn btn-light text-light my-4">Add Data</button>
+                    </form>
+                </div>
             </div>
-         </div>
-      </div>
+        </div>
+    </div>
+</div>
 
    
 
@@ -1631,6 +1645,7 @@
 </div>
             </div>
          </div>
+
 
          <div class="card">
          <h5 class="card-header bg-secondary text-white text-center">Bundle Progress</h5>
@@ -2851,86 +2866,97 @@
 
          <!-- Data Product Modal -->
          <div class="modal fade" id="data_product_modal">
-            <div class="modal-dialog modal-xl">
-               <div class="modal-content">
-                  <!-- Title -->
-                  <div class="modal-header">
-                     <h5 class="modal-title">Add Data Product</h5>
-                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                  </div>
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add Data Product</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
 
-                  <div class="modal-body pt-0">
-                     <div class="row px-2">
-                        <form action="{% url 'build:bundle' bundle.pk %}" method="post" id="form_data">
-                           {% csrf_token %}
+            <div class="modal-body pt-0">
+                <div class="row px-2">
+                    <form action="{% url 'build:bundle' bundle.pk %}" method="post" id="form_data">
+                        {% csrf_token %}
 
-                           <!-- Name-->
-                           <div class="mt-3">
-                              <label for="data_name">Name<span class="text-danger" title="This field is required">*</span></label>
-                              {{ form_data.name }}
-                           </div>
+                        <div class="mt-3">
+                            <label for="data_name">Name<span class="text-danger" title="This field is required">*</span></label>
+                            {{ form_data.name }}
+                        </div>
 
-                           <!-- Processing Level -->
-                           <div class="mt-3">
-                              <label for="processing_level">Processing Level</label>
-                              {{ form_data.processing_level }}
-                           </div>
+                        <div class="mt-3">
+                            <label for="processing_level">Processing Level</label>
+                            {{ form_data.processing_level }}
+                        </div>
 
-                           <!-- Data Type -->
-                           <div class="mt-3">
-                              <label for="data_type">Data Type</label>
-                              {{ form_data.data_type }}
-                           </div>
+                        <div class="mt-1 mb-2">
+                            <a class="small text-decoration-none" 
+                               data-bs-toggle="collapse" 
+                               href="#processing-help" 
+                               role="button" 
+                               aria-expanded="false" 
+                               aria-controls="processing-help">
+                                
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle" viewBox="0 0 16 16" style="vertical-align: -0.125em;">
+                                  <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                                  <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.064.293.006.399.287.47l.45.083.082.38-2.29-.287-.082-.38.45-.083c.294-.07.352-.176.288-.469l.738-3.468c.064-.293-.006-.399-.287-.47l-.45-.083-.082-.38 2.29.287zM8 5.5a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/>
+                                </svg>
+                                What do these processing levels mean?
+                            </a>
+                        </div>
+                        
+                        <div class="collapse" id="processing-help">
+                            <div class="card card-body bg-light" style="font-size: 0.9em;">
+                                <dl class="mb-0">
+                                    <dt>Raw</dt>
+                                    <dd class="mb-2">
+                                        Original data from an instrument. If compression, reformatting, packetization, or other translation has been applied to facilitate data transmission or storage, those processes will be reversed so that the archived data are in a PDS approved archive format.
+                                    </dd>
 
-                           <!-- <script>
-                              document.addEventListener("DOMContentLoaded", function () {
-                                 var dropdown = document.getElementById("id_data_type");
-                                 var checkboxContainer = document.getElementById("header_field");
-                                 var checkbox = document.getElementById("id_header");
-                     
-                                 function toggleCheckboxVisibility() {
-                                    if (dropdown.value === "Table Delimited") {  // Adjust to match the triggering option
-                                          checkboxContainer.style.display = "block";
-                                    } else {
-                                          checkboxContainer.style.display = "none";
-                                          checkbox.checked = false;  // Uncheck when hidden
-                                    }
-                                 }
-                     
-                                 dropdown.addEventListener("change", toggleCheckboxVisibility);
-                                 toggleCheckboxVisibility(); // Call on page load to ensure correct state
-                              });
-                        </script> -->
+                                    <dt>Reduced</dt>
+                                    <dd class="mb-2">
+                                        Data that have been processed beyond the raw stage but which have not yet reached calibrated status.
+                                    </dd>
+                                
+                                    <dt>Calibrated</dt>
+                                    <dd class="mb-2">
+                                        Data converted to physical units, which makes values independent of the instrument.
+                                    </dd>
+                                
+                                    <dt>Derived</dt>
+                                    <dd class="mb-0">
+                                        Results that have been distilled from one or more calibrated data products (for example, maps, gravity or magnetic fields, or ring particle size distributions). Supplementary data, such as calibration tables or tables of viewing geometry, used to interpret observational data should also be classified as 'derived' data if not easily matched to one of the other three categories.
+                                    </dd>
+                                </dl>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <label for="data_type">Data Type</label>
+                            {{ form_data.data_type }}
+                        </div>
 
                         <style>
-                              #checkbox-container {
-                                 display: none;
-                              }
+                            #checkbox-container {
+                                display: none;
+                            }
                         </style>
 
-                           <!-- Data Type Header -->
-                           <div id="header_field" class="mt-3">
-                              <label for="header">Header?</label>
-                              {{ form_data.header }}
-                           </div>
+                        <div id="header_field" class="mt-3">
+                            <label for="header">Header?</label>
+                            {{ form_data.header }}
+                        </div>
 
-                           <!-- Collection -->
-                           <div class="mt-3">
-                              <label for="collection">Collection<span class="text-danger" title="This field is required">*</span></label>
-                              {{ form_data.collection }}
-                           </div>
+                        <div class="mt-3">
+                            <label for="collection">Collection<span class="text-danger" title="This field is required">*</span></label>
+                            {{ form_data.collection }}
+                        </div>
 
-                           <!-- Create Product Document -->
-                           <button type="submit" class="btn btn-light text-light my-4">Add Data</button>
-                        </form>
-                     </div>
-                  </div>
-               </div>
+                        <button type="submit" class="btn btn-light text-light my-4">Add Data</button>
+                    </form>
+                </div>
             </div>
-         </div>
-      </div>
+        </div>
+    </div>
+</div>
       {% endif %}
-
-
-
 {% endblock %}

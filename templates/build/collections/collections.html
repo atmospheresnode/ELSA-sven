@@ -1,0 +1,207 @@
+{% extends 'base-derk.html' %}
+{% load static %}
+
+{% block title_block %}Collections{% endblock %}
+
+{% block body_block %}
+
+<style>
+.card {
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    border-radius: 10px;
+}
+.card-body {
+    padding: 20px;
+}
+.btn {
+    display: inline-flex;
+    align-items: center; 
+    justify-content: center; 
+    color: white;
+    padding: 6px 12px;
+    background-color: #2bbbad;
+    border-radius: 5px;
+    text-decoration: none; 
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+.btn:hover {
+    background-color: #26a498;
+}
+.tab-content .card {
+    margin-bottom: 15px;
+}
+</style>
+
+<div class="container-fluid mt-4">
+
+    <!-- Messages -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-success">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Section Heading -->
+    <h2 class="mb-4 text-center">Collections Area</h2>
+
+    <!-- Tabs -->
+    <ul class="nav nav-tabs nav-fill mb-3" role="tablist">
+        <li class="nav-item">
+            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#doc_collection" type="button" role="tab">
+                Document Collection
+            </button>
+        </li>
+
+        {% for add_collection in additional_collections_set %}
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#additional_{{ add_collection.collection_name }}_collection" type="button" role="tab">
+                {{ add_collection.collection_name }}
+            </button>
+        </li>
+        {% endfor %}
+
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#add_a_collection" type="button" role="tab">
+                <i class="fa fa-plus me-2"></i> Add New Collection
+            </button>
+        </li>
+    </ul>
+
+    <!-- Tab Content -->
+    <div class="tab-content">
+
+        <!-- Document Collection Tab -->
+        <div class="tab-pane fade show active" id="doc_collection" role="tabpanel">
+            <div class="card mb-3">
+                <div class="card-header">
+                    <p>This is your document collection. Add documentation like user guides, graphics, or other helpful archive materials.</p>
+                </div>
+
+                <!-- Inline Document Form -->
+                <div class="card-body">
+                    <form method="post" action="{% url 'build:bundle' pk_bundle %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="form_name" value="document_form">
+                        {% for field in form_document %}
+                            <div class="mb-3">
+                                {{ field.label_tag }}
+                                {{ field }}
+                                {% if field.errors %}
+                                    <div class="text-danger">{{ field.errors }}</div>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                        <button type="submit" class="btn">Add Document</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- List of Documents -->
+            {% if documents %}
+            <div class="row">
+                {% for document in documents %}
+                <div class="col-md-6">
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ document.document_name }}</h5>
+                            <p>Acknowledgment list: {{ document.acknowledgement_text }}</p>
+                            <p>Author list: {{ document.author_list }}</p>
+                            <p>Copyright: {{ document.copyright }}</p>
+                            <p>Description: {{ document.description }}</p>
+                            <p>Document editions: {{ document.document_editions }}</p>
+                            <p>DOI: {{ document.doi }}</p>
+                            <p>Editor list: {{ document.editor_list }}</p>
+                            <p>Publication date: {{ document.publication_date }}</p>
+                            <p>Revision ID: {{ document.revision_id }}</p>
+                            <a href="{% url 'build:product_document' pk_bundle document.pk %}" class="btn">Edit</a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p>No Documents Found</p>
+            {% endif %}
+        </div>
+
+        <!-- Additional Collections Tabs -->
+        {% for add_collection in additional_collections_set %}
+        <div class="tab-pane fade" id="additional_{{ add_collection.collection_name }}_collection" role="tabpanel">
+            <div class="card mb-3">
+                <div class="card-header">
+                    <p>This is a data collection. Add your data products here (tables, images, etc.).</p>
+                </div>
+
+                <!-- Inline Data Product Form -->
+                <div class="card-body">
+                    <form method="post" action="{% url 'build:collections' pk_bundle %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="form_name" value="data_product_form">
+                        <input type="hidden" name="collection_id" value="{{ add_collection.pk }}">
+                        {% for field in form_data_product %}
+                            <div class="mb-3">
+                                {{ field.label_tag }}
+                                {{ field }}
+                                {% if field.errors %}
+                                    <div class="text-danger">{{ field.errors }}</div>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                        <button type="submit" class="btn">Add Data Product</button>
+                    </form>
+                </div>
+
+                <!-- List of Data Products -->
+                <div class="row mt-3">
+                    {% for data in data_set %}
+                        {% if data.collection == add_collection %}
+                        <div class="col-md-6">
+                            <div class="card mb-3">
+                                <div class="card-body">
+                                    <h5 class="card-title">{{ data.name }}</h5>
+                                    <p>Processing Level: {{ data.processing_level }}</p>
+                                    <p>Data Type: {{ data.data_type }}</p>
+                                    <div class="btn-group">
+                                        <a href="{% url 'build:table_creation' pk_bundle data.pk %}" class="btn">Edit Table</a>
+                                        {% for table_type in table_set %}
+                                            {% for table in table_type %}
+                                                {% if table.data == data %}
+                                                    <a href="{% url 'build:edit_table_field_information' pk_bundle data.pk table.pk %}" class="btn">Edit Field(s)</a>
+                                                {% endif %}
+                                            {% endfor %}
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+
+        <!-- Add New Collection Tab -->
+        <div class="tab-pane fade" id="add_a_collection" role="tabpanel">
+            <form method="post" action="{% url 'build:bundle' pk_bundle %}" class="mt-3">
+                {% csrf_token %}
+                <input type="hidden" name="form_name" value="additional_collection_form">
+                <div class="mb-3">
+                    <label>Collection Name</label>
+                    {{ form_additional_collections.collection_name }}
+                </div>
+                <div class="mb-3">
+                    <label>Collection Type</label>
+                    {{ form_additional_collections.collection_type }}
+                </div>
+                <button type="submit" class="btn">Create Collection</button>
+            </form>
+        </div>
+        
+    </div>
+</div>
+
+
+{% endblock %}
