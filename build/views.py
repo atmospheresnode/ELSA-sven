@@ -687,7 +687,12 @@ def bundle(request, pk_bundle):
                 product_observational_set.extend(Product_Observational.objects.filter(data=data))
 
         # Forms present on bundle detail page
-        form_netcdf = NetCDFForm(request.POST or None, request.FILES or None) # To handle NetCDF files
+        # form_netcdf = NetCDFForm(request.POST or None, request.FILES or None) # To handle NetCDF files
+        #form_netcdf = MultipleNetCDFUploadForm(request.POST, request.FILES) # To handle NetCDF files
+        if request.method == 'POST':
+            form_netcdf = MultipleNetCDFUploadForm(request.POST, request.FILES)
+        else:
+            form_netcdf = MultipleNetCDFUploadForm()
 
         form_alias = AliasForm(request.POST or None) 
         form_bundle = BundleForm(request.POST or None) 
@@ -831,18 +836,47 @@ def bundle(request, pk_bundle):
         context_dict['file_context'] = file_context
 
         # To handle NetCDF files
-        if form_netcdf.is_valid():
-            netcdf_obj = form_netcdf.save(commit=False)
-            netcdf_obj.bundle = bundle
-            netcdf_obj.save()
+        # if form_netcdf.is_valid():
+        #     netcdf_obj = form_netcdf.save(commit=False)
+        #     netcdf_obj.bundle = bundle
+        #     netcdf_obj.save()
 
-            print('before call')
+        #     print('before call')
 
-            variable_coord_to_product(bundle=bundle)
+        #     variable_coord_to_product(bundle=bundle)
 
-            print('after call')
+        #     print('after call')
     
-            return HttpResponseRedirect('/elsa/build/' + str(bundle.pk) + '/')
+        #     return HttpResponseRedirect('/elsa/build/' + str(bundle.pk) + '/')
+
+        if request.method == 'POST':
+
+            if form_netcdf.is_valid():
+                files = form_netcdf.cleaned_data['netcdf_files']
+                
+                files_uploaded = False
+                for f in files:
+                    file_title = f.name
+                    if len(file_title) > 100:
+                        file_title = file_title[:100]
+
+                    # Create the NetCDFFile object using your model's fields
+                    netcdf_obj = NetCDFFile(
+                        bundle=bundle,
+                        file=f,         
+                        title=file_title 
+                    )
+                    
+                    netcdf_obj.save()
+                    files_uploaded = True
+
+        
+                if files_uploaded:
+                    print('before call')
+                    variable_coord_to_product(bundle=bundle)
+                    print('after call')
+                
+                return HttpResponseRedirect('/elsa/build/' + str(bundle.pk) + '/')
 
         if form_investigation.is_valid():
             print(form_investigation.cleaned_data['investigation'].file_ref)
