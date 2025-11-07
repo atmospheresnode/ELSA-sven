@@ -7,9 +7,9 @@
 
 <style>
 .card {
-    margin-bottom: 20px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    border-radius: 10px;
+    box-shadow: var(--box-shadow);
+    border-radius: 15px;
+    overflow: hidden;
 }
 .card-body {
     padding: 20px;
@@ -31,97 +31,38 @@
 }
 </style>
 
-<div class="container-fluid mt-4">
+<div class="container-fluid">
+    <div class="row justify-content-center align-items-center py-4">
+        <div class="col-12 col-lg-9 col-xl-10">
+            <div class="card mb-3">
+                <div class="card-body m-4">
+                    <!-- Messages -->
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-success">{{ message }}</div>
+                        {% endfor %}
+                    {% endif %}
 
-    <!-- Messages -->
-    {% if messages %}
-        {% for message in messages %}
-            <div class="alert alert-success">{{ message }}</div>
-        {% endfor %}
-    {% endif %}
+                    <h2 class="mb-5 pb-2 pb-md-0 mb-md-4">Additional Collections</h2>
+                    <hr>
 
-    <!-- Section Heading -->
-    <h2 class="mb-4 text-center">Additional Collections</h2>
-
-    <!-- Loop through existing additional collections -->
-    {% for add_collection in additional_collections_set %}
-    <div class="card mb-3">
-        <div class="card-header">
-            <h5>{{ add_collection.collection_name }}</h5>
-            <p>This is a data collection. Add your data products here (tables, images, etc.).</p>
-        </div>
-
-        <div class="card-body">
-            <form method="post" action="{% url 'build:collections' pk_bundle %}">
-                {% csrf_token %}
-                <input type="hidden" name="form_name" value="data_product_form">
-                <input type="hidden" name="collection_id" value="{{ add_collection.pk }}">
-                {% for field in form_data_product %}
-                    <div class="mb-3">
-                        {{ field.label_tag }}
-                        {{ field }}
-                        {% if field.errors %}
-                            <div class="text-danger">{{ field.errors }}</div>
-                        {% endif %}
-                    </div>
-                {% endfor %}
-                <button type="submit" class="btn">Add Data Product</button>
-            </form>
-        </div>
-
-        <!-- List of Data Products -->
-        <div class="row mt-3">
-            {% for data in data_set %}
-                {% if data.collection == add_collection %}
-                <div class="col-md-6">
-                    <div class="card mb-3">
-                        <div class="card-body">
-                            <h5 class="card-title">{{ data.name }}</h5>
-                            <p>Processing Level: {{ data.processing_level }}</p>
-                            <p>Data Type: {{ data.data_type }}</p>
-                            <div class="btn-group">
-                                <a href="{% url 'build:table_creation' pk_bundle data.pk %}" class="btn">Edit Table</a>
-                                {% for table_type in table_set %}
-                                    {% for table in table_type %}
-                                        {% if table.data == data %}
-                                            <a href="{% url 'build:edit_table_field_information' pk_bundle data.pk table.pk %}" class="btn">Edit Field(s)</a>
-                                        {% endif %}
-                                    {% endfor %}
-                                {% endfor %}
-                            </div>
+                    <form method="post" action="{% url 'build:bundle' pk_bundle %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="form_name" value="additional_collection_form">
+                        <div class="mb-3">
+                            <label>Collection Name</label>
+                            {{ form_additional_collections.collection_name }}
                         </div>
-                    </div>
+                        <div class="mb-3">
+                            <label>Collection Type</label>
+                            {{ form_additional_collections.collection_type }}
+                        </div>
+                        <button type="submit" class="btn">Create Collection</button>
+                    </form>
                 </div>
-                {% endif %}
-            {% endfor %}
+            </div>
         </div>
     </div>
-    {% empty %}
-        <p>No Additional Collections Found.</p>
-    {% endfor %}
-
-    <!-- Add New Collection Section -->
-    <div class="card mt-4">
-        <div class="card-header">
-            <h5>Add New Collection</h5>
-        </div>
-        <div class="card-body">
-            <form method="post" action="{% url 'build:bundle' pk_bundle %}">
-                {% csrf_token %}
-                <input type="hidden" name="form_name" value="additional_collection_form">
-                <div class="mb-3">
-                    <label>Collection Name</label>
-                    {{ form_additional_collections.collection_name }}
-                </div>
-                <div class="mb-3">
-                    <label>Collection Type</label>
-                    {{ form_additional_collections.collection_type }}
-                </div>
-                <button type="submit" class="btn">Create Collection</button>
-            </form>
-        </div>
-    </div>
-
 </div>
 
 {% endblock %}
