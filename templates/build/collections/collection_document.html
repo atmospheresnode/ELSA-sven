@@ -7,9 +7,9 @@
 
 <style>
 .card {
-    margin-bottom: 20px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    border-radius: 10px;
+    box-shadow: var(--box-shadow);
+    border-radius: 15px;
+    overflow: hidden;
 }
 .card-body {
     padding: 20px;
@@ -31,73 +31,74 @@
 }
 </style>
 
-<div class="container-fluid mt-4">
-
-    <!-- Messages -->
-    {% if messages %}
-        {% for message in messages %}
-            <div class="alert alert-success">{{ message }}</div>
-        {% endfor %}
-    {% endif %}
-
-    <!-- Section Heading -->
-    <h2 class="mb-4 text-center">Document Collections</h2>
-
-    <!-- Document Collection Section -->
-    <div class="card mb-3">
-        <div class="card-header">
-            <p>This is your document collection. Add documentation like user guides, graphics, or other helpful archive materials.</p>
-        </div>
-
-        <div class="card-body">
-            <form method="post" action="{% url 'build:collection_document' bundle.pk %}">
-                {% csrf_token %}
-                <input type="hidden" name="form_name" value="document_form">
-                {% for field in form_document %}
-                    <div class="mb-3">
-                        {{ field.label_tag }}
-                        {{ field }}
-                        {% if field.errors %}
-                            <div class="text-danger">{{ field.errors }}</div>
-                        {% endif %}
-                    </div>
-                {% endfor %}
-                <button type="submit" class="btn">Add Document</button>
-            </form>
-
-            <a href="{% url 'build:collection_additional' bundle.pk %}" class="btn btn-light text-light ms-3">
-                Skip
-                <i class="fa fa-arrow-right ms-2"></i>
-            </a>            
-        </div>
-    </div>
-
-    <!-- List of Documents -->
-    {% if documents %}
-    <div class="row">
-        {% for document in documents %}
-        <div class="col-md-6">
+<div class="container-fluid">
+    <div class="row justify-content-center align-items-center py-4">
+        <div class="col-12 col-lg-9 col-xl-10">
             <div class="card mb-3">
-                <div class="card-body">
-                    <h5 class="card-title">{{ document.document_name }}</h5>
-                    <p>Acknowledgment list: {{ document.acknowledgement_text }}</p>
-                    <p>Author list: {{ document.author_list }}</p>
-                    <p>Copyright: {{ document.copyright }}</p>
-                    <p>Description: {{ document.description }}</p>
-                    <p>Document editions: {{ document.document_editions }}</p>
-                    <p>DOI: {{ document.doi }}</p>
-                    <p>Editor list: {{ document.editor_list }}</p>
-                    <p>Publication date: {{ document.publication_date }}</p>
-                    <p>Revision ID: {{ document.revision_id }}</p>
-                    <a href="{% url 'build:product_document' pk_bundle document.pk %}" class="btn">Edit</a>
+                <div class="card-body m-4">
+                <!-- Messages -->
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-success">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+
+                <!-- Section Heading -->
+                <h2 class="mb-5 pb-2 pb-md-0 mb-md-4">Document Collections</h2>
+                <p>This is your document collection. In this collection, you should plan to put any documentation you think users 
+                    of your data might need to understand and use your data. Typically users would expect to find a user guide and/or 
+                    supporting documentation in this collection. Helpful movies, graphics, or other non-standard archive formats could 
+                    also be here if they helpful for documenting your bundle.</p>
+                <hr>
+
+                <!-- Document Collection Section -->
+
+                    <div class="card-body">
+                        <form method="post" action="{% url 'build:collection_document' bundle.pk %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="form_name" value="document_form">
+                            {% for field in form_document %}
+                                <div class="mb-3">
+                                    {{ field.label_tag }}
+                                    {{ field }}
+                                    {% if field.errors %}
+                                        <div class="text-danger">{{ field.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                            <button type="submit" class="btn">Add Document</button>
+                            <a href="{% url 'build:collection_additional' bundle.pk %}" class="btn btn-light text-light ms-3">
+                                Skip
+                                <i class="fa fa-arrow-right ms-2"></i>
+                            </a>
+                        </form>           
+                    </div>
+                <!-- </div> -->
+
+                    <div class="row">
+                        {% for document in documents %}
+                        <div class="col-md-6">
+                            <div class="card mb-3">
+                                <div class="card-body">
+                                    <h5 class="card-title">{{ document.document_name }}</h5>
+                                    <p>Acknowledgment list: {{ document.acknowledgement_text }}</p>
+                                    <p>Author list: {{ document.author_list }}</p>
+                                    <p>Copyright: {{ document.copyright }}</p>
+                                    <p>Description: {{ document.description }}</p>
+                                    <p>Document editions: {{ document.document_editions }}</p>
+                                    <p>DOI: {{ document.doi }}</p>
+                                    <p>Editor list: {{ document.editor_list }}</p>
+                                    <p>Publication date: {{ document.publication_date }}</p>
+                                    <p>Revision ID: {{ document.revision_id }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
                 </div>
             </div>
         </div>
-        {% endfor %}
     </div>
-    {% else %}
-    <p>No Documents Found</p>
-    {% endif %}
 </div>
 
 {% endblock %}
