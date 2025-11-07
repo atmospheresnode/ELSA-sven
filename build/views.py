@@ -3655,6 +3655,10 @@ def variable_coord_to_product(bundle):
         tree = ET.parse(source_file)
         root = tree.getroot()
 
+        update = Version()
+
+        update.version_update_old(bundle.version, source_file, output_path)
+
         # =====================================================================================
         # 3. Locate <Identification_Area> and Insert <pds:logical_identifier>, <pds:title>
         # =====================================================================================
@@ -3730,11 +3734,14 @@ def variable_coord_to_product(bundle):
         for modification_history in modification_history_set:
             products.append(modification_history)
 
+        print(products)
+
         for product in products:
             # print('- Label: {}'.format(label))
             print(' ... Opening Label ... ')
             label_list = open_label_with_tree(output_path)
             label_root = label_list[1]
+            print(label_root)
             print(' ... Building Label ... ')
             label_root = product.fill_label(label_root)
             #alias.alias_list.append(label_root)
