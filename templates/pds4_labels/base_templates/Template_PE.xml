@@ -27,52 +27,40 @@
 			<ama:AMA>
 				<ama:Model_Metadata>
 					<!-- first 2 classes are required in every file. -->
-					<ama:type>GCM</ama:type>
-					<ama:name>NASA Ames FV3-based Mars GCM</ama:name>
-					<ama:version>3.1</ama:version>
-					<ama:institution>NASA Ames Research Center, Mars Climate Modeling
-						Center</ama:institution>
+					<ama:type></ama:type>
+					<ama:name></ama:name>
+					<ama:version></ama:version>
+					<ama:institution></ama:institution>
 				</ama:Model_Metadata>
 				<ama:Simulation_Configuration>
-					<ama:horizontal_grid_type>cube-sphere</ama:horizontal_grid_type>
-					<ama:model_resolution>1.875</ama:model_resolution>
-					<ama:model_resolution_unit>degrees</ama:model_resolution_unit>
-					<ama:vertical_grid_type>Hybrid-Sigma</ama:vertical_grid_type>
-					<ama:vertical_grid_unit>Pa</ama:vertical_grid_unit>
-					<ama:model_timestep>600</ama:model_timestep>
-					<ama:model_timestep_unit>seconds</ama:model_timestep_unit>
-					<ama:upper_boundary>3.25e-05</ama:upper_boundary>
-					<ama:lower_boundary>7.05e+00</ama:lower_boundary>
-					<ama:northern_boundary unit="deg">88.125</ama:northern_boundary>
-					<ama:southern_boundary unit="deg">-88.125</ama:southern_boundary>
-					<ama:eastern_boundary unit="deg">358.125</ama:eastern_boundary>
-					<ama:western_boundary unit="deg">1.875</ama:western_boundary>
-					<ama:start_time>3.0</ama:start_time>
-					<ama:end_time>147.0</ama:end_time>
-					<ama:time_unit>days since 0000-00-00 00:00:00</ama:time_unit>
-					<ama:description>Simulations based on the exoplanet configuration of the MGCM,
-						here for Trappist-1e. Code changes described in document X, in document
-						collection. The simulation has no surface topography and uniform surface
-						thermal properties. The orbit is circular with zero obliquity. The clear sky
-						simulation has no radiatively active dust aerosols and clouds are not
-						modeled. The atmosphere is 100% CO2 with an initial surface pressure = 7.05
-						mb. Atmospheric Co2 is allowed to condense into surface
-						deposits</ama:description>
+					<ama:horizontal_grid_type></ama:horizontal_grid_type>
+					<ama:model_resolution></ama:model_resolution>
+					<ama:model_resolution_unit></ama:model_resolution_unit>
+					<ama:vertical_grid_type></ama:vertical_grid_type>
+					<ama:vertical_grid_unit></ama:vertical_grid_unit>
+					<ama:model_timestep></ama:model_timestep>
+					<ama:model_timestep_unit></ama:model_timestep_unit>
+					<ama:upper_boundary></ama:upper_boundary>
+					<ama:lower_boundary></ama:lower_boundary>
+					<ama:northern_boundary unit="deg"></ama:northern_boundary>
+					<ama:southern_boundary unit="deg"></ama:southern_boundary>
+					<ama:eastern_boundary unit="deg"></ama:eastern_boundary>
+					<ama:western_boundary unit="deg"></ama:western_boundary>
+					<ama:start_time></ama:start_time>
+					<ama:end_time></ama:end_time>
+					<ama:time_unit></ama:time_unit>
+					<ama:description></ama:description>
 				</ama:Simulation_Configuration>
 				<ama:Model_Output>
 					<ama:File_Description>
-						<ama:top_level>1.0e-02</ama:top_level>
-						<ama:bottom_level>1.0e+03</ama:bottom_level>
-						<ama:level_unit>Pa</ama:level_unit>
-						<ama:start_time>3.0</ama:start_time>
-						<ama:end_time>147.0</ama:end_time>
-						<ama:time_unit>days since 0000-00-00 00:00:00</ama:time_unit>
-						<ama:postprocessing_methods>time:mean(interval:6 sols),pstd:vertically
-							interpolated to standard pressure grid
-							w/CAP</ama:postprocessing_methods>
+						<ama:top_level></ama:top_level>
+						<ama:bottom_level></ama:bottom_level>
+						<ama:level_unit></ama:level_unit>
+						<ama:start_time></ama:start_time>
+						<ama:end_time></ama:end_time>
+						<ama:time_unit></ama:time_unit>
+						<ama:postprocessing_methods></ama:postprocessing_methods>
 					</ama:File_Description>
-
-					
 				</ama:Model_Output>
 			</ama:AMA>
 		</Discipline_Area>
