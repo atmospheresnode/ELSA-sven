@@ -3689,9 +3689,7 @@ def variable_coord_to_product(bundle):
         tree = ET.parse(source_file)
         root = tree.getroot()
 
-        update = Version()
 
-        update.version_update_old(bundle.version, source_file, output_path)
 
         # =====================================================================================
         # 3. Locate <Identification_Area> and Insert <pds:logical_identifier>, <pds:title>
@@ -3747,6 +3745,10 @@ def variable_coord_to_product(bundle):
         # =====================================================================================
         with open(output_path, "w", encoding="utf-8") as f:
             f.write(ET.tostring(root, encoding='unicode'))
+
+        update = Version()
+
+        update.version_update_old(bundle.version, source_file, output_path)
 
 
         alias_set = Alias.objects.filter(bundle=bundle)
