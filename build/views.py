@@ -687,7 +687,12 @@ def bundle(request, pk_bundle):
                 product_observational_set.extend(Product_Observational.objects.filter(data=data))
 
         # Forms present on bundle detail page
-        form_netcdf = NetCDFForm(request.POST or None, request.FILES or None) # To handle NetCDF files
+        # form_netcdf = NetCDFForm(request.POST or None, request.FILES or None) # To handle NetCDF files
+        #form_netcdf = MultipleNetCDFUploadForm(request.POST, request.FILES) # To handle NetCDF files
+        if request.method == 'POST':
+            form_netcdf = MultipleNetCDFUploadForm(request.POST, request.FILES)
+        else:
+            form_netcdf = MultipleNetCDFUploadForm()
 
         form_alias = AliasForm(request.POST or None) 
         form_bundle = BundleForm(request.POST or None) 
@@ -831,18 +836,47 @@ def bundle(request, pk_bundle):
         context_dict['file_context'] = file_context
 
         # To handle NetCDF files
-        if form_netcdf.is_valid():
-            netcdf_obj = form_netcdf.save(commit=False)
-            netcdf_obj.bundle = bundle
-            netcdf_obj.save()
+        # if form_netcdf.is_valid():
+        #     netcdf_obj = form_netcdf.save(commit=False)
+        #     netcdf_obj.bundle = bundle
+        #     netcdf_obj.save()
 
-            print('before call')
+        #     print('before call')
 
-            variable_coord_to_product(bundle=bundle)
+        #     variable_coord_to_product(bundle=bundle)
 
-            print('after call')
+        #     print('after call')
     
-            return HttpResponseRedirect('/elsa/build/' + str(bundle.pk) + '/')
+        #     return HttpResponseRedirect('/elsa/build/' + str(bundle.pk) + '/')
+
+        if request.method == 'POST':
+
+            if form_netcdf.is_valid():
+                files = form_netcdf.cleaned_data['netcdf_files']
+                
+                files_uploaded = False
+                for f in files:
+                    file_title = f.name
+                    if len(file_title) > 100:
+                        file_title = file_title[:100]
+
+                    # Create the NetCDFFile object using your model's fields
+                    netcdf_obj = NetCDFFile(
+                        bundle=bundle,
+                        file=f,         
+                        title=file_title 
+                    )
+                    
+                    netcdf_obj.save()
+                    files_uploaded = True
+
+        
+                if files_uploaded:
+                    print('before call')
+                    variable_coord_to_product(bundle=bundle)
+                    print('after call')
+                
+                return HttpResponseRedirect('/elsa/build/' + str(bundle.pk) + '/')
 
         if form_investigation.is_valid():
             print(form_investigation.cleaned_data['investigation'].file_ref)
@@ -3577,6 +3611,7 @@ def variable_coord_to_product(bundle):
     working_dir = os.path.join(settings.ARCHIVE_DIR, 'netcdf')
 
     # 2. Recursively find all .nc files
+    os.environ['HDF5_USE_FILE_LOCKING'] = 'FALSE'
     netcdf_files = glob.glob(os.path.join(working_dir, "**", "*.nc"), recursive=True)
     # =========================================================================================
     # Loop Through NetCDF Files
@@ -3654,6 +3689,8 @@ def variable_coord_to_product(bundle):
         tree = ET.parse(source_file)
         root = tree.getroot()
 
+
+
         # =====================================================================================
         # 3. Locate <Identification_Area> and Insert <pds:logical_identifier>, <pds:title>
         # =====================================================================================
@@ -3708,3 +3745,43 @@ def variable_coord_to_product(bundle):
         # =====================================================================================
         with open(output_path, "w", encoding="utf-8") as f:
             f.write(ET.tostring(root, encoding='unicode'))
+
+        update = Version()
+
+        update.version_update_old(bundle.version, source_file, output_path)
+
+
+        alias_set = Alias.objects.filter(bundle=bundle)
+        citation_information_set = Citation_Information.objects.filter(bundle=bundle)
+        modification_history_set = Modification_History.objects.filter(bundle=bundle)
+
+        products = []
+        products.extend(bundle.investigations.all())
+        products.extend(bundle.instrument_hosts.all())
+        products.extend(bundle.facilities.all())
+        products.extend(bundle.instruments.all())
+        products.extend(bundle.telescopes.all())
+        products.extend(bundle.targets.all())
+
+        for citation_information in citation_information_set:
+            products.append(citation_information)
+        for alias in alias_set:
+            products.append(alias)
+        for modification_history in modification_history_set:
+            products.append(modification_history)
+
+        print(products)
+
+        for product in products:
+            # print('- Label: {}'.format(label))
+            print(' ... Opening Label ... ')
+            label_list = open_label_with_tree(output_path)
+            label_root = label_list[1]
+            print(label_root)
+            print(' ... Building Label ... ')
+            label_root = product.fill_label(label_root)
+            #alias.alias_list.append(label_root)
+
+            # Close appropriate label(s)
+            print(' ... Closing Label ... ')
+            close_label(output_path, label_root, label_list[2])
