@@ -1462,8 +1462,35 @@ class DictionaryForm(forms.Form):
 
 
 
-# To handle NetCDF files
-class NetCDFForm(forms.ModelForm):
-    class Meta:
-        model = NetCDFFile
-        fields = ['title', 'file']
+# # To handle single NetCDF file
+# class NetCDFForm(forms.ModelForm):
+#     class Meta:
+#         model = NetCDFFile
+#         fields = ['title', 'file']
+
+
+# To handle multiple NetCDF files
+class MultipleNetCDFUploadForm(forms.Form):
+    netcdf_files = forms.FileField(
+        widget=forms.ClearableFileInput(attrs={
+            'multiple': True,
+            'accept': '.nc',
+            'class': 'form-control'
+        }),
+        label='Select NetCDF files (.nc)',
+        required=True
+    )
+
+    def clean_netcdf_files(self):
+        files = self.files.getlist('netcdf_files')
+        
+        if not files:
+            raise forms.ValidationError("No files were selected.")
+
+        for file in files:
+            if not file.name.endswith('.nc'):
+                raise forms.ValidationError(
+                    f"File type not allowed: '{file.name}'. Only .nc files are accepted."
+                )
+        
+        return files
