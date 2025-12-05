@@ -11,6 +11,7 @@ urlpatterns = [
     #url(r'^$', views.FriendList.as_view(), name='friends'),
     re_path(r'^(?P<pk_user>\d+)/$', views.profile, name='profile'),
     re_path(r'^login/$', views.friend_login, name='login'),
+    re_path(r'^otp-verify/$', views.otp_verify, name='otp_verify'), #OTP verify view
     re_path(r'^logout/$', views.friend_logout, name='logout'),
     re_path(r'^register/$', views.register, name='register'),
     re_path(r'^(?P<pk_user>\d+)/settings/$', views.friend_settings, name='settings'),
