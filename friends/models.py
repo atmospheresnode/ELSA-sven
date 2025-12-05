@@ -1,21 +1,18 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
+# from django.utils.encoding import python_2_unicode_compatible
 
 from builtins import str
 from django.contrib.auth.models import User
 from django.db import models
 from django.urls import reverse
-# from django.utils.encoding import python_2_unicode_compatible
+
+from django.utils import timezone
+import random
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 
 
-
-
-
-
-
-
-
-# Create your models here.
 
 # UserProfile is an extension of the User model.  So each User has a UserProfile.  And each UserProfile lists the associated user, their agency to be used in the urn, and their related user directory.
 # @python_2_unicode_compatible
@@ -32,6 +29,10 @@ class UserProfile(models.Model):
     #picture = models.ImageField(upload_to='profile_images', blank=True)
 
 
+    otp_code = models.CharField(max_length=6, blank=True, null=True)
+    otp_created_at = models.DateTimeField(blank=True, null=True)
+
+
     # Typical __str__ function returns the username.
     def __str__(self):
         return self.user.username
@@ -44,6 +45,13 @@ class UserProfile(models.Model):
     # Returns a user's archive on ELSA.
     def get_directory_url(self):
         return reverse('https://atmos.nmsu.edu/elsa/{0}'.format(str(self.id)))
+    
+    def generate_otp(self):
+        """Generates a random 6-digit code."""
+        self.otp_code = str(random.randint(100000, 999999))
+        self.otp_created_at = timezone.now()
+        self.save()
+        return self.otp_code
 
 
 class UpdateNameFirst(models.Model):
@@ -65,7 +73,17 @@ class UpdatePassword(models.Model):
     confirm_password = models.CharField(max_length=256)
 
 
-
+@receiver(post_save, sender=User)
+def create_or_update_user_profile(sender, instance, created, **kwargs):
+    if created:
+        # Create default directory path if needed, or leave empty
+        UserProfile.objects.create(user=instance, directory=f"/archive/{instance.username}/")
+    else:
+        # If user exists but has no profile, create one (safeguard)
+        if hasattr(instance, 'userprofile'):
+            instance.userprofile.save()
+        else:
+             UserProfile.objects.create(user=instance, directory=f"/archive/{instance.username}/")
 
 
 

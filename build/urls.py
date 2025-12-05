@@ -82,6 +82,8 @@ urlpatterns = [
     # re_path(r'^(?P<pk_bundle>\d+)/collections/$', views.collections, name='collections_additional'),
     re_path(r'^(?P<pk_bundle>\d+)/collection_document/$', views.collection_document, name='collection_document'),
     re_path(r'^(?P<pk_bundle>\d+)/collection_additional/$', views.collection_additional, name='collection_additional'),
+    re_path(r'^(?P<pk_bundle>\d+)/annex_collection_document/$', views.annex_collection_document, name='annex_collection_document'),
+
 
 
 
@@ -115,7 +117,7 @@ urlpatterns = [
     # Document
     re_path(r'^(?P<pk_bundle>\d+)/document/$', views.document, name='document'),
     re_path(r'^(?P<pk_bundle>\d+)/document/product_document/(?P<pk_product_document>\d+)/$', views.product_document, name='product_document'),
-
+    re_path(r'^(?P<pk_bundle>\d+)/document/annex_product_document/(?P<pk_product_document>\d+)/$', views.annex_product_document, name='annex_product_document'),
 
     #delete product document
     re_path(r'^(?P<pk_bundle>\d+)/document/product_document/(?P<pk_product_document>\d+)/delete/$', views.delete_product_document, name='delete_product_document'),    

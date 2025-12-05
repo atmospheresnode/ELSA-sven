@@ -9,10 +9,14 @@
                 <div class="card-body m-4">
                     <h2 class="mb-5 pb-2 pb-md-0 mb-md-4">Citation Information</h2>
                     <p>
-                        Anyone creating labels should be able to get credit for their work. 
-                        Citation Information portion of the labels allows authors and editors to be added to a project. 
-                        For this version of PDS4 authors and editors can be listed following the pattern, Last Name, First Initial, 
-                        with multiples separated by a semi-colon. (e.g., Sanchez, R.; Smith, M.)
+                        Creating a bundle in PDS4 is a complicated process and those working to compile the bundle should be credited for their work. 
+                        In the Citation Information section you can input all your authors and editors. Authors contribute to the creation of the 
+                        files and data within the bundle. If the author is a group of people from a set organization, you should add an 'authors 
+                        organization'; otherwise the author's organization (and the editors organization) should be set to '0'. You can put in the 
+                        number of authors and editors on this screen; each author's identification information will be added on the next page. 
+                        Publication year should be the expected year of release of this bundle. Description can contain a few sentences describing 
+                        your project (should be concise). You can add keywords for your project that could help in determining search facets 
+                        (input as a comma separated list: e.g., item1, item2, etc.).
                     </p>
 
                     <hr>
@@ -30,7 +34,7 @@
                             {% comment %} Added a check for bundle type here. If it's external, it takes the user directly to the bundle page. Because, we don't have any investigation choices if it's external. So, no need to skip to context_search. - Rupak {% endcomment %}
                             {% comment %} This part now goes to collections instead of the bundle page since collections is only need for the external bundle walkthrough for NetCDF files (for right now).  {% endcomment %}
                             {% if bundle.bundle_type == 'External' %}
-                                <a href="{% url 'build:collection_document' bundle.pk %}" class="btn btn-light text-light ms-3">
+                                <a href="{% url 'build:context_search' bundle.pk %}" class="btn btn-light text-light ms-3">
                                     Skip
                                     <i class="fa fa-arrow-right ms-2"></i>
                                 </a>
