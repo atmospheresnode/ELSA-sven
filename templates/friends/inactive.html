@@ -1,0 +1,35 @@
+{% extends "base-derk.html" %}
+
+{% block body_block %}
+<div class="container d-flex justify-content-center align-items-center" style="min-height: 80vh;">
+    <div class="card shadow-lg border-0" style="width: 100%; max-width: 500px;">
+        <div class="card-header bg-warning text-dark fw-bold text-center">
+            Account Inactive
+        </div>
+        <div class="card-body p-5 text-center">
+            
+            <div class="mb-4 text-warning">
+                <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="currentColor" class="bi bi-exclamation-triangle-fill" viewBox="0 0 16 16">
+                  <path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/>
+                </svg>
+            </div>
+
+            <h3 class="fw-bold mb-3">Account Deactivated</h3>
+            <p class="text-muted mb-4">
+                Hello <strong>{{ user.username }}</strong>,<br>
+                Your account is currently inactive. This might be because your registration is pending approval or it has been disabled by an administrator.
+            </p>
+
+            <p class="text-muted">
+                Please contact the Atmospheres Node support team if you believe this is an error.
+            </p>
+
+            <div class="d-grid gap-2 mt-4">
+                <a href="{% url 'main:contact' %}" class="btn btn-outline-dark">Contact Support</a>
+                <a href="{% url 'main:index' %}" class="btn btn-primary">Back to Home</a>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}
