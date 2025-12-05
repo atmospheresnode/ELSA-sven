@@ -4056,7 +4056,6 @@ Inherited Association        none
 Referenced from        Product_Document                           
 """
 
-
 # @python_2_unicode_compatible
 class Product_Document(models.Model):
     # Attributes
@@ -4076,9 +4075,9 @@ class Product_Document(models.Model):
     files = models.CharField(max_length=MAX_CHAR_FIELD, default='')
     file_name = models.CharField(max_length=MAX_CHAR_FIELD, default='')
     local_id = models.CharField(max_length=MAX_CHAR_FIELD, default='')
+    document_id = models.CharField(max_length=MAX_CHAR_FIELD, default='')
     document_std_id = models.CharField(max_length=MAX_CHAR_FIELD, default='PDF/A')
 
-    #
 
     # Meta
 
@@ -4110,7 +4109,7 @@ class Product_Document(models.Model):
             This could be improved to ensure disallowed characters for a file name are not contained
             in name.
         """
-        name_edit = self.document_name.lower()
+        name_edit = self.document_id.lower()
         name_edit = replace_all(name_edit, ' ', '_')
         return name_edit
 
@@ -4243,7 +4242,15 @@ class Product_Document(models.Model):
                 '{}document_standard_id'.format(NAMESPACE))
             document_std_id.text = self.document_std_id
 
-        for i in range(int(self.files) - 1):
+            
+
+        # for i in range(int(self.files) - 1):
+        file_count = 0
+        try:
+            file_count = int(self.files)
+        except (TypeError, ValueError):
+            file_count = 0
+        for i in range(file_count - 1):
             cloned_file = copy.deepcopy(Files)
             Document_Edition.append(cloned_file)
         

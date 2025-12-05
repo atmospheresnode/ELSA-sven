@@ -51,13 +51,12 @@
                     also be here if they helpful for documenting your bundle.</p>
                 <hr>
 
-                <!-- Document Collection Section -->
-
+                <!--Document Collection Section-->    
                     <div class="card-body">
-                        <form method="post" action="{% url 'build:collection_document' bundle.pk %}">
+                        <form method="post" action="{% url 'build:annex_collection_document' bundle.pk %}">
                             {% csrf_token %}
                             <input type="hidden" name="form_name" value="document_form">
-                            {% for field in form_document %}
+                            {% for field in annex_form_document %}
                                 <div class="mb-3">
                                     {{ field.label_tag }}
                                     {{ field }}
@@ -72,6 +71,25 @@
                                 <i class="fa fa-arrow-right ms-2"></i>
                             </a>
                         </form>           
+                    </div>
+
+                    <div class="row">
+                        {% for document in documents %}
+                        <div class="col-md-6">
+                            <div class="card mb-3">
+                                <div class="card-body">
+                                    <h5 class="card-title">{{ document.document_name }}</h5>
+                                    <p>Document Title: {{ document.document_title}}</p>
+                                    <p>Document Identifier: {{ document.document_id }}</p>
+                                    <p>Description: {{ document.description }}</p>
+                                    <p>File Name: {{ document.file_name }}</p>
+                                    <p>File Format: {{ document.encoding_standard_id }}</p> 
+                                    <!--This is from the drop down menu (Probably end up removing this since it's not really an actual field)-->
+
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
                     </div>
                 </div>
             </div>
