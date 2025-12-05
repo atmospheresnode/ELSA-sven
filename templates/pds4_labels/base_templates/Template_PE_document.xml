@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-model href="https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_1O00.sch" schematypens="http://purl.oclc.org/dsdl/schematron"?>
+<Product_External xmlns="http://pds.nasa.gov/pds4/pds/v1"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://pds.nasa.gov/pds4/pds/v1 http://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_1O00.xsd">
+	<Identification_Area>
+		<logical_identifier>urn:nasa:pds-ama:sample_bundle</logical_identifier>
+		<version_id>1.0</version_id>
+		<!-- Querey for this -->
+		<title></title>
+		<information_model_version>AAAA</information_model_version>
+		<product_class>Product_External</product_class>
+		<Modification_History></Modification_History>
+	</Identification_Area>
+	<Context_Area>
+		<Investigation_Area>
+			<name>Atmospheric Modeling Annex Individual Investigation</name>
+			<type>Individual Investigation</type>
+			<Internal_Reference>
+				<lid_reference>urn:nasa:pds:context:investigation:individual.atmospheric_modeling_annex</lid_reference>
+				<reference_type>external_to_investigation</reference_type>
+			</Internal_Reference>
+		</Investigation_Area>
+	</Context_Area>
+	<Reference_List>
+	</Reference_List>
+	<File_Area_External>
+		<File>
+			<!-- Querey for this -->
+			<file_name></file_name>
+			<creation_date_time></creation_date_time>
+			<file_size unit="byte"></file_size>
+			<records>1</records>
+			<!-- Querey for this -->
+			<comment></comment>
+		</File>
+		<Encoded_External>
+			<!-- Going to be the same as the title -->
+			<name></name>
+			<offset unit="byte">0</offset>
+			<!-- PDF/A or 7-bit ASCII -->
+			<encoding_standard_id></encoding_standard_id>
+		</Encoded_External>
+	</File_Area_External>
+</Product_External>

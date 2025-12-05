@@ -1742,7 +1742,9 @@ def context_search_target(request, pk_bundle):
 
                 write_into_label(i, product_bundle, product_collections_list)
 
-        return render(request, 'build/context/context_search_target.html', context_dict)
+        #return render(request, 'build/collections/annex_collection_document.html', context_dict)
+        return redirect('build:annex_collection_document', pk_bundle=pk_bundle)
+
 
     # Secure: Current user is not the user associated with the bundle, so...
     else:
@@ -2143,6 +2145,38 @@ def context_search_target_and_instrument(request, pk_bundle, pk_investigation, p
 
 #     return render(request, 'build/collections/collections_additional.html', {"pk_bundle": pk_bundle, "bundle": bundle, "form_additional_collections": form_additional_collections, "form_document": form_document})
 #     #return render(request, template, {"pk_bundle": pk_bundle, "bundle": bundle, "form_additional_collections": form_additional_collections, "form_document": form_document})
+def annex_collection_document(request, pk_bundle):
+    bundle = Bundle.objects.get(pk=pk_bundle)
+    annex_form_document = AnnexProductDocumentForm(request.POST or None)
+
+    if annex_form_document.is_valid():        
+        document = annex_form_document.save(commit=False)
+        document.bundle = bundle
+        document.save()
+        document.build_base_case()
+
+        print(document.label())
+        # Open label - returns a list where index 0 is the label object and 1 is the tree
+        print(' ... Opening Label ... ')
+        label_list = open_label_with_tree(document.label())
+        label_root = label_list[1]
+        # Fill label - fills 
+        print(' ... Filling Label ... ')
+        #label_root = bundle.version.fill_xml_schema(label_root)
+        label_root = document.fill_label(label_root)
+        # Close label    
+        print(' ... Closing Label ... ')
+        close_label(label_list[0], label_root, label_list[2])          
+        print('---------------- End Build Product_Document Base Case -------')                     
+
+        product_bundle = Product_Bundle.objects.get(bundle=bundle)
+        product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+
+        return redirect(reverse('build:collection_additional', args=[pk_bundle]))
+
+        #write_into_label(document, product_bundle, product_collections_list)
+
+    return render(request, 'build/collections/annex_collection_document.html', {"pk_bundle": pk_bundle, "bundle": bundle, "annex_form_document": annex_form_document})
 
 def collection_document(request, pk_bundle):
     bundle = Bundle.objects.get(pk=pk_bundle)
@@ -2527,7 +2561,94 @@ def document(request, pk_bundle):
 
     return render(request, 'build/document/document.html', context_dict)
 
+def annex_product_document(request, pk_bundle, pk_product_document):
+    # Get Bundle
+    bundle = Bundle.object.get(pk=pk_bundle)
 
+    # Make sure the user is logged in with the same account associated with the bundle
+    if request.user == bundle.user:
+        print('authorized user: {}'.format(request.user))
+
+        product_document = Product_Document.objects.get(pk=pk_product_document)
+
+        initial_product = {
+            "document_name":product_document.document_name,
+            #"document_id":product_document.document_id,
+            "local_id":product_document.local_id,
+            "description":product_document.description,
+            "file_name":product_document.file_name,
+            "document_std_id":product_document.document_std_id,
+        }
+
+        annex_form_product_document = AnnexProductDocumentForm(request.POST or None, initial=initial_product)
+        documents = Product_Document.objects.filter(bundle=bundle)
+        
+        if annex_form_product_document.is_valid() and annex_form_product_document.has_changed:
+            
+            
+            all_labels = []
+            product_bundle = Product_Bundle.objects.get(bundle=bundle)
+            product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+            # We need to check for Product_Collections associated with Data products now.
+                    
+            all_labels.append(product_bundle)
+            all_labels.append(product_collections_list)
+
+            # Open appropriate label(s).  
+            print(' ... Opening Label ... ')
+
+            #breaks here
+            label_list = open_label_with_tree(product_document.label())
+            old_name = product_document.label()
+
+            for change in annex_form_product_document.changed_data:
+                if change == 'document_name':
+                   product_document.document_name = annex_form_product_document['document_name'].value()
+                
+                elif change == 'local_id':
+                    product_document.local_id = annex_form_product_document['local_id'].value()
+
+                elif change == 'description':
+                   product_document.description = annex_form_product_document['description'].value()
+                
+                elif change == 'file_name':
+                    product_document.file_name = annex_form_product_document['file_name'].value()
+
+                elif change == 'document_std_id':
+                    product_document.document_std_id = annex_form_product_document['document_std_id'].value()
+                
+                product_document.save()
+
+            label_root = label_list[1]
+
+            # fix the document name path change error - deric
+            os.rename(old_name, product_document.label())
+
+            # Build document label
+            print(' ... Building Label ... ')
+            label_root = product_document.fill_base_case(label_root)
+            #alias.alias_list.append(label_root)
+
+            # Close appropriate label(s)
+            print(' ... Closing Label ... ')
+            close_label(product_document.label(), label_root, label_list[2])
+
+
+        print('Changed: {}'.format(annex_form_product_document.changed_data))
+
+        context_dict = {
+            'bundle':bundle,
+            'documents':documents,
+            'annex_form_product_document':annex_form_product_document,
+            'product_document':product_document,
+        }
+
+        return render(request, 'build/collections/annex_collection_document.html', context_dict)
+
+    # Secure: Current user is not the user associated with the bundle, so...
+    else:
+        print('unauthorized user attempting to access a restricted area.')
+        return redirect('main:restricted_access')                    
 
 def product_document(request, pk_bundle, pk_product_document):
     print('\n\n')
