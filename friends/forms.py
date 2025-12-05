@@ -69,7 +69,7 @@ class UserProfileForm(forms.ModelForm):
     )
     class Meta(object):
         model = UserProfile
-        exclude = ('user', 'directory',)
+        exclude = ('user', 'directory', 'otp_code', 'otp_created_at')
 
 #The following classes update various and sundry in the profile settings page. As things are added to the UserForm new classes will need to be added here and in friends/models.
 class UpdateNameFirstForm(forms.ModelForm):
