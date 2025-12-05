@@ -19,6 +19,8 @@ from .models import *
 from build.models import Bundle
 import os
 
+from django.utils import timezone
+from datetime import timedelta
 
 #----------------------------------------------------------------------------------------
 
@@ -103,6 +105,10 @@ def profile(request, pk_user):
 
 # let's elsa's friends login
 def friend_login(request):
+    """
+    Validates credentials -> Generates OTP -> Redirects to Verify Page.
+    Does NOT log the user in immediately.
+    """
     if request.method == 'POST':
         username = request.POST.get('username')
         password = request.POST.get('password')
@@ -110,19 +116,85 @@ def friend_login(request):
 
         if user:
             if user.is_active:
-                # the User model is valid and active, so we can log the user in
-                login(request, user)
-                return HttpResponseRedirect(reverse('main:index'))
+                try:
+                    profile = user.userprofile
+                except UserProfile.DoesNotExist:
+                    user_path = os.path.join(settings.ARCHIVE_DIR, user.username)
+                    makedirs(user_path)
+                    profile = UserProfile.objects.create(
+                        user=user, 
+                        directory=user_path
+                    )
+
+                otp = profile.generate_otp()
+
+                print(f"DEBUG: OTP for {user.username} is: {otp}")
+                
+                email = EmailMessage(
+                    subject="ELSA Login Verification",
+                    body=f"Your one-time login code is: {otp}",
+                    from_email='atm-elsa@nmsu.edu',
+                    to=[user.email]
+                )
+                email.send(fail_silently=True)
+
+                request.session['pre_otp_user_id'] = user.id
+
+                return redirect('friends:otp_verify')
+
             else:
-                # An inactive account was used - no logging in!
                 return render(request, 'friends/inactive.html', {'user':user})
         else:
-            # Bad login credentials
-            return HttpResponse("Invalid login details supplied.")
+            messages.error(request, "Invalid username or password.")
+            return render(request, 'main:index')
     else:
-        # Not a POST, so simply display the login form
-        #return render(request, 'friends/login.html', {})
-        return HttpResponseRedirect(reverse('main:index'))
+        # On GET, show the login form
+        return render(request, 'main:index')
+
+
+# friends/views.py
+
+def otp_verify(request):
+    """
+    Verifies OTP, Activates User (if new), and Logs them in.
+    """
+    user_id = request.session.get('pre_otp_user_id')
+    
+    if not user_id:
+        messages.error(request, "Session expired. Please login or register again.")
+        return redirect('friends:login')
+    
+    if request.method == 'POST':
+        otp_input = request.POST.get('otp')
+        
+        try:
+            user = User.objects.get(id=user_id)
+            profile = user.userprofile
+            
+            if profile.otp_code == otp_input:
+                if profile.otp_created_at > timezone.now() - timedelta(minutes=5):
+                    
+                    user.is_active = True 
+                    user.save()
+
+                    login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+                    
+                    del request.session['pre_otp_user_id']
+                    profile.otp_code = None
+                    profile.save()
+                    
+                    messages.success(request, f"Welcome to ELSA, {user.username}!")
+                    return HttpResponseRedirect(reverse('main:index'))
+                else:
+                    messages.error(request, "This code has expired.")
+            else:
+                messages.error(request, "Invalid code. Please try again.")
+                
+        except User.DoesNotExist:
+            messages.error(request, "User error.")
+            return redirect('friends:login')
+
+    return render(request, 'friends/otp_verify.html')
 
 
 
@@ -136,8 +208,11 @@ def friend_logout(request):
 
 
 # let's people sign up to be one of elsa's friends
+# friends/views.py
+
+# friends/views.py
+
 def register(request):
-    # Boolean value.  Upon successful registration, registered will be changed to True
     registered = False
 
     user_form = UserForm(request.POST or None)
@@ -145,33 +220,44 @@ def register(request):
 
     if user_form.is_valid() and profile_form.is_valid():
 
-        # Create User model object
-        user = user_form.save()
+   
+        user = user_form.save(commit=False)
         user.set_password(user.password)
-        user.save()
+        user.is_active = False 
+        user.save() 
 
-        # Create User directory
+  
         user_path = os.path.join(settings.ARCHIVE_DIR, user.username)
         makedirs(user_path)
 
-        # Create UserProfile model object
-        profile = profile_form.save(commit=False)
-        profile.user = user
+    
+        profile = user.userprofile 
+        
+    
+        profile.agency = profile_form.cleaned_data.get('agency')
         profile.directory = user_path
         profile.save()
+        
         registered = True
 
-        #Login User
-        username = request.POST['username']
-        password = request.POST['password']
-        user = authenticate(request, username=username, password=password)
 
-        if user is not None:
-            login(request, user)
-            return HttpResponseRedirect(reverse('main:index'))
+        otp = profile.generate_otp()
+        
+  
+        print(f"DEBUG: Registration OTP for {user.username} is: {otp}")
+        email = EmailMessage(
+            subject="ELSA Email Verification",
+            body=f"Welcome to ELSA! Please verify your email with this code: {otp}",
+            from_email='atm-elsa@nmsu.edu',
+            to=[user.email]
+        )
+        email.send(fail_silently=True)
 
-        else:
-            return HttpResponse("Error: Login after registration failed. Please contact <a href='{% url 'main:contact' %}'>Atmospheres Node</a> or try again.")        
+
+        request.session['pre_otp_user_id'] = user.id
+
+    
+        return redirect('friends:otp_verify')       
 
     return render(request, 'friends/register.html', {'user_form':user_form, 'profile_form':profile_form, 'registered':registered})
 

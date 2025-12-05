@@ -1,0 +1,128 @@
+{% extends "base-derk.html" %}
+
+{% block body_block %}
+
+<style>
+    :root {
+        --elsa-teal: #5F9EA0; 
+        --elsa-teal-hover: #4e8688;
+        --elsa-dark: #212529;
+    }
+
+    body {
+        background-color: #f4f7f9;
+    }
+
+    .verification-card {
+        border: none;
+        border-radius: 1rem;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+        overflow: hidden;
+        border-top: 5px solid var(--elsa-teal); /* Accent bar on top */
+    }
+
+    .card-header-custom {
+        background-color: transparent;
+        padding-bottom: 0;
+        border-bottom: none;
+    }
+
+    .icon-container {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 80px;
+        height: 80px;
+        background-color: rgba(95, 158, 160, 0.1); /* 10% opacity teal */
+        border-radius: 50%;
+        color: var(--elsa-teal);
+        margin-bottom: 1.5rem;
+    }
+
+    .otp-input {
+        font-size: 2rem;
+        font-weight: 700;
+        letter-spacing: 0.8rem;
+        text-align: center;
+        border: 2px solid #e9ecef;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        color: var(--elsa-dark);
+        transition: all 0.3s ease;
+        background-color: #f8f9fa;
+    }
+
+    .otp-input:focus {
+        outline: none;
+        border-color: var(--elsa-teal);
+        background-color: #fff;
+        box-shadow: 0 0 0 4px rgba(95, 158, 160, 0.15);
+    }
+    
+    input::-webkit-outer-spin-button,
+    input::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+
+    .btn-elsa-teal {
+        background-color: var(--elsa-teal);
+        color: white;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        padding: 0.75rem 1.5rem;
+        border: none;
+        border-radius: 0.5rem;
+        transition: all 0.2s;
+    }
+
+    .btn-elsa-teal:hover {
+        background-color: var(--elsa-teal-hover);
+        color: #ffffff;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 10px rgba(95, 158, 160, 0.3);
+    }
+</style>
+
+<div class="container d-flex justify-content-center align-items-center" style="min-height: 85vh;">
+    <div class="card verification-card p-4 p-md-5" style="width: 100%; max-width: 450px;">
+        
+        <div class="text-center">
+            <div class="icon-container">
+                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="currentColor" class="bi bi-shield-lock-fill" viewBox="0 0 16 16">
+                  <path fill-rule="evenodd" d="M8 0c-.69 0-1.843.265-2.928.56-1.11.3-2.229.655-2.887.87a1.54 1.54 0 0 0-1.044 1.263 62.467 62.467 0 0 0-.294 5.837c0 3.905 2.052 7.543 5.48 9.596a2.5 2.5 0 0 0 2.383 0c3.428-2.053 5.48-5.691 5.48-9.596 0-2.022-.109-4.026-.294-5.837a1.54 1.54 0 0 0-1.044-1.263 62.467 62.467 0 0 0-2.928-.56C9.843.265 8.69 0 8 0zm0 6.5a1.5 1.5 0 0 1 1 1.5v1.033l1.468 2.486a.5.5 0 1 1-.857.508L8.5 9.828v2.672a.5.5 0 1 1-1 0V9.828l-1.08 1.832a.5.5 0 1 1-.857-.508L8 9.033V8a1.5 1.5 0 0 1 1.5-1.5z"/>
+                </svg>
+            </div>
+            
+            <h2 class="fw-bold text-dark mb-3">Security Verification</h2>
+            <p class="text-muted mb-4">We have sent a 6-digit confirmation code to your email address. Please enter it below to secure your account.</p>
+
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags|default:'danger' }} shadow-sm border-0 mb-4" role="alert">
+                        <i class="bi bi-exclamation-circle-fill me-2"></i> {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <form method="post" action="{% url 'friends:otp_verify' %}" autocomplete="off">
+                {% csrf_token %}
+                <div class="mb-4">
+                    <input type="number" name="otp" class="form-control otp-input" 
+                           placeholder="••••••" maxlength="6" required autofocus>
+                </div>
+                
+                <button type="submit" class="btn btn-elsa-teal w-100 py-3 fw-bold fs-5">
+                    Verify Identity <i class="bi bi-arrow-right-short ms-1"></i>
+                </button>
+            </form>
+            
+            <div class="mt-4 pt-3 border-top">
+                <a href="{% url 'main:index' %}" class="text-decoration-none text-muted small fw-bold">
+                    <i class="bi bi-arrow-left me-1"></i> Back to Login
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
