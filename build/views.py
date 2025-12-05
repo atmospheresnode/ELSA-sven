@@ -3611,6 +3611,7 @@ def variable_coord_to_product(bundle):
     working_dir = os.path.join(settings.ARCHIVE_DIR, 'netcdf')
 
     # 2. Recursively find all .nc files
+    os.environ['HDF5_USE_FILE_LOCKING'] = 'FALSE'
     netcdf_files = glob.glob(os.path.join(working_dir, "**", "*.nc"), recursive=True)
     # =========================================================================================
     # Loop Through NetCDF Files
@@ -3688,6 +3689,8 @@ def variable_coord_to_product(bundle):
         tree = ET.parse(source_file)
         root = tree.getroot()
 
+
+
         # =====================================================================================
         # 3. Locate <Identification_Area> and Insert <pds:logical_identifier>, <pds:title>
         # =====================================================================================
@@ -3742,3 +3745,43 @@ def variable_coord_to_product(bundle):
         # =====================================================================================
         with open(output_path, "w", encoding="utf-8") as f:
             f.write(ET.tostring(root, encoding='unicode'))
+
+        update = Version()
+
+        update.version_update_old(bundle.version, source_file, output_path)
+
+
+        alias_set = Alias.objects.filter(bundle=bundle)
+        citation_information_set = Citation_Information.objects.filter(bundle=bundle)
+        modification_history_set = Modification_History.objects.filter(bundle=bundle)
+
+        products = []
+        products.extend(bundle.investigations.all())
+        products.extend(bundle.instrument_hosts.all())
+        products.extend(bundle.facilities.all())
+        products.extend(bundle.instruments.all())
+        products.extend(bundle.telescopes.all())
+        products.extend(bundle.targets.all())
+
+        for citation_information in citation_information_set:
+            products.append(citation_information)
+        for alias in alias_set:
+            products.append(alias)
+        for modification_history in modification_history_set:
+            products.append(modification_history)
+
+        print(products)
+
+        for product in products:
+            # print('- Label: {}'.format(label))
+            print(' ... Opening Label ... ')
+            label_list = open_label_with_tree(output_path)
+            label_root = label_list[1]
+            print(label_root)
+            print(' ... Building Label ... ')
+            label_root = product.fill_label(label_root)
+            #alias.alias_list.append(label_root)
+
+            # Close appropriate label(s)
+            print(' ... Closing Label ... ')
+            close_label(output_path, label_root, label_list[2])
