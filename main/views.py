@@ -312,7 +312,3 @@ def success(request):
 
 
 
-
-
-
-
