@@ -5,13 +5,14 @@ from builtins import object
 from django.db import models
 from six import python_2_unicode_compatible
 from build.models import Bundle
+from django.contrib.auth.models import User
+from django.utils import timezone
+
 
 def get_user_document_directory(instance, filename):
-    
     document_collection_directory = 'archive/{0}/{1}/documents/'.format(instance.bundle.user.username, instance.bundle.name)
     return document_collection_directory
 
-# Create your models here.
 @python_2_unicode_compatible
 class Joke(models.Model):
     question = models.CharField(max_length=500, unique=True, default="")
@@ -33,7 +34,3 @@ class UploadedDocument(models.Model):
 
     def __str__(self):
         return self.description
-
-    
-
-
