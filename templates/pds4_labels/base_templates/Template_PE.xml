@@ -16,10 +16,10 @@
 	</Identification_Area>
 	<Context_Area>
 		<Investigation_Area>
-			<name></name>
-			<type></type>
+			<name>Atmospheric Modeling Annex Individual Investigation</name>
+			<type>Individual Investigation</type>
 			<Internal_Reference>
-				<lid_reference></lid_reference>
+				<lid_reference>urn:nasa:pds:context:investigation:individual.atmospheric_modeling_annex</lid_reference>
 				<reference_type>external_to_investigation</reference_type>
 			</Internal_Reference>
 		</Investigation_Area>
