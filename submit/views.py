@@ -133,8 +133,8 @@ def send_upload_emails(request, submission):
     """
     
     # Staff email list
-    #staff_emails = ['atm-elsa@nmsu.edu', 'sajomont@nmsu.edu', 'rupakdey@nmsu.edu']
-    staff_emails = ['rupakdey@nmsu.edu'] # Temporary: Send only to Rupak for testing
+    staff_emails = ['atm-elsa@nmsu.edu', 'sajomont@nmsu.edu', 'rupakdey@nmsu.edu']
+    #staff_emails = ['rupakdey@nmsu.edu'] # Temporary: Send only to Rupak for testing
     
     email_to_staff = EmailMessage(
         subject=staff_subject,

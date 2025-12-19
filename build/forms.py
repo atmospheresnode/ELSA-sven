@@ -774,6 +774,70 @@ STD_ID = [
     ('UTF-8', 'UTF-8 Text')
 ]
 
+# Nov. 24, 2025 -- External Bundles are supposed to have some different fields for document collections.
+class AnnexProductDocumentForm(forms.ModelForm):
+
+    document_name = forms.CharField(
+        required = True,
+        max_length=100,
+        label='Document Title',
+        label_suffix = '',
+        widget=forms.TextInput(attrs={
+            "class": "form-control",
+            "placeholder": "Enter document title"
+        })
+    )
+
+    document_id = forms.CharField(
+        required = True,
+        max_length = 100,
+        label='Document ID',
+        label_suffix = '',
+        widget=forms.TextInput(attrs={
+            "class": "form-control",
+            "placeholder": "Enter a document_id for the URN"
+        })
+    )
+
+    description = forms.CharField(
+        required=False,
+        label_suffix = '',
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 3
+        })
+    )
+
+
+    file_name = forms.CharField(
+        required = True,
+        max_length=100,
+        label='File Name',
+        label_suffix='',
+        widget=forms.TextInput(attrs={
+            "class":"form-control",
+            "placeholder": "Enter file name (e.g. User_Guide.pdf)",
+        })
+    )
+
+    document_std_id = forms.ChoiceField(
+        required=False,
+        choices=STD_ID,
+        label='File Format',
+        label_suffix = '',
+        widget=forms.Select(attrs={
+            'class': 'form-control custom-select'
+        })
+    )
+    class Meta:
+        model = Product_Document
+        fields = [
+            "document_name",
+            "document_id",
+            "description",
+            "file_name",
+            "document_std_id",
+        ]
 
 class ProductDocumentForm(forms.ModelForm):
     document_name = forms.CharField(
