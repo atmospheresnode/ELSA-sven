@@ -28,7 +28,7 @@ This section provides a timeline of ELSA's release history, highlighting key upd
 - External Walkthrough: Document Collections have new fields to reflect the XML tags in AMA Document Products.
 
 ### **Previous Versions** 
-> ### **Version 1.16.0 - 1.20.0 (October - December 2025)**
+> ### **Version 1.16.0 - 1.20.0 (October 2025 - December 2025)**
 - Various Bug Fixes.
 - Quality of Life updates.
 
