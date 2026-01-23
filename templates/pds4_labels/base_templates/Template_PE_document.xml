@@ -6,7 +6,6 @@
 	<Identification_Area>
 		<logical_identifier>urn:nasa:pds-ama:sample_bundle</logical_identifier>
 		<version_id>1.0</version_id>
-		<!-- Querey for this -->
 		<title></title>
 		<information_model_version>AAAA</information_model_version>
 		<product_class>Product_External</product_class>
@@ -26,19 +25,15 @@
 	</Reference_List>
 	<File_Area_External>
 		<File>
-			<!-- Querey for this -->
 			<file_name></file_name>
 			<creation_date_time></creation_date_time>
 			<file_size unit="byte"></file_size>
 			<records>1</records>
-			<!-- Querey for this -->
 			<comment></comment>
 		</File>
 		<Encoded_External>
-			<!-- Going to be the same as the title -->
 			<name></name>
 			<offset unit="byte">0</offset>
-			<!-- PDF/A or 7-bit ASCII -->
 			<encoding_standard_id></encoding_standard_id>
 		</Encoded_External>
 	</File_Area_External>
