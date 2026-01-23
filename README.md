@@ -23,8 +23,14 @@ This section provides a timeline of ELSA's release history, highlighting key upd
 - External Bundle UI: The Edit Collections button has been removed and relocated to an independent card under the Info card.
 - External Bundle UI: The Info card section has been updated, and contextual help text has been added to each card and section within the bundle.
 - External Bundle UI: The AMA color scheme has been updated.
+- External Bundles: Document Collections are now available for External Bundles.
+- External Bundles: Document Products have an updated XML template to reflect AMA requirements.
+- External Walkthrough: Document Collections have new fields to reflect the XML tags in AMA Document Products.
 
 ### **Previous Versions** 
+> ### **Version 1.16.0 - 1.20.0 (October - December 2025)**
+- Various Bug Fixes.
+- Quality of Life updates.
 
 > ### **Version 1.15.0 (September 26, 2025)**
 - About Page: The page has been redesigned and now includes a tab feature for different sections.
