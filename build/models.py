@@ -2361,6 +2361,7 @@ class AdditionalCollections(models.Model):
         # Fill in Identification_Area
         Identification_Area = Product_Collection.find('{}Identification_Area'.format(NAMESPACE))
 
+
         #     lid
         logical_identifier = Identification_Area.find('{}logical_identifier'.format(NAMESPACE))
         logical_identifier.text = 'urn:{0}:{1}:{2}'.format(self.bundle.user.userprofile.agency, self.bundle.name_lid_case(), self.collection_name) # where agency is something like nasa:pds
@@ -3019,8 +3020,15 @@ class Product_Collection(models.Model):
         #     lid
         logical_identifier = Identification_Area.find(
             '{}logical_identifier'.format(NAMESPACE))
-        logical_identifier.text = 'urn:{0}:{1}:{2}'.format(self.bundle.user.userprofile.agency, self.bundle.name_lid_case(
-        ), self.collection.lower())  # where agency is something like nasa:pds
+        
+        if self.bundle.bundle_type == "External":
+            authority = "nasa:pds-ama"
+        else:
+            authority = self.bundle.user.userprofile.agency
+
+        logical_identifier.text = f'urn:{authority}:{self.bundle.name_lid_case()}:{self.collection.lower()}'
+        # logical_identifier.text = 'urn:{0}:{1}:{2}'.format(self.bundle.user.userprofile.agency, self.bundle.name_lid_case(
+        # ), self.collection.lower())  # where agency is something like nasa:pds
 
         #     version_id --> Note:  Can be changed to be more dynamic once we implement bundle versions (which is different from PDS4 versions)
         version_id = Identification_Area.find('{}version_id'.format(NAMESPACE))
@@ -4063,6 +4071,7 @@ class Product_Document(models.Model):
     # acknowledgement_text = models.CharField(max_length=MAX_CHAR_FIELD) #doesn't exist on lockwood.xml
     author_list = models.CharField(max_length=MAX_CHAR_FIELD)
     copyright = models.CharField(max_length=MAX_CHAR_FIELD)
+    comment = models.CharField(max_length=MAX_CHAR_FIELD, default='')
     description = models.CharField(max_length=MAX_CHAR_FIELD)
     document_editions = models.CharField(max_length=MAX_CHAR_FIELD)
     document_name = models.CharField(max_length=MAX_CHAR_FIELD)
@@ -4076,8 +4085,9 @@ class Product_Document(models.Model):
     file_name = models.CharField(max_length=MAX_CHAR_FIELD, default='')
     local_id = models.CharField(max_length=MAX_CHAR_FIELD, default='')
     document_id = models.CharField(max_length=MAX_CHAR_FIELD, default='')
+    name = models.CharField(max_length=MAX_CHAR_FIELD, default='')
     document_std_id = models.CharField(max_length=MAX_CHAR_FIELD, default='PDF/A')
-
+    encoding_standard_id = models.CharField(max_length=MAX_CHAR_FIELD, default='PDF/A')
 
     # Meta
 
@@ -4129,9 +4139,16 @@ class Product_Document(models.Model):
 
     def build_base_case(self):
 
-        # Locate base case Product_Document template found in templates/pds4_labels/base_case/
-        source_file = os.path.join(PDS4_LABEL_TEMPLATE_DIRECTORY, 'base_case')
-        source_file = os.path.join(source_file, 'product_document.xml')
+        if self.bundle.bundle_type == 'External':
+            source_file = os.path.join(PDS4_LABEL_TEMPLATE_DIRECTORY, 'base_templates')
+            template_name = "Template_PE_document.xml"
+        else:
+            # Locate base case Product_Document template found in templates/pds4_labels/base_case/
+            source_file = os.path.join(PDS4_LABEL_TEMPLATE_DIRECTORY, 'base_case')
+            template_name = "product_document.xml"
+
+        source_file = os.path.join(source_file, template_name)    
+    
 
         # Locate collection directory and create path for new label
         label_file = os.path.join(self.directory(), '{}.xml'.format(self.name_label_case()))
@@ -4141,7 +4158,7 @@ class Product_Document(models.Model):
         update.version_update_old(self.bundle.version, source_file, label_file)
 
         # Copy the base case template to the correct directory
-#        copyfile(source_file, label_file)
+        # copyfile(source_file, label_file)
 
         return
 
@@ -4184,63 +4201,88 @@ class Product_Document(models.Model):
             'information_model_version')
         #information_model_version.text = self.bundle.version.with_dots()
 
-        # Fill in Document
-        Document = Product_Document.find('{}Document'.format(NAMESPACE))
-        Document_Edition = Document.find(
-            '{}Document_Edition'.format(NAMESPACE))
-        Files = Document_Edition.find('{}Document_File'.format(NAMESPACE))
-        if self.revision_id:
-            revision_id = Document.find('{}revision_id'.format(NAMESPACE))
-            revision_id.text = self.revision_id
-        if self.document_name:
-            document_name = Document.find('{}document_name'.format(NAMESPACE))
-            document_name.text = self.document_name
-        # if self.doi:
-        #     doi = etree.SubElement(Document, 'doi')
-        #     doi.text = self.doi
-        if self.author_list:
-            author_list = Document.find('{}author_list'.format(NAMESPACE))
-            author_list.text = self.author_list
-        # if self.editor_list:
-        #     editor_list = etree.SubElement(Document, 'editor_list')
-        #     editor_list.text = self.editor_list
-        # if self.acknowledgement_text:
-        #     acknowledgement_text = etree.SubElement(Document, 'acknowledgement_text')
-        #     acknowledgement_text.text = self.acknowledgement_text
-        if self.copyright:
-            copyright = Document.find('{}copyright'.format(NAMESPACE))
-            copyright.text = self.copyright
-        if self.publication_date:  # this should always be true
-            publication_date = Document.find(
-                '{}publication_date'.format(NAMESPACE))
-            publication_date.text = self.publication_date
-        if self.document_editions:
-            document_editions = Document.find(
-                '{}document_editions'.format(NAMESPACE))
-            document_editions.text = self.document_editions
-        if self.description:
-            description = Document.find('{}description'.format(NAMESPACE))
-            description.text = self.description
-        if self.edition_name:
-            edition_name = Document_Edition.find(
-                '{}edition_name'.format(NAMESPACE))
-            edition_name.text = self.edition_name
-        if self.language:
-            language = Document_Edition.find('{}language'.format(NAMESPACE))
-            language.text = self.language
-        if self.files:
-            files = Document_Edition.find('{}files'.format(NAMESPACE))
-            files.text = self.files
-        if self.file_name:
-            file_name = Files.find('{}file_name'.format(NAMESPACE))
-            file_name.text = self.file_name
-        if self.local_id:
-            local_id = Files.find('{}local_identifier'.format(NAMESPACE))
-            local_id.text = self.local_id
-        if self.document_std_id:
-            document_std_id = Files.find(
-                '{}document_standard_id'.format(NAMESPACE))
-            document_std_id.text = self.document_std_id
+        # If the bundle is External, only look at the fields in the PE_document.xml file
+        if self.bundle.bundle_type == 'External':
+            File_Area_External = Product_Document.find('{}File_Area_External'.format(NAMESPACE))
+            File = File_Area_External.find('{}File'.format(NAMESPACE))
+            Encoded_External = File_Area_External.find('{}Encoded_External'.format(NAMESPACE))
+
+            if Encoded_External is not None:
+                name = Encoded_External.find('{}name'.format(NAMESPACE))
+                name.text = self.file_name # Yes, this is correct.
+                if self.document_std_id:
+                    encoding_standard_id = Encoded_External.find(
+                        '{}encoding_standard_id'.format(NAMESPACE))
+                    encoding_standard_id.text = self.document_std_id
+            if File is not None:
+                if self.comment:
+                    comment = File.find('{}comment'.format(NAMESPACE))
+                    comment.text = self.comment
+                if self.file_name:
+                    file_name = File.find('{}file_name'.format(NAMESPACE))
+                    file_name.text = self.file_name
+
+
+
+        # Else, default to the archive product_document fields   
+        else: 
+            # Fill in Document
+            Document = Product_Document.find('{}Document'.format(NAMESPACE))
+            Document_Edition = Document.find(
+                '{}Document_Edition'.format(NAMESPACE))
+            Files = Document_Edition.find('{}Document_File'.format(NAMESPACE))
+            if self.revision_id:
+                revision_id = Document.find('{}revision_id'.format(NAMESPACE))
+                revision_id.text = self.revision_id
+            if self.document_name:
+                document_name = Document.find('{}document_name'.format(NAMESPACE))
+                document_name.text = self.document_name
+            # if self.doi:
+            #     doi = etree.SubElement(Document, 'doi')
+            #     doi.text = self.doi
+            if self.author_list:
+                author_list = Document.find('{}author_list'.format(NAMESPACE))
+                author_list.text = self.author_list
+            # if self.editor_list:
+            #     editor_list = etree.SubElement(Document, 'editor_list')
+            #     editor_list.text = self.editor_list
+            # if self.acknowledgement_text:
+            #     acknowledgement_text = etree.SubElement(Document, 'acknowledgement_text')
+            #     acknowledgement_text.text = self.acknowledgement_text
+            if self.copyright:
+                copyright = Document.find('{}copyright'.format(NAMESPACE))
+                copyright.text = self.copyright
+            if self.publication_date:  # this should always be true
+                publication_date = Document.find(
+                    '{}publication_date'.format(NAMESPACE))
+                publication_date.text = self.publication_date
+            if self.document_editions:
+                document_editions = Document.find(
+                    '{}document_editions'.format(NAMESPACE))
+                document_editions.text = self.document_editions
+            if self.description:
+                description = Document.find('{}description'.format(NAMESPACE))
+                description.text = self.description
+            if self.edition_name:
+                edition_name = Document_Edition.find(
+                    '{}edition_name'.format(NAMESPACE))
+                edition_name.text = self.edition_name
+            if self.language:
+                language = Document_Edition.find('{}language'.format(NAMESPACE))
+                language.text = self.language
+            if self.files:
+                files = Document_Edition.find('{}files'.format(NAMESPACE))
+                files.text = self.files
+            if self.file_name:
+                file_name = Files.find('{}file_name'.format(NAMESPACE))
+                file_name.text = self.file_name
+            if self.local_id:
+                local_id = Files.find('{}local_identifier'.format(NAMESPACE))
+                local_id.text = self.local_id
+            if self.document_std_id:
+                document_std_id = Files.find(
+                    '{}document_standard_id'.format(NAMESPACE))
+                document_std_id.text = self.document_std_id
 
             
 
