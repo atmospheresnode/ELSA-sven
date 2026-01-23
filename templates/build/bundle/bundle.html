@@ -81,6 +81,7 @@
 
 
    {% elif bundle_type == "External" %}
+   <div class="external-theme">
        <!-- Help Button -->
       <div class="col-md-2">
          <button class="btn btn-teal" data-toggle="bundle-collapse" href="#content" role="button"> What is a bundle? </button>
@@ -130,6 +131,7 @@
             <br>
          </div>
       </div>
+   </div>
    </div>
    {% endif %}
 
@@ -1522,6 +1524,37 @@
    
     <!-- External Contents -->
    {% elif bundle_type == "External" %}
+   <div class="external-theme">
+   <style>
+         /* ===== External bundle theme ===== */
+        .external-theme{
+         --external: #0E76BD;
+         --external-hover: #0C66A3;
+         }
+
+         /* Recolor ALL buttons inside External EXCEPT ones marked keep-bg */
+         .external-theme .btn:not(.btn-keep-bg){
+         background-color: var(--external) !important;
+         border-color: var(--external) !important;
+         color: #fff !important;
+         box-shadow: none !important;
+         }
+         .external-theme .btn:not(.btn-keep-bg):hover{
+         background-color: var(--external-hover) !important;
+         border-color: var(--external-hover) !important;
+         }
+
+         /* Legacy custom button classes in header */
+         .external-theme .btn-teal:not(.btn-keep-bg),
+         .external-theme .btn-cyan:not(.btn-keep-bg),
+         .external-theme .btn-blue:not(.btn-keep-bg),
+         .external-theme .btn-red:not(.btn-keep-bg){
+         background-color: var(--external) !important;
+         border-color: var(--external) !important;
+         color: #fff !important;
+         }
+   </style>
+
 
       <div class="container-fluid pt-3">
          <!-- Info Card -->
@@ -1541,8 +1574,8 @@
                      <div class="col p-1 m-3 mt-0 text-center">
                            <!--'Help' is removed as it does not serve any required functionality -->
                            {% comment %} <a type="button" class="btn btn-info text-light" href="" aria-expanded="true" style="box-shadow: none;">Help</a> {% endcomment %}
-                           <a type="button" class="btn btn-danger text-light" data-bs-toggle="modal" data-bs-target="#delete_modal" aria-expanded="false" style="box-shadow: none;">Delete Bundle</a>
-                           <a type="button" class="btn btn-success text-light" href="{% url 'build:bundle_download' bundle.pk %}" aria-expanded="false" style="box-shadow: none;">Download Bundle</a>
+                           <a class="btn btn-danger text-light btn-keep-bg" data-bs-toggle="modal" data-bs-target="#delete_modal" aria-expanded="false" style="box-shadow: none;">Delete Bundle</a>
+                           <a class="btn btn-success text-light btn-keep-bg" href="{% url 'build:bundle_download' bundle.pk %}" aria-expanded="false" style="box-shadow: none;">Download Bundle</a>
                            
                            <a type="button" class="btn btn-light text-light dropdown-toggle" id="investigation_dropdown" data-bs-toggle="dropdown" aria-expanded="false" style="box-shadow: none;">Edit Investigation Area</a>
                               <ul class="dropdown-menu" aria-labelledby="investigation_dropdown">
@@ -1606,7 +1639,7 @@
                         </div>
 
                         <!-- List of Product Documents -->
-                        <div class="modal-footer justify-content-start">
+                        <div class="modal-footer justify-content-start mt-3">
                            {% if documents %}
                               {% for document in documents %}
                               <div class="card snippet-card ms-0 me-3">
@@ -1659,7 +1692,7 @@
 
 
                         <!-- List of Collections -->
-                        <div class="modal-footer justify-content-start">
+                        <div class="modal-footer justify-content-start mt-3 mb-3">
                            {% for data in data_set %}
                            {% if data.collection == add_collection %}
                               {% if data.collection == add_collection %}
@@ -1688,7 +1721,7 @@
 
 <!-- NetCDF Upload Section -->
 <div class="card mt-3 mb-3">
-    <h5 class="card-header bg-info text-light text-center">Upload NetCDF File(s)</h5>
+    <h5 class="card-header bg-secondary text-light text-center">Upload NetCDF File(s)</h5>
     <div class="card-body">
 
         <form method="post" enctype="multipart/form-data">
@@ -2977,6 +3010,7 @@
             </div>
         </div>
     </div>
+</div>
 </div>
       {% endif %}
 {% endblock %}
