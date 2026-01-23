@@ -774,6 +774,12 @@ STD_ID = [
     ('UTF-8', 'UTF-8 Text')
 ]
 
+# PE = Product External
+PE_STD_ID = [
+    ('PDF/A', 'PDF/A'),
+    ('ASCII', '7-Bit ASCII')
+]
+
 # Nov. 24, 2025 -- External Bundles are supposed to have some different fields for document collections.
 class AnnexProductDocumentForm(forms.ModelForm):
 
@@ -799,15 +805,14 @@ class AnnexProductDocumentForm(forms.ModelForm):
         })
     )
 
-    description = forms.CharField(
+    comment = forms.CharField(
         required=False,
         label_suffix = '',
-        widget=forms.Textarea(attrs={
+        widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'rows': 3
+            "placeholder": "Enter a comment for the file"
         })
     )
-
 
     file_name = forms.CharField(
         required = True,
@@ -822,7 +827,7 @@ class AnnexProductDocumentForm(forms.ModelForm):
 
     document_std_id = forms.ChoiceField(
         required=False,
-        choices=STD_ID,
+        choices=PE_STD_ID,
         label='File Format',
         label_suffix = '',
         widget=forms.Select(attrs={
@@ -834,10 +839,12 @@ class AnnexProductDocumentForm(forms.ModelForm):
         fields = [
             "document_name",
             "document_id",
-            "description",
             "file_name",
+            "comment",
             "document_std_id",
         ]
+
+
 
 class ProductDocumentForm(forms.ModelForm):
     document_name = forms.CharField(

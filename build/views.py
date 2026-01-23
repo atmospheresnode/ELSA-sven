@@ -442,6 +442,38 @@ def build(request):
                 print('before build collections directories')
                 collections.build_directories()
                 print('after build collections directories')
+
+                product_collection = form_product_collection_document.save(commit=False)
+                product_collection.bundle = bundle
+                product_collection.collection = 'Document'
+                product_collection.save()
+
+                label_list = open_label_with_tree(product_bundle.label())
+                label_root = label_list[1]
+                print(' ... Adding Bundle Member Entries ... ')
+                label_root = product_bundle.build_bundle_member_entry(
+                    label_root, product_collection)
+                close_label(product_bundle.label(), label_root, label_list[2])
+                print(' ... Bundle Member Entry Added: {} ...'.format(product_collection.lid))
+
+
+                product_collection.build_base_case()
+
+                # Open Product_Collection label
+                print(' ... Opening Label ... ')
+                label_list = open_label_with_tree(
+                    product_collection.label())
+                label_root = label_list[1]
+
+                # Fill label
+                print(' ... Filling Label ... ')
+                #label_root = bundle.version.fill_xml_schema(label_root)
+                label_root = product_collection.fill_base_case(label_root)
+
+                # Close label
+                print(' ... Closing Label ... ')
+                close_label(product_collection.label(), label_root, label_list[2])
+                print('-------------End Build Product_Collection Base Case-----------------')
             else:
                 print('before initial save')
                 collections = form_collections.save(commit=False)
@@ -2574,9 +2606,9 @@ def annex_product_document(request, pk_bundle, pk_product_document):
         initial_product = {
             "document_name":product_document.document_name,
             #"document_id":product_document.document_id,
-            "local_id":product_document.local_id,
-            "description":product_document.description,
+            "local_id":product_document.local_id,     
             "file_name":product_document.file_name,
+            "comment":product_document.comment,
             "document_std_id":product_document.document_std_id,
         }
 
@@ -2608,8 +2640,8 @@ def annex_product_document(request, pk_bundle, pk_product_document):
                 elif change == 'local_id':
                     product_document.local_id = annex_form_product_document['local_id'].value()
 
-                elif change == 'description':
-                   product_document.description = annex_form_product_document['description'].value()
+                # elif change == 'description':
+                #    product_document.description = annex_form_product_document['description'].value()
                 
                 elif change == 'file_name':
                     product_document.file_name = annex_form_product_document['file_name'].value()
@@ -3806,7 +3838,7 @@ def variable_coord_to_product(bundle):
         # 2. Load & Parse Template XML
         # =====================================================================================
         source_file = os.path.join(PDS4_LABEL_TEMPLATE_DIRECTORY, 'base_templates')
-        source_file = os.path.join(source_file, 'Template_PE.xml')
+        source_file = os.path.join(source_file, 'Template_PE.xml') # May have to change to Template_PE_document.xml
         tree = ET.parse(source_file)
         root = tree.getroot()
 
