@@ -1561,7 +1561,6 @@ def context_search(request, pk_bundle):
         form_investigation = InvestigationForm(request.POST or None)
         form_target = TargetFormAll(request.POST or None, pk_bundle=pk_bundle)
         contact_form = ContactForm(request.POST or None)
-
         context_products_contact = ContextProductsContactForm(request.POST or None)
 
         # Context Dictionary
