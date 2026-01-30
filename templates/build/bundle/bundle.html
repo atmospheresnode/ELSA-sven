@@ -162,8 +162,7 @@
                      Global settings in your bundle handled in the Investigation Area OR Context Product references can be edited here.
          
                      <div class="col p-1 m-3 mt-0 text-center">
-                           <!--'Help' is removed as it does not serve any required functionality -->
-                           {% comment %} <a type="button" class="btn btn-info text-light" href="" aria-expanded="true" style="box-shadow: none;">Help</a> {% endcomment %}
+
                            <a type="button" class="btn btn-danger text-light" data-bs-toggle="modal" data-bs-target="#delete_modal" aria-expanded="false" style="box-shadow: none;">Delete Bundle</a>
                            <a type="button" class="btn btn-success text-light" href="{% url 'build:bundle_download' bundle.pk %}" aria-expanded="false" style="box-shadow: none;">Download Bundle</a>
                            
@@ -175,19 +174,169 @@
                               </ul>
                            
                            <a type="button" class="btn btn-light text-light" data-bs-toggle="modal" data-bs-target="#context_modal" aria-expanded="false" style="box-shadow: none;">Edit Context Products</a>
-                           <a type="button" class="btn btn-light text-light" data-bs-toggle="modal" data-bs-target="#collections_modal" aria-expanded="false" style="box-shadow: none;">Edit Collections</a>
                      </div>
                   </p>
                </div>
             </div>
          </div>
 
+      
+      <!-- Collections Card -->
+      <div class="row justify-content-center align-items-center mt-3">
+         <div class="col-md-12">
+            <div class="card d-flex mb-0" id="collectionsCard">
+               <h5 class="card-header bg-secondary text-light text-center">
+                  Collections
+                  <span class="ms-1 align-baseline" style="position: relative; top: -1px;"
+                        data-bs-toggle="tooltip" data-bs-placement="top"
+                        title="This section allows you to interact with the collections in your bundle. You can add new collections and/or add files to your collections. Adding a file to your collection allows you to edit the template for the type of file. Using the file uploader will use that template and generate a label for that uploaded file. Documents are limited to PDF/A or 7-bit ASCII Text. Data files are limited to netCDF files for model output.">
+                     <i class="bi bi-info-circle"></i>
+                  </span>
+               </h5>
+
+               <div class="card-body">
+                  <!-- Tabs -->
+                  <ul class="nav nav-fill nav-underline nav-justified" role="tablist">
+                     <li class="nav-item" role="presentation">
+                        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#doc_collection" type="button" role="tab" aria-selected="true">Document Collection</button>
+                     </li>
+
+                     {% for add_collection in additional_collections_set %}
+                     <li class="nav-item" role="presentation">
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#additional_{{ add_collection.collection_name }}_collection" type="button" role="tab" aria-selected="false">{{ add_collection.collection_name }}</button>
+                     </li>
+                     {% endfor %}
+
+                     <li class="nav-item" role="presentation">
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#add_a_collection" type="button" role="tab" aria-selected="false"><i class="fa fa-plus me-2"></i> Add New Collection</button>
+                     </li>
+                  </ul>
+
+                  <!-- Content -->
+                  <div class="tab-content">
+                     <!-- Document Collection -->
+                     <div class="tab-pane fade show active" id="doc_collection" role="tabpanel">
+                        <br>
+                        <div class="col-md-12">
+                           <div class="card">
+                              <div class="card-header">
+                                 <p> This is your document collection. In this collection, you should plan to put any documentation you
+                                    think users of your data might need to understand and use your data. Typically users would expect to
+                                    find a user guide and/or supporting documentation in this collection. Helpful movies, graphics, or
+                                    other non-standard archive formats could also be here if they helpful for documenting your bundle.</p>
+                              </div>
+                              <button type="button" class="btn btn-light text-light" data-bs-toggle="modal" data-bs-target="#document_modal">Add Document Products</button>
+                           </div>
+                        </div>
+
+                        <!-- List of Product Documents -->
+                        <div class="modal-footer justify-content-start mt-3 mb-3">
+                           {% if documents %}
+                              {% for document in documents %}
+                              <div class="card snippet-card ms-0 me-3">
+                                 <div class="card-body">
+                                    <h5 class="card-title">{{ document.document_name }}</h5>
+                                    <p class="card-text">Acknowledgment list: {{ document.acknowledgement_text }}</p>
+                                    <p class="card-text">Author list: {{ document.author_list }}</p>
+                                    <p class="card-text">Copyright: {{ document.copyright }}</p>
+                                    <p class="card-text">Description: {{ document.description }}</p>
+                                    <p class="card-text">Document editions: {{ document.document_editions }}</p>
+                                    <p class="card-text">DOI: {{ document.doi }}</p>
+                                    <p class="card-text">Editor list {{ document.editor_list }}</p>
+                                    <p class="card-text">Publication date: {{ document.publication_date }}</p>
+                                    <p class="card-text">revision ID: {{ document.revision_id }}</p>
+                                    <a href="{%  url 'build:product_document' bundle.pk document.pk %}" class="btn btn-light text-light d-flex justify-content-center">Edit</a>
+                                 </div>
+                              </div>
+                              {% endfor%}
+                           {% else %}
+                              <p>No Documents Found</p>
+                           {% endif %}
+                        </div>
+                     </div>
+
+                     <!-- Additional Collections -->
+                     {% for add_collection in additional_collections_set %}
+                     <div class="tab-pane fade" id="additional_{{ add_collection.collection_name }}_collection" role="tabpanel">
+                        <br>
+                        <div class="col-md-12">
+                           <div class="card">
+                              <div class="card-header">
+                                 <p> This is a data collection. In this collection, you will build labels for data products. Data products are also
+                                    known as Product_Observational and include things like tables of data, image files, etc. Currently ELSA
+                                    will help you build tempaltes for data tables. Types of tables ELSA knows how to label are:
+
+                                    <ul>
+                                       <li>Table Binary</li>
+                                       <li>Table Character</li>
+                                       <li>Table Delimited</li>
+                                    </ul>
+                                 </p>
+                              </div>
+                              <button type="button" class="btn btn-light text-light" data-bs-toggle="modal" data-bs-target="#data_product_modal">Add Data Products</button>
+                           </div>
+                        </div>
+
+                        <!-- List of Collections -->
+                        <div class="modal-footer justify-content-start mt-3 mb-3">
+                           {% for data in data_set %}
+                              {% if data.collection == add_collection %}
+                              <div class="card snippet-card ms-0 me-3">
+                                 <div class="card-body">
+                                    <h5 class="card-title">{{ data.name }}</h5>
+                                    <p class="card-text">Processing Level: {{ data.processing_level }}</p>
+                                    <p class="card-text">Data Type: {{ data.data_type }}</p>
+                                    <div class="btn-group">
+                                       <a href="{%  url 'build:table_creation' bundle.pk data.pk %}" class="btn btn-light text-light d-flex justify-content-center me-1">Edit Table</a>
+                                       {% for table_type in table_set %}
+                                          {% for table in table_type %}
+                                             {% if table.data == data %}
+                                                <a href="{%  url 'build:edit_table_field_information' bundle.pk data.pk table.pk %}" class="btn btn-light text-light d-flex justify-content-center">Edit Field(s)</a>
+                                             {% endif %}
+                                          {% endfor %}
+                                       {% endfor %}
+                                    </div>
+                                 </div>
+                              </div>
+                              {% endif %}
+                           {% endfor %}
+                        </div>
+                     </div>
+                     {% endfor %}
+
+                     <!-- Add Collections -->
+                     <div class="tab-pane fade" id="add_a_collection" role="tabpanel">
+                        <div class="row px-2">
+                           <form action="{% url 'build:bundle' bundle.pk %}" method="post" id="form_collections" >
+                              {% csrf_token %}
+
+                              <div class="mt-3">
+                                 <label for="col_name">Collection Name<span class="text-danger" title="This field is required">*</span></label>
+                                 {{ form_additional_collections.collection_name }}
+                              </div>
+
+                              <div class="mt-3">
+                                 <label for="col_type">Collection Type<span class="text-danger" title="This field is required">*</span></label>
+                                 {{ form_additional_collections.collection_type }}
+                              </div>
+
+                              <button type="submit" class="btn btn-light text-light my-4">Create Collection</button>
+                           </form>
+                        </div>
+                     </div>
+
+                  </div>
+               </div>
+            </div>
+         </div>
+      </div>
+
       <!-- The Rest -->
       <div class="row py-4">
       <div class="col-md-3">
          <!-- Files Card -->
          <div class="card d-flex mb-4">
-            <h5 class="card-header bg-secondary text-light text-center">Files</h5>
+            <h5 class="card-header bg-secondary text-light text-center">Files <span class="ms-1 align-baseline" style="position: relative; top: -1px;" data-bs-toggle="tooltip" data-bs-placement="top" title="This section allows you to select XML labels from your bundle to be displayed in the XML viewer to the right. As you add more files to your bundle, this list will expand to include all of them."><i class="bi bi-info-circle"></i></span></h5>
             <div class="card_body m-4">
             <div class="col">
                {% for f in file_context %}
@@ -208,7 +357,7 @@
 
          <!-- Bundle Progress Card-->
          <div class="card">
-         <h5 class="card-header bg-secondary text-white text-center">Bundle Progress</h5>
+         <h5 class="card-header bg-secondary text-white text-center">Bundle Progress <span class="ms-1 align-baseline" style="position: relative; top: -1px;" data-bs-toggle="tooltip" data-bs-placement="top" title="This section shows a qualitative depiction of the overall completion progress of this bundle."><i class="bi bi-info-circle"></i></span></h5>
          <div class="list-group list-group-flush">
             <!-- Alias -->
             <div class="list-group-item d-flex justify-content-between align-items-center">
@@ -297,8 +446,16 @@
 
          <div class="col-md-9">
             <div class="card d-flex">
-               <h2 class="card-title text-center mt-3" id="fileName">File Content</h2>
-               <div class="card-body m-3 mt-1">
+               <h5 class="card-header bg-secondary text-light text-center">
+                  XML Viewer
+                  <span class="ms-1 align-baseline" style="position: relative; top: -1px;"
+                        data-bs-toggle="tooltip" data-bs-placement="top"
+                        title="This section allows you to view edited XML labels, selected via the File list on the left of the screen.">
+                     <i class="bi bi-info-circle"></i>
+                  </span>
+               </h5>
+               <div class="card-body m-3 mt-2">
+                  <h5 class="text-center mb-3" id="fileName">File Content</h5>
                   <pre><code id="fileContent"></code></pre>
                </div>
             </div>
@@ -328,6 +485,11 @@
                   const content = this.getAttribute('data-content');
                   showFileContent(filename, content);
                });
+            });
+
+            // Enable Bootstrap tooltips (info icons)
+            document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (el) {
+               new bootstrap.Tooltip(el);
             });
          </script>
       </div>
@@ -384,7 +546,8 @@
       {% if additional_collection_successful_submit %}
          <script type="text/javascript">
             $(document).ready(function(){
-                  $("#collections_modal").modal('show');
+               const el = document.getElementById("collectionsCard");
+               if(el){ el.scrollIntoView({behavior: "smooth", block: "start"}); }
             });
          </script>
       {% endif %}
@@ -1146,183 +1309,7 @@
          </div>
       </div>
 
-      <!-- Collections Modal -->
-      <div class="modal fade" id="collections_modal">
-         <div class="modal-dialog modal-xl">
-            <div class="modal-content">
-               <!-- Title -->
-               <div class="modal-header d-flex justify-content-center position-relative">
-                  <h5 class="modal-title">Collections Area</h5>
-                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="position: absolute; right: 1.5rem;"></button>
-               </div>
-
-               <div class="modal-body ">
-                  <!-- Tabs -->
-                  <ul class="nav nav-fill nav-underline nav-justified" role="tablist">
-                     <li class="nav-item" role="presentation">
-                        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#doc_collection" type="button" role="tab" aria-selected="true">Document Collection</button>
-                     </li>
-
-                     {% for add_collection in additional_collections_set %}
-                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#additional_{{ add_collection.collection_name }}_collection" type="button" role="tab" aria-selected="false">{{ add_collection.collection_name }}</button>
-                     </li>
-                     {% endfor %}
-                     
-                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#add_a_collection" type="button" role="tab" aria-selected="false"><i class="fa fa-plus me-2"></i> Add New Collection</button>
-                     </li>
-                  </ul>
-
-                  <!-- Content -->
-                  <div class="tab-content">
-                     <!-- Document Collection -->
-                     <div class="tab-pane fade show active" id="doc_collection" role="tabpanel">
-                        <br>
-                        <div class="col-md-12">
-                           <div class="card">
-                           <div class="card-header">
-                              <p> This is your document collection. In this collection, you should plan to put any documentation you 
-                                 think users of your data might need to understand and use your data. Typically users would expect to 
-                                 find a user guide and/or supporting documentation in this collection. Helpful movies, graphics, or 
-                                 other non-standard archive formats could also be here if they helpful for documenting your bundle.</p>
-                           </div>
-                           <button type="button" class="btn btn-light text-light" data-bs-toggle="modal" data-bs-target="#document_modal">Add Document Products</button>
-                           </div>
-                        </div>
-
-                        <!-- List of Product Documents -->
-                        <div class="modal-footer justify-content-start">
-                           {% if documents %}
-                              {% for document in documents %}
-                              <div class="card snippet-card ms-0 me-3">
-                                 <div class="card-body">
-                                    <h5 class="card-title">{{ document.document_name }}</h5>
-                                    <p class="card-text">Acknowledgment list: {{ document.acknowledgement_text }}</p>
-                                    <p class="card-text">Author list: {{ document.author_list }}</p>
-                                    <p class="card-text">Copyright: {{ document.copyright }}</p>
-                                    <p class="card-text">Description: {{ document.description }}</p>
-                                    <p class="card-text">Document editions: {{ document.document_editions }}</p>
-                                    <p class="card-text">DOI: {{ document.doi }}</p>
-                                    <p class="card-text">Editor list {{ document.editor_list }}</p>
-                                    <p class="card-text">Publication date: {{ document.publication_date }}</p>
-                                    <p class="card-text">revision ID: {{ document.revision_id }}</p>
-                                    <a href="{%  url 'build:product_document' bundle.pk document.pk %}" class="btn btn-light text-light d-flex justify-content-center">Edit</a>
-                                 </div>
-                              </div>
-                              {% endfor%}
-                           {% else %}
-                           <p>No Documents Found</p>
-                           {% endif %}
-                        </div>
-                     </div>
-
-
-                     <!-- Additional Collections -->
-                     {% for add_collection in additional_collections_set %}
-                     <div class="tab-pane fade" id="additional_{{ add_collection.collection_name }}_collection" role="tabpanel">
-                        <br>
-                        <div class="col-md-12">
-                           <div class="card">
-                           <div class="card-header">
-                              <p> This is a data collection. In this collection, you will build labels for data products. Data products are also 
-                                 known as Product_Observational and include things like tables of data, image files, etc. Currently ELSA 
-                                 will help you build tempaltes for data tables. Types of tables ELSA knows how to label are:
-                                 
-                                 <ul>
-                                    <li>Table Binary</li>
-                                    <li>Table Character</li>
-                                    <li>Table Delimited</li>
-
-                              </p>
-                           </div>
-                           <button type="button" class="btn btn-light text-light" data-bs-toggle="modal" data-bs-target="#data_product_modal">Add Data Products</button>
-                           </div>
-                        </div>
-
-                        <!-- List of Collections -->
-                        <div class="modal-footer justify-content-start">
-                           {% for data in data_set %}
-                           {% if data.collection == add_collection %}
-                              {% if data.collection == add_collection %}
-                           <div class="card snippet-card ms-0 me-3">
-                              <div class="card-body">
-                                 <h5 class="card-title">{{ data.name }}</h5>
-                                 <p class="card-text">Processing Level: {{ data.processing_level }}</p>
-                                 <p class="card-text">Data Type: {{ data.data_type }}</p>
-                                 <div class="btn-group">
-                                    <a href="{%  url 'build:table_creation' bundle.pk data.pk %}" class="btn btn-light text-light d-flex justify-content-center me-1">Edit Table</a>
-                                    {% for table_type in table_set %}
-                                       {% for table in table_type %}
-                                          {% if table.data == data %}
-                                             <a href="{%  url 'build:edit_table_field_information' bundle.pk data.pk table.pk %}" class="btn btn-light text-light d-flex justify-content-center">Edit Field(s)</a>
-                                          {% endif %}
-                                       {% endfor %}
-                                    {% endfor %}
-                                    
-                                 </div>
-                              </div>
-                           </div>
-                           {% endif %}
-                              {% endif %}
-                           {% endfor %}
-                        </div>
-                     </div>
-                     {% endfor %}
-
-                     <!-- Add Collections -->
-                     <div class="tab-pane fade" id="add_a_collection" role="tabpanel">
-                        <!-- Form -->
-                        <div class="row px-2">
-                           <form action="{% url 'build:bundle' bundle.pk %}" method="post" id="form_collections" >
-                              {% csrf_token %}
-
-                              <!-- Collection Name -->
-                              <div class="mt-3">
-                                 <label for="col_name">Collection Name<span class="text-danger" title="This field is required">*</span></label>
-                                 {{ form_additional_collections.collection_name }}
-                              </div>
-
-                              <!-- Alternate Title -->
-                              <div class="mt-3">
-                                 <label for="col_type">Collection Type<span class="text-danger" title="This field is required">*</span></label>
-                                 {{ form_additional_collections.collection_type }}
-                              </div>
-
-                              <!-- Create Collection -->
-                              <button type="submit" class="btn btn-light text-light my-4">Create Collection</button>
-                           </form>
-                        </div>
-
-                        <!-- List of Collections -->
-                        {% comment %} <div class="modal-footer justify-content-start">
-                           {% if additional_collections_count != 0 %}
-                              {% for additional_collection in additional_collections_set %}
-                                 {% for collection in additional_collection.collections_list %}
-                                 <div class="card snippet-card ms-0 me-3">
-                                    <div class="card-body">
-                                       <h5 class="card-title">{{ collection.0}} Collection</h5>
-                                       {% if collection.1 == 'Data' %}
-                                       <h6 class="card-subtitle">In here is where you will be able to add your data products that belong to this collection. You may choose from different processing levels for each data product.</h6>
-                                       <a href="" class="btn btn-light text-light d-flex justify-content-center">Add DATA</a>
-                                       {% endif %}
-                                    </div>
-                                 </div>
-                                 {% endfor %}
-                              {% endfor %}
-                           {% else %}
-                              <p>No Collections Found</p>
-                           {% endif %}
-                        </div> {% endcomment %}
-                     </div>
-
-                  </div>
-
-               </div>
-            </div>
-         </div>
-
-         <!-- Document Product Modal -->
+      <!-- Document Product Modal -->
          <div class="modal fade" id="document_modal">
             <div class="modal-dialog modal-xl">
                <div class="modal-content">
@@ -1519,6 +1506,9 @@
     </div>
 </div>
 
+
+
+
    
 
    
@@ -1572,8 +1562,7 @@
                      Global settings in your bundle handled in the Investigation Area OR Context Product references can be edited here.
          
                      <div class="col p-1 m-3 mt-0 text-center">
-                           <!--'Help' is removed as it does not serve any required functionality -->
-                           {% comment %} <a type="button" class="btn btn-info text-light" href="" aria-expanded="true" style="box-shadow: none;">Help</a> {% endcomment %}
+
                            <a class="btn btn-danger text-light btn-keep-bg" data-bs-toggle="modal" data-bs-target="#delete_modal" aria-expanded="false" style="box-shadow: none;">Delete Bundle</a>
                            <a class="btn btn-success text-light btn-keep-bg" href="{% url 'build:bundle_download' bundle.pk %}" aria-expanded="false" style="box-shadow: none;">Download Bundle</a>
                            
