@@ -630,7 +630,6 @@ class TargetForm(forms.Form):
         # self.fields['target'] = forms.ModelChoiceField(
         #     queryset=Target.objects.filter(investigation=self.pk_ins), required=True)
 
-
         # If the bundle type is 'External', we filter targets that start with 'urn:nasa:pds:context:target:laboratory_analog' -Rupak
         if self.bundle.bundle_type == 'External':
             self.fields['target'] = forms.ModelChoiceField(
