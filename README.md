@@ -19,14 +19,24 @@ This approach takes advantage of Atmospheres Node expertise to ensure all connec
 This section provides a timeline of ELSA's release history, highlighting key updates, new features, bug fixes, and improvements, with the most recent release listed first.
 
 ### **Current Version** 
+> ### **Version 1.21.0 (January 23, 2025)**
+- External Bundle UI: The Edit Collections button has been removed and relocated to an independent card under the Info card.
+- External Bundle UI: The Info card section has been updated, and contextual help text has been added to each card and section within the bundle.
+- External Bundle UI: The AMA color scheme has been updated.
+- External Bundles: Document Collections are now available for External Bundles.
+- External Bundles: Document Products have an updated XML template to reflect AMA requirements.
+- External Walkthrough: Document Collections have new fields to reflect the XML tags in AMA Document Products.
+
+### **Previous Versions** 
+> ### **Version 1.16.0 - 1.20.0 (October 2025 - December 2025)**
+- Various Bug Fixes.
+- Quality of Life updates.
+
 > ### **Version 1.15.0 (September 26, 2025)**
 - About Page: The page has been redesigned and now includes a tab feature for different sections.
 - Table Products: Fixed being able to access table and field pages for table products.
 - Data Products: Reformatted the models of data products to be able to support more types in the future.
-
-
-### **Previous Versions** 
-
+  
 > ### **Version 1.14.0 (September 05, 2025)**
 - Bundle Hub: The Select and delete feature has been introduced. Now, users can delete multiple bundles from the bundle hub.
 - Bundle Hub: Separate images for Archive and External Bundles have been added to the carousel.
