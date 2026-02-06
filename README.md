@@ -19,13 +19,17 @@ This approach takes advantage of Atmospheres Node expertise to ensure all connec
 This section provides a timeline of ELSA's release history, highlighting key updates, new features, bug fixes, and improvements, with the most recent release listed first.
 
 ### **Current Version** 
-> ### **Version 1.22.0 (January 30, 2025)**
-- Bundle Hub UI: The Delete Multiple Files feature now includes a confirmation modal, and an auto-vanishing success message has been introduced for deleted bundles.
-- Archive Bundle UI: The Edit Collections button has been removed and relocated to an independent card under the Info card.
+> ### **Version 1.23.0 (February 06, 2026)**
+- External Bundle: The NetCDF file upload section has been updated by combining two cards into one.
+- NetCDF Uploaded Files: A scroller has been introduced, and the number of files is now displayed.
 
 ### **Previous Versions** 
 
-> ### **Version 1.21.0 (January 23, 2025)**
+> ### **Version 1.22.0 (January 30, 2026)**
+- Bundle Hub UI: The Delete Multiple Files feature now includes a confirmation modal, and an auto-vanishing success message has been introduced for deleted bundles.
+- Archive Bundle UI: The Edit Collections button has been removed and relocated to an independent card under the Info card.
+  
+> ### **Version 1.21.0 (January 23, 2026)**
 - External Bundle UI: The Edit Collections button has been removed and relocated to an independent card under the Info card.
 - External Bundle UI: The Info card section has been updated, and contextual help text has been added to each card and section within the bundle.
 - External Bundle UI: The AMA color scheme has been updated.
