@@ -1618,10 +1618,9 @@
                         <div class="col-md-12">
                            <div class="card">
                            <div class="card-header">
-                              <p> This is your document collection. In this collection, you should plan to put any documentation you 
-                                 think users of your data might need to understand and use your data. Typically users would expect to 
-                                 find a user guide and/or supporting documentation in this collection. Helpful movies, graphics, or 
-                                 other non-standard archive formats could also be here if they helpful for documenting your bundle.</p>
+                              <p> This is your document collection. In this collection, you should plan to put any documentation you think users of your 
+                                 data might need to understand and use your data. Typically users would expect to find a user guide and/or supporting documentation 
+                                 in this collection. You can add as many documents as you need and tailor the label for each.</p>
                            </div>
                            <button type="button" class="btn btn-light text-light" data-bs-toggle="modal" data-bs-target="#document_modal">Add Document Products</button>
                            </div>
@@ -1708,49 +1707,67 @@
                            {% endfor %}
                         </div>
 
-<!-- NetCDF Upload Section -->
-<div class="card mt-3 mb-3">
-    <h5 class="card-header bg-secondary text-light text-center">Upload NetCDF File(s)</h5>
-    <div class="card-body">
+                     <!-- NetCDF Upload Section -->
+                     <div class="card mt-3 mb-3 border">
+                        <h5 class="card-header bg-secondary text-light text-center">NetCDF Files</h5>
+                        <div class="card-body">
+                           <div class="row">
+                                 <div class="col-md-6 border-end">
+                                    <h6 class="card-title text-center mb-3">Upload New File</h6>
+                                    <form method="post" enctype="multipart/form-data">
+                                       {% csrf_token %}
+                                       
+                                       {% if form_netcdf.errors %}
+                                             <div class="alert alert-danger" role="alert">
+                                                <strong>Please correct the errors below:</strong>
+                                                {{ form_netcdf.errors }}
+                                             </div>
+                                       {% endif %}
 
-        <form method="post" enctype="multipart/form-data">
-            {% csrf_token %}
+                                       <div class="mb-3">
+                                             {{ form_netcdf.netcdf_files.label_tag }}
+                                             {{ form_netcdf.netcdf_files }}
+                                             <div class="form-text">You can select multiple .nc files.</div>
+                                       </div>
 
-            {% if form_netcdf.errors %}
-                <div class="alert alert-danger" role="alert">
-                    <strong>Please correct the errors below:</strong>
-                    {{ form_netcdf.errors }}
-                </div>
-            {% endif %}
+                                       <button type="submit" class="btn btn-success w-100">Upload</button>
+                                    </form>
+                                 </div>
 
-            <div class="mb-3">
-                {{ form_netcdf.netcdf_files.label_tag }}
-                {{ form_netcdf.netcdf_files }}
-                <div class="form-text">You can select multiple .nc files.</div>
-            </div>
-
-            <button type="submit" class="btn btn-success">Upload</button>
-        </form>
-    </div>
-</div>
-
-<div class="card mt-3">
-    <h5 class="card-header bg-secondary text-light text-center">Uploaded NetCDF Files</h5>
-    <div class="card-body">
-        <ul class="list-group">
-            {% for nc_file in netcdf_files %}
-            <li class="list-group-item d-flex justify-content-between align-items-center">
-                <a href="{{ nc_file.file.url }}" target="_blank">{{ nc_file.title }}</a>
-                <span class="text-muted">{{ nc_file.uploaded_at|date:"Y-m-d H:i" }}</span>
-            </li>
-            {% empty %}
-            <li class="list-group-item">No NetCDF files uploaded yet.</li>
-            {% endfor %}
-        </ul>
-    </div>
-</div>
+                                 <div class="col-md-6">
+                                    <div class="d-flex justify-content-between align-items-center mb-3 px-2">
+                                       <h6 class="card-title mb-0">Uploaded Files</h6>
+                                       <span class="badge rounded-pill bg-light text-dark border">
+                                             {{ netcdf_files|length }} File{% if netcdf_files|length != 1 %}s{% endif %}
+                                       </span>
+                                    </div>
+                                    
+                                    <div style="max-height: 130px; overflow-y: auto;">
+                                       <ul class="list-group list-group-flush">
+                                             {% for nc_file in netcdf_files %}
+                                             <li class="list-group-item d-flex justify-content-between align-items-center px-2">
+                                                <div class="d-flex align-items-center" style="overflow:hidden;">
+                                                   <i class="bi bi-file-earmark-code me-2 text-secondary"></i>
+                                                   <a href="{{ nc_file.file.url }}" target="_blank" class="text-truncate" style="max-width: 200px;" title="{{ nc_file.title }}">
+                                                         {{ nc_file.title }}
+                                                   </a>
+                                                </div>
+                                                <span class="text-muted small">{{ nc_file.uploaded_at|date:"M d, H:i" }}</span>
+                                             </li>
+                                             {% empty %}
+                                             <li class="list-group-item text-center text-muted py-4">
+                                                <i class="bi bi-folder2-open display-6 d-block mb-2"></i>
+                                                No NetCDF files uploaded yet.
+                                             </li>
+                                             {% endfor %}
+                                       </ul>
+                                    </div>
+                                 </div>
+                           </div>
+                        </div>
                      </div>
-                     {% endfor %}
+
+                     </div> {% endfor %}
 
                      <!-- Add s Collections -->
                      <div class="tab-pane fade" id="add_a_collection" role="tabpanel">
