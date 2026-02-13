@@ -5256,7 +5256,7 @@ class NetCDFFile(models.Model):
     title = models.CharField(max_length=100)
     uploaded_at = models.DateTimeField(auto_now_add=True)
     file = models.FileField(
-        upload_to='netcdf/',
+        upload_to='',
         validators=[FileExtensionValidator(allowed_extensions=['nc'])],
         )
     bundle = models.ForeignKey(Bundle, on_delete=models.CASCADE, related_name='netcdf_files', null=True, blank=True)
