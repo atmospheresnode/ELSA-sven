@@ -198,7 +198,7 @@
                   <!-- Tabs -->
                   <ul class="nav nav-fill nav-underline nav-justified" role="tablist">
                      <li class="nav-item" role="presentation">
-                        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#doc_collection" type="button" role="tab" aria-selected="true">Document Collection</button>
+                        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#doc_collection" type="button" role="tab" aria-selected="true">Document</button>
                      </li>
 
                      {% for add_collection in additional_collections_set %}
@@ -1309,110 +1309,8 @@
          </div>
       </div>
 
-      <!-- Document Product Modal -->
-         <div class="modal fade" id="document_modal">
-            <div class="modal-dialog modal-xl">
-               <div class="modal-content">
-                  <!-- Title -->
-                  <div class="modal-header">
-                     <h5 class="modal-title">Add Document Product</h5>
-                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                  </div>
-
-                  <div class="modal-body pt-0">
-                     <div class="row px-2">
-                        <form action="{% url 'build:bundle' bundle.pk %}" method="post" id="form_document">
-                           {% csrf_token %}
-
-                           <!-- Name-->
-                           <div class="mt-3">
-                              <label for="doc_name">Document Name</label>
-                              {{ form_document.document_name }}
-                           </div>
-
-                           <!-- Publication Date -->
-                           <div class="mt-3">
-                              <label for="pub_date">Publication Date</label>
-                              {{ form_document.publication_date }}
-                           </div>
-
-                           <!-- Author List -->
-                           <div class="mt-3">
-                              <label for="auth_list">Author List</label>
-                              {{ form_document.author_list }}
-                           </div>
-
-                           <!-- Copyright-->
-                           <div class="mt-3">
-                              <label for="copyright">Copyright</label>
-                              {{ form_document.copyright }}
-                           </div>
-
-                           <!-- Description -->
-                           <div class="mt-3">
-                              <label for="description">Description</label>
-                              {{ form_document.description }}
-                           </div>
-
-                           <!-- Revision ID-->
-                           <div class="mt-3">
-                              <label for="rev_id">Revision ID</label>
-                              {{ form_document.revision_id }}
-                           </div>
-                           
-                           <!-- document_editions -->
-                           <div class="mt-3">
-                              <label for="doc_editions">Document Editions</label>
-                              {{ form_document.document_editions }}
-                           </div>
-                           
-                           <!-- edition name -->
-                           <div class="mt-3">
-                              <label for="edition_name">Edition Name</label>
-                              {{ form_document.edition_name }}
-                           </div>
-
-                           <!-- Language -->
-                           <div class="mt-3">
-                              <label for="language">Language</label>
-                              {{ form_document.language }}
-                           </div>
-
-                           <!-- Files-->
-                           <div class="mt-3">
-                              <label for="files">Files</label>
-                              {{ form_document.files }}
-                           </div>
-
-                           <!-- file_name -->
-                           <div class="mt-3">
-                              <label for="file_name">File Name</label>
-                              {{ form_document.file_name }}
-                           </div>
-
-                           <!-- Local ID -->
-                           <div class="mt-3">
-                              <label for="local_id">Local ID</label>
-                              {{ form_document.local_id }}
-                           </div>
-                           
-                           <!-- Document SSTD ID -->
-                           <div class="mt-3">
-                              <label for="doc_std_id">Document STD ID</label>
-                              {{ form_document.document_std_id }}
-                           </div>
-
-                           <!-- Create Product Document -->
-                           <button type="submit" class="btn btn-light text-light my-4">Create Document</button>
-                        </form>
-                     </div>
-                  </div>
-               </div>
-            </div>
-         </div>
-
-         <!-- Data Product Modal -->
-         <div class="modal fade" id="data_product_modal">
+   <!-- Data Product Modal -->
+   <div class="modal fade" id="data_product_modal">
     <div class="modal-dialog modal-xl">
         <div class="modal-content">
             <div class="modal-header">
@@ -1512,7 +1410,7 @@
    
 
    
-    <!-- External Contents -->
+    <!--     Contents -->
    {% elif bundle_type == "External" %}
    <div class="external-theme">
    <style>
@@ -1596,7 +1494,7 @@
                   <!-- Tabs -->
                   <ul class="nav nav-fill nav-underline nav-justified" role="tablist">
                      <li class="nav-item" role="presentation">
-                        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#doc_collection" type="button" role="tab" aria-selected="true">Document Collection</button>
+                        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#doc_collection" type="button" role="tab" aria-selected="true">Document</button>
                      </li>
 
                      {% for add_collection in additional_collections_set %}
@@ -1627,27 +1525,53 @@
                         </div>
 
                         <!-- List of Product Documents -->
-                        <div class="modal-footer justify-content-start mt-3">
+                        <div class="row g-3">
                            {% if documents %}
-                              {% for document in documents %}
-                              <div class="card snippet-card ms-0 me-3">
-                                 <div class="card-body">
-                                    <h5 class="card-title">{{ document.document_name }}</h5>
-                                    <p class="card-text">Acknowledgment list: {{ document.acknowledgement_text }}</p>
-                                    <p class="card-text">Author list: {{ document.author_list }}</p>
-                                    <p class="card-text">Copyright: {{ document.copyright }}</p>
-                                    <p class="card-text">Description: {{ document.description }}</p>
-                                    <p class="card-text">Document editions: {{ document.document_editions }}</p>
-                                    <p class="card-text">DOI: {{ document.doi }}</p>
-                                    <p class="card-text">Editor list {{ document.editor_list }}</p>
-                                    <p class="card-text">Publication date: {{ document.publication_date }}</p>
-                                    <p class="card-text">revision ID: {{ document.revision_id }}</p>
-                                    <a href="{%  url 'build:product_document' bundle.pk document.pk %}" class="btn btn-light text-light d-flex justify-content-center">Edit</a>
+                                 {% for document in documents %}
+                                 <div class="col-12 col-md-6 col-lg-4 mb-3">
+                                    <div class="card h-100 mt-3 shadow-sm border">
+                                       <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
+                                             <div class="d-flex align-items-center text-truncate" style="max-width: 85%;">
+                                                <i class="bi bi-file-earmark-text text-secondary me-2"></i>
+                                                <span class="fw-bold text-truncate" title="{{ document.document_name }}">
+                                                   {{ document.document_name }}
+                                                </span>
+                                             </div>
+                                             <button class="btn btn-sm btn-link text-decoration-none text-dark p-0" type="button" data-bs-toggle="collapse" data-bs-target="#doc_details_{{ document.pk }}" aria-expanded="false">
+                                                <i class="bi bi-chevron-down"></i>
+                                             </button>
+                                       </div>
+
+                                       <div class="collapse" id="doc_details_{{ document.pk }}">
+                                             <div class="card-body bg-light small">
+                                                <div class="mb-2">
+                                                   <strong>Authors:</strong><br>
+                                                   <span class="text-muted">{{ document.author_list}}</span>
+                                                </div>
+                                                <div class="mb-2">
+                                                   <strong>Date:</strong> {{ document.publication_date }}
+                                                </div>
+                                                <div class="mb-3">
+                                                   <strong>Description:</strong><br>
+                                                   <span class="text-muted">{{ document.description|truncatechars:80 }}</span>
+                                                </div>
+                                                
+                                                <div class="d-grid">
+                                                   <a href="{% url 'build:product_document' bundle.pk document.pk %}" class="btn btn-sm btn-outline-secondary">
+                                                         Edit Details
+                                                   </a>
+                                                </div>
+                                             </div>
+                                       </div>
+                                    </div>
                                  </div>
-                              </div>
-                              {% endfor%}
+                                 {% endfor %}
                            {% else %}
-                           <p>No Documents Found</p>
+                                 <div class="col-12">
+                                    <div class="alert alert-light text-center border text-muted">
+                                       No documents!
+                                    </div>
+                                 </div>
                            {% endif %}
                         </div>
                      </div>
@@ -2833,98 +2757,115 @@
 
                   <div class="modal-body pt-0">
                      <div class="row px-2">
-                        <form action="{% url 'build:bundle' bundle.pk %}" method="post" id="form_document">
-                           {% csrf_token %}
+                        {% if bundle.bundle_type == "External" %}
+                           <form action="{% url 'build:annex_collection_document' bundle.pk %}" method="post" id="form_document">
+                              {% csrf_token %}
+                              <input type="hidden" name="form_name" value="document_form">
+                              {% for field in annex_form_document %}
+                                 <div class="mb-3">
+                                    {{ field.label_tag }}
+                                    {{ field }}
+                                    {% if field.errors %}
+                                    <div class="text-danger">{{ field.errors }}</div>
+                                    {% endif %}
+                                 </div>
+                              {% endfor %}
+                              <button type="submit" name="source" value="bundle" class="btn btn-light text-light my-4">Add Document</button>
+                           </form>
+                        {% else %}                        
+                           <form action="{% url 'build:bundle' bundle.pk %}" method="post" id="form_document">
+                              {% csrf_token %}
 
-                           <!-- Name-->
-                           <div class="mt-3">
-                              <label for="doc_name">Document Name</label>
-                              {{ form_document.document_name }}
-                           </div>
+                              <!-- Name-->
+                              <div class="mt-3">
+                                 <label for="doc_name">Document Name</label>
+                                 {{ form_document.document_name }}
+                              </div>
 
-                           <!-- Publication Date -->
-                           <div class="mt-3">
-                              <label for="pub_date">Publication Date</label>
-                              {{ form_document.publication_date }}
-                           </div>
+                              <!-- Publication Date -->
+                              <div class="mt-3">
+                                 <label for="pub_date">Publication Date</label>
+                                 {{ form_document.publication_date }}
+                              </div>
 
-                           <!-- Author List -->
-                           <div class="mt-3">
-                              <label for="auth_list">Author List</label>
-                              {{ form_document.author_list }}
-                           </div>
+                              <!-- Author List -->
+                              <div class="mt-3">
+                                 <label for="auth_list">Author List</label>
+                                 {{ form_document.author_list }}
+                              </div>
 
-                           <!-- Copyright-->
-                           <div class="mt-3">
-                              <label for="copyright">Copyright</label>
-                              {{ form_document.copyright }}
-                           </div>
+                              <!-- Copyright-->
+                              <div class="mt-3">
+                                 <label for="copyright">Copyright</label>
+                                 {{ form_document.copyright }}
+                              </div>
 
-                           <!-- Description -->
-                           <div class="mt-3">
-                              <label for="description">Description</label>
-                              {{ form_document.description }}
-                           </div>
+                              <!-- Description -->
+                              <div class="mt-3">
+                                 <label for="description">Description</label>
+                                 {{ form_document.description }}
+                              </div>
 
-                           <!-- Revision ID-->
-                           <div class="mt-3">
-                              <label for="rev_id">Revision ID</label>
-                              {{ form_document.revision_id }}
-                           </div>
-                           
-                           <!-- document_editions -->
-                           <div class="mt-3">
-                              <label for="doc_editions">Document Editions</label>
-                              {{ form_document.document_editions }}
-                           </div>
-                           
-                           <!-- edition name -->
-                           <div class="mt-3">
-                              <label for="edition_name">Edition Name</label>
-                              {{ form_document.edition_name }}
-                           </div>
+                              <!-- Revision ID-->
+                              <div class="mt-3">
+                                 <label for="rev_id">Revision ID</label>
+                                 {{ form_document.revision_id }}
+                              </div>
+                              
+                              <!-- document_editions -->
+                              <div class="mt-3">
+                                 <label for="doc_editions">Document Editions</label>
+                                 {{ form_document.document_editions }}
+                              </div>
+                              
+                              <!-- edition name -->
+                              <div class="mt-3">
+                                 <label for="edition_name">Edition Name</label>
+                                 {{ form_document.edition_name }}
+                              </div>
 
-                           <!-- Language -->
-                           <div class="mt-3">
-                              <label for="language">Language</label>
-                              {{ form_document.language }}
-                           </div>
+                              <!-- Language -->
+                              <div class="mt-3">
+                                 <label for="language">Language</label>
+                                 {{ form_document.language }}
+                              </div>
 
-                           <!-- Files-->
-                           <div class="mt-3">
-                              <label for="files">Files</label>
-                              {{ form_document.files }}
-                           </div>
+                              <!-- Files-->
+                              <div class="mt-3">
+                                 <label for="files">Files</label>
+                                 {{ form_document.files }}
+                              </div>
 
-                           <!-- file_name -->
-                           <div class="mt-3">
-                              <label for="file_name">File Name</label>
-                              {{ form_document.file_name }}
-                           </div>
+                              <!-- file_name -->
+                              <div class="mt-3">
+                                 <label for="file_name">File Name</label>
+                                 {{ form_document.file_name }}
+                              </div>
 
-                           <!-- Local ID -->
-                           <div class="mt-3">
-                              <label for="local_id">Local ID</label>
-                              {{ form_document.local_id }}
-                           </div>
-                           
-                           <!-- Document SSTD ID -->
-                           <div class="mt-3">
-                              <label for="doc_std_id">Document STD ID</label>
-                              {{ form_document.document_std_id }}
-                           </div>
+                              <!-- Local ID -->
+                              <div class="mt-3">
+                                 <label for="local_id">Local ID</label>
+                                 {{ form_document.local_id }}
+                              </div>
+                              
+                              <!-- Document SSTD ID -->
+                              <div class="mt-3">
+                                 <label for="doc_std_id">Document STD ID</label>
+                                 {{ form_document.document_std_id }}
+                              </div>
 
-                           <!-- Create Product Document -->
-                           <button type="submit" class="btn btn-light text-light my-4">Create Document</button>
-                        </form>
+                              <!-- Create Product Document -->
+                              <button type="submit" class="btn btn-light text-light my-4">Create Document</button>
+                           </form>
+                        {% endif %}
                      </div>
                   </div>
                </div>
             </div>
          </div>
 
-         <!-- Data Product Modal -->
-         <div class="modal fade" id="data_product_modal">
+   <!-- Data Product Modal -->
+   <div class="modal fade" id="data_product_modal">
     <div class="modal-dialog modal-xl">
         <div class="modal-content">
             <div class="modal-header">
