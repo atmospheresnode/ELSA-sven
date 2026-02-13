@@ -2284,12 +2284,16 @@ class Collections(models.Model):
 
 
 class AdditionalCollections(models.Model):
+    #External Data Collections should only be of type external
+    #Temporarily commenting out other collection options since the archive bundles doesn't need it at the moment. -Nicholas
     ADDITIONAL_COLLECTION_CHOICES = (
-        ('Data','Data'),
-        ('Browse','Browse'),
-        ('Geometry','Geometry'),
-        ('Calibration','Calibration'),
+        # ('Data','Data'),
+        # ('Browse','Browse'),
+        # ('Geometry','Geometry'),
+        # ('Calibration','Calibration'),
+        ('External', 'External'),
     )
+    
     bundle = models.ForeignKey(Bundle, on_delete=models.CASCADE)
     collection_name = models.CharField(max_length=MAX_CHAR_FIELD)
     collection_type = models.CharField(max_length=MAX_CHAR_FIELD, choices=ADDITIONAL_COLLECTION_CHOICES, default='Data')
@@ -2363,8 +2367,17 @@ class AdditionalCollections(models.Model):
 
 
         #     lid
+        
         logical_identifier = Identification_Area.find('{}logical_identifier'.format(NAMESPACE))
-        logical_identifier.text = 'urn:{0}:{1}:{2}'.format(self.bundle.user.userprofile.agency, self.bundle.name_lid_case(), self.collection_name) # where agency is something like nasa:pds
+
+        if self.bundle.bundle_type == "External":
+            authority = "nasa:pds-ama"
+        else:
+            authority = self.bundle.user.userprofile.agency
+
+        logical_identifier.text = f'urn:{authority}:{self.bundle.name_lid_case()}:{self.collection_name}'
+
+        # logical_identifier.text = 'urn:{0}:{1}:{2}'.format(self.bundle.user.userprofile.agency, self.bundle.name_lid_case(), self.collection_name) # where agency is something like nasa:pds
         
 
         #     version_id --> Note:  Can be changed to be more dynamic once we implement bundle versions (which is different from PDS4 versions)
