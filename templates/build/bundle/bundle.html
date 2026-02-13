@@ -198,7 +198,7 @@
                   <!-- Tabs -->
                   <ul class="nav nav-fill nav-underline nav-justified" role="tablist">
                      <li class="nav-item" role="presentation">
-                        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#doc_collection" type="button" role="tab" aria-selected="true">Document Collection</button>
+                        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#doc_collection" type="button" role="tab" aria-selected="true">Document</button>
                      </li>
 
                      {% for add_collection in additional_collections_set %}
@@ -1596,7 +1596,7 @@
                   <!-- Tabs -->
                   <ul class="nav nav-fill nav-underline nav-justified" role="tablist">
                      <li class="nav-item" role="presentation">
-                        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#doc_collection" type="button" role="tab" aria-selected="true">Document Collection</button>
+                        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#doc_collection" type="button" role="tab" aria-selected="true">Document</button>
                      </li>
 
                      {% for add_collection in additional_collections_set %}
@@ -1627,27 +1627,53 @@
                         </div>
 
                         <!-- List of Product Documents -->
-                        <div class="modal-footer justify-content-start mt-3">
+                        <div class="row g-3">
                            {% if documents %}
-                              {% for document in documents %}
-                              <div class="card snippet-card ms-0 me-3">
-                                 <div class="card-body">
-                                    <h5 class="card-title">{{ document.document_name }}</h5>
-                                    <p class="card-text">Acknowledgment list: {{ document.acknowledgement_text }}</p>
-                                    <p class="card-text">Author list: {{ document.author_list }}</p>
-                                    <p class="card-text">Copyright: {{ document.copyright }}</p>
-                                    <p class="card-text">Description: {{ document.description }}</p>
-                                    <p class="card-text">Document editions: {{ document.document_editions }}</p>
-                                    <p class="card-text">DOI: {{ document.doi }}</p>
-                                    <p class="card-text">Editor list {{ document.editor_list }}</p>
-                                    <p class="card-text">Publication date: {{ document.publication_date }}</p>
-                                    <p class="card-text">revision ID: {{ document.revision_id }}</p>
-                                    <a href="{%  url 'build:product_document' bundle.pk document.pk %}" class="btn btn-light text-light d-flex justify-content-center">Edit</a>
+                                 {% for document in documents %}
+                                 <div class="col-12 col-md-6 col-lg-4 mb-3">
+                                    <div class="card h-100 mt-3 shadow-sm border">
+                                       <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
+                                             <div class="d-flex align-items-center text-truncate" style="max-width: 85%;">
+                                                <i class="bi bi-file-earmark-text text-secondary me-2"></i>
+                                                <span class="fw-bold text-truncate" title="{{ document.document_name }}">
+                                                   {{ document.document_name }}
+                                                </span>
+                                             </div>
+                                             <button class="btn btn-sm btn-link text-decoration-none text-dark p-0" type="button" data-bs-toggle="collapse" data-bs-target="#doc_details_{{ document.pk }}" aria-expanded="false">
+                                                <i class="bi bi-chevron-down"></i>
+                                             </button>
+                                       </div>
+
+                                       <div class="collapse" id="doc_details_{{ document.pk }}">
+                                             <div class="card-body bg-light small">
+                                                <div class="mb-2">
+                                                   <strong>Authors:</strong><br>
+                                                   <span class="text-muted">{{ document.author_list}}</span>
+                                                </div>
+                                                <div class="mb-2">
+                                                   <strong>Date:</strong> {{ document.publication_date }}
+                                                </div>
+                                                <div class="mb-3">
+                                                   <strong>Description:</strong><br>
+                                                   <span class="text-muted">{{ document.description|truncatechars:80 }}</span>
+                                                </div>
+                                                
+                                                <div class="d-grid">
+                                                   <a href="{% url 'build:product_document' bundle.pk document.pk %}" class="btn btn-sm btn-outline-secondary">
+                                                         Edit Details
+                                                   </a>
+                                                </div>
+                                             </div>
+                                       </div>
+                                    </div>
                                  </div>
-                              </div>
-                              {% endfor%}
+                                 {% endfor %}
                            {% else %}
-                           <p>No Documents Found</p>
+                                 <div class="col-12">
+                                    <div class="alert alert-light text-center border text-muted">
+                                       No documents!
+                                    </div>
+                                 </div>
                            {% endif %}
                         </div>
                      </div>
