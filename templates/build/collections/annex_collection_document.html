@@ -44,11 +44,11 @@
                 {% endif %}
 
                 <!-- Section Heading -->
-                <h2 class="mb-5 pb-2 pb-md-0 mb-md-4">Document Collections</h2>
-                <p>This is your document collection. In this collection, you should plan to put any documentation you think users 
-                    of your data might need to understand and use your data. Typically users would expect to find a user guide and/or 
-                    supporting documentation in this collection. Helpful movies, graphics, or other non-standard archive formats could 
-                    also be here if they helpful for documenting your bundle.</p>
+                <h2 class="mb-5 pb-2 pb-md-0 mb-md-4">Document Collection</h2>
+                <p>ELSA has created a document collection for you. In this collection, you should plan to put any documentation you think 
+                    users of your data might need to understand and use your data. ATM suggests the inclusion of a User Guide for this 
+                    purpose. Other supporting documents could be added in this collection. You may set up the label for your first document 
+                    now or you can add this later. ASCII 7-bit Text (.txt) and PDF/A (.pdf) are the acceptable formats for your documentation</p>
                 <hr>
 
                 <!--Document Collection Section-->    
@@ -61,11 +61,11 @@
                                     {{ field.label_tag }}
                                     {{ field }}
                                     {% if field.errors %}
-                                        <div class="text-danger">{{ field.errors }}</div>
+                                    <div class="text-danger">{{ field.errors }}</div>
                                     {% endif %}
                                 </div>
                             {% endfor %}
-                            <button type="submit" class="btn">Add Document</button>
+                            <button type="submit" name="source" value="walkthrough" class="btn">Add Document</button>
                             <a href="{% url 'build:collection_additional' bundle.pk %}" class="btn btn-light text-light ms-3">
                                 Skip
                                 <i class="fa fa-arrow-right ms-2"></i>
