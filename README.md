@@ -21,6 +21,8 @@ This section provides a timeline of ELSA's release history, highlighting key upd
 ### **Current Version** 
 > ### **Version 1.24.0 (February 13, 2026)**
 - External Bundle View: The document product list in the collections card has been updated to a collapsible list format.
+- External Bundle Walkthrough: Updated text and fixed bundle flow when adding citation information
+- External Bundle View: Document Products now use the correct form for external bundles.
 
 ### **Previous Versions** 
 
