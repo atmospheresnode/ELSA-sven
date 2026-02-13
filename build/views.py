@@ -690,7 +690,6 @@ def data_prep(request, bundle, data_enum):
 def bundle(request, pk_bundle):
     # Get Bundle
     bundle = Bundle.objects.get(pk=pk_bundle)
-
     # Secure ELSA by seeing if the user logged in is the same user associated with the Bundle
     if request.user == bundle.user:
         print('authorized user: {}'.format(request.user))
@@ -732,6 +731,7 @@ def bundle(request, pk_bundle):
         form_modification_history = ModificationHistoryForm(request.POST or None)     
         form_data = DataForm(request.POST or None, pk_bun=pk_bundle)
         form_document = ProductDocumentForm(request.POST or None)
+        annex_form_document = AnnexProductDocumentForm(request.POST or None)
         form_collections = CollectionsForm(request.POST or None)
         form_product_collection = ProductCollectionForm(request.POST or None)
         form_additional_collections = AdditionalCollectionForm(request.POST or None)
@@ -817,6 +817,7 @@ def bundle(request, pk_bundle):
             'form_data':form_data,
             'form_modification_history':form_modification_history,
             'form_document':form_document,
+            'annex_form_document':annex_form_document,
             'form_collections':form_collections,
             'form_product_collection': form_product_collection,
             'form_additional_collections': form_additional_collections,
@@ -1472,8 +1473,9 @@ def edit_citation_information(request, pk_bundle, pk_citation_information):
             #return redirect(reverse('build:context_search', args=[pk_bundle]))
 
             #Adding a check for bundle type, so it skips context search if external selected - RUPAK
+            # Context search is back for AMA, but I'm still living the if statement (for now) in case something changes on the archive end - Nicholas
             if bundle.bundle_type == 'External':
-                return redirect(reverse('build:collection_document', args=[pk_bundle]))  
+                return redirect(reverse('build:context_search', args=[pk_bundle]))  
             else:
                 return redirect(reverse('build:context_search', args=[pk_bundle]))
 
@@ -2200,10 +2202,14 @@ def annex_collection_document(request, pk_bundle):
         close_label(label_list[0], label_root, label_list[2])          
         print('---------------- End Build Product_Document Base Case -------')                     
 
+
         product_bundle = Product_Bundle.objects.get(bundle=bundle)
         product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
 
-        return redirect(reverse('build:collection_additional', args=[pk_bundle]))
+        if request.POST.get("source") == "bundle":
+            return redirect(reverse("build:bundle", args=[pk_bundle]))
+        else:
+            return redirect(reverse('build:collection_additional', args=[pk_bundle]))
 
         #write_into_label(document, product_bundle, product_collections_list)
 

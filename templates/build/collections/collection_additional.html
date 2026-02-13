@@ -43,8 +43,12 @@
                         {% endfor %}
                     {% endif %}
 
-                    <h2 class="mb-5 pb-2 pb-md-0 mb-md-4">Additional Collections</h2>
-                    <p>Collections are the primary means for organizing related PDS4 products. Let's start by adding your first collection. You will need to name your collection here with something intuitive for its use. (e.g., Model Output, Simulation 01, etc.). In Modeling Annex projects anything outside of the document collection is assumed to be of type 'netCDF'. If you have multiple collections, you'll be able to add and modify them after completing the bundle walkthrough.</p>
+                    <h2 class="mb-5 pb-2 pb-md-0 mb-md-4">Data Collections</h2>
+                    <p>Collections are the primary means for organizing related PDS4 products. 
+                        Now we'll add your first 'data' collection. You will need to name your 
+                        collection here with something intuitive for its use. (e.g., Model Output, Simulation 01, etc.). 
+                        In Modeling Annex projects all 'data products' are assumed to be of type 'netCDF' as model output. 
+                        If you have multiple collections, you'll be able to add and modify them after completing the bundle walkthrough.</p>
                     <hr>
 
                     <form method="post" action="{% url 'build:bundle' pk_bundle %}">
