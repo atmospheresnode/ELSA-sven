@@ -19,13 +19,17 @@ This approach takes advantage of Atmospheres Node expertise to ensure all connec
 This section provides a timeline of ELSA's release history, highlighting key updates, new features, bug fixes, and improvements, with the most recent release listed first.
 
 ### **Current Version** 
-> ### **Version 1.24.0 (February 13, 2026)**
-- External Bundle View: The document product list in the collections card has been updated to a collapsible list format.
-- External Bundle Walkthrough: Updated text and fixed bundle flow when adding citation information
-- External Bundle View: Document Products now use the correct form for external bundles.
+> ### **Version 1.25.0 (February 27, 2026)**
+- Archive Bundle View: Fixed issue with the "Add Document Products" button not working.
+- Product Document Editor: Fixed issue with users not being able to edit document products.
+- Product Document Editor: Correct document product forms for archive and external bundles have been added to the editor, as well as an updated color scheme.
 
 ### **Previous Versions** 
-
+> ### **Version 1.24.0 (February 13, 2026)**
+- External Bundle View: The document product list in the collections card has been updated to a collapsible list format.
+- External Bundle Walkthrough: Updated text and fixed bundle flow when adding citation information.
+- External Bundle View: Document Products now use the correct form for external bundles.
+- 
 > ### **Version 1.23.0 (February 06, 2026)**
 - External Bundle: The NetCDF file upload section has been updated by combining two cards into one.
 - NetCDF Uploaded Files: A scroller has been introduced, and the number of files is now displayed.
