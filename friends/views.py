@@ -182,8 +182,7 @@ def otp_verify(request):
                     del request.session['pre_otp_user_id']
                     profile.otp_code = None
                     profile.save()
-                    
-                    messages.success(request, f"Welcome to ELSA, {user.username}!")
+            
                     return HttpResponseRedirect(reverse('main:index'))
                 else:
                     messages.error(request, "This code has expired.")
