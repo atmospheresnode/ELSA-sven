@@ -23,6 +23,7 @@ This section provides a timeline of ELSA's release history, highlighting key upd
 - Archive Bundle View: Fixed issue with the "Add Document Products" button not working.
 - Product Document Editor: Fixed issue with users not being able to edit document products.
 - Product Document Editor: Correct document product forms for archive and external bundles have been added to the editor, as well as an updated color scheme.
+- External Bundle: Implemented the deletion of the additional collections feature.
 
 ### **Previous Versions** 
 > ### **Version 1.24.0 (February 13, 2026)**
