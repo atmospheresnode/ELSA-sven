@@ -630,7 +630,6 @@ class TargetForm(forms.Form):
         # self.fields['target'] = forms.ModelChoiceField(
         #     queryset=Target.objects.filter(investigation=self.pk_ins), required=True)
 
-
         # If the bundle type is 'External', we filter targets that start with 'urn:nasa:pds:context:target:laboratory_analog' -Rupak
         if self.bundle.bundle_type == 'External':
             self.fields['target'] = forms.ModelChoiceField(
@@ -757,10 +756,12 @@ STD_ID = [
     ('ASCII', '7-Bit ASCII'),
     ('Encapsulated Postscript', 'Encapsulated Postscript'),
     ('GIF', 'GIF'),
-    ('HTML v2.0', 'HTML v2.0'),
-    ('HTML v3.2', 'HTML v3.2'),
-    ('HTML v4.0', 'HTML v4.0'),
-    ('HTML v4.01', 'HTML v4.01'),
+    # Older versions of HTML are now deprecated and is now just HTML
+    # ('HTML v2.0', 'HTML v2.0'),
+    # ('HTML v3.2', 'HTML v3.2'),
+    # ('HTML v4.0', 'HTML v4.0'),
+    # ('HTML v4.01', 'HTML v4.01'),
+    ('HTML', 'HTML'),
     ('JPEG', 'JPEG'),
     ('LaTEX', 'LaTEX'),
     ('MPEG', 'MPEG-4'),
@@ -968,7 +969,22 @@ class ProductDocumentForm(forms.ModelForm):
 
     class Meta:
         model = Product_Document
-        exclude = ('bundle',)
+        #exclude = ('bundle',)
+        fields = [
+            "document_name",
+            "publication_date",
+            "author_list",
+            "copyright",
+            "description",
+            "revision_id",
+            "document_editions",
+            "edition_name",
+            "language",
+            "files",
+            "file_name",
+            "local_id",
+            "document_std_id",
+        ]
 
 
 """

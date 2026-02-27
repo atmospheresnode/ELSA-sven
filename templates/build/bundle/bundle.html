@@ -162,8 +162,7 @@
                      Global settings in your bundle handled in the Investigation Area OR Context Product references can be edited here.
          
                      <div class="col p-1 m-3 mt-0 text-center">
-                           <!--'Help' is removed as it does not serve any required functionality -->
-                           {% comment %} <a type="button" class="btn btn-info text-light" href="" aria-expanded="true" style="box-shadow: none;">Help</a> {% endcomment %}
+
                            <a type="button" class="btn btn-danger text-light" data-bs-toggle="modal" data-bs-target="#delete_modal" aria-expanded="false" style="box-shadow: none;">Delete Bundle</a>
                            <a type="button" class="btn btn-success text-light" href="{% url 'build:bundle_download' bundle.pk %}" aria-expanded="false" style="box-shadow: none;">Download Bundle</a>
                            
@@ -175,19 +174,169 @@
                               </ul>
                            
                            <a type="button" class="btn btn-light text-light" data-bs-toggle="modal" data-bs-target="#context_modal" aria-expanded="false" style="box-shadow: none;">Edit Context Products</a>
-                           <a type="button" class="btn btn-light text-light" data-bs-toggle="modal" data-bs-target="#collections_modal" aria-expanded="false" style="box-shadow: none;">Edit Collections</a>
                      </div>
                   </p>
                </div>
             </div>
          </div>
 
+      
+      <!-- Collections Card -->
+      <div class="row justify-content-center align-items-center mt-3">
+         <div class="col-md-12">
+            <div class="card d-flex mb-0" id="collectionsCard">
+               <h5 class="card-header bg-secondary text-light text-center">
+                  Collections
+                  <span class="ms-1 align-baseline" style="position: relative; top: -1px;"
+                        data-bs-toggle="tooltip" data-bs-placement="top"
+                        title="This section allows you to interact with the collections in your bundle. You can add new collections and/or add files to your collections. Adding a file to your collection allows you to edit the template for the type of file. Using the file uploader will use that template and generate a label for that uploaded file. Documents are limited to PDF/A or 7-bit ASCII Text. Data files are limited to netCDF files for model output.">
+                     <i class="bi bi-info-circle"></i>
+                  </span>
+               </h5>
+
+               <div class="card-body">
+                  <!-- Tabs -->
+                  <ul class="nav nav-fill nav-underline nav-justified" role="tablist">
+                     <li class="nav-item" role="presentation">
+                        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#doc_collection" type="button" role="tab" aria-selected="true">Document</button>
+                     </li>
+
+                     {% for add_collection in additional_collections_set %}
+                     <li class="nav-item" role="presentation">
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#additional_{{ add_collection.collection_name }}_collection" type="button" role="tab" aria-selected="false">{{ add_collection.collection_name }}</button>
+                     </li>
+                     {% endfor %}
+
+                     <li class="nav-item" role="presentation">
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#add_a_collection" type="button" role="tab" aria-selected="false"><i class="fa fa-plus me-2"></i> Add New Collection</button>
+                     </li>
+                  </ul>
+
+                  <!-- Content -->
+                  <div class="tab-content">
+                     <!-- Document Collection -->
+                     <div class="tab-pane fade show active" id="doc_collection" role="tabpanel">
+                        <br>
+                        <div class="col-md-12">
+                           <div class="card">
+                              <div class="card-header">
+                                 <p> This is your document collection. In this collection, you should plan to put any documentation you
+                                    think users of your data might need to understand and use your data. Typically users would expect to
+                                    find a user guide and/or supporting documentation in this collection. Helpful movies, graphics, or
+                                    other non-standard archive formats could also be here if they helpful for documenting your bundle.</p>
+                              </div>
+                              <button type="button" class="btn btn-light text-light" data-bs-toggle="modal" data-bs-target="#document_modal">Add Document Products</button>
+                           </div>
+                        </div>
+
+                        <!-- List of Product Documents -->
+                        <div class="modal-footer justify-content-start mt-3 mb-3">
+                           {% if documents %}
+                              {% for document in documents %}
+                              <div class="card snippet-card ms-0 me-3">
+                                 <div class="card-body">
+                                    <h5 class="card-title">{{ document.document_name }}</h5>
+                                    <p class="card-text">Acknowledgment list: {{ document.acknowledgement_text }}</p>
+                                    <p class="card-text">Author list: {{ document.author_list }}</p>
+                                    <p class="card-text">Copyright: {{ document.copyright }}</p>
+                                    <p class="card-text">Description: {{ document.description }}</p>
+                                    <p class="card-text">Document editions: {{ document.document_editions }}</p>
+                                    <p class="card-text">DOI: {{ document.doi }}</p>
+                                    <p class="card-text">Editor list {{ document.editor_list }}</p>
+                                    <p class="card-text">Publication date: {{ document.publication_date }}</p>
+                                    <p class="card-text">revision ID: {{ document.revision_id }}</p>
+                                    <a href="{%  url 'build:product_document' bundle.pk document.pk %}" class="btn btn-light text-light d-flex justify-content-center">Edit</a>
+                                 </div>
+                              </div>
+                              {% endfor%}
+                           {% else %}
+                              <p>No Documents Found</p>
+                           {% endif %}
+                        </div>
+                     </div>
+
+                     <!-- Additional Collections -->
+                     {% for add_collection in additional_collections_set %}
+                     <div class="tab-pane fade" id="additional_{{ add_collection.collection_name }}_collection" role="tabpanel">
+                        <br>
+                        <div class="col-md-12">
+                           <div class="card">
+                              <div class="card-header">
+                                 <p> This is a data collection. In this collection, you will build labels for data products. Data products are also
+                                    known as Product_Observational and include things like tables of data, image files, etc. Currently ELSA
+                                    will help you build tempaltes for data tables. Types of tables ELSA knows how to label are:
+
+                                    <ul>
+                                       <li>Table Binary</li>
+                                       <li>Table Character</li>
+                                       <li>Table Delimited</li>
+                                    </ul>
+                                 </p>
+                              </div>
+                              <button type="button" class="btn btn-light text-light" data-bs-toggle="modal" data-bs-target="#data_product_modal">Add Data Products</button>
+                           </div>
+                        </div>
+
+                        <!-- List of Collections -->
+                        <div class="modal-footer justify-content-start mt-3 mb-3">
+                           {% for data in data_set %}
+                              {% if data.collection == add_collection %}
+                              <div class="card snippet-card ms-0 me-3">
+                                 <div class="card-body">
+                                    <h5 class="card-title">{{ data.name }}</h5>
+                                    <p class="card-text">Processing Level: {{ data.processing_level }}</p>
+                                    <p class="card-text">Data Type: {{ data.data_type }}</p>
+                                    <div class="btn-group">
+                                       <a href="{%  url 'build:table_creation' bundle.pk data.pk %}" class="btn btn-light text-light d-flex justify-content-center me-1">Edit Table</a>
+                                       {% for table_type in table_set %}
+                                          {% for table in table_type %}
+                                             {% if table.data == data %}
+                                                <a href="{%  url 'build:edit_table_field_information' bundle.pk data.pk table.pk %}" class="btn btn-light text-light d-flex justify-content-center">Edit Field(s)</a>
+                                             {% endif %}
+                                          {% endfor %}
+                                       {% endfor %}
+                                    </div>
+                                 </div>
+                              </div>
+                              {% endif %}
+                           {% endfor %}
+                        </div>
+                     </div>
+                     {% endfor %}
+
+                     <!-- Add Collections -->
+                     <div class="tab-pane fade" id="add_a_collection" role="tabpanel">
+                        <div class="row px-2">
+                           <form action="{% url 'build:bundle' bundle.pk %}" method="post" id="form_collections" >
+                              {% csrf_token %}
+
+                              <div class="mt-3">
+                                 <label for="col_name">Collection Name<span class="text-danger" title="This field is required">*</span></label>
+                                 {{ form_additional_collections.collection_name }}
+                              </div>
+
+                              <div class="mt-3">
+                                 <label for="col_type">Collection Type<span class="text-danger" title="This field is required">*</span></label>
+                                 {{ form_additional_collections.collection_type }}
+                              </div>
+
+                              <button type="submit" class="btn btn-light text-light my-4">Create Collection</button>
+                           </form>
+                        </div>
+                     </div>
+
+                  </div>
+               </div>
+            </div>
+         </div>
+      </div>
+
       <!-- The Rest -->
       <div class="row py-4">
       <div class="col-md-3">
          <!-- Files Card -->
          <div class="card d-flex mb-4">
-            <h5 class="card-header bg-secondary text-light text-center">Files</h5>
+            <h5 class="card-header bg-secondary text-light text-center">Files <span class="ms-1 align-baseline" style="position: relative; top: -1px;" data-bs-toggle="tooltip" data-bs-placement="top" title="This section allows you to select XML labels from your bundle to be displayed in the XML viewer to the right. As you add more files to your bundle, this list will expand to include all of them."><i class="bi bi-info-circle"></i></span></h5>
             <div class="card_body m-4">
             <div class="col">
                {% for f in file_context %}
@@ -208,7 +357,7 @@
 
          <!-- Bundle Progress Card-->
          <div class="card">
-         <h5 class="card-header bg-secondary text-white text-center">Bundle Progress</h5>
+         <h5 class="card-header bg-secondary text-white text-center">Bundle Progress <span class="ms-1 align-baseline" style="position: relative; top: -1px;" data-bs-toggle="tooltip" data-bs-placement="top" title="This section shows a qualitative depiction of the overall completion progress of this bundle."><i class="bi bi-info-circle"></i></span></h5>
          <div class="list-group list-group-flush">
             <!-- Alias -->
             <div class="list-group-item d-flex justify-content-between align-items-center">
@@ -297,8 +446,16 @@
 
          <div class="col-md-9">
             <div class="card d-flex">
-               <h2 class="card-title text-center mt-3" id="fileName">File Content</h2>
-               <div class="card-body m-3 mt-1">
+               <h5 class="card-header bg-secondary text-light text-center">
+                  XML Viewer
+                  <span class="ms-1 align-baseline" style="position: relative; top: -1px;"
+                        data-bs-toggle="tooltip" data-bs-placement="top"
+                        title="This section allows you to view edited XML labels, selected via the File list on the left of the screen.">
+                     <i class="bi bi-info-circle"></i>
+                  </span>
+               </h5>
+               <div class="card-body m-3 mt-2">
+                  <h5 class="text-center mb-3" id="fileName">File Content</h5>
                   <pre><code id="fileContent"></code></pre>
                </div>
             </div>
@@ -328,6 +485,11 @@
                   const content = this.getAttribute('data-content');
                   showFileContent(filename, content);
                });
+            });
+
+            // Enable Bootstrap tooltips (info icons)
+            document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (el) {
+               new bootstrap.Tooltip(el);
             });
          </script>
       </div>
@@ -384,7 +546,8 @@
       {% if additional_collection_successful_submit %}
          <script type="text/javascript">
             $(document).ready(function(){
-                  $("#collections_modal").modal('show');
+               const el = document.getElementById("collectionsCard");
+               if(el){ el.scrollIntoView({behavior: "smooth", block: "start"}); }
             });
          </script>
       {% endif %}
@@ -1146,183 +1309,7 @@
          </div>
       </div>
 
-      <!-- Collections Modal -->
-      <div class="modal fade" id="collections_modal">
-         <div class="modal-dialog modal-xl">
-            <div class="modal-content">
-               <!-- Title -->
-               <div class="modal-header d-flex justify-content-center position-relative">
-                  <h5 class="modal-title">Collections Area</h5>
-                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="position: absolute; right: 1.5rem;"></button>
-               </div>
-
-               <div class="modal-body ">
-                  <!-- Tabs -->
-                  <ul class="nav nav-fill nav-underline nav-justified" role="tablist">
-                     <li class="nav-item" role="presentation">
-                        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#doc_collection" type="button" role="tab" aria-selected="true">Document Collection</button>
-                     </li>
-
-                     {% for add_collection in additional_collections_set %}
-                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#additional_{{ add_collection.collection_name }}_collection" type="button" role="tab" aria-selected="false">{{ add_collection.collection_name }}</button>
-                     </li>
-                     {% endfor %}
-                     
-                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#add_a_collection" type="button" role="tab" aria-selected="false"><i class="fa fa-plus me-2"></i> Add New Collection</button>
-                     </li>
-                  </ul>
-
-                  <!-- Content -->
-                  <div class="tab-content">
-                     <!-- Document Collection -->
-                     <div class="tab-pane fade show active" id="doc_collection" role="tabpanel">
-                        <br>
-                        <div class="col-md-12">
-                           <div class="card">
-                           <div class="card-header">
-                              <p> This is your document collection. In this collection, you should plan to put any documentation you 
-                                 think users of your data might need to understand and use your data. Typically users would expect to 
-                                 find a user guide and/or supporting documentation in this collection. Helpful movies, graphics, or 
-                                 other non-standard archive formats could also be here if they helpful for documenting your bundle.</p>
-                           </div>
-                           <button type="button" class="btn btn-light text-light" data-bs-toggle="modal" data-bs-target="#document_modal">Add Document Products</button>
-                           </div>
-                        </div>
-
-                        <!-- List of Product Documents -->
-                        <div class="modal-footer justify-content-start">
-                           {% if documents %}
-                              {% for document in documents %}
-                              <div class="card snippet-card ms-0 me-3">
-                                 <div class="card-body">
-                                    <h5 class="card-title">{{ document.document_name }}</h5>
-                                    <p class="card-text">Acknowledgment list: {{ document.acknowledgement_text }}</p>
-                                    <p class="card-text">Author list: {{ document.author_list }}</p>
-                                    <p class="card-text">Copyright: {{ document.copyright }}</p>
-                                    <p class="card-text">Description: {{ document.description }}</p>
-                                    <p class="card-text">Document editions: {{ document.document_editions }}</p>
-                                    <p class="card-text">DOI: {{ document.doi }}</p>
-                                    <p class="card-text">Editor list {{ document.editor_list }}</p>
-                                    <p class="card-text">Publication date: {{ document.publication_date }}</p>
-                                    <p class="card-text">revision ID: {{ document.revision_id }}</p>
-                                    <a href="{%  url 'build:product_document' bundle.pk document.pk %}" class="btn btn-light text-light d-flex justify-content-center">Edit</a>
-                                 </div>
-                              </div>
-                              {% endfor%}
-                           {% else %}
-                           <p>No Documents Found</p>
-                           {% endif %}
-                        </div>
-                     </div>
-
-
-                     <!-- Additional Collections -->
-                     {% for add_collection in additional_collections_set %}
-                     <div class="tab-pane fade" id="additional_{{ add_collection.collection_name }}_collection" role="tabpanel">
-                        <br>
-                        <div class="col-md-12">
-                           <div class="card">
-                           <div class="card-header">
-                              <p> This is a data collection. In this collection, you will build labels for data products. Data products are also 
-                                 known as Product_Observational and include things like tables of data, image files, etc. Currently ELSA 
-                                 will help you build tempaltes for data tables. Types of tables ELSA knows how to label are:
-                                 
-                                 <ul>
-                                    <li>Table Binary</li>
-                                    <li>Table Character</li>
-                                    <li>Table Delimited</li>
-
-                              </p>
-                           </div>
-                           <button type="button" class="btn btn-light text-light" data-bs-toggle="modal" data-bs-target="#data_product_modal">Add Data Products</button>
-                           </div>
-                        </div>
-
-                        <!-- List of Collections -->
-                        <div class="modal-footer justify-content-start">
-                           {% for data in data_set %}
-                           {% if data.collection == add_collection %}
-                              {% if data.collection == add_collection %}
-                           <div class="card snippet-card ms-0 me-3">
-                              <div class="card-body">
-                                 <h5 class="card-title">{{ data.name }}</h5>
-                                 <p class="card-text">Processing Level: {{ data.processing_level }}</p>
-                                 <p class="card-text">Data Type: {{ data.data_type }}</p>
-                                 <div class="btn-group">
-                                    <a href="{%  url 'build:table_creation' bundle.pk data.pk %}" class="btn btn-light text-light d-flex justify-content-center me-1">Edit Table</a>
-                                    {% for table_type in table_set %}
-                                       {% for table in table_type %}
-                                          {% if table.data == data %}
-                                             <a href="{%  url 'build:edit_table_field_information' bundle.pk data.pk table.pk %}" class="btn btn-light text-light d-flex justify-content-center">Edit Field(s)</a>
-                                          {% endif %}
-                                       {% endfor %}
-                                    {% endfor %}
-                                    
-                                 </div>
-                              </div>
-                           </div>
-                           {% endif %}
-                              {% endif %}
-                           {% endfor %}
-                        </div>
-                     </div>
-                     {% endfor %}
-
-                     <!-- Add Collections -->
-                     <div class="tab-pane fade" id="add_a_collection" role="tabpanel">
-                        <!-- Form -->
-                        <div class="row px-2">
-                           <form action="{% url 'build:bundle' bundle.pk %}" method="post" id="form_collections" >
-                              {% csrf_token %}
-
-                              <!-- Collection Name -->
-                              <div class="mt-3">
-                                 <label for="col_name">Collection Name<span class="text-danger" title="This field is required">*</span></label>
-                                 {{ form_additional_collections.collection_name }}
-                              </div>
-
-                              <!-- Alternate Title -->
-                              <div class="mt-3">
-                                 <label for="col_type">Collection Type<span class="text-danger" title="This field is required">*</span></label>
-                                 {{ form_additional_collections.collection_type }}
-                              </div>
-
-                              <!-- Create Collection -->
-                              <button type="submit" class="btn btn-light text-light my-4">Create Collection</button>
-                           </form>
-                        </div>
-
-                        <!-- List of Collections -->
-                        {% comment %} <div class="modal-footer justify-content-start">
-                           {% if additional_collections_count != 0 %}
-                              {% for additional_collection in additional_collections_set %}
-                                 {% for collection in additional_collection.collections_list %}
-                                 <div class="card snippet-card ms-0 me-3">
-                                    <div class="card-body">
-                                       <h5 class="card-title">{{ collection.0}} Collection</h5>
-                                       {% if collection.1 == 'Data' %}
-                                       <h6 class="card-subtitle">In here is where you will be able to add your data products that belong to this collection. You may choose from different processing levels for each data product.</h6>
-                                       <a href="" class="btn btn-light text-light d-flex justify-content-center">Add DATA</a>
-                                       {% endif %}
-                                    </div>
-                                 </div>
-                                 {% endfor %}
-                              {% endfor %}
-                           {% else %}
-                              <p>No Collections Found</p>
-                           {% endif %}
-                        </div> {% endcomment %}
-                     </div>
-
-                  </div>
-
-               </div>
-            </div>
-         </div>
-
-         <!-- Document Product Modal -->
+      <!-- Document Product Modal -->
          <div class="modal fade" id="document_modal">
             <div class="modal-dialog modal-xl">
                <div class="modal-content">
@@ -1333,90 +1320,95 @@
                   </div>
 
                   <div class="modal-body pt-0">
-                     <div class="row px-2">
-                        <form action="{% url 'build:bundle' bundle.pk %}" method="post" id="form_document">
+                     <div class="row px-2">                    
+                        <form action="{% url 'build:bundle' bundle.pk %}" method="post" id="form_document" enctype="multipart/form-data">
                            {% csrf_token %}
+                           <input type="hidden" name="form_name" value="document_form">
+                              {% if form_document.errors %}
+                              <div class="alert alert-danger">
+                                 {{ form_document.errors }}
+                              </div>
+                              {% endif %}
+                              <!-- Name-->
+                              <div class="mt-3">
+                                 <label for="doc_name">Document Name</label>
+                                 {{ form_document.document_name }}
+                              </div>
 
-                           <!-- Name-->
-                           <div class="mt-3">
-                              <label for="doc_name">Document Name</label>
-                              {{ form_document.document_name }}
-                           </div>
+                              <!-- Publication Date -->
+                              <div class="mt-3">
+                                 <label for="pub_date">Publication Date</label>
+                                 {{ form_document.publication_date }}
+                              </div>
 
-                           <!-- Publication Date -->
-                           <div class="mt-3">
-                              <label for="pub_date">Publication Date</label>
-                              {{ form_document.publication_date }}
-                           </div>
+                              <!-- Author List -->
+                              <div class="mt-3">
+                                 <label for="auth_list">Author List</label>
+                                 {{ form_document.author_list }}
+                              </div>
 
-                           <!-- Author List -->
-                           <div class="mt-3">
-                              <label for="auth_list">Author List</label>
-                              {{ form_document.author_list }}
-                           </div>
+                              <!-- Copyright-->
+                              <div class="mt-3">
+                                 <label for="copyright">Copyright</label>
+                                 {{ form_document.copyright }}
+                              </div>
 
-                           <!-- Copyright-->
-                           <div class="mt-3">
-                              <label for="copyright">Copyright</label>
-                              {{ form_document.copyright }}
-                           </div>
+                              <!-- Description -->
+                              <div class="mt-3">
+                                 <label for="description">Description</label>
+                                 {{ form_document.description }}
+                              </div>
 
-                           <!-- Description -->
-                           <div class="mt-3">
-                              <label for="description">Description</label>
-                              {{ form_document.description }}
-                           </div>
+                              <!-- Revision ID-->
+                              <div class="mt-3">
+                                 <label for="rev_id">Revision ID</label>
+                                 {{ form_document.revision_id }}
+                              </div>
+                              
+                              <!-- document_editions -->
+                              <div class="mt-3">
+                                 <label for="doc_editions">Document Editions</label>
+                                 {{ form_document.document_editions }}
+                              </div>
+                              
+                              <!-- edition name -->
+                              <div class="mt-3">
+                                 <label for="edition_name">Edition Name</label>
+                                 {{ form_document.edition_name }}
+                              </div>
 
-                           <!-- Revision ID-->
-                           <div class="mt-3">
-                              <label for="rev_id">Revision ID</label>
-                              {{ form_document.revision_id }}
-                           </div>
-                           
-                           <!-- document_editions -->
-                           <div class="mt-3">
-                              <label for="doc_editions">Document Editions</label>
-                              {{ form_document.document_editions }}
-                           </div>
-                           
-                           <!-- edition name -->
-                           <div class="mt-3">
-                              <label for="edition_name">Edition Name</label>
-                              {{ form_document.edition_name }}
-                           </div>
+                              <!-- Language -->
+                              <div class="mt-3">
+                                 <label for="language">Language</label>
+                                 {{ form_document.language }}
+                              </div>
 
-                           <!-- Language -->
-                           <div class="mt-3">
-                              <label for="language">Language</label>
-                              {{ form_document.language }}
-                           </div>
+                              <!-- Files-->
+                              <div class="mt-3">
+                                 <label for="files">Files</label>
+                                 {{ form_document.files }}
+                              </div>
 
-                           <!-- Files-->
-                           <div class="mt-3">
-                              <label for="files">Files</label>
-                              {{ form_document.files }}
-                           </div>
+                              <!-- file_name -->
+                              <div class="mt-3">
+                                 <label for="file_name">File Name</label>
+                                 {{ form_document.file_name }}
+                              </div>
 
-                           <!-- file_name -->
-                           <div class="mt-3">
-                              <label for="file_name">File Name</label>
-                              {{ form_document.file_name }}
-                           </div>
-
-                           <!-- Local ID -->
-                           <div class="mt-3">
-                              <label for="local_id">Local ID</label>
-                              {{ form_document.local_id }}
-                           </div>
-                           
-                           <!-- Document SSTD ID -->
-                           <div class="mt-3">
-                              <label for="doc_std_id">Document STD ID</label>
-                              {{ form_document.document_std_id }}
-                           </div>
+                              <!-- Local ID -->
+                              <div class="mt-3">
+                                 <label for="local_id">Local ID</label>
+                                 {{ form_document.local_id }}
+                              </div>
+                              
+                              <!-- Document SSTD ID -->
+                              <div class="mt-3">
+                                 <label for="doc_std_id">Document STD ID</label>
+                                 {{ form_document.document_std_id }}
+                              </div>
 
                            <!-- Create Product Document -->
-                           <button type="submit" class="btn btn-light text-light my-4">Create Document</button>
+                           <button type="submit" name="source" value="bundle" class="btn btn-light text-light my-4">Create Document</button>
                         </form>
                      </div>
                   </div>
@@ -1424,8 +1416,8 @@
             </div>
          </div>
 
-         <!-- Data Product Modal -->
-         <div class="modal fade" id="data_product_modal">
+   <!-- Data Product Modal -->
+   <div class="modal fade" id="data_product_modal">
     <div class="modal-dialog modal-xl">
         <div class="modal-content">
             <div class="modal-header">
@@ -1519,10 +1511,13 @@
     </div>
 </div>
 
+
+
+
    
 
    
-    <!-- External Contents -->
+    <!--     Contents -->
    {% elif bundle_type == "External" %}
    <div class="external-theme">
    <style>
@@ -1572,8 +1567,7 @@
                      Global settings in your bundle handled in the Investigation Area OR Context Product references can be edited here.
          
                      <div class="col p-1 m-3 mt-0 text-center">
-                           <!--'Help' is removed as it does not serve any required functionality -->
-                           {% comment %} <a type="button" class="btn btn-info text-light" href="" aria-expanded="true" style="box-shadow: none;">Help</a> {% endcomment %}
+
                            <a class="btn btn-danger text-light btn-keep-bg" data-bs-toggle="modal" data-bs-target="#delete_modal" aria-expanded="false" style="box-shadow: none;">Delete Bundle</a>
                            <a class="btn btn-success text-light btn-keep-bg" href="{% url 'build:bundle_download' bundle.pk %}" aria-expanded="false" style="box-shadow: none;">Download Bundle</a>
                            
@@ -1607,7 +1601,7 @@
                   <!-- Tabs -->
                   <ul class="nav nav-fill nav-underline nav-justified" role="tablist">
                      <li class="nav-item" role="presentation">
-                        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#doc_collection" type="button" role="tab" aria-selected="true">Document Collection</button>
+                        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#doc_collection" type="button" role="tab" aria-selected="true">Document</button>
                      </li>
 
                      {% for add_collection in additional_collections_set %}
@@ -1627,39 +1621,75 @@
                      <div class="tab-pane fade show active" id="doc_collection" role="tabpanel">
                         <br>
                         <div class="col-md-12">
-                           <div class="card">
-                           <div class="card-header">
-                              <p> This is your document collection. In this collection, you should plan to put any documentation you 
-                                 think users of your data might need to understand and use your data. Typically users would expect to 
-                                 find a user guide and/or supporting documentation in this collection. Helpful movies, graphics, or 
-                                 other non-standard archive formats could also be here if they helpful for documenting your bundle.</p>
-                           </div>
-                           <button type="button" class="btn btn-light text-light" data-bs-toggle="modal" data-bs-target="#document_modal">Add Document Products</button>
+                           <div class="card mb-3 border-0 bg-light">
+                              <div class="card-body p-3">
+                                 <p class="mb-3 small text-muted">
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    This is a data collection. In this collection, you will build labels for data products. Data products are also known as Product_Observational and include things like tables of data, image files, etc. Currently ELSA will help you build templates for data tables. Types of tables ELSA knows how to label are:
+                                    <ul class="mt-2 mb-0">
+                                       <li>Table Binary</li>
+                                       <li>Table Character</li>
+                                       <li>Table Delimited</li>
+                                    </ul>
+                                 </p>
+                                 
+                                 <div class="d-flex justify-content-between align-items-center border-top pt-3 mt-2">
+                                    <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#data_product_modal">
+                                       <i class="bi bi-plus-lg me-1"></i> Add Data Products
+                                    </button>
+                                 </div>
+                              </div>
                            </div>
                         </div>
 
                         <!-- List of Product Documents -->
-                        <div class="modal-footer justify-content-start mt-3">
+                        <div class="row g-3">
                            {% if documents %}
-                              {% for document in documents %}
-                              <div class="card snippet-card ms-0 me-3">
-                                 <div class="card-body">
-                                    <h5 class="card-title">{{ document.document_name }}</h5>
-                                    <p class="card-text">Acknowledgment list: {{ document.acknowledgement_text }}</p>
-                                    <p class="card-text">Author list: {{ document.author_list }}</p>
-                                    <p class="card-text">Copyright: {{ document.copyright }}</p>
-                                    <p class="card-text">Description: {{ document.description }}</p>
-                                    <p class="card-text">Document editions: {{ document.document_editions }}</p>
-                                    <p class="card-text">DOI: {{ document.doi }}</p>
-                                    <p class="card-text">Editor list {{ document.editor_list }}</p>
-                                    <p class="card-text">Publication date: {{ document.publication_date }}</p>
-                                    <p class="card-text">revision ID: {{ document.revision_id }}</p>
-                                    <a href="{%  url 'build:product_document' bundle.pk document.pk %}" class="btn btn-light text-light d-flex justify-content-center">Edit</a>
+                                 {% for document in documents %}
+                                 <div class="col-12 col-md-6 col-lg-4 mb-3">
+                                    <div class="card h-100 mt-3 shadow-sm border">
+                                       <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
+                                             <div class="d-flex align-items-center text-truncate" style="max-width: 85%;">
+                                                <i class="bi bi-file-earmark-text text-secondary me-2"></i>
+                                                <span class="fw-bold text-truncate" title="{{ document.document_name }}">
+                                                   {{ document.document_name }}
+                                                </span>
+                                             </div>
+                                             <button class="btn btn-sm btn-link text-decoration-none text-dark p-0" type="button" data-bs-toggle="collapse" data-bs-target="#doc_details_{{ document.pk }}" aria-expanded="false">
+                                                <i class="bi bi-chevron-down"></i>
+                                             </button>
+                                       </div>
+
+                                       <div class="collapse" id="doc_details_{{ document.pk }}">
+                                             <div class="card-body bg-light small">
+                                                <div class="mb-2">
+                                                   <strong>Authors:</strong><br>
+                                                   <span class="text-muted">{{ document.author_list}}</span>
+                                                </div>
+                                                <div class="mb-2">
+                                                   <strong>Date:</strong> {{ document.publication_date }}
+                                                </div>
+                                                <div class="mb-3">
+                                                   <strong>Description:</strong><br>
+                                                   <span class="text-muted">{{ document.description|truncatechars:80 }}</span>
+                                                </div>
+                                                
+                                                <div class="d-grid">
+                                                   <a href="{% url 'build:product_document' bundle.pk document.pk %}" class="btn btn-sm btn-outline-secondary">
+                                                         Edit Details
+                                                   </a>
+                                                </div>
+                                             </div>
+                                       </div>
+                                    </div>
                                  </div>
-                              </div>
-                              {% endfor%}
+                                 {% endfor %}
                            {% else %}
-                           <p>No Documents Found</p>
+                                 <div class="col-12">
+                                    <div class="alert alert-light text-center border text-muted">
+                                       No documents!
+                                    </div>
+                                 </div>
                            {% endif %}
                         </div>
                      </div>
@@ -1670,96 +1700,139 @@
                      <div class="tab-pane fade" id="additional_{{ add_collection.collection_name }}_collection" role="tabpanel">
                         <br>
                         <div class="col-md-12">
-                           <div class="card">
-                           <div class="card-header">
-                              <p> This is a data collection. In this collection, you will build labels for data products. Data products are also 
-                                 known as Product_Observational and include things like tables of data, image files, etc. Currently ELSA 
-                                 will help you build tempaltes for data tables. Types of tables ELSA knows how to label are:
+                           <div class="card mb-3 border-0 bg-light">
+                              <div class="card-body p-3">
+                                 <p class="mb-3 small text-muted">
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    This is a data collection. In this collection, you will build labels for data products. Data products are also known as Product_Observational and include things like tables of data, image files, etc. Currently ELSA will help you build templates for data tables. Types of tables ELSA knows how to label are:
+                                    <ul class="mt-2 mb-0">
+                                       <li>Table Binary</li>
+                                       <li>Table Character</li>
+                                       <li>Table Delimited</li>
+                                    </ul>
+                                 </p>
                                  
-                                 <ul>
-                                    <li>Table Binary</li>
-                                    <li>Table Character</li>
-                                    <li>Table Delimited</li>
+                                 <div class="d-flex justify-content-between align-items-center border-top pt-3 mt-2">
+                                    <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#data_product_modal">
+                                       <i class="bi bi-plus-lg me-1"></i> Add Data Products
+                                    </button>
 
-                              </p>
-                           </div>
-                           <button type="button" class="btn btn-light text-light" data-bs-toggle="modal" data-bs-target="#data_product_modal">Add Data Products</button>
-
-
-                           </div>
-
-                        </div>
-
-
-                        <!-- List of Collections -->
-                        <div class="modal-footer justify-content-start mt-3 mb-3">
-                           {% for data in data_set %}
-                           {% if data.collection == add_collection %}
-                              {% if data.collection == add_collection %}
-                           <div class="card snippet-card ms-0 me-3">
-                              <div class="card-body">
-                                 <h5 class="card-title">{{ data.name }}</h5>
-                                 <p class="card-text">Processing Level: {{ data.processing_level }}</p>
-                                 <p class="card-text">Data Type: {{ data.data_type }}</p>
-                                 <div class="btn-group">
-                                    <a href="{%  url 'build:table_creation' bundle.pk data.pk %}" class="btn btn-light text-light d-flex justify-content-center me-1">Edit Table</a>
-                                    {% for table_type in table_set %}
-                                       {% for table in table_type %}
-                                          {% if table.data == data %}
-                                             <a href="{%  url 'build:edit_table_field_information' bundle.pk data.pk table.pk %}" class="btn btn-light text-light d-flex justify-content-center">Edit Field(s)</a>
-                                          {% endif %}
-                                       {% endfor %}
-                                    {% endfor %}
-                                    
+                                       
+                                       <button type="button" class="btn btn-sm btn-danger btn-keep-bg" data-bs-toggle="modal" data-bs-target="#deleteCollectionModal{{ add_collection.id }}">
+                                          <i class="bi bi-trash me-1"></i> Delete Collection
+                                       </button>
                                  </div>
                               </div>
                            </div>
-                           {% endif %}
+                        </div>
+
+                        <!-- Delete Collection Modal -->
+                        <div class="modal fade" id="deleteCollectionModal{{ add_collection.id }}" tabindex="-1" aria-labelledby="deleteCollectionModalLabel{{ add_collection.id }}" aria-hidden="true">
+                           <div class="modal-dialog modal-dialog-centered">
+                              <div class="modal-content">
+                                    <div class="modal-header border-0 pb-0">
+                                       <h5 class="modal-title text-danger" id="deleteCollectionModalLabel{{ add_collection.id }}">
+                                          <i class="bi bi-exclamation-triangle me-2"></i>Delete Collection
+                                       </h5>
+                                       <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                       <p>Are you sure you want to delete the <strong>{{ add_collection.collection_name }}</strong> collection?</p>
+                                       <p class="text-muted small mb-0"><i class="bi bi-info-circle me-1"></i>This action cannot be undone.</p>
+                                    </div>
+                                    <div class="modal-footer border-0">
+                                       <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                       <form action="{% url 'build:delete_collection' pk_bundle=bundle.id pk_collection=add_collection.id %}" method="post" class="mb-0">
+                                          {% csrf_token %}
+                                          <button type="submit" class="btn btn-danger btn-keep-bg">
+                                                <i class="bi bi-trash me-1"></i> Delete Collection
+                                          </button>
+                                       </form>
+                                    </div>
+                              </div>
+                           </div>
+                        </div>
+
+                        <div class="modal-footer justify-content-start mt-3 mb-3">
+                           {% for data in data_set %}
+                              {% if data.collection == add_collection %}
+                              <div class="card snippet-card ms-0 me-3">
+                                 <div class="card-body">
+                                    <h5 class="card-title">{{ data.name }}</h5>
+                                    <p class="card-text">Processing Level: {{ data.processing_level }}</p>
+                                    <p class="card-text">Data Type: {{ data.data_type }}</p>
+                                    <div class="btn-group">
+                                       <a href="{% url 'build:table_creation' bundle.pk data.pk %}" class="btn btn-light text-light d-flex justify-content-center me-1">Edit Table</a>
+                                       {% for table_type in table_set %}
+                                          {% for table in table_type %}
+                                             {% if table.data == data %}
+                                                <a href="{% url 'build:edit_table_field_information' bundle.pk data.pk table.pk %}" class="btn btn-light text-light d-flex justify-content-center">Edit Field(s)</a>
+                                             {% endif %}
+                                          {% endfor %}
+                                       {% endfor %}
+                                    </div>
+                                 </div>
+                              </div>
                               {% endif %}
                            {% endfor %}
                         </div>
 
-<!-- NetCDF Upload Section -->
-<div class="card mt-3 mb-3">
-    <h5 class="card-header bg-secondary text-light text-center">Upload NetCDF File(s)</h5>
-    <div class="card-body">
+                        <div class="card mt-3 mb-3 border">
+                           <h5 class="card-header bg-secondary text-light text-center">NetCDF Files</h5>
+                           <div class="card-body">
+                              <div class="row">
+                                 <div class="col-md-6 border-end">
+                                    <h6 class="card-title text-center mb-3">Upload New File</h6>
+                                    <form method="post" enctype="multipart/form-data">
+                                       {% csrf_token %}
+                                       {% if form_netcdf.errors %}
+                                          <div class="alert alert-danger" role="alert">
+                                             <strong>Please correct the errors below:</strong>
+                                             {{ form_netcdf.errors }}
+                                          </div>
+                                       {% endif %}
+                                       <div class="mb-3">
+                                          {{ form_netcdf.netcdf_files.label_tag }}
+                                          {{ form_netcdf.netcdf_files }}
+                                          <div class="form-text">You can select multiple .nc files.</div>
+                                       </div>
+                                       <button type="submit" class="btn btn-success w-100">Upload</button>
+                                    </form>
+                                 </div>
 
-        <form method="post" enctype="multipart/form-data">
-            {% csrf_token %}
+                                 <div class="col-md-6">
+                                    <div class="d-flex justify-content-between align-items-center mb-3 px-1">
+                                       <h6 class="card-title mb-0">Uploaded Files</h6>
+                                       <span class="badge rounded-pill bg-light text-dark border">
+                                          {{ netcdf_files|length }} File{% if netcdf_files|length != 1 %}s{% endif %}
+                                       </span>
+                                    </div>
+                                    
+                                    <div class="border rounded bg-light" style="max-height: 250px; overflow-y: auto;">
+                                       <ul class="list-group list-group-flush">
+                                          {% for nc_file in netcdf_files %}
+                                          <li class="list-group-item d-flex justify-content-between align-items-center px-2 bg-transparent">
+                                             <div class="d-flex align-items-center" style="overflow:hidden;">
+                                                <i class="bi bi-file-earmark-code me-2 text-secondary"></i>
+                                                <a href="{{ nc_file.file.url }}" target="_blank" class="text-truncate" style="max-width: 200px;" title="{{ nc_file.title }}">
+                                                   {{ nc_file.title }}
+                                                </a>
+                                             </div>
+                                             <span class="text-muted small">{{ nc_file.uploaded_at|date:"M d, H:i" }}</span>
+                                          </li>
+                                          {% empty %}
+                                          <li class="list-group-item text-center text-muted py-4 bg-transparent">
+                                             <i class="bi bi-folder2-open display-6 d-block mb-2"></i>
+                                             No NetCDF files uploaded yet.
+                                          </li>
+                                          {% endfor %}
+                                       </ul>
+                                    </div>
+                                 </div>
+                              </div>
+                           </div>
+                        </div>
 
-            {% if form_netcdf.errors %}
-                <div class="alert alert-danger" role="alert">
-                    <strong>Please correct the errors below:</strong>
-                    {{ form_netcdf.errors }}
-                </div>
-            {% endif %}
-
-            <div class="mb-3">
-                {{ form_netcdf.netcdf_files.label_tag }}
-                {{ form_netcdf.netcdf_files }}
-                <div class="form-text">You can select multiple .nc files.</div>
-            </div>
-
-            <button type="submit" class="btn btn-success">Upload</button>
-        </form>
-    </div>
-</div>
-
-<div class="card mt-3">
-    <h5 class="card-header bg-secondary text-light text-center">Uploaded NetCDF Files</h5>
-    <div class="card-body">
-        <ul class="list-group">
-            {% for nc_file in netcdf_files %}
-            <li class="list-group-item d-flex justify-content-between align-items-center">
-                <a href="{{ nc_file.file.url }}" target="_blank">{{ nc_file.title }}</a>
-                <span class="text-muted">{{ nc_file.uploaded_at|date:"Y-m-d H:i" }}</span>
-            </li>
-            {% empty %}
-            <li class="list-group-item">No NetCDF files uploaded yet.</li>
-            {% endfor %}
-        </ul>
-    </div>
-</div>
                      </div>
                      {% endfor %}
 
@@ -2827,98 +2900,117 @@
 
                   <div class="modal-body pt-0">
                      <div class="row px-2">
-                        <form action="{% url 'build:bundle' bundle.pk %}" method="post" id="form_document">
-                           {% csrf_token %}
+                        {% if bundle.bundle_type == "External" %}
+                        <!-- Reusing the document form from the external walkthrough -->
+                           <form action="{% url 'build:annex_collection_document' bundle.pk %}" method="post" id="form_document">
+                              {% csrf_token %}
+                              <input type="hidden" name="form_name" value="document_form">
+                              {% for field in annex_form_document %}
+                                 <div class="mb-3">
+                                    {{ field.label_tag }}
+                                    {{ field }}
+                                    {% if field.errors %}
+                                    <div class="text-danger">{{ field.errors }}</div>
+                                    {% endif %}
+                                 </div>
+                              {% endfor %}
+                              <button type="submit" name="source" value="bundle" class="btn btn-light text-light my-4">Add Document</button>
+                           </form>
+                        {% else %}                        
+                           <form action="{% url 'build:bundle' bundle.pk %}" method="post" id="form_document">
+                              {% csrf_token %}
+                              <input type="hidden" name="form_name" value="document_form">
 
-                           <!-- Name-->
-                           <div class="mt-3">
-                              <label for="doc_name">Document Name</label>
-                              {{ form_document.document_name }}
-                           </div>
+                                 <!-- Name-->
+                                 <div class="mt-3">
+                                    <label for="doc_name">Document Name</label>
+                                    {{ form_document.document_name }}
+                                 </div>
 
-                           <!-- Publication Date -->
-                           <div class="mt-3">
-                              <label for="pub_date">Publication Date</label>
-                              {{ form_document.publication_date }}
-                           </div>
+                                 <!-- Publication Date -->
+                                 <div class="mt-3">
+                                    <label for="pub_date">Publication Date</label>
+                                    {{ form_document.publication_date }}
+                                 </div>
 
-                           <!-- Author List -->
-                           <div class="mt-3">
-                              <label for="auth_list">Author List</label>
-                              {{ form_document.author_list }}
-                           </div>
+                                 <!-- Author List -->
+                                 <div class="mt-3">
+                                    <label for="auth_list">Author List</label>
+                                    {{ form_document.author_list }}
+                                 </div>
 
-                           <!-- Copyright-->
-                           <div class="mt-3">
-                              <label for="copyright">Copyright</label>
-                              {{ form_document.copyright }}
-                           </div>
+                                 <!-- Copyright-->
+                                 <div class="mt-3">
+                                    <label for="copyright">Copyright</label>
+                                    {{ form_document.copyright }}
+                                 </div>
 
-                           <!-- Description -->
-                           <div class="mt-3">
-                              <label for="description">Description</label>
-                              {{ form_document.description }}
-                           </div>
+                                 <!-- Description -->
+                                 <div class="mt-3">
+                                    <label for="description">Description</label>
+                                    {{ form_document.description }}
+                                 </div>
 
-                           <!-- Revision ID-->
-                           <div class="mt-3">
-                              <label for="rev_id">Revision ID</label>
-                              {{ form_document.revision_id }}
-                           </div>
-                           
-                           <!-- document_editions -->
-                           <div class="mt-3">
-                              <label for="doc_editions">Document Editions</label>
-                              {{ form_document.document_editions }}
-                           </div>
-                           
-                           <!-- edition name -->
-                           <div class="mt-3">
-                              <label for="edition_name">Edition Name</label>
-                              {{ form_document.edition_name }}
-                           </div>
+                                 <!-- Revision ID-->
+                                 <div class="mt-3">
+                                    <label for="rev_id">Revision ID</label>
+                                    {{ form_document.revision_id }}
+                                 </div>
+                                 
+                                 <!-- document_editions -->
+                                 <div class="mt-3">
+                                    <label for="doc_editions">Document Editions</label>
+                                    {{ form_document.document_editions }}
+                                 </div>
+                                 
+                                 <!-- edition name -->
+                                 <div class="mt-3">
+                                    <label for="edition_name">Edition Name</label>
+                                    {{ form_document.edition_name }}
+                                 </div>
 
-                           <!-- Language -->
-                           <div class="mt-3">
-                              <label for="language">Language</label>
-                              {{ form_document.language }}
-                           </div>
+                                 <!-- Language -->
+                                 <div class="mt-3">
+                                    <label for="language">Language</label>
+                                    {{ form_document.language }}
+                                 </div>
 
-                           <!-- Files-->
-                           <div class="mt-3">
-                              <label for="files">Files</label>
-                              {{ form_document.files }}
-                           </div>
+                                 <!-- Files-->
+                                 <div class="mt-3">
+                                    <label for="files">Files</label>
+                                    {{ form_document.files }}
+                                 </div>
 
-                           <!-- file_name -->
-                           <div class="mt-3">
-                              <label for="file_name">File Name</label>
-                              {{ form_document.file_name }}
-                           </div>
+                                 <!-- file_name -->
+                                 <div class="mt-3">
+                                    <label for="file_name">File Name</label>
+                                    {{ form_document.file_name }}
+                                 </div>
 
-                           <!-- Local ID -->
-                           <div class="mt-3">
-                              <label for="local_id">Local ID</label>
-                              {{ form_document.local_id }}
-                           </div>
-                           
-                           <!-- Document SSTD ID -->
-                           <div class="mt-3">
-                              <label for="doc_std_id">Document STD ID</label>
-                              {{ form_document.document_std_id }}
-                           </div>
+                                 <!-- Local ID -->
+                                 <div class="mt-3">
+                                    <label for="local_id">Local ID</label>
+                                    {{ form_document.local_id }}
+                                 </div>
+                                 
+                                 <!-- Document SSTD ID -->
+                                 <div class="mt-3">
+                                    <label for="doc_std_id">Document STD ID</label>
+                                    {{ form_document.document_std_id }}
+                                 </div>
 
-                           <!-- Create Product Document -->
-                           <button type="submit" class="btn btn-light text-light my-4">Create Document</button>
-                        </form>
+                              <!-- Create Product Document -->
+                              <button type="submit" class="btn btn-light text-light my-4">Create Document</button>
+                           </form>
+                        {% endif %}
                      </div>
                   </div>
                </div>
             </div>
          </div>
 
-         <!-- Data Product Modal -->
-         <div class="modal fade" id="data_product_modal">
+   <!-- Data Product Modal -->
+   <div class="modal fade" id="data_product_modal">
     <div class="modal-dialog modal-xl">
         <div class="modal-content">
             <div class="modal-header">
