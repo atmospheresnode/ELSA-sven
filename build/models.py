@@ -2034,7 +2034,7 @@ class Bundle(models.Model):
     def save(self, *args, **kwargs):
         if not self.bundleID:
             # Auto-generate bundleID from bundle_name
-            self.bundleID = self.bundle_name.lower().replace(" ", "_")
+            self.bundleID = self.name.lower().replace(" ", "_")
         super().save(*args, **kwargs)
 
     def __str__(self):
