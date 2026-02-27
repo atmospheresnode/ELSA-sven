@@ -47,7 +47,11 @@ Product Document Editor
     <!-- Document Header -->
     <div class="row mb-4">
         <div class="col-md-12">
-            <div class="card text-center" style="background: linear-gradient(135deg, #008B8B, #004d4d); color: white; border-radius: 12px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);">
+            {% if bundle.bundle_type == "External" %} 
+                <div class="card text-center" style="background: linear-gradient(135deg, #0e76bd, #094b77); color: white; border-radius: 12px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);">
+            {% else %}
+                <div class="card text-center" style="background: linear-gradient(135deg, #008B8B, #004d4d); color: white; border-radius: 12px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);">
+            {% endif %}    
                 <div class="card-header" style="border-bottom: 1px solid rgba(255, 255, 255, 0.2);">
                     <h2 class="mb-0">{{ product_document.document_name }}</h2>
                 </div>
@@ -60,7 +64,11 @@ Product Document Editor
         <!-- Form Column -->
         <div class="col-md-8">
             <div class="card shadow-sm">
-                <div class="card-header text-center" style="background-color: #2F4F4F; color: white;">
+                {% if bundle.bundle_type == "External" %} 
+                    <div class="card-header text-center" style="background-color: #0e76bd; color: white;">
+                {% else %}
+                    <div class="card-header text-center" style="background-color: #2F4F4F; color: white;">
+                {% endif %}
                     <h4>Product Document Editor</h4>
                 </div>
                 <div class="card-body">
@@ -82,7 +90,11 @@ Product Document Editor
         <!-- Help Column -->
         <div class="col-md-4">
             <div class="card bg-light border-primary">
-                <div class="card-header text-center" style="background-color: #2F4F4F; color: white;">
+                {% if bundle.bundle_type == "External" %}
+                    <div class="card-header text-center" style="background-color: #0e76bd; color: white;">
+                {% else %}
+                    <div class="card-header text-center" style="background-color: #2F4F4F; color: white;">
+                {% endif %}
                     <h4>Document Guidelines</h4>
                 </div>
                 <div class="card-body">
@@ -100,7 +112,11 @@ Product Document Editor
     <!-- Document Products Section -->
     <div class="row mb-3">
         <div class="col-md-12">
-            <div class="card text-center" style="background-color: #2F4F4F; color: white;">
+            {% if bundle.bundle_type == "External" %}
+                <div class="card text-center" style="background-color: #0e76bd; color: white;">
+            {% else %}
+                <div class="card text-center" style="background-color: #2F4F4F; color: white;">
+            {% endif %}
                 <div class="card-header">
                     <h3>Current Document Products</h3>
                 </div>
@@ -210,7 +226,11 @@ Product Document Editor
     <!-- Back Button -->
     <div class="row mt-3 mb-1">
         <div class="col-md-12 d-flex align-items-center justify-content-center">
-        <a href="{% url 'build:bundle' bundle.pk %}" class="btn bi bi-arrow-return-left" style="background-color: #008B8B; color: white;">
+        {% if bundle.bundle_type == "External" %}
+            <a href="{% url 'build:bundle' bundle.pk %}" class="btn bi" style="background-color: #0e76bd; color: white;">
+        {% else %}   
+            <a href="{% url 'build:bundle' bundle.pk %}" class="btn bi" style="background-color: #008B8B; color: white;">
+        {% endif %}
             <i class="fa fa-arrow-circle-left" style="margin-right: 5px;"></i> Bundle Details
         </a>
         </div>
