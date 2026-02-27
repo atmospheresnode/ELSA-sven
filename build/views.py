@@ -18,6 +18,7 @@ from django import forms
 from django.forms import modelformset_factory
 from django.views.generic.edit import UpdateView, DeleteView
 from django.contrib import messages
+import shutil
 import lxml.etree as ET # for XML parsing- Added by Rupak
 # from lxml import etree # debug product obs only
 
@@ -1065,6 +1066,12 @@ def bundle(request, pk_bundle):
                     
         # After ELSAs friend hits submit, if the forms are completed correctly, we should enter
         # this conditional.  We must do [] things: 1. Create the Document model object, 2. Add a Product_Document label to the Document Collection, 3. Add the Document as an Internal_Reference to the proper labels (like Product_Bundle and Product_Collection).
+        
+        if bundle.bundle_type == "External":
+            form_document = AnnexProductDocumentForm(request.POST or None, request.FILES or None)
+        else:
+            form_document = ProductDocumentForm(request.POST or None, request.FILES or None)
+            
         if form_document.is_valid():
             print('\n\n---------------------- DOCUMENT INFO -------------------------------')
             print('form_product_document is valid')  
@@ -1130,7 +1137,9 @@ def bundle(request, pk_bundle):
             for modification_history in modification_history_set:
                 write_into_label(modification_history, product_document, None)
 
-            form_document = ProductDocumentForm()
+
+
+            #form_document = ProductDocumentForm()
             context_dict['form_document'] = form_document
             context_dict['documents'] = Product_Document.objects.filter(bundle=bundle)
 
@@ -2600,7 +2609,7 @@ def document(request, pk_bundle):
 
 def annex_product_document(request, pk_bundle, pk_product_document):
     # Get Bundle
-    bundle = Bundle.object.get(pk=pk_bundle)
+    bundle = Bundle.objects.get(pk=pk_bundle)
 
     # Make sure the user is logged in with the same account associated with the bundle
     if request.user == bundle.user:
@@ -2610,7 +2619,7 @@ def annex_product_document(request, pk_bundle, pk_product_document):
 
         initial_product = {
             "document_name":product_document.document_name,
-            #"document_id":product_document.document_id,
+            "document_id":product_document.document_id,
             "local_id":product_document.local_id,     
             "file_name":product_document.file_name,
             "comment":product_document.comment,
@@ -2620,8 +2629,7 @@ def annex_product_document(request, pk_bundle, pk_product_document):
         annex_form_product_document = AnnexProductDocumentForm(request.POST or None, initial=initial_product)
         documents = Product_Document.objects.filter(bundle=bundle)
         
-        if annex_form_product_document.is_valid() and annex_form_product_document.has_changed:
-            
+        if annex_form_product_document.is_valid() and annex_form_product_document.has_changed():
             
             all_labels = []
             product_bundle = Product_Bundle.objects.get(bundle=bundle)
@@ -2645,16 +2653,19 @@ def annex_product_document(request, pk_bundle, pk_product_document):
                 elif change == 'local_id':
                     product_document.local_id = annex_form_product_document['local_id'].value()
 
-                # elif change == 'description':
-                #    product_document.description = annex_form_product_document['description'].value()
+                elif change == "document_id":
+                    product_document.document_id = annex_form_product_document['document_id'].value()
                 
                 elif change == 'file_name':
                     product_document.file_name = annex_form_product_document['file_name'].value()
+                
+                elif change == 'comment':
+                    product_document.comment = annex_form_product_document['comment'].value()
 
                 elif change == 'document_std_id':
                     product_document.document_std_id = annex_form_product_document['document_std_id'].value()
                 
-                product_document.save()
+            product_document.save()
 
             label_root = label_list[1]
 
@@ -2663,7 +2674,7 @@ def annex_product_document(request, pk_bundle, pk_product_document):
 
             # Build document label
             print(' ... Building Label ... ')
-            label_root = product_document.fill_base_case(label_root)
+            label_root = product_document.fill_label(label_root)
             #alias.alias_list.append(label_root)
 
             # Close appropriate label(s)
@@ -2700,27 +2711,38 @@ def product_document(request, pk_bundle, pk_product_document):
         print('authorized user: {}'.format(request.user))
 
         product_document = Product_Document.objects.get(pk=pk_product_document)
-
-        initial_product = {
-            'author_list':product_document.author_list,
-            'copyright':product_document.copyright,
-            'description':product_document.description,
-            'document_editions':product_document.document_editions,
-            'document_name':product_document.document_name,
-            'publication_date':product_document.publication_date,
-            'revision_id':product_document.revision_id,
-            'edition_name': product_document.edition_name,
-            'language': product_document.language,
-            'files': product_document.files,
-            'file_name': product_document.file_name,
-            'local_id': product_document.local_id,
-            'document_std_id': product_document.document_std_id,
-        }
-
-        form_product_document = ProductDocumentForm(request.POST or None, initial=initial_product)
+        if bundle.bundle_type == "External":
+            initial_product = {
+                "document_name":product_document.document_name,
+                "document_id":product_document.document_id,
+                "local_id":product_document.local_id,     
+                "file_name":product_document.file_name,
+                "comment":product_document.comment,
+                "document_std_id":product_document.document_std_id,
+            }
+            # When editing the product document via the bundle page, we want to use the external form for external bundles
+            form_product_document = AnnexProductDocumentForm(request.POST or None, initial=initial_product)
+        else:
+            initial_product = {
+                'author_list':product_document.author_list,
+                'copyright':product_document.copyright,
+                'description':product_document.description,
+                'document_editions':product_document.document_editions,
+                'document_name':product_document.document_name,
+                'publication_date':product_document.publication_date,
+                'revision_id':product_document.revision_id,
+                'edition_name': product_document.edition_name,
+                'language': product_document.language,
+                'files': product_document.files,
+                'file_name': product_document.file_name,
+                'local_id': product_document.local_id,
+                'document_std_id': product_document.document_std_id,
+            }
+            
+            form_product_document = ProductDocumentForm(request.POST or None, initial=initial_product)
         documents = Product_Document.objects.filter(bundle=bundle)
         
-        if form_product_document.is_valid and form_product_document.has_changed:
+        if form_product_document.is_valid() and form_product_document.has_changed():
             
             
             all_labels = []
@@ -2776,7 +2798,13 @@ def product_document(request, pk_bundle, pk_product_document):
                     product_document.local_id = form_product_document['local_id'].value()
                 
                 elif change == 'document_std_id':
-                    product_document.document_std_id = form_product_document['document_std_id'].value()
+                    product_document.document_std_id = form_product_document['document_std_id'].value()    
+
+                elif change == "document_id":
+                    product_document.document_id = form_product_document['document_id'].value()
+                
+                elif change == 'comment':
+                    product_document.comment = form_product_document['comment'].value()
                 
                 product_document.save()
 
@@ -2787,7 +2815,7 @@ def product_document(request, pk_bundle, pk_product_document):
 
             # Build document label
             print(' ... Building Label ... ')
-            label_root = product_document.fill_base_case(label_root)
+            label_root = product_document.fill_label(label_root)
             #alias.alias_list.append(label_root)
 
             # Close appropriate label(s)
@@ -3766,7 +3794,7 @@ def variable_coord_to_product(bundle):
     # Include Sub-Directories
     # =========================================================================================
     # 1. Set the top-level working directory
-    working_dir = os.path.join(settings.ARCHIVE_DIR, 'netcdf')
+    working_dir = os.path.join(settings.BASE_DIR, 'uploads')
 
     # 2. Recursively find all .nc files
     os.environ['HDF5_USE_FILE_LOCKING'] = 'FALSE'
@@ -3943,3 +3971,80 @@ def variable_coord_to_product(bundle):
             # Close appropriate label(s)
             print(' ... Closing Label ... ')
             close_label(output_path, label_root, label_list[2])
+
+        # Temporary remove netcdf file before figuring out how to move it
+        os.remove(nc_path)
+        print('removed: ' + nc_path)
+
+
+
+@login_required
+def delete_collection(request, pk_bundle, pk_collection):
+    print('\n\n')
+    print('-------------------------------------------------------------------------')
+    print('\n\n------------------ Delete Collection with ELSA -------------------')
+    print('------------------------------ DEBUGGER ---------------------------------')
+    
+    bundle = Bundle.objects.get(pk=pk_bundle)
+
+    if request.user == bundle.user:
+        print('authorized user')
+
+        collection_to_delete = get_object_or_404(AdditionalCollections, pk=pk_collection)
+
+        # Grab the XML file path BEFORE deleting the record
+        try:
+            xml_path = collection_to_delete.label()
+            print('XML path to delete: {}'.format(xml_path))
+        except Exception as e:
+            xml_path = None
+            print('Could not get label path: {}'.format(e))
+
+        # Grab the archive directory path BEFORE deleting the record
+        # Structure: ARCHIVE_DIR / username / bundle.directory() / collection_name /
+        try:
+            archive_dir = os.path.join(
+                settings.ARCHIVE_DIR,
+                bundle.user.username,
+                bundle.directory(),
+                collection_to_delete.collection_name
+            )
+            print('Archive directory to delete: {}'.format(archive_dir))
+        except Exception as e:
+            archive_dir = None
+            print('Could not get archive directory path: {}'.format(e))
+
+        # Remove from label
+        try:
+            product_bundle = Product_Bundle.objects.get(bundle=bundle)
+            product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+            remove_from_label(collection_to_delete, product_bundle, product_collections_list)
+        except Exception as e:
+            print('Note: Could not remove from label or not applicable. Error: {}'.format(e))
+
+        # Delete the XML file from disk
+        if xml_path:
+            if os.path.exists(xml_path):
+                os.remove(xml_path)
+                print('Deleted XML file: {}'.format(xml_path))
+            else:
+                print('XML file not found at path: {}'.format(xml_path))
+
+        # Delete the archive directory and all its contents
+        if archive_dir:
+            if os.path.exists(archive_dir):
+                shutil.rmtree(archive_dir)
+                print('Deleted archive directory: {}'.format(archive_dir))
+            else:
+                print('Archive directory not found at path: {}'.format(archive_dir))
+
+        # Delete the collection from the database
+        collection_to_delete.delete()
+
+        return HttpResponseRedirect('/elsa/build/' + str(pk_bundle) + '/')
+
+    else:
+        print('unauthorized user attempting to access a restricted area.')
+        return redirect('main:restricted_access')
+
+        

@@ -83,10 +83,8 @@ urlpatterns = [
     re_path(r'^(?P<pk_bundle>\d+)/collection_document/$', views.collection_document, name='collection_document'),
     re_path(r'^(?P<pk_bundle>\d+)/collection_additional/$', views.collection_additional, name='collection_additional'),
     re_path(r'^(?P<pk_bundle>\d+)/annex_collection_document/$', views.annex_collection_document, name='annex_collection_document'),
-
-
-
-
+    re_path(r'^(?P<pk_bundle>\d+)/collection/(?P<pk_collection>[-\w]+)/delete/$', views.delete_collection, name='delete_collection'),
+    
     # Data
 #    url(r'^(?P<pk_bundle>\d+)/data/$', views.data, name='data'),
     re_path(r'^(?P<pk_bundle>\d+)/data/(?P<pk_data>\d+)/$', views.data, name='data'),    
