@@ -18,6 +18,7 @@ from django import forms
 from django.forms import modelformset_factory
 from django.views.generic.edit import UpdateView, DeleteView
 from django.contrib import messages
+import shutil
 import lxml.etree as ET # for XML parsing- Added by Rupak
 # from lxml import etree # debug product obs only
 
@@ -3943,3 +3944,74 @@ def variable_coord_to_product(bundle):
             # Close appropriate label(s)
             print(' ... Closing Label ... ')
             close_label(output_path, label_root, label_list[2])
+
+
+
+@login_required
+def delete_collection(request, pk_bundle, pk_collection):
+    print('\n\n')
+    print('-------------------------------------------------------------------------')
+    print('\n\n------------------ Delete Collection with ELSA -------------------')
+    print('------------------------------ DEBUGGER ---------------------------------')
+    
+    bundle = Bundle.objects.get(pk=pk_bundle)
+
+    if request.user == bundle.user:
+        print('authorized user')
+
+        collection_to_delete = get_object_or_404(AdditionalCollections, pk=pk_collection)
+
+        # Grab the XML file path BEFORE deleting the record
+        try:
+            xml_path = collection_to_delete.label()
+            print('XML path to delete: {}'.format(xml_path))
+        except Exception as e:
+            xml_path = None
+            print('Could not get label path: {}'.format(e))
+
+        # Grab the archive directory path BEFORE deleting the record
+        # Structure: ARCHIVE_DIR / username / bundle.directory() / collection_name /
+        try:
+            archive_dir = os.path.join(
+                settings.ARCHIVE_DIR,
+                bundle.user.username,
+                bundle.directory(),
+                collection_to_delete.collection_name
+            )
+            print('Archive directory to delete: {}'.format(archive_dir))
+        except Exception as e:
+            archive_dir = None
+            print('Could not get archive directory path: {}'.format(e))
+
+        # Remove from label
+        try:
+            product_bundle = Product_Bundle.objects.get(bundle=bundle)
+            product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+            remove_from_label(collection_to_delete, product_bundle, product_collections_list)
+        except Exception as e:
+            print('Note: Could not remove from label or not applicable. Error: {}'.format(e))
+
+        # Delete the XML file from disk
+        if xml_path:
+            if os.path.exists(xml_path):
+                os.remove(xml_path)
+                print('Deleted XML file: {}'.format(xml_path))
+            else:
+                print('XML file not found at path: {}'.format(xml_path))
+
+        # Delete the archive directory and all its contents
+        if archive_dir:
+            if os.path.exists(archive_dir):
+                shutil.rmtree(archive_dir)
+                print('Deleted archive directory: {}'.format(archive_dir))
+            else:
+                print('Archive directory not found at path: {}'.format(archive_dir))
+
+        # Delete the collection from the database
+        collection_to_delete.delete()
+
+        return HttpResponseRedirect('/elsa/build/' + str(pk_bundle) + '/')
+
+    else:
+        print('unauthorized user attempting to access a restricted area.')
+        return redirect('main:restricted_access')
