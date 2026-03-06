@@ -39,6 +39,9 @@ import os
 import logging  # This document logs errors and is currently not in use in ELSA.  Feel free to develop this (k).
 from datetime import date
 
+import re
+import requests
+from django.core.cache import cache
 
 #logger = loggin.getLogger(__name__)
 
@@ -90,9 +93,74 @@ def contact_from_login(request):
 
     return render(request, 'main/index.html', context_dict)
 
-# about describes elsa's purpose, goal, etc.
+def parse_release_notes(markdown_text):
+    releases = []
+
+    release_section_match = re.search(
+        r'## \*\*Release Notes\*\*(.*?)(?=\n## |\Z)',
+        markdown_text,
+        re.DOTALL
+    )
+    if not release_section_match:
+        return releases
+
+    release_section = release_section_match.group(1)
+    version_blocks = re.split(r'(?=>\s*###\s*\*\*Version)', release_section)
+
+    for block in version_blocks:
+        header_match = re.search(
+            r'>\s*###\s*\*\*Version\s+([\d\.]+(?:\s*-\s*[\d\.]+)?)\s*\(([^)]+)\)\*\*',
+            block
+        )
+        if not header_match:
+            continue
+
+        version = header_match.group(1).strip()
+        date = header_match.group(2).strip()
+
+        raw_bullets = re.findall(r'^-\s+(.+)$', block, re.MULTILINE)
+
+        bullets = []
+        for b in raw_bullets:
+            if ':' in b:
+                parts = b.split(':', 1)
+                bullets.append('<strong>{}:</strong>{}'.format(parts[0], parts[1]))
+            else:
+                bullets.append(b)
+
+        releases.append({
+            'version': version,
+            'date': date,
+            'bullets': bullets,
+        })
+
+    return releases
+
+
 def about(request):
-    return render(request, 'main/about.html', {})
+    releases = cache.get('elsa_release_notes')
+
+    if not releases:
+        try:
+            response = requests.get(
+                'https://raw.githubusercontent.com/atmospheresnode/ELSA-sven/main/README.md',
+                timeout=5
+            )
+            response.raise_for_status()
+            releases = parse_release_notes(response.text)
+            cache.set('elsa_release_notes', releases, 60 * 60)  # cache for 1 hour
+            print('README fetched and parsed successfully. {} versions found.'.format(len(releases)))
+        except Exception as e:
+            releases = None
+            print('Could not fetch README: {}'.format(e))
+
+    current = releases[0] if releases else None
+    previous = releases[1:6] if releases else []
+
+    return render(request, 'main/about.html', {
+        'current_release': current,
+        'previous_releases': previous,
+    })
 
 # contact provides a means for users to contact atmos through contact cards and direct email to elsa@nmsu.edu.
 def contact(request):

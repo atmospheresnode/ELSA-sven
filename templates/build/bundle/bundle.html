@@ -198,7 +198,7 @@
                   <!-- Tabs -->
                   <ul class="nav nav-fill nav-underline nav-justified" role="tablist">
                      <li class="nav-item" role="presentation">
-                        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#doc_collection" type="button" role="tab" aria-selected="true">Document</button>
+                        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#doc_collection" type="button" role="tab" aria-selected="true">document</button>
                      </li>
 
                      {% for add_collection in additional_collections_set %}
@@ -272,8 +272,40 @@
                                        <li>Table Delimited</li>
                                     </ul>
                                  </p>
+                              <div class="d-flex justify-content-between align-items-center p-2">
+                              <button type="button" class="btn btn-light text-light" data-bs-toggle="modal" data-bs-target="#data_product_modal">
+                                 Add Data Products
+                              </button>
+                              <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#archiveDeleteCollectionModal{{ add_collection.id }}">
+                                 <i class="bi bi-trash me-1"></i> Delete Collection
+                              </button>
+                           </div>
+
+                           <!-- Delete Collection Modal -->
+                           <div class="modal fade" id="archiveDeleteCollectionModal{{ add_collection.id }}" tabindex="-1" aria-labelledby="archiveDeleteCollectionModalLabel{{ add_collection.id }}" aria-hidden="true">
+                              <div class="modal-dialog modal-dialog-centered">
+                                 <div class="modal-content">
+                                       <div class="modal-header border-0 pb-0">
+                                          <h5 class="modal-title text-danger" id="archiveDeleteCollectionModalLabel{{ add_collection.id }}">
+                                             <i class="bi bi-exclamation-triangle me-2"></i>Delete Collection
+                                          </h5>
+                                          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                       </div>
+                                       <div class="modal-body">
+                                          <p>Are you sure you want to delete the <strong>{{ add_collection.collection_name }}</strong> collection?</p>
+                                          <p class="text-muted small mb-0"><i class="bi bi-info-circle me-1"></i>This action cannot be undone.</p>
+                                       </div>
+                                       <div class="modal-footer border-0">
+                                          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                          <form action="{% url 'build:delete_collection' pk_bundle=bundle.id pk_collection=add_collection.id %}" method="post" class="mb-0">
+                                             {% csrf_token %}
+                                             <button type="submit" class="btn btn-danger btn-keep-bg">
+                                                   <i class="bi bi-trash me-1"></i> Delete Collection
+                                             </button>
+                                          </form>
+                                       </div>
+                                 </div>
                               </div>
-                              <button type="button" class="btn btn-light text-light" data-bs-toggle="modal" data-bs-target="#data_product_modal">Add Data Products</button>
                            </div>
                         </div>
 
@@ -307,7 +339,7 @@
                      <!-- Add Collections -->
                      <div class="tab-pane fade" id="add_a_collection" role="tabpanel">
                         <div class="row px-2">
-                           <form action="{% url 'build:bundle' bundle.pk %}" method="post" id="form_collections" >
+                           <form action="{% url 'build:bundle' bundle.pk %}" method="post" id="form_collections" novalidate>
                               {% csrf_token %}
 
                               <div class="mt-3">
@@ -1601,7 +1633,7 @@
                   <!-- Tabs -->
                   <ul class="nav nav-fill nav-underline nav-justified" role="tablist">
                      <li class="nav-item" role="presentation">
-                        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#doc_collection" type="button" role="tab" aria-selected="true">Document</button>
+                        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#doc_collection" type="button" role="tab" aria-selected="true">document</button>
                      </li>
 
                      {% for add_collection in additional_collections_set %}
