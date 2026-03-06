@@ -3794,7 +3794,7 @@ def variable_coord_to_product(bundle):
     # Include Sub-Directories
     # =========================================================================================
     # 1. Set the top-level working directory
-    working_dir = os.path.join(settings.ARCHIVE_DIR, 'netcdf')
+    working_dir = os.path.join(settings.BASE_DIR, 'uploads')
 
     # 2. Recursively find all .nc files
     os.environ['HDF5_USE_FILE_LOCKING'] = 'FALSE'
@@ -3972,6 +3972,10 @@ def variable_coord_to_product(bundle):
             print(' ... Closing Label ... ')
             close_label(output_path, label_root, label_list[2])
 
+        # Temporary remove netcdf file before figuring out how to move it
+        os.remove(nc_path)
+        print('removed: ' + nc_path)
+
 
 
 @login_required
@@ -4042,3 +4046,5 @@ def delete_collection(request, pk_bundle, pk_collection):
     else:
         print('unauthorized user attempting to access a restricted area.')
         return redirect('main:restricted_access')
+
+        
