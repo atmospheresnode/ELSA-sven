@@ -241,43 +241,67 @@ Educational Labeling System @Atmospheres
         </div>
 
         <div id="releases" class="tab-pane">
-            <section class="text-lg-left section-content">
-                <h2>Release Notes</h2>
-                <p>Track the latest updates, improvements, and bug fixes for ELSA. For a complete history, please visit our official GitHub repository.</p>
-                <hr>
+        <section class="text-lg-left section-content">
+        <h2>Release Notes</h2>
+        <p>Track the latest updates, improvements, and bug fixes for ELSA. For a complete history, please visit our official <a href="https://github.com/atmospheresnode/ELSA-sven?tab=readme-ov-file#readme" target="_blank" rel="noopener noreferrer">GitHub repository</a>.</p>
+        <hr>
 
-                <div class="release-version">
-                    <h4>
-                        Version 1.24.0 
-                        <span class="current-version-badge">Current Version</span>
-                        <small class="text-muted">– February 13, 2026</small>
-                    </h4>
-                    <h5><strong>New Features and Improvements</strong></h5>
-                    <ul>
-                        <li>
-                            <strong>External Bundle View:</strong> The document product list in the collections card has been updated to a collapsible list format.
-                        </li>
-                        <li>
-                            <strong>External Bundle Walkthrough:</strong> Updated instructional text and resolved an issue with the bundle flow when adding citation information.
-                        </li>
-                        <li>
-                            <strong>External Bundle View:</strong> Document Products now use the correct form for external bundles.
-                        </li>
-                    </ul>
-                </div>
-            </section>
+        {% if current_release %}
 
-            <div style="text-align: center; margin-top: 2rem;">
-                <a href="https://github.com/atmospheresnode/ELSA-sven?tab=readme-ov-file#readme" 
-                class="btn button" 
-                style="font-size: 1.1rem; padding: 10px 20px;"
-                target="_blank" 
-                rel="noopener noreferrer">
-                    <i class="fa fa-github"></i> View Full Release History on GitHub
-                </a>
+            <!-- Current Version -->
+            <div class="release-version">
+                <h4>
+                    Version {{ current_release.version }}
+                    <span class="release-badge badge-feature">Current Version</span>
+                    <small class="text-muted">– {{ current_release.date }}</small>
+                </h4>
+                <ul>
+                    {% for bullet in current_release.bullets %}
+                    <li>{{ bullet|safe }}</li>
+                    {% endfor %}
+                </ul>
             </div>
 
-        </div>
+            {% if previous_releases %}
+            <hr>
+            <h5 class="text-muted mb-3">Previous Versions</h5>
+
+            {% for release in previous_releases %}
+            <div class="release-version">
+                <h4>
+                    Version {{ release.version }}
+                    <small class="text-muted">– {{ release.date }}</small>
+                </h4>
+                <ul>
+                    {% for bullet in release.bullets %}
+                    <li>{{ bullet|safe }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% if not forloop.last %}<hr>{% endif %}
+            {% endfor %}
+            {% endif %}
+
+        {% else %}
+            <div class="alert alert-warning">
+                <i class="fa fa-exclamation-triangle me-2"></i>
+                Could not load release notes from GitHub. Please check the
+                <a href="https://github.com/atmospheresnode/ELSA-sven?tab=readme-ov-file#readme" target="_blank" rel="noopener noreferrer">README directly</a>.
+            </div>
+        {% endif %}
+
+    </section>
+
+    <div style="text-align: center; margin-top: 2rem;">
+        <a href="https://github.com/atmospheresnode/ELSA-sven?tab=readme-ov-file#readme"
+           class="btn button"
+           style="font-size: 1.1rem; padding: 10px 20px;"
+           target="_blank"
+           rel="noopener noreferrer">
+            <i class="fa fa-github"></i> View Full Release History on GitHub
+        </a>
+    </div>
+</div>
 
 </div>
 
