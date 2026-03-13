@@ -120,12 +120,12 @@ urlpatterns = [
     #delete product document
     re_path(r'^(?P<pk_bundle>\d+)/document/product_document/(?P<pk_product_document>\d+)/delete/$', views.delete_product_document, name='delete_product_document'),    
 
-
+    #delete net cdf file
+    re_path(r'^(?P<pk_bundle>\d+)/netcdf/bulk_delete/$', views.bulk_delete_netcdf, name='bulk_delete_netcdf'),
+    
+    
     # XML_Schema --> A view that no one sees.  So no xml_schema url.  This might even be removed 
     # completely from PDS4
 
 
-
-
-    # TEST
 ]
