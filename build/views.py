@@ -907,7 +907,10 @@ def bundle(request, pk_bundle):
         
                 if files_uploaded:
                     print('before call')
-                    variable_coord_to_product(bundle=bundle)
+                    try:
+                        variable_coord_to_product(bundle=bundle)
+                    except Exception as e:
+                        print('Warning: Could not process NetCDF file: {}'.format(e))
                     print('after call')
                 
                 return HttpResponseRedirect('/elsa/build/' + str(bundle.pk) + '/')
@@ -1213,6 +1216,37 @@ def bundle(request, pk_bundle):
     else:
             print('unauthorized user attempting to access a restricted area.')
             return redirect('main:restricted_access')
+        
+
+
+# This view is for select and deleting NetCDF files.  It deletes both the files on disk and the NetCDFFile model objects in the database.  This view is accessed by a bulk delete button on the bundle detail page that appears when a user selects multiple NetCDF files to delete and then clicks the bulk delete button.
+@login_required
+def bulk_delete_netcdf(request, pk_bundle):
+    bundle = Bundle.objects.get(pk=pk_bundle)
+
+    if request.user == bundle.user:
+        if request.method == 'POST':
+            selected_ids = request.POST.getlist('selected_netcdf')
+            print('Bulk deleting NetCDF files: {}'.format(selected_ids))
+
+            for netcdf_id in selected_ids:
+                try:
+                    netcdf_file = NetCDFFile.objects.get(pk=netcdf_id, bundle=bundle)
+                    # Delete file from disk
+                    if netcdf_file.file and os.path.exists(netcdf_file.file.path):
+                        os.remove(netcdf_file.file.path)
+                        print('Deleted file: {}'.format(netcdf_file.file.path))
+                    # Delete DB record
+                    netcdf_file.delete()
+                except NetCDFFile.DoesNotExist:
+                    print('NetCDF file {} not found, skipping.'.format(netcdf_id))
+                except Exception as e:
+                    print('Error deleting NetCDF file {}: {}'.format(netcdf_id, e))
+
+        return HttpResponseRedirect('/elsa/build/' + str(pk_bundle) + '/')
+
+    else:
+        return redirect('main:restricted_access')
 
 
 # The bundle_download view is not a page.  When a user chooses to download a bundle, this 'view' manifests and begins the downloading process.
