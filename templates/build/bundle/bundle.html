@@ -198,7 +198,7 @@
                   <!-- Tabs -->
                   <ul class="nav nav-fill nav-underline nav-justified" role="tablist">
                      <li class="nav-item" role="presentation">
-                        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#doc_collection" type="button" role="tab" aria-selected="true">Document</button>
+                        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#doc_collection" type="button" role="tab" aria-selected="true">document</button>
                      </li>
 
                      {% for add_collection in additional_collections_set %}
@@ -272,8 +272,40 @@
                                        <li>Table Delimited</li>
                                     </ul>
                                  </p>
+                              <div class="d-flex justify-content-between align-items-center p-2">
+                              <button type="button" class="btn btn-light text-light" data-bs-toggle="modal" data-bs-target="#data_product_modal">
+                                 Add Data Products
+                              </button>
+                              <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#archiveDeleteCollectionModal{{ add_collection.id }}">
+                                 <i class="bi bi-trash me-1"></i> Delete Collection
+                              </button>
+                           </div>
+
+                           <!-- Delete Collection Modal -->
+                           <div class="modal fade" id="archiveDeleteCollectionModal{{ add_collection.id }}" tabindex="-1" aria-labelledby="archiveDeleteCollectionModalLabel{{ add_collection.id }}" aria-hidden="true">
+                              <div class="modal-dialog modal-dialog-centered">
+                                 <div class="modal-content">
+                                       <div class="modal-header border-0 pb-0">
+                                          <h5 class="modal-title text-danger" id="archiveDeleteCollectionModalLabel{{ add_collection.id }}">
+                                             <i class="bi bi-exclamation-triangle me-2"></i>Delete Collection
+                                          </h5>
+                                          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                       </div>
+                                       <div class="modal-body">
+                                          <p>Are you sure you want to delete the <strong>{{ add_collection.collection_name }}</strong> collection?</p>
+                                          <p class="text-muted small mb-0"><i class="bi bi-info-circle me-1"></i>This action cannot be undone.</p>
+                                       </div>
+                                       <div class="modal-footer border-0">
+                                          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                          <form action="{% url 'build:delete_collection' pk_bundle=bundle.id pk_collection=add_collection.id %}" method="post" class="mb-0">
+                                             {% csrf_token %}
+                                             <button type="submit" class="btn btn-danger btn-keep-bg">
+                                                   <i class="bi bi-trash me-1"></i> Delete Collection
+                                             </button>
+                                          </form>
+                                       </div>
+                                 </div>
                               </div>
-                              <button type="button" class="btn btn-light text-light" data-bs-toggle="modal" data-bs-target="#data_product_modal">Add Data Products</button>
                            </div>
                         </div>
 
@@ -307,7 +339,7 @@
                      <!-- Add Collections -->
                      <div class="tab-pane fade" id="add_a_collection" role="tabpanel">
                         <div class="row px-2">
-                           <form action="{% url 'build:bundle' bundle.pk %}" method="post" id="form_collections" >
+                           <form action="{% url 'build:bundle' bundle.pk %}" method="post" id="form_collections" novalidate>
                               {% csrf_token %}
 
                               <div class="mt-3">
@@ -456,8 +488,7 @@
                </h5>
                <div class="card-body m-3 mt-2">
                   <h5 class="text-center mb-3" id="fileName">File Content</h5>
-                  <pre><code id="fileContent"></code></pre>
-               </div>
+                  <pre style="max-height: 800px; overflow-y: auto; overflow-x: auto;"><code id="fileContent"></code></pre>               </div>
             </div>
          </div>
 
@@ -1601,7 +1632,7 @@
                   <!-- Tabs -->
                   <ul class="nav nav-fill nav-underline nav-justified" role="tablist">
                      <li class="nav-item" role="presentation">
-                        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#doc_collection" type="button" role="tab" aria-selected="true">Document</button>
+                        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#doc_collection" type="button" role="tab" aria-selected="true">document</button>
                      </li>
 
                      {% for add_collection in additional_collections_set %}
@@ -1661,25 +1692,60 @@
                                        </div>
 
                                        <div class="collapse" id="doc_details_{{ document.pk }}">
-                                             <div class="card-body bg-light small">
-                                                <div class="mb-2">
-                                                   <strong>Authors:</strong><br>
-                                                   <span class="text-muted">{{ document.author_list}}</span>
-                                                </div>
-                                                <div class="mb-2">
-                                                   <strong>Date:</strong> {{ document.publication_date }}
-                                                </div>
-                                                <div class="mb-3">
-                                                   <strong>Description:</strong><br>
-                                                   <span class="text-muted">{{ document.description|truncatechars:80 }}</span>
-                                                </div>
-                                                
-                                                <div class="d-grid">
-                                                   <a href="{% url 'build:product_document' bundle.pk document.pk %}" class="btn btn-sm btn-outline-secondary">
-                                                         Edit Details
-                                                   </a>
+                                          <div class="card-body bg-light small">
+                                             <div class="mb-2">
+                                                   <strong>Document ID:</strong><br>
+                                                   <span class="text-muted">{{ document.document_id|default:"—" }}</span>
+                                             </div>
+                                             <div class="mb-2">
+                                                   <strong>File Name:</strong><br>
+                                                   <span class="text-muted">{{ document.file_name|default:"—" }}</span>
+                                             </div>
+                                             <div class="mb-2">
+                                                   <strong>File Format:</strong><br>
+                                                   <span class="text-muted">{{ document.document_std_id|default:"—" }}</span>
+                                             </div>
+                                             <div class="mb-3">
+                                                   <strong>Comment:</strong><br>
+                                                   <span class="text-muted">{{ document.comment|default:"—" }}</span>
+                                             </div>
+                                             <div class="d-flex gap-2">
+                                                <a href="{% url 'build:product_document' bundle.pk document.pk %}" class="btn btn-sm btn-outline-secondary w-100">
+                                                   Edit Details
+                                                </a>
+                                                <button type="button" class="btn btn-sm btn-outline-danger btn-keep-bg w-100"
+                                                   data-bs-toggle="modal" data-bs-target="#deleteDocModal{{ document.pk }}">
+                                                   <i class="bi bi-trash me-1"></i> Delete
+                                                </button>
+                                             </div>
+
+                                             <!-- Delete Document Modal -->
+                                             <div class="modal fade" id="deleteDocModal{{ document.pk }}" tabindex="-1" aria-hidden="true">
+                                                <div class="modal-dialog modal-dialog-centered">
+                                                   <div class="modal-content">
+                                                         <div class="modal-header border-0 pb-0">
+                                                            <h5 class="modal-title text-danger">
+                                                               <i class="bi bi-exclamation-triangle me-2"></i> Delete Document
+                                                            </h5>
+                                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                         </div>
+                                                         <div class="modal-body">
+                                                            <p>Are you sure you want to delete <strong>{{ document.document_name }}</strong>?</p>
+                                                            <p class="text-muted small mb-0"><i class="bi bi-info-circle me-1"></i> This action cannot be undone.</p>
+                                                         </div>
+                                                         <div class="modal-footer border-0">
+                                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                            <form action="{% url 'build:delete_product_document' bundle.pk document.pk %}" method="post" class="mb-0">
+                                                               {% csrf_token %}
+                                                               <button type="submit" class="btn btn-danger btn-keep-bg">
+                                                                     <i class="bi bi-trash me-1"></i> Delete
+                                                               </button>
+                                                            </form>
+                                                         </div>
+                                                   </div>
                                                 </div>
                                              </div>
+                                          </div>
                                        </div>
                                     </div>
                                  </div>
@@ -1801,34 +1867,82 @@
                                  </div>
 
                                  <div class="col-md-6">
+                                 <form method="post" action="{% url 'build:bulk_delete_netcdf' pk_bundle=bundle.id %}" id="bulkDeleteNetCDFForm">
+                                    {% csrf_token %}
+
                                     <div class="d-flex justify-content-between align-items-center mb-3 px-1">
-                                       <h6 class="card-title mb-0">Uploaded Files</h6>
-                                       <span class="badge rounded-pill bg-light text-dark border">
-                                          {{ netcdf_files|length }} File{% if netcdf_files|length != 1 %}s{% endif %}
-                                       </span>
+                                          <div class="d-flex align-items-center gap-2">
+                                             <h6 class="card-title mb-0">Uploaded Files</h6>
+                                             <span class="badge rounded-pill bg-light text-dark border">
+                                                {{ netcdf_files|length }} File{% if netcdf_files|length != 1 %}s{% endif %}
+                                             </span>
+                                          </div>
+                                          {% if netcdf_files %}
+                                          <div class="d-flex align-items-center gap-2">
+                                             <button type="button" class="btn btn-sm btn-outline-secondary" id="selectAllWrapper" style="display: none;" onclick="toggleSelectAll()">
+                                                Select All
+                                             </button>
+                                             <button type="button" class="btn btn-sm btn-outline-danger btn-keep-bg"
+                                                data-bs-toggle="modal" data-bs-target="#bulkDeleteNetCDFModal"
+                                                id="bulkDeleteBtn" disabled>
+                                                <i class="bi bi-trash me-1"></i> Delete Selected
+                                             </button>
+                                          </div>
+                                          {% endif %}
                                     </div>
-                                    
+
                                     <div class="border rounded bg-light" style="max-height: 250px; overflow-y: auto;">
-                                       <ul class="list-group list-group-flush">
-                                          {% for nc_file in netcdf_files %}
-                                          <li class="list-group-item d-flex justify-content-between align-items-center px-2 bg-transparent">
-                                             <div class="d-flex align-items-center" style="overflow:hidden;">
-                                                <i class="bi bi-file-earmark-code me-2 text-secondary"></i>
-                                                <a href="{{ nc_file.file.url }}" target="_blank" class="text-truncate" style="max-width: 200px;" title="{{ nc_file.title }}">
-                                                   {{ nc_file.title }}
-                                                </a>
-                                             </div>
-                                             <span class="text-muted small">{{ nc_file.uploaded_at|date:"M d, H:i" }}</span>
-                                          </li>
-                                          {% empty %}
-                                          <li class="list-group-item text-center text-muted py-4 bg-transparent">
-                                             <i class="bi bi-folder2-open display-6 d-block mb-2"></i>
-                                             No NetCDF files uploaded yet.
-                                          </li>
-                                          {% endfor %}
-                                       </ul>
+                                          <ul class="list-group list-group-flush">
+                                             {% for nc_file in netcdf_files %}
+                                             <li class="list-group-item d-flex justify-content-between align-items-center px-2 bg-transparent">
+                                                <div class="d-flex align-items-center" style="overflow:hidden;">
+                                                      <input class="form-check-input me-2 netcdf-checkbox" type="checkbox"
+                                                         name="selected_netcdf" value="{{ nc_file.pk }}" id="nc_{{ nc_file.pk }}">
+                                                      <i class="bi bi-file-earmark-code me-2 text-secondary"></i>
+                                                      <a href="{{ nc_file.file.url }}" target="_blank" class="text-truncate"
+                                                         style="max-width: 180px;" title="{{ nc_file.title }}">
+                                                         {{ nc_file.title }}
+                                                      </a>
+                                                </div>
+                                                <span class="text-muted small">{{ nc_file.uploaded_at|date:"M d, H:i" }}</span>
+                                             </li>
+                                             {% empty %}
+                                             <li class="list-group-item text-center text-muted py-4 bg-transparent">
+                                                <i class="bi bi-folder2-open display-6 d-block mb-2"></i>
+                                                No NetCDF files uploaded yet.
+                                             </li>
+                                             {% endfor %}
+                                          </ul>
                                     </div>
-                                 </div>
+
+                                    <!-- Bulk Delete Confirmation Modal -->
+                                    <div class="modal fade" id="bulkDeleteNetCDFModal" tabindex="-1" aria-hidden="true">
+                                          <div class="modal-dialog modal-dialog-centered">
+                                             <div class="modal-content">
+                                                <div class="modal-header border-0 pb-0">
+                                                      <h5 class="modal-title text-danger">
+                                                         <i class="bi bi-exclamation-triangle me-2"></i>Delete Selected Files
+                                                      </h5>
+                                                      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                      <p>Are you sure you want to delete the selected NetCDF files?</p>
+                                                      <p class="text-muted small mb-0">
+                                                         <i class="bi bi-info-circle me-1"></i>This action cannot be undone.
+                                                      </p>
+                                                </div>
+                                                <div class="modal-footer border-0">
+                                                      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                      <button type="submit" class="btn btn-danger btn-keep-bg">
+                                                         <i class="bi bi-trash me-1"></i> Delete
+                                                      </button>
+                                                </div>
+                                             </div>
+                                          </div>
+                                    </div>
+
+                                 </form>
+                              </div>
                               </div>
                            </div>
                         </div>
@@ -1970,7 +2084,7 @@
                   {% endif %}
                </span>
             </div>
-            <!-- Investigations -->
+            {% comment %} <!-- Investigations -->
             <div class="list-group-item d-flex justify-content-between align-items-center">
                Investigations
                <span class="badge {% if status_dict.Investigations %}bg-success{% else %}bg-danger{% endif %}">
@@ -1980,8 +2094,8 @@
                      <i class="bi bi-x-circle-fill"></i>
                   {% endif %}
                </span>
-            </div>
-            <!-- Hosts -->
+            </div> {% endcomment %}
+            {% comment %} <!-- Hosts -->
             <div class="list-group-item d-flex justify-content-between align-items-center">
                Hosts
                <span class="badge {% if status_dict.Hosts %}bg-success{% else %}bg-danger{% endif %}">
@@ -2003,7 +2117,7 @@
                      <i class="bi bi-x-circle-fill"></i>
                   {% endif %}
                </span>
-            </div>
+            </div> {% endcomment %}
 
             <!-- Targets -->
             <div class="list-group-item d-flex justify-content-between align-items-center">
@@ -2016,9 +2130,30 @@
                   {% endif %}
                </span>
             </div>
+
+             <!-- Submit Button -->
+         {% with all_complete=status_dict.Alias|yesno:"True,False" %}
+         <div class="list-group-item p-3">
+            {% if status_dict.Alias and status_dict.Modification_History and status_dict.Citation_Information and status_dict.Investigations and status_dict.Hosts and status_dict.Instruments and status_dict.Targets %}
+               <button type="button" class="btn btn-success w-100" data-bs-toggle="modal" data-bs-target="#submitBundleModal">
+                  <i class="bi bi-send me-2"></i> Submit Bundle
+               </button>
+            {% else %}
+               <button type="button" class="btn btn-secondary w-100" disabled
+                  data-bs-toggle="tooltip" data-bs-placement="top"
+                  title="Complete all required sections before submitting.">
+                  <i class="bi bi-send me-2"></i> Submit Bundle
+               </button>
+               <p class="text-muted small text-center mt-2 mb-0">Complete all sections above to enable submission!</p>
+            {% endif %}
          </div>
+         {% endwith %}
       </div>
-      </div>
+   </div>
+    </div>
+       
+      
+      
 
 
 
@@ -2034,7 +2169,7 @@
                </h5>
                <div class="card-body m-3 mt-2">
                   <h5 class="text-center mb-3" id="fileName">File Content</h5>
-                  <pre><code id="fileContent"></code></pre>
+                 <pre style="max-height: 800px; overflow-y: auto; overflow-x: auto;"><code id="fileContent"></code></pre>
                </div>
             </div>
          </div>
@@ -2069,6 +2204,33 @@
             const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
             tooltipTriggerList.forEach(function (tooltipTriggerEl) {
                new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+
+
+
+            // NetCDF select all + enable/disable delete button
+            const netcdfCheckboxes = document.querySelectorAll('.netcdf-checkbox');
+            const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+
+            function toggleSelectAll() {
+               const allChecked = [...netcdfCheckboxes].every(c => c.checked);
+               netcdfCheckboxes.forEach(cb => cb.checked = !allChecked);
+               updateBulkDeleteBtn();
+            }
+
+            function updateBulkDeleteBtn() {
+               const checkedCount = document.querySelectorAll('.netcdf-checkbox:checked').length;
+               const anyChecked = checkedCount > 0;
+               if (bulkDeleteBtn) bulkDeleteBtn.disabled = !anyChecked;
+
+               const selectAllWrapper = document.getElementById('selectAllWrapper');
+               if (selectAllWrapper) selectAllWrapper.style.display = anyChecked ? 'inline-block' : 'none';
+            }
+
+            netcdfCheckboxes.forEach(cb => {
+               cb.addEventListener('change', function() {
+                  updateBulkDeleteBtn();
+               });
             });
          </script>
       </div>
