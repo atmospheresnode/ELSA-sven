@@ -20,11 +20,17 @@ This section provides a timeline of ELSA's release history, highlighting key upd
 
 ### **Current Version** 
 
+> ### **Version 1.27.0 (March 13, 2026)**
+- External Bundle Viewer: Vertical scrolling has been added to the XML viewer.
+- External Bundle: Delete feature implemented for uploaded NetCDF files.
+- External Bundle: Bundle Progress card now includes a Submit button that activates when all required sections are complete.
+- Document Product: Collapsible card fields have been updated to display accurate information.
+
+### **Previous Versions** 
 > ### **Version 1.26.0 (March 06, 2026)**
 - Archive Bundle: Implemented deletion of additional collections.
 - About Page: Automated the Release Notes section to pull directly from the GitHub README.
-
-### **Previous Versions** 
+  
 > ### **Version 1.25.0 (February 27, 2026)**
 - Archive Bundle View: Fixed issue with the "Add Document Products" button not working.
 - Product Document Editor: Fixed issue with users not being able to edit document products.
