@@ -2285,13 +2285,12 @@ class Collections(models.Model):
 
 class AdditionalCollections(models.Model):
     #External Data Collections should only be of type external
-    #Temporarily commenting out other collection options since the archive bundles doesn't need it at the moment. -Nicholas
     ADDITIONAL_COLLECTION_CHOICES = (
-        # ('Data','Data'),
-        # ('Browse','Browse'),
-        # ('Geometry','Geometry'),
-        # ('Calibration','Calibration'),
         ('External', 'External'),
+        ('Data','Data'),
+        ('Browse','Browse'),
+        ('Geometry','Geometry'),
+        ('Calibration','Calibration'),   
     )
     
     bundle = models.ForeignKey(Bundle, on_delete=models.CASCADE)
@@ -2335,11 +2334,15 @@ class AdditionalCollections(models.Model):
         return collection_directory
 
     def name_label_case(self):
+        bundle_id = self.bundle.bundleID.strip().lower().replace(' ', '_')
+        collection_id = self.collection_name.lower().replace(' ', '_')
 
+        return f'collection_{bundle_id}_{collection_id}.xml'
         # Append cleaned collection name to name edit for Product_Collection xml label
-        name_edit = self.collection_name.lower()
-        name_edit = 'collection_{}.xml'.format(name_edit)
-        return name_edit
+        # name_edit = self.collection_name.lower()
+        # name_edit = 'collection_{}.xml'.format(name_edit)
+        # return name_edit
+        
 
     def label(self):
         return os.path.join(self.directory(), self.name_label_case())
@@ -2370,12 +2373,15 @@ class AdditionalCollections(models.Model):
         
         logical_identifier = Identification_Area.find('{}logical_identifier'.format(NAMESPACE))
 
-        if self.bundle.bundle_type == "External":
-            authority = "nasa:pds-ama"
-        else:
-            authority = self.bundle.user.userprofile.agency
+        # if self.bundle.bundle_type == "External":
+        #     authority = "nasa:pds-ama"
+        # else:
+        #     authority = self.bundle.user.userprofile.agency
 
-        logical_identifier.text = f'urn:{authority}:{self.bundle.name_lid_case()}:{self.collection_name}'
+        # Just get the lid straight from the bundle since it's already formatted, has the authority, and alternative bundleID (if applicable).
+        logical_identifier.text = f"{self.bundle.lid()}:{self.collection_name.lower()}"
+
+        #logical_identifier.text = f'urn:{authority}:{self.bundle.name_lid_case()}:{self.collection_name}'
 
         # logical_identifier.text = 'urn:{0}:{1}:{2}'.format(self.bundle.user.userprofile.agency, self.bundle.name_lid_case(), self.collection_name) # where agency is something like nasa:pds
         
@@ -2662,7 +2668,7 @@ class Product_Bundle(models.Model):
 
     def name_file_case(self):
         # Append bundle name in file case to name edit for a Product_Bundle xml label
-        name_edit = 'bundle_{}.xml'.format(self.bundle.name_file_case())
+        name_edit = 'bundle_{}.xml'.format(self.bundle.bundleID.strip().lower().replace(' ', '_'))
         return name_edit
 
     """
@@ -3039,7 +3045,9 @@ class Product_Collection(models.Model):
         else:
             authority = self.bundle.user.userprofile.agency
 
-        logical_identifier.text = f'urn:{authority}:{self.bundle.name_lid_case()}:{self.collection.lower()}'
+        logical_identifier.text = f'{self.bundle.lid()}:{self.collection.lower()}'
+
+        #logical_identifier.text = f'urn:{authority}:{self.bundle.name_lid_case()}:{self.collection.lower()}'
         # logical_identifier.text = 'urn:{0}:{1}:{2}'.format(self.bundle.user.userprofile.agency, self.bundle.name_lid_case(
         # ), self.collection.lower())  # where agency is something like nasa:pds
 
@@ -4132,14 +4140,15 @@ class Product_Document(models.Model):
             This could be improved to ensure disallowed characters for a file name are not contained
             in name.
         """
-        name_edit = self.document_id.lower()
+        name_edit = self.document_name.lower()
         name_edit = replace_all(name_edit, ' ', '_')
         return name_edit
-
+    
     def label(self):
         """
             label returns the physical label location in ELSAs archive
         """
+        #return os.path.join(self.directory(), self.name_label_case())
         return os.path.join(self.directory(), '{}.xml'.format(self.name_label_case()))
 
     def lid(self):
