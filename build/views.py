@@ -735,7 +735,7 @@ def bundle(request, pk_bundle):
         annex_form_document = AnnexProductDocumentForm(request.POST or None)
         form_collections = CollectionsForm(request.POST or None)
         form_product_collection = ProductCollectionForm(request.POST or None)
-        form_additional_collections = AdditionalCollectionForm(request.POST or None)
+        form_additional_collections = AdditionalCollectionForm(request.POST or None, bundle=bundle)
         form_investigation = InvestigationForm(request.POST or None)
         form_target = TargetFormAll(request.POST or None, pk_bundle=pk_bundle)
         form_instrument_host = InstrumentHostForm(request.POST or None, pk_inv=None)
@@ -2292,7 +2292,8 @@ def collection_document(request, pk_bundle):
     return render(request, 'build/collections/collection_document.html', {"pk_bundle": pk_bundle, "bundle": bundle, "form_document": form_document})
 
 def collection_additional(request, pk_bundle):
-    form_additional_collections = AdditionalCollectionForm(request.POST or None)
+    bundle = Bundle.objects.get(pk=pk_bundle)
+    form_additional_collections = AdditionalCollectionForm(request.POST or None, bundle=bundle)
     return render(request, 'build/collections/collection_additional.html', {"pk_bundle": pk_bundle, "bundle": bundle, "form_additional_collections": form_additional_collections})
 
 @login_required
