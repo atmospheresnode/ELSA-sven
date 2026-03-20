@@ -1836,20 +1836,42 @@
                               <div class="row">
                                  <div class="col-md-6 border-end">
                                     <h6 class="card-title text-center mb-3">Upload New File</h6>
-                                    <form method="post" enctype="multipart/form-data">
+                                    <form id="netcdfUploadForm" method="post" enctype="multipart/form-data">
                                        {% csrf_token %}
                                        {% if form_netcdf.errors %}
-                                          <div class="alert alert-danger" role="alert">
-                                             <strong>Please correct the errors below:</strong>
-                                             {{ form_netcdf.errors }}
-                                          </div>
+                                             <div class="alert alert-danger" role="alert">
+                                                <strong>Please correct the errors below:</strong>
+                                                {{ form_netcdf.errors }}
+                                             </div>
                                        {% endif %}
                                        <div class="mb-3">
-                                          {{ form_netcdf.netcdf_files.label_tag }}
-                                          {{ form_netcdf.netcdf_files }}
-                                          <div class="form-text">You can select multiple .nc files.</div>
+                                             {{ form_netcdf.netcdf_files.label_tag }}
+                                             {{ form_netcdf.netcdf_files }}
+                                             <div class="form-text">You can select multiple .nc files.</div>
                                        </div>
-                                       <button type="submit" class="btn btn-success w-100">Upload</button>
+
+                                       <!-- File summary -->
+                                       <div id="fileSummary" class="text-muted small mb-2" style="display:none;"></div>
+
+                                       <!-- Progress bar -->
+                                       <div id="uploadProgressWrapper" style="display:none;" class="mb-3">
+                                             <div class="d-flex justify-content-between small text-muted mb-1">
+                                                <span id="uploadStatusText">Uploading...</span>
+                                                <span id="uploadPercent">0%</span>
+                                             </div>
+                                             <div class="progress" style="height: 10px;">
+                                                <div id="uploadProgressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-success"
+                                                   role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                                                </div>
+                                             </div>
+                                       </div>
+
+                                       <!-- Success message -->
+                                       <div id="uploadSuccessMsg" class="alert alert-success py-2 small" style="display:none;">
+                                             <i class="bi bi-check-circle me-1"></i> Upload complete! Reloading...
+                                       </div>
+
+                                       <button type="submit" id="uploadBtn" class="btn btn-success w-100">Upload</button>
                                     </form>
                                  </div>
 
@@ -2219,6 +2241,85 @@
                   updateBulkDeleteBtn();
                });
             });
+
+
+         // NetCDF upload progress bar
+         const netcdfForm = document.getElementById('netcdfUploadForm');
+         const uploadBtn = document.getElementById('uploadBtn');
+         const progressWrapper = document.getElementById('uploadProgressWrapper');
+         const progressBar = document.getElementById('uploadProgressBar');
+         const uploadPercent = document.getElementById('uploadPercent');
+         const uploadStatusText = document.getElementById('uploadStatusText');
+         const uploadSuccessMsg = document.getElementById('uploadSuccessMsg');
+         const fileSummary = document.getElementById('fileSummary');
+         const netcdfFileInput = document.querySelector('input[name="netcdf_files"]');
+
+         // Show file summary when files are selected
+         if (netcdfFileInput) {
+            netcdfFileInput.addEventListener('change', function() {
+               const files = this.files;
+               if (files.length > 0) {
+                     const totalSize = [...files].reduce((acc, f) => acc + f.size, 0);
+                     const sizeMB = (totalSize / (1024 * 1024)).toFixed(2);
+                     fileSummary.textContent = `${files.length} file${files.length > 1 ? 's' : ''} selected — ${sizeMB} MB total`;
+                     fileSummary.style.display = 'block';
+               } else {
+                     fileSummary.style.display = 'none';
+               }
+            });
+         }
+
+         if (netcdfForm) {
+            netcdfForm.addEventListener('submit', function(e) {
+               e.preventDefault();
+
+               const formData = new FormData(netcdfForm);
+               const xhr = new XMLHttpRequest();
+
+               // Show progress bar, disable button
+               progressWrapper.style.display = 'block';
+               uploadBtn.disabled = true;
+               uploadBtn.textContent = 'Uploading...';
+               uploadSuccessMsg.style.display = 'none';
+
+               // Track upload progress
+               xhr.upload.addEventListener('progress', function(e) {
+                     if (e.lengthComputable) {
+                        const pct = Math.round((e.loaded / e.total) * 100);
+                        progressBar.style.width = pct + '%';
+                        progressBar.setAttribute('aria-valuenow', pct);
+                        uploadPercent.textContent = pct + '%';
+                        uploadStatusText.textContent = pct < 100 ? 'Uploading...' : 'Processing...';
+                     }
+               });
+
+               // On complete
+               xhr.addEventListener('load', function() {
+                     progressBar.style.width = '100%';
+                     progressBar.classList.remove('progress-bar-animated');
+                     uploadPercent.textContent = '100%';
+                     uploadStatusText.textContent = 'Done!';
+                     uploadSuccessMsg.style.display = 'block';
+                     uploadBtn.textContent = 'Upload';
+
+                     // Reload the page after a short delay to show updated file list
+                     setTimeout(() => { window.location.reload(); }, 1500);
+               });
+
+               // On error
+               xhr.addEventListener('error', function() {
+                     uploadStatusText.textContent = 'Upload failed. Please try again.';
+                     progressBar.classList.add('bg-danger');
+                     progressBar.classList.remove('bg-success', 'progress-bar-animated');
+                     uploadBtn.disabled = false;
+                     uploadBtn.textContent = 'Upload';
+               });
+
+               xhr.open('POST', netcdfForm.action || window.location.href);
+               xhr.send(formData);
+            });
+         }
+
          </script>
       </div>
 
