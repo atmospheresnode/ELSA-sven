@@ -22,6 +22,10 @@ This section provides a timeline of ELSA's release history, highlighting key upd
 
 > ### **Version 1.28.0 (March 20, 2026)**
 - External Bundle: A real-time progress bar has been added for NetCDF file uploads.
+- Archive Bundle: Now displays the proper collection type options when creating a new collection.
+- Archive Bundle: Fixed the issue with document product XML files not having a name and overwriting each other when a new one is made.
+- External and Archive Bundles: Documents and collections now use the alternate BundleID, if provided.
+- External and Archive Bundles: Updated format for XML file names in the file viewer.
 
 ### **Previous Versions** 
 > ### **Version 1.27.0 (March 13, 2026)**
