@@ -490,6 +490,22 @@ class AdditionalCollectionForm(forms.ModelForm):
         'id': 'col_name'
     }))
 
+    def __init__(self, *args, **kwargs):
+        bundle = kwargs.pop("bundle", None)
+        super().__init__(*args, **kwargs)
+
+        if bundle and bundle.bundle_type == "External":
+            self.fields['collection_type'].choices = [
+                ('External', 'External'),
+            ]
+        else:
+            self.fields['collection_type'].choices = [
+                ('Data', 'Data'),
+                ('Browse', 'Browse'),
+                ('Geometry', 'Geometry'),
+                ('Calibration', 'Calibration'),
+            ]
+
     class Meta(object):
         model = AdditionalCollections
         exclude = ('bundle', 'collection')
