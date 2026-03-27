@@ -1,0 +1,426 @@
+Adding context product; urn:nasa:pds:context:investigation:other_investigation.relab_speclib
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:nasa:pds:context:instrument:relab.bd-vnir
+keyword ctli:Type_List.ctli:type not found in xml label for urn:nasa:pds:context:instrument:relab.bd-vnir
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:relab.bd-vnir
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:relab.bd-vnir
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:nasa:pds:context:instrument:relab.bd-vnir
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:relab.bd-vnir
+Adding context product; urn:nasa:pds:context:instrument:relab.bd-vnir
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:nasa:pds:context:instrument:relab.bc-ftir1
+keyword ctli:Type_List.ctli:type not found in xml label for urn:nasa:pds:context:instrument:relab.bc-ftir1
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:relab.bc-ftir1
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:relab.bc-ftir1
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:nasa:pds:context:instrument:relab.bc-ftir1
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:relab.bc-ftir1
+Adding context product; urn:nasa:pds:context:instrument:relab.bc-ftir1
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:nasa:pds:context:instrument:relab.bcf-ftir2
+keyword ctli:Type_List.ctli:type not found in xml label for urn:nasa:pds:context:instrument:relab.bcf-ftir2
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:relab.bcf-ftir2
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:relab.bcf-ftir2
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:nasa:pds:context:instrument:relab.bcf-ftir2
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:relab.bcf-ftir2
+Adding context product; urn:nasa:pds:context:instrument:relab.bcf-ftir2
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:laboratory.relab
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:laboratory.relab
+Adding context product; urn:nasa:pds:context:facility:laboratory.relab
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:juice.rime
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:esa:psa:context:instrument:juice.rime
+Adding context product; urn:esa:psa:context:instrument:juice.rime
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:esa:psa:context:instrument:simbio-sys.mpo
+keyword ctli:Type_List.ctli:type not found in xml label for urn:esa:psa:context:instrument:simbio-sys.mpo
+Adding context product; urn:esa:psa:context:instrument:simbio-sys.mpo
+Adding context product; urn:esa:psa:context:instrument_host:spacecraft.mpo
+Adding context product; urn:esa:psa:context:target:star.hr_1996
+Adding context product; urn:esa:psa:context:target:star.hd_48915
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:esa:psa:context:instrument:mag.mpo
+keyword ctli:Type_List.ctli:type not found in xml label for urn:esa:psa:context:instrument:mag.mpo
+Adding context product; urn:esa:psa:context:instrument:mag.mpo
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:juice.pep
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:esa:psa:context:instrument:juice.pep
+Adding context product; urn:esa:psa:context:instrument:juice.pep
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:mpo.more
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:esa:psa:context:instrument:mpo.more
+Adding context product; urn:esa:psa:context:instrument:mpo.more
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:juice.rpwi
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:esa:psa:context:instrument:juice.rpwi
+Adding context product; urn:esa:psa:context:instrument:juice.rpwi
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:mpo.simbio-sys
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:esa:psa:context:instrument:mpo.simbio-sys
+Adding context product; urn:esa:psa:context:instrument:mpo.simbio-sys
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:esa:psa:context:instrument:bela.mpo
+keyword ctli:Type_List.ctli:type not found in xml label for urn:esa:psa:context:instrument:bela.mpo
+Adding context product; urn:esa:psa:context:instrument:bela.mpo
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:mpo.mixs
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:esa:psa:context:instrument:mpo.mixs
+Adding context product; urn:esa:psa:context:instrument:mpo.mixs
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:juice.majis
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:esa:psa:context:instrument:juice.majis
+Adding context product; urn:esa:psa:context:instrument:juice.majis
+Adding context product; urn:esa:psa:context:instrument_host:spacecraft.tgo
+keyword ref_lid_facility not found in xml label for urn:esa:psa:context:investigation:mission.juice
+Adding context product; urn:esa:psa:context:investigation:mission.juice
+Adding context product; urn:esa:psa:context:target:star.hd_30739
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:mpo.mgns
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:esa:psa:context:instrument:mpo.mgns
+Adding context product; urn:esa:psa:context:instrument:mpo.mgns
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:esa:psa:context:instrument:cassis.tgo
+keyword ctli:Type_List.ctli:type not found in xml label for urn:esa:psa:context:instrument:cassis.tgo
+Adding context product; urn:esa:psa:context:instrument:cassis.tgo
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:esa:psa:context:instrument:frend.tgo
+keyword ctli:Type_List.ctli:type not found in xml label for urn:esa:psa:context:instrument:frend.tgo
+Adding context product; urn:esa:psa:context:instrument:frend.tgo
+Adding context product; urn:esa:psa:context:target:star.hd_100889
+keyword ref_lid_instrument not found in xml label for urn:esa:psa:context:telescope:malarguee.dsa3_35m
+Adding context product; urn:esa:psa:context:telescope:malarguee.dsa3_35m
+ERROR adding context product urn:esa:psa:context:telescope:malarguee.dsa3_35m: 'ctli:Type_List.ctli:type'
+keyword ref_lid_instrument not found in xml label for urn:esa:psa:context:facility:observatory.estrack
+keyword ref_lid_telescope not found in xml label for urn:esa:psa:context:facility:observatory.estrack
+Adding context product; urn:esa:psa:context:facility:observatory.estrack
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:esa:psa:context:instrument:phebus.mpo
+keyword ctli:Type_List.ctli:type not found in xml label for urn:esa:psa:context:instrument:phebus.mpo
+Adding context product; urn:esa:psa:context:instrument:phebus.mpo
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:esa:psa:context:instrument:isa.mpo
+keyword ctli:Type_List.ctli:type not found in xml label for urn:esa:psa:context:instrument:isa.mpo
+Adding context product; urn:esa:psa:context:instrument:isa.mpo
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:juice.uvs
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:esa:psa:context:instrument:juice.uvs
+Adding context product; urn:esa:psa:context:instrument:juice.uvs
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:juice.swi
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:esa:psa:context:instrument:juice.swi
+Adding context product; urn:esa:psa:context:instrument:juice.swi
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:mpo.phebus
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:esa:psa:context:instrument:mpo.phebus
+Adding context product; urn:esa:psa:context:instrument:mpo.phebus
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:juice.gala
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:esa:psa:context:instrument:juice.gala
+Adding context product; urn:esa:psa:context:instrument:juice.gala
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:esa:psa:context:instrument:mgns.mpo
+keyword ctli:Type_List.ctli:type not found in xml label for urn:esa:psa:context:instrument:mgns.mpo
+Adding context product; urn:esa:psa:context:instrument:mgns.mpo
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:juice.janus
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:esa:psa:context:instrument:juice.janus
+Adding context product; urn:esa:psa:context:instrument:juice.janus
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:esa:psa:context:instrument:mcam.mtm
+keyword ctli:Type_List.ctli:type not found in xml label for urn:esa:psa:context:instrument:mcam.mtm
+Adding context product; urn:esa:psa:context:instrument:mcam.mtm
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:mpo.mertis
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:esa:psa:context:instrument:mpo.mertis
+Adding context product; urn:esa:psa:context:instrument:mpo.mertis
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:esa:psa:context:instrument:mertis.mpo
+keyword ctli:Type_List.ctli:type not found in xml label for urn:esa:psa:context:instrument:mertis.mpo
+Adding context product; urn:esa:psa:context:instrument:mertis.mpo
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:juice.pride
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:esa:psa:context:instrument:juice.pride
+Adding context product; urn:esa:psa:context:instrument:juice.pride
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:juice.radem
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:esa:psa:context:instrument:juice.radem
+Adding context product; urn:esa:psa:context:instrument:juice.radem
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:esa:psa:context:instrument:more.mpo
+keyword ctli:Type_List.ctli:type not found in xml label for urn:esa:psa:context:instrument:more.mpo
+Adding context product; urn:esa:psa:context:instrument:more.mpo
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:mtm.mcam
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:esa:psa:context:instrument:mtm.mcam
+Adding context product; urn:esa:psa:context:instrument:mtm.mcam
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:esa:psa:context:instrument:mixs.mpo
+keyword ctli:Type_List.ctli:type not found in xml label for urn:esa:psa:context:instrument:mixs.mpo
+Adding context product; urn:esa:psa:context:instrument:mixs.mpo
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:tgo.frend
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:esa:psa:context:instrument:tgo.frend
+Adding context product; urn:esa:psa:context:instrument:tgo.frend
+Adding context product; urn:esa:psa:context:instrument_host:spacecraft.mtm
+Adding context product; urn:esa:psa:context:target:star.landolt_sa_104
+Adding context product; urn:esa:psa:context:target:star.hd_172167
+Adding context product; urn:esa:psa:context:target:star.hd_42560
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:amelia.edm
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:esa:psa:context:instrument:amelia.edm
+Adding context product; urn:esa:psa:context:instrument:amelia.edm
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:esa:psa:context:instrument:berm.mpo
+keyword ctli:Type_List.ctli:type not found in xml label for urn:esa:psa:context:instrument:berm.mpo
+Adding context product; urn:esa:psa:context:instrument:berm.mpo
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:juice.navcam
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:esa:psa:context:instrument:juice.navcam
+Adding context product; urn:esa:psa:context:instrument:juice.navcam
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:mpo.bela
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:esa:psa:context:instrument:mpo.bela
+Adding context product; urn:esa:psa:context:instrument:mpo.bela
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:juice.jmag
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:esa:psa:context:instrument:juice.jmag
+Adding context product; urn:esa:psa:context:instrument:juice.jmag
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:comars.edm
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:esa:psa:context:instrument:comars.edm
+Adding context product; urn:esa:psa:context:instrument:comars.edm
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:mpo.isa
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:esa:psa:context:instrument:mpo.isa
+Adding context product; urn:esa:psa:context:instrument:mpo.isa
+keyword ref_lid_facility not found in xml label for urn:esa:psa:context:investigation:mission.em16
+Adding context product; urn:esa:psa:context:investigation:mission.em16
+Adding context product; urn:esa:psa:context:target:star.zet_cas
+keyword ref_lid_instrument not found in xml label for urn:esa:psa:context:telescope:new_norcia.dsa1_35m
+Adding context product; urn:esa:psa:context:telescope:new_norcia.dsa1_35m
+ERROR adding context product urn:esa:psa:context:telescope:new_norcia.dsa1_35m: 'ctli:Type_List.ctli:type'
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:esa:psa:context:instrument:acs.tgo
+keyword ctli:Type_List.ctli:type not found in xml label for urn:esa:psa:context:instrument:acs.tgo
+Adding context product; urn:esa:psa:context:instrument:acs.tgo
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:tgo.nomad
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:esa:psa:context:instrument:tgo.nomad
+Adding context product; urn:esa:psa:context:instrument:tgo.nomad
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:mpo.sixs
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:esa:psa:context:instrument:mpo.sixs
+Adding context product; urn:esa:psa:context:instrument:mpo.sixs
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:mpo.mag
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:esa:psa:context:instrument:mpo.mag
+Adding context product; urn:esa:psa:context:instrument:mpo.mag
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:esa:psa:context:instrument:sixs.mpo
+keyword ctli:Type_List.ctli:type not found in xml label for urn:esa:psa:context:instrument:sixs.mpo
+Adding context product; urn:esa:psa:context:instrument:sixs.mpo
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:tgo.cassis
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:esa:psa:context:instrument:tgo.cassis
+Adding context product; urn:esa:psa:context:instrument:tgo.cassis
+keyword ref_lid_instrument not found in xml label for urn:esa:psa:context:instrument_host:spacecraft.mmo
+Adding context product; urn:esa:psa:context:instrument_host:spacecraft.mmo
+Adding context product; urn:esa:psa:context:target:star.hd_93521
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:tgo.acs
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:esa:psa:context:instrument:tgo.acs
+Adding context product; urn:esa:psa:context:instrument:tgo.acs
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:dreams.edm
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:esa:psa:context:instrument:dreams.edm
+Adding context product; urn:esa:psa:context:instrument:dreams.edm
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:juice.jmc
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:esa:psa:context:instrument:juice.jmc
+Adding context product; urn:esa:psa:context:instrument:juice.jmc
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:mpo.serena
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:esa:psa:context:instrument:mpo.serena
+Adding context product; urn:esa:psa:context:instrument:mpo.serena
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:juice.haa
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:esa:psa:context:instrument:juice.haa
+Adding context product; urn:esa:psa:context:instrument:juice.haa
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:juice.3gm
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:esa:psa:context:instrument:juice.3gm
+Adding context product; urn:esa:psa:context:instrument:juice.3gm
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:deca.edm
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:esa:psa:context:instrument:deca.edm
+Adding context product; urn:esa:psa:context:instrument:deca.edm
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:esa:psa:context:instrument:nomad.tgo
+keyword ctli:Type_List.ctli:type not found in xml label for urn:esa:psa:context:instrument:nomad.tgo
+Adding context product; urn:esa:psa:context:instrument:nomad.tgo
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:esa:psa:context:instrument:serena.mpo
+keyword ctli:Type_List.ctli:type not found in xml label for urn:esa:psa:context:instrument:serena.mpo
+Adding context product; urn:esa:psa:context:instrument:serena.mpo
+keyword pds:Instrument.pds:type not found in xml label for urn:esa:psa:context:instrument:mpo.berm
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:esa:psa:context:instrument:mpo.berm
+Adding context product; urn:esa:psa:context:instrument:mpo.berm
+Adding context product; urn:esa:psa:context:instrument_host:spacecraft.edm
+Adding context product; urn:esa:psa:context:instrument_host:spacecraft.juice
+Adding context product; urn:esa:psa:context:target:star.landolt_sa_92
+Adding context product; urn:esa:psa:context:target:open_cluster.pleiades
+Adding context product; urn:esa:psa:context:target:star.hd_15318
+keyword ref_lid_facility not found in xml label for urn:esa:psa:context:investigation:mission.bc
+Adding context product; urn:esa:psa:context:investigation:mission.bc
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:laboratory.ghent-ice
+Adding context product; urn:nasa:pds:context:facility:laboratory.ghent-ice
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:laboratory.lasp
+Adding context product; urn:nasa:pds:context:facility:laboratory.lasp
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:laboratory.pal
+Adding context product; urn:nasa:pds:context:facility:laboratory.pal
+Adding context product; urn:nasa:pds:context:facility:observatory.apache_point
+Adding context product; urn:nasa:pds:context:facility:observatory.canberra
+Adding context product; urn:nasa:pds:context:facility:observatory.chuguev
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:facility:observatory.ensenada
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:observatory.ensenada
+Adding context product; urn:nasa:pds:context:facility:observatory.ensenada
+Adding context product; urn:nasa:pds:context:facility:observatory.goldstone
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:facility:observatory.goodricke-pigott
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:observatory.goodricke-pigott
+Adding context product; urn:nasa:pds:context:facility:observatory.goodricke-pigott
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:facility:observatory.lick
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:observatory.lick
+Adding context product; urn:nasa:pds:context:facility:observatory.lick
+Adding context product; urn:nasa:pds:context:facility:observatory.mcdonald
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:facility:observatory.partizanskoye
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:observatory.partizanskoye
+Adding context product; urn:nasa:pds:context:facility:observatory.partizanskoye
+Adding context product; urn:nasa:pds:context:facility:observatory.steward-kittpeak
+keyword ref_lid_instrument not found in xml label for urn:nasa:pds:context:facility:observatory.uwo_meteor_radar
+keyword ref_lid_telescope not found in xml label for urn:nasa:pds:context:facility:observatory.uwo_meteor_radar
+Adding context product; urn:nasa:pds:context:facility:observatory.uwo_meteor_radar
+Adding context product; urn:nasa:pds:context:target:laboratory_analog.trappist-1e
+Adding context product; urn:nasa:pds:context:target:planet.earth
+Adding context product; urn:nasa:pds:context:target:planet.mars
+Adding context product; urn:nasa:pds:context:target:planet.venus
+Adding context product; urn:nasa:pds:context:target:planet.mercury
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:ghent-ice.ice_wt
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:nasa:pds:context:instrument:ghent-ice.ice_wt
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:ghent-ice.ice_wt
+Adding context product; urn:nasa:pds:context:instrument:ghent-ice.ice_wt
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:lasp.mcpherson-vuvas
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:nasa:pds:context:instrument:lasp.mcpherson-vuvas
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:lasp.mcpherson-vuvas
+Adding context product; urn:nasa:pds:context:instrument:lasp.mcpherson-vuvas
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:pal.cwt
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:nasa:pds:context:instrument:pal.cwt
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:pal.cwt
+Adding context product; urn:nasa:pds:context:instrument:pal.cwt
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:pal.marswit
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:nasa:pds:context:instrument:pal.marswit
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:pal.marswit
+Adding context product; urn:nasa:pds:context:instrument:pal.marswit
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:pal.twt
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:nasa:pds:context:instrument:pal.twt
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:pal.twt
+Adding context product; urn:nasa:pds:context:instrument:pal.twt
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:pal.vwt
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:nasa:pds:context:instrument:pal.vwt
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:pal.vwt
+Adding context product; urn:nasa:pds:context:instrument:pal.vwt
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:apache_point.arc3m5.agile
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:nasa:pds:context:instrument:apache_point.arc3m5.agile
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:apache_point.arc3m5.agile
+Adding context product; urn:nasa:pds:context:instrument:apache_point.arc3m5.agile
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:apache_point.sdss2m5.sdss_photometric
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:nasa:pds:context:instrument:apache_point.sdss2m5.sdss_photometric
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:apache_point.sdss2m5.sdss_photometric
+Adding context product; urn:nasa:pds:context:instrument:apache_point.sdss2m5.sdss_photometric
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:dsn.rss
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:nasa:pds:context:instrument:dsn.rss
+Adding context product; urn:nasa:pds:context:instrument:dsn.rss
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:chuguev.azt8_0m70.sbig_st6_uv
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:nasa:pds:context:instrument:chuguev.azt8_0m70.sbig_st6_uv
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:chuguev.azt8_0m70.sbig_st6_uv
+Adding context product; urn:nasa:pds:context:instrument:chuguev.azt8_0m70.sbig_st6_uv
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:goldstone.dss13_34m.recv_x
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:nasa:pds:context:instrument:goldstone.dss13_34m.recv_x
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:goldstone.dss13_34m.recv_x
+Adding context product; urn:nasa:pds:context:instrument:goldstone.dss13_34m.recv_x
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:goldstone.dss14_70m.recv_x
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:nasa:pds:context:instrument:goldstone.dss14_70m.recv_x
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:goldstone.dss14_70m.recv_x
+Adding context product; urn:nasa:pds:context:instrument:goldstone.dss14_70m.recv_x
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:goldstone.dss14_70m.trans_x
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:nasa:pds:context:instrument:goldstone.dss14_70m.trans_x
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:goldstone.dss14_70m.trans_x
+Adding context product; urn:nasa:pds:context:instrument:goldstone.dss14_70m.trans_x
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mcdonald.harlanjsmith_2m7.lcs
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:nasa:pds:context:instrument:mcdonald.harlanjsmith_2m7.lcs
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:mcdonald.harlanjsmith_2m7.lcs
+Adding context product; urn:nasa:pds:context:instrument:mcdonald.harlanjsmith_2m7.lcs
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mcdonald.harlanjsmith_2m7.p45a_phot
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:nasa:pds:context:instrument:mcdonald.harlanjsmith_2m7.p45a_phot
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:mcdonald.harlanjsmith_2m7.p45a_phot
+Adding context product; urn:nasa:pds:context:instrument:mcdonald.harlanjsmith_2m7.p45a_phot
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mcdonald.struve2m1.cs
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:nasa:pds:context:instrument:mcdonald.struve2m1.cs
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:mcdonald.struve2m1.cs
+Adding context product; urn:nasa:pds:context:instrument:mcdonald.struve2m1.cs
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:mcdonald.struve2m1.molp
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:nasa:pds:context:instrument:mcdonald.struve2m1.molp
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:mcdonald.struve2m1.molp
+Adding context product; urn:nasa:pds:context:instrument:mcdonald.struve2m1.molp
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:steward-kittpeak.bok2m3.90prime
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:nasa:pds:context:instrument:steward-kittpeak.bok2m3.90prime
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:steward-kittpeak.bok2m3.90prime
+Adding context product; urn:nasa:pds:context:instrument:steward-kittpeak.bok2m3.90prime
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:steward-kittpeak.spacewatch_0m9.driftscan
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:nasa:pds:context:instrument:steward-kittpeak.spacewatch_0m9.driftscan
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:steward-kittpeak.spacewatch_0m9.driftscan
+Adding context product; urn:nasa:pds:context:instrument:steward-kittpeak.spacewatch_0m9.driftscan
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:steward-kittpeak.spacewatch_0m9.mosaic
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:nasa:pds:context:instrument:steward-kittpeak.spacewatch_0m9.mosaic
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:steward-kittpeak.spacewatch_0m9.mosaic
+Adding context product; urn:nasa:pds:context:instrument:steward-kittpeak.spacewatch_0m9.mosaic
+keyword pds:Instrument.pds:type not found in xml label for urn:nasa:pds:context:instrument:steward-kittpeak.spacewatch_1m8.fli
+keyword ctli:Type_List.ctli:type found as ctli in xml label for urn:nasa:pds:context:instrument:steward-kittpeak.spacewatch_1m8.fli
+keyword ref_lid_instrument_host not found in xml label for urn:nasa:pds:context:instrument:steward-kittpeak.spacewatch_1m8.fli
+Adding context product; urn:nasa:pds:context:instrument:steward-kittpeak.spacewatch_1m8.fli
+Internal reference added: urn:nasa:pds:context:instrument:relab.bc-ftir1 -> urn:nasa:pds:context:investigation:other_investigation.relab_speclib
+Internal reference added: urn:nasa:pds:context:instrument:relab.bcf-ftir2 -> urn:nasa:pds:context:investigation:other_investigation.relab_speclib
+Internal reference added: urn:nasa:pds:context:instrument:relab.bd-vnir -> urn:nasa:pds:context:investigation:other_investigation.relab_speclib
+Internal reference added: urn:nasa:pds:context:investigation:other_investigation.relab_speclib -> urn:nasa:pds:context:facility:laboratory.relab
+Internal reference added: urn:nasa:pds:context:facility:laboratory.relab -> urn:nasa:pds:context:investigation:other_investigation.relab_speclib
+Internal reference added: urn:nasa:pds:context:facility:laboratory.relab -> urn:nasa:pds:context:instrument:relab.bc-ftir1
+Internal reference added: urn:nasa:pds:context:instrument:relab.bc-ftir1 -> urn:nasa:pds:context:facility:laboratory.relab
+Internal reference added: urn:nasa:pds:context:facility:laboratory.relab -> urn:nasa:pds:context:instrument:relab.bcf-ftir2
+Internal reference added: urn:nasa:pds:context:instrument:relab.bcf-ftir2 -> urn:nasa:pds:context:facility:laboratory.relab
+Internal reference added: urn:nasa:pds:context:facility:laboratory.relab -> urn:nasa:pds:context:instrument:relab.bd-vnir
+Internal reference added: urn:nasa:pds:context:instrument:relab.bd-vnir -> urn:nasa:pds:context:facility:laboratory.relab
+Internal reference added: urn:esa:psa:context:instrument_host:spacecraft.mpo -> urn:esa:psa:context:investigation:mission.bc
+Internal reference added: urn:esa:psa:context:investigation:mission.bc -> urn:esa:psa:context:instrument_host:spacecraft.mpo
+Internal reference added: urn:esa:psa:context:instrument_host:spacecraft.tgo -> urn:esa:psa:context:investigation:mission.em16
+Internal reference added: urn:esa:psa:context:investigation:mission.em16 -> urn:esa:psa:context:instrument_host:spacecraft.tgo
+Internal reference added: urn:esa:psa:context:investigation:mission.juice -> urn:esa:psa:context:instrument_host:spacecraft.juice
+Internal reference added: urn:esa:psa:context:instrument_host:spacecraft.juice -> urn:esa:psa:context:investigation:mission.juice
+Internal reference added: urn:esa:psa:context:investigation:mission.juice -> urn:nasa:pds:context:target:planet.earth
+Internal reference added: urn:nasa:pds:context:target:planet.earth -> urn:esa:psa:context:investigation:mission.juice
+Internal reference added: urn:esa:psa:context:investigation:mission.juice -> urn:nasa:pds:context:target:planet.mars
+Internal reference added: urn:nasa:pds:context:target:planet.mars -> urn:esa:psa:context:investigation:mission.juice
+Internal reference added: urn:esa:psa:context:investigation:mission.juice -> urn:nasa:pds:context:target:planet.venus
+Internal reference added: urn:nasa:pds:context:target:planet.venus -> urn:esa:psa:context:investigation:mission.juice
+Internal reference added: urn:esa:psa:context:instrument_host:spacecraft.mtm -> urn:esa:psa:context:investigation:mission.bc
+Internal reference added: urn:esa:psa:context:investigation:mission.bc -> urn:esa:psa:context:instrument_host:spacecraft.mtm
+Internal reference added: urn:esa:psa:context:investigation:mission.em16 -> urn:esa:psa:context:instrument_host:spacecraft.edm
+Internal reference added: urn:esa:psa:context:instrument_host:spacecraft.edm -> urn:esa:psa:context:investigation:mission.em16
+Internal reference added: urn:esa:psa:context:investigation:mission.em16 -> urn:esa:psa:context:instrument_host:spacecraft.tgo
+Internal reference added: urn:esa:psa:context:instrument_host:spacecraft.tgo -> urn:esa:psa:context:investigation:mission.em16
+Internal reference added: urn:esa:psa:context:investigation:mission.em16 -> urn:nasa:pds:context:target:planet.mars
+Internal reference added: urn:nasa:pds:context:target:planet.mars -> urn:esa:psa:context:investigation:mission.em16
+Internal reference added: urn:esa:psa:context:instrument_host:spacecraft.mmo -> urn:esa:psa:context:investigation:mission.bc
+Internal reference added: urn:esa:psa:context:investigation:mission.bc -> urn:esa:psa:context:instrument_host:spacecraft.mmo
+Internal reference added: urn:esa:psa:context:instrument_host:spacecraft.edm -> urn:esa:psa:context:investigation:mission.em16
+Internal reference added: urn:esa:psa:context:investigation:mission.em16 -> urn:esa:psa:context:instrument_host:spacecraft.edm
+Internal reference added: urn:esa:psa:context:instrument_host:spacecraft.juice -> urn:esa:psa:context:investigation:mission.juice
+Internal reference added: urn:esa:psa:context:investigation:mission.juice -> urn:esa:psa:context:instrument_host:spacecraft.juice
+Internal reference added: urn:esa:psa:context:investigation:mission.bc -> urn:esa:psa:context:instrument_host:spacecraft.mmo
+Internal reference added: urn:esa:psa:context:instrument_host:spacecraft.mmo -> urn:esa:psa:context:investigation:mission.bc
+Internal reference added: urn:esa:psa:context:investigation:mission.bc -> urn:esa:psa:context:instrument_host:spacecraft.mpo
+Internal reference added: urn:esa:psa:context:instrument_host:spacecraft.mpo -> urn:esa:psa:context:investigation:mission.bc
+Internal reference added: urn:esa:psa:context:investigation:mission.bc -> urn:esa:psa:context:instrument_host:spacecraft.mtm
+Internal reference added: urn:esa:psa:context:instrument_host:spacecraft.mtm -> urn:esa:psa:context:investigation:mission.bc
+Internal reference added: urn:esa:psa:context:investigation:mission.bc -> urn:nasa:pds:context:target:planet.earth
+Internal reference added: urn:nasa:pds:context:target:planet.earth -> urn:esa:psa:context:investigation:mission.bc
+Internal reference added: urn:esa:psa:context:investigation:mission.bc -> urn:nasa:pds:context:target:planet.mercury
+Internal reference added: urn:nasa:pds:context:target:planet.mercury -> urn:esa:psa:context:investigation:mission.bc
+Internal reference added: urn:esa:psa:context:investigation:mission.bc -> urn:nasa:pds:context:target:planet.venus
+Internal reference added: urn:nasa:pds:context:target:planet.venus -> urn:esa:psa:context:investigation:mission.bc
+Internal reference added: urn:nasa:pds:context:facility:laboratory.ghent-ice -> urn:nasa:pds:context:instrument:ghent-ice.ice_wt
+Internal reference added: urn:nasa:pds:context:instrument:ghent-ice.ice_wt -> urn:nasa:pds:context:facility:laboratory.ghent-ice
+Internal reference added: urn:nasa:pds:context:facility:laboratory.lasp -> urn:nasa:pds:context:instrument:lasp.mcpherson-vuvas
+Internal reference added: urn:nasa:pds:context:instrument:lasp.mcpherson-vuvas -> urn:nasa:pds:context:facility:laboratory.lasp
+Internal reference added: urn:nasa:pds:context:facility:laboratory.pal -> urn:nasa:pds:context:instrument:pal.cwt
+Internal reference added: urn:nasa:pds:context:instrument:pal.cwt -> urn:nasa:pds:context:facility:laboratory.pal
+Internal reference added: urn:nasa:pds:context:facility:laboratory.pal -> urn:nasa:pds:context:instrument:pal.marswit
+Internal reference added: urn:nasa:pds:context:instrument:pal.marswit -> urn:nasa:pds:context:facility:laboratory.pal
+Internal reference added: urn:nasa:pds:context:facility:laboratory.pal -> urn:nasa:pds:context:instrument:pal.twt
+Internal reference added: urn:nasa:pds:context:instrument:pal.twt -> urn:nasa:pds:context:facility:laboratory.pal
+Internal reference added: urn:nasa:pds:context:facility:laboratory.pal -> urn:nasa:pds:context:instrument:pal.vwt
+Internal reference added: urn:nasa:pds:context:instrument:pal.vwt -> urn:nasa:pds:context:facility:laboratory.pal
+Internal reference added: urn:nasa:pds:context:facility:observatory.apache_point -> urn:nasa:pds:context:instrument:apache_point.arc3m5.agile
+Internal reference added: urn:nasa:pds:context:instrument:apache_point.arc3m5.agile -> urn:nasa:pds:context:facility:observatory.apache_point
+Internal reference added: urn:nasa:pds:context:facility:observatory.apache_point -> urn:nasa:pds:context:instrument:apache_point.sdss2m5.sdss_photometric
+Internal reference added: urn:nasa:pds:context:instrument:apache_point.sdss2m5.sdss_photometric -> urn:nasa:pds:context:facility:observatory.apache_point
+Internal reference added: urn:nasa:pds:context:facility:observatory.canberra -> urn:nasa:pds:context:instrument:dsn.rss
+Internal reference added: urn:nasa:pds:context:instrument:dsn.rss -> urn:nasa:pds:context:facility:observatory.canberra
+Internal reference added: urn:nasa:pds:context:facility:observatory.chuguev -> urn:nasa:pds:context:instrument:chuguev.azt8_0m70.sbig_st6_uv
+Internal reference added: urn:nasa:pds:context:instrument:chuguev.azt8_0m70.sbig_st6_uv -> urn:nasa:pds:context:facility:observatory.chuguev
+Internal reference added: urn:nasa:pds:context:facility:observatory.goldstone -> urn:nasa:pds:context:instrument:dsn.rss
+Internal reference added: urn:nasa:pds:context:instrument:dsn.rss -> urn:nasa:pds:context:facility:observatory.goldstone
+Internal reference added: urn:nasa:pds:context:facility:observatory.goldstone -> urn:nasa:pds:context:instrument:goldstone.dss13_34m.recv_x
+Internal reference added: urn:nasa:pds:context:instrument:goldstone.dss13_34m.recv_x -> urn:nasa:pds:context:facility:observatory.goldstone
+Internal reference added: urn:nasa:pds:context:facility:observatory.goldstone -> urn:nasa:pds:context:instrument:goldstone.dss14_70m.recv_x
+Internal reference added: urn:nasa:pds:context:instrument:goldstone.dss14_70m.recv_x -> urn:nasa:pds:context:facility:observatory.goldstone
+Internal reference added: urn:nasa:pds:context:facility:observatory.goldstone -> urn:nasa:pds:context:instrument:goldstone.dss14_70m.trans_x
+Internal reference added: urn:nasa:pds:context:instrument:goldstone.dss14_70m.trans_x -> urn:nasa:pds:context:facility:observatory.goldstone
+Internal reference added: urn:nasa:pds:context:facility:observatory.mcdonald -> urn:nasa:pds:context:instrument:mcdonald.harlanjsmith_2m7.lcs
+Internal reference added: urn:nasa:pds:context:instrument:mcdonald.harlanjsmith_2m7.lcs -> urn:nasa:pds:context:facility:observatory.mcdonald
+Internal reference added: urn:nasa:pds:context:facility:observatory.mcdonald -> urn:nasa:pds:context:instrument:mcdonald.harlanjsmith_2m7.p45a_phot
+Internal reference added: urn:nasa:pds:context:instrument:mcdonald.harlanjsmith_2m7.p45a_phot -> urn:nasa:pds:context:facility:observatory.mcdonald
+Internal reference added: urn:nasa:pds:context:facility:observatory.mcdonald -> urn:nasa:pds:context:instrument:mcdonald.struve2m1.cs
+Internal reference added: urn:nasa:pds:context:instrument:mcdonald.struve2m1.cs -> urn:nasa:pds:context:facility:observatory.mcdonald
+Internal reference added: urn:nasa:pds:context:facility:observatory.mcdonald -> urn:nasa:pds:context:instrument:mcdonald.struve2m1.molp
+Internal reference added: urn:nasa:pds:context:instrument:mcdonald.struve2m1.molp -> urn:nasa:pds:context:facility:observatory.mcdonald
+Internal reference added: urn:nasa:pds:context:facility:observatory.steward-kittpeak -> urn:nasa:pds:context:instrument:steward-kittpeak.bok2m3.90prime
+Internal reference added: urn:nasa:pds:context:instrument:steward-kittpeak.bok2m3.90prime -> urn:nasa:pds:context:facility:observatory.steward-kittpeak
+Internal reference added: urn:nasa:pds:context:facility:observatory.steward-kittpeak -> urn:nasa:pds:context:instrument:steward-kittpeak.spacewatch_0m9.driftscan
+Internal reference added: urn:nasa:pds:context:instrument:steward-kittpeak.spacewatch_0m9.driftscan -> urn:nasa:pds:context:facility:observatory.steward-kittpeak
+Internal reference added: urn:nasa:pds:context:facility:observatory.steward-kittpeak -> urn:nasa:pds:context:instrument:steward-kittpeak.spacewatch_0m9.mosaic
+Internal reference added: urn:nasa:pds:context:instrument:steward-kittpeak.spacewatch_0m9.mosaic -> urn:nasa:pds:context:facility:observatory.steward-kittpeak
+Internal reference added: urn:nasa:pds:context:facility:observatory.steward-kittpeak -> urn:nasa:pds:context:instrument:steward-kittpeak.spacewatch_1m8.fli
+Internal reference added: urn:nasa:pds:context:instrument:steward-kittpeak.spacewatch_1m8.fli -> urn:nasa:pds:context:facility:observatory.steward-kittpeak
