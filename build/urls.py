@@ -123,6 +123,8 @@ urlpatterns = [
     #delete net cdf file
     re_path(r'^(?P<pk_bundle>\d+)/netcdf/bulk_delete/$', views.bulk_delete_netcdf, name='bulk_delete_netcdf'),
     
+    # Submit Bundle for Review
+    re_path(r'^(?P<pk_bundle>\d+)/submit/$', views.submit_bundle_internal, name='submit_bundle_internal'),
     
     # XML_Schema --> A view that no one sees.  So no xml_schema url.  This might even be removed 
     # completely from PDS4
