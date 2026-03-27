@@ -20,6 +20,14 @@ This section provides a timeline of ELSA's release history, highlighting key upd
 
 ### **Current Version** 
 
+> ### **Version 1.29.0 (March 27, 2026)**
+- Delete NetCDF: Fixed an issue where the XML file was not deleted when removing a NetCDF file.
+- Delete Document: Fixed an issue where the XML file was not deleted when removing a document.
+- NetCDF File Upload: Updated the status bar to display "Processing NetCDF..." while the server processes the file after upload.
+- External Bundle: Implemented the Submit functionality, which sends an email with the bundle archive path and a download link.
+
+### **Previous Versions** 
+
 > ### **Version 1.28.0 (March 20, 2026)**
 - External Bundle: A real-time progress bar has been added for NetCDF file uploads.
 - Archive Bundle: Now displays the proper collection type options when creating a new collection.
@@ -27,7 +35,6 @@ This section provides a timeline of ELSA's release history, highlighting key upd
 - External and Archive Bundles: Documents and collections now use the alternate BundleID, if provided.
 - External and Archive Bundles: Updated format for XML file names in the file viewer.
 
-### **Previous Versions** 
 > ### **Version 1.27.0 (March 13, 2026)**
 - External Bundle Viewer: Vertical scrolling has been added to the XML viewer.
 - External Bundle: Delete feature implemented for uploaded NetCDF files.
