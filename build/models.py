@@ -2025,6 +2025,8 @@ class Bundle(models.Model):
     targets = models.ManyToManyField(Target)
     facilities = models.ManyToManyField(Facility)
     telescopes = models.ManyToManyField(Telescope)
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    
 
     class Meta:
         constraints = [
