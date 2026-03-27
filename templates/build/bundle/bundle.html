@@ -1757,12 +1757,9 @@
                               <div class="card-body p-3">
                                  <p class="mb-3 small text-muted">
                                     <i class="bi bi-info-circle me-1"></i>
-                                    This is a data collection. In this collection, you will build labels for data products. Data products are also known as Product_Observational and include things like tables of data, image files, etc. Currently ELSA will help you build templates for data tables. Types of tables ELSA knows how to label are:
-                                    <ul class="mt-2 mb-0">
-                                       <li>Table Binary</li>
-                                       <li>Table Character</li>
-                                       <li>Table Delimited</li>
-                                    </ul>
+                                    This is a model output ‘data’ collection. In this collection, you will upload your model output (.nc) 
+                                    and ELSA will add labels (.xml) to your products. Within the AMA, Model Output should be in netCDF format, 
+                                    and ELSA will extract metadata from those files and input them into your labels for you.
                                  </p>
                                  
                                  <div class="d-flex justify-content-between align-items-center border-top pt-3 mt-2">
@@ -2060,14 +2057,17 @@
             </span>
          </h5>
          <div class="list-group list-group-flush">
-            <!-- Alias -->
+            <!-- Alias (Optional for External) -->
             <div class="list-group-item d-flex justify-content-between align-items-center">
                Alias
-               <span class="badge {% if status_dict.Alias %}bg-success{% else %}bg-danger{% endif %}">
+               <span>
                   {% if status_dict.Alias %}
-                     <i class="bi bi-check-circle-fill"></i>
+                     <span class="badge bg-success"><i class="bi bi-check-circle-fill"></i></span>
                   {% else %}
-                     <i class="bi bi-x-circle-fill"></i>
+                     <span class="badge bg-warning text-dark" data-bs-toggle="tooltip" data-bs-placement="left"
+                        title="Alias is optional for external bundles.">
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                     </span>
                   {% endif %}
                </span>
             </div>
@@ -2140,31 +2140,73 @@
                </span>
             </div>
 
-             <!-- Submit Button -->
-         {% with all_complete=status_dict.Alias|yesno:"True,False" %}
-         <div class="list-group-item p-3">
-            {% if status_dict.Alias and status_dict.Modification_History and status_dict.Citation_Information and status_dict.Investigations and status_dict.Hosts and status_dict.Instruments and status_dict.Targets %}
-               <button type="button" class="btn btn-success w-100" data-bs-toggle="modal" data-bs-target="#submitBundleModal">
-                  <i class="bi bi-send me-2"></i> Submit Bundle
-               </button>
-            {% else %}
-               <button type="button" class="btn btn-secondary w-100" disabled
-                  data-bs-toggle="tooltip" data-bs-placement="top"
-                  title="Complete all required sections before submitting.">
-                  <i class="bi bi-send me-2"></i> Submit Bundle
-               </button>
-               <p class="text-muted small text-center mt-2 mb-0">Complete all sections above to enable submission!</p>
-            {% endif %}
+            <!-- Submit Button -->
+            <div class="list-group-item p-3">
+               {% if status_dict.Modification_History and status_dict.Citation_Information and status_dict.Targets %}
+                  <button type="button" class="btn btn-success w-100" data-bs-toggle="modal" data-bs-target="#submitBundleModal">
+                     <i class="bi bi-send me-2"></i>
+                     {% if bundle.submitted_at %}Resubmit Bundle{% else %}Submit Bundle{% endif %}
+                  </button>
+                  {% if bundle.submitted_at %}
+                     <p class="text-muted small text-center mt-2 mb-0">
+                        <i class="bi bi-clock me-1"></i>
+                        Last submitted: {{ bundle.submitted_at|date:"M d, Y \a\t g:i A" }}
+                        <br>You can still edit your bundle and resubmit.
+                     </p>
+                  {% endif %}
+               {% else %}
+                  <button type="button" class="btn btn-secondary w-100" disabled
+                     data-bs-toggle="tooltip" data-bs-placement="top"
+                     title="Complete all required sections before submitting.">
+                     <i class="bi bi-send me-2"></i> Submit Bundle
+                  </button>
+                  <p class="text-muted small text-center mt-2 mb-0">Complete all required sections above to enable submission.</p>
+               {% endif %}
+            </div>
          </div>
-         {% endwith %}
       </div>
-   </div>
-    </div>
+      </div>
+
+         <!-- Submit Bundle for Review Modal -->
+         <div class="modal fade" id="submitBundleModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+               <div class="modal-content">
+                  <div class="modal-header border-0 pb-0">
+                     <h5 class="modal-title">
+                        <i class="bi bi-send me-2 text-success"></i>
+                        {% if bundle.submitted_at %}Resubmit{% else %}Submit{% endif %} Bundle for Review
+                     </h5>
+                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                  </div>
+                  <div class="modal-body">
+                     <p>You are about to submit <strong>{{ bundle.name }}</strong> to ATM for review.</p>
+
+                     {% if not status_dict.Alias %}
+                        <div class="alert alert-warning py-2 small mb-3">
+                           <i class="bi bi-exclamation-triangle me-1"></i>
+                           <strong>Alias</strong> has not been added. This is optional for external bundles- you can still submit without it.
+                        </div>
+                     {% endif %}
+
+                     <p class="text-muted small mb-0">
+                        <i class="bi bi-info-circle me-1"></i>
+                        An email notification will be sent to ATM. You can continue editing and resubmit at any time.
+                     </p>
+                  </div>
+                  <div class="modal-footer border-0">
+                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                     <form action="{% url 'build:submit_bundle_internal' bundle.pk %}" method="post" class="mb-0">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-success">
+                           <i class="bi bi-send me-1"></i>
+                           {% if bundle.submitted_at %}Resubmit{% else %}Submit{% endif %} for Review
+                        </button>
+                     </form>
+                  </div>
+               </div>
+            </div>
+         </div>
        
-      
-      
-
-
 
          <div class="col-md-9">
             <div class="card d-flex">
@@ -2289,14 +2331,21 @@
                         progressBar.style.width = pct + '%';
                         progressBar.setAttribute('aria-valuenow', pct);
                         uploadPercent.textContent = pct + '%';
-                        uploadStatusText.textContent = pct < 100 ? 'Uploading...' : 'Processing...';
-                     }
-               });
+                        uploadStatusText.textContent = pct < 100 ? 'Uploading...' : 'Processing NetCDF...';
+                        // Switch bar style when upload finishes but server is still processing
+                        if (pct === 100) {
+                           progressBar.classList.remove('bg-success');
+                           progressBar.classList.add('bg-info');
+                           uploadBtn.textContent = 'Processing...';
+                        }
+                              }
+                        });
 
                // On complete
-               xhr.addEventListener('load', function() {
+                xhr.addEventListener('load', function() {
                      progressBar.style.width = '100%';
-                     progressBar.classList.remove('progress-bar-animated');
+                     progressBar.classList.remove('progress-bar-animated', 'bg-info');
+                     progressBar.classList.add('bg-success');
                      uploadPercent.textContent = '100%';
                      uploadStatusText.textContent = 'Done!';
                      uploadSuccessMsg.style.display = 'block';

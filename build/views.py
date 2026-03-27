@@ -24,7 +24,10 @@ import lxml.etree as ET # for XML parsing- Added by Rupak
 
 # Libraries for handilng netCDF files
 import io
-#import netCDF4
+from django.core.mail import EmailMessage
+from django.utils import timezone
+from django.utils.timezone import localtime
+
 
 # -------------------------------------------------------------------------------------------------- #
 # -------------------------------------------------------------------------------------------------- #
@@ -1232,10 +1235,25 @@ def bulk_delete_netcdf(request, pk_bundle):
             for netcdf_id in selected_ids:
                 try:
                     netcdf_file = NetCDFFile.objects.get(pk=netcdf_id, bundle=bundle)
-                    # Delete file from disk
+
+                    # Delete the corresponding XML label from the archive
+                    try:
+                        nc_filename = os.path.basename(netcdf_file.file.name)
+                        xml_filename = nc_filename.replace('.nc', '.xml')
+                        xml_path = os.path.join(bundle.directory(), xml_filename)
+                        if os.path.exists(xml_path):
+                            os.remove(xml_path)
+                            print('Deleted XML file: {}'.format(xml_path))
+                        else:
+                            print('XML file not found at path: {}'.format(xml_path))
+                    except Exception as e:
+                        print('Could not delete XML for {}: {}'.format(netcdf_id, e))
+
+                    # Delete NetCDF file from disk
                     if netcdf_file.file and os.path.exists(netcdf_file.file.path):
                         os.remove(netcdf_file.file.path)
                         print('Deleted file: {}'.format(netcdf_file.file.path))
+
                     # Delete DB record
                     netcdf_file.delete()
                 except NetCDFFile.DoesNotExist:
@@ -1246,6 +1264,76 @@ def bulk_delete_netcdf(request, pk_bundle):
         return HttpResponseRedirect('/elsa/build/' + str(pk_bundle) + '/')
 
     else:
+        return redirect('main:restricted_access')
+
+
+# This view is for when a user clicks the submit bundle for review button on the bundle detail page (Currently implemented for External Bundles- Rupak).  This view marks the bundle as submitted by adding a timestamp to the submitted_at field in the Bundle model, and then sends an email to ATM with the details of the submission.
+@login_required
+def submit_bundle_internal(request, pk_bundle):
+    print('\n\n')
+    print('-------------------------------------------------------------------------')
+    print('\n\n------------------ Submit Bundle with ELSA -------------------')
+    print('------------------------------ DEBUGGER ---------------------------------')
+
+    bundle = Bundle.objects.get(pk=pk_bundle)
+
+    if request.user == bundle.user:
+        if request.method == 'POST':
+            is_resubmission = bundle.submitted_at is not None
+            bundle.submitted_at = timezone.now()
+            bundle.save()
+
+            # Build email
+            archive_path = bundle.directory()
+            download_url = request.build_absolute_uri(
+                reverse('build:bundle_download', args=[bundle.pk])
+            )
+
+            subject = '{} Bundle "{}" by {}'.format(
+                'Resubmission:' if is_resubmission else 'New Submission:',
+                bundle.name,
+                bundle.user.username
+            )
+
+            body = (
+                'A bundle has been {} for review.\n\n'
+                'Bundle: {}\n'
+                'User: {} ({})\n'
+                'Bundle Type: {}\n'
+                'Submitted: {}\n\n'
+                'Archive Path:\n{}\n\n'
+                'Download URL:\n{}\n'
+            ).format(
+                'resubmitted' if is_resubmission else 'submitted',
+                bundle.name,
+                bundle.user.get_full_name() or bundle.user.username,
+                bundle.user.email,
+                bundle.bundle_type,
+                localtime(bundle.submitted_at).strftime('%B %d, %Y at %I:%M %p %Z'),
+                archive_path,
+                download_url,
+            )
+
+            try:
+                email = EmailMessage(
+                    subject=subject,
+                    body=body,
+                    from_email='atm-elsa@nmsu.edu',
+                    #to=['rupakdey@nmsu.edu'], # For testing 
+                    to=['lneakras@nmsu.edu', 'rupakdey@nmsu.edu'], # Add pds-atm@nmsu.edu if it needs to be sent to all
+                    headers={'Reply-To': bundle.user.email}
+                )
+                email.send()
+                messages.success(request, 'Bundle submitted for review! A notification has been sent to ATM.')
+                print('Email sent to atm-elsa@nmsu.edu')
+            except Exception as e:
+                messages.warning(request, 'Bundle marked as submitted, but the email notification could not be sent. Please contact ATM directly.')
+                print('Email failed: {}'.format(e))
+
+            return HttpResponseRedirect('/elsa/build/' + str(pk_bundle) + '/')
+
+    else:
+        print('unauthorized user attempting to access a restricted area.')
         return redirect('main:restricted_access')
 
 
@@ -2875,7 +2963,6 @@ def product_document(request, pk_bundle, pk_product_document):
         print('unauthorized user attempting to access a restricted area.')
         return redirect('main:restricted_access')
 
-# implement delete function for product_document
 def delete_product_document(request, pk_bundle, pk_product_document):
     print('\n\n')
     print('-------------------------------------------------------------------------')
@@ -2891,9 +2978,26 @@ def delete_product_document(request, pk_bundle, pk_product_document):
         product_document = Product_Document.objects.get(pk=pk_product_document)
         product_bundle = Product_Bundle.objects.get(bundle=bundle)
         product_collections_list = Product_Collection.objects.filter(bundle=bundle)
-        
+
+        # Grab the XML file path BEFORE deleting the record
+        try:
+            xml_path = product_document.label()
+            print('XML path to delete: {}'.format(xml_path))
+        except Exception as e:
+            xml_path = None
+            print('Could not get label path: {}'.format(e))
+
         remove_from_label(product_document, product_bundle, product_collections_list)
-        # Delete the product_document
+
+        # Delete the XML file from disk
+        if xml_path:
+            if os.path.exists(xml_path):
+                os.remove(xml_path)
+                print('Deleted XML file: {}'.format(xml_path))
+            else:
+                print('XML file not found at path: {}'.format(xml_path))
+
+        # Delete the product_document from the database
         product_document.delete()
 
         return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
