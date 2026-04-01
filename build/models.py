@@ -2689,7 +2689,12 @@ class Product_Bundle(models.Model):
         # Locate base case Product_Bundle template found in templates/pds4_labels/base_case/product_bundle
         source_file = os.path.join(settings.TEMPLATE_DIR, 'pds4_labels')
         source_file = os.path.join(source_file, 'base_case')
-        source_file = os.path.join(source_file, 'product_bundle.xml')
+        if self.bundle.bundle_type == 'External':
+            source_file = os.path.join(PDS4_LABEL_TEMPLATE_DIRECTORY, 'base_templates')
+            source_file = os.path.join(source_file, 'product_external_bundle.xml')
+        else:
+            source_file = os.path.join(PDS4_LABEL_TEMPLATE_DIRECTORY, 'base_case')
+            source_file = os.path.join(source_file, 'product_bundle.xml')
 
         # set selected version
         update = Version()
@@ -2954,9 +2959,11 @@ class Product_Collection(models.Model):
     def name_label_case(self):
 
         # Append cleaned collection name to name edit for Product_Collection xml label
+        bundle_id = self.bundle.bundleID.strip().lower().replace(' ', '_')
         name_edit = self.collection.lower()
-        name_edit = 'collection_{}.xml'.format(name_edit)
-        return name_edit
+        return f'collection_{bundle_id}_{name_edit}.xml'
+        #name_edit = 'collection_{}_{}.xml'.format(bundle_id, name_edit)   
+        #return name_edit
 
     def name_label_case_data(self, data):
         # Append cleaned collection name to name edit for Product_Collection xml label
@@ -2980,8 +2987,13 @@ class Product_Collection(models.Model):
     def build_base_case(self):
 
         # Locate base case Product_Collection template found in templates/pds4_labels/base_case/
-        source_file = os.path.join(PDS4_LABEL_TEMPLATE_DIRECTORY, 'base_case')
-        source_file = os.path.join(source_file, 'product_collection.xml')
+        
+        if self.bundle.bundle_type == 'External':
+            source_file = os.path.join(PDS4_LABEL_TEMPLATE_DIRECTORY, 'base_templates')
+            source_file = os.path.join(source_file, 'product_external_collection.xml')
+        else:
+            source_file = os.path.join(PDS4_LABEL_TEMPLATE_DIRECTORY, 'base_case')
+            source_file = os.path.join(source_file, 'product_collection.xml')
 
         # Locate collection directory and create path for new label
         label_file = os.path.join(self.directory(), self.name_label_case())
