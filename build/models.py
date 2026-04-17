@@ -2026,6 +2026,8 @@ class Bundle(models.Model):
     facilities = models.ManyToManyField(Facility)
     telescopes = models.ManyToManyField(Telescope)
     submitted_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)
     
 
     class Meta:
@@ -2196,6 +2198,16 @@ class Bundle(models.Model):
     """
        update is used when a new label is being created for a product. Given a product, update will see which objects (whether that be other products or individual components of a label like an alias) are currently associated with the bundle and ensure all of the current metadata will be found on the new label being created for the given product.
     """
+
+    def get_status(self):
+        if self.submitted_at is not None:
+            return 'submitted'
+        required_complete = all([
+            self.modification_history_set.exists(),
+            self.citation_information_set.exists(),
+            self.targets.exists(),
+        ])
+        return 'ready' if required_complete else 'in_progress'
 
     def update(self, product):
 
