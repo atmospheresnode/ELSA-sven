@@ -15,40 +15,38 @@
 <div class="container-fluid justify-content-center align-items-center">
 
     <!-- Messages -->
-   {% if messages %}
+    {% if messages %}
     <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1080;">
-    {% for message in messages %}
-      <div
-        class="toast align-items-center border-0 shadow-sm mb-2"
-        role="alert"
-        aria-live="assertive"
-        aria-atomic="true"
-        data-bs-delay="4500"
-      >
-        <div class="d-flex">
-          <div class="px-3 d-flex align-items-center
-            {% if message.tags == 'success' %}bg-success
-            {% elif message.tags == 'error' %}bg-danger
-            {% elif message.tags == 'warning' %}bg-warning
-            {% else %}bg-info{% endif %}">
-          </div>
-
-          <div class="toast-body">
-            <div class="fw-semibold mb-1">
-              {% if message.tags == 'success' %}Success
-              {% elif message.tags == 'error' %}Error
-              {% elif message.tags == 'warning' %}Warning
-              {% else %}Notice{% endif %}
+        {% for message in messages %}
+        <div
+            class="toast align-items-center border-0 shadow-sm mb-2"
+            role="alert"
+            aria-live="assertive"
+            aria-atomic="true"
+            data-bs-delay="4500"
+        >
+            <div class="d-flex">
+                <div class="px-3 d-flex align-items-center
+                    {% if message.tags == 'success' %}bg-success
+                    {% elif message.tags == 'error' %}bg-danger
+                    {% elif message.tags == 'warning' %}bg-warning
+                    {% else %}bg-info{% endif %}">
+                </div>
+                <div class="toast-body">
+                    <div class="fw-semibold mb-1">
+                        {% if message.tags == 'success' %}Success
+                        {% elif message.tags == 'error' %}Error
+                        {% elif message.tags == 'warning' %}Warning
+                        {% else %}Notice{% endif %}
+                    </div>
+                    <div>{{ message }}</div>
+                </div>
+                <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
             </div>
-            <div>{{ message }}</div>
-          </div>
-
-          <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
         </div>
-      </div>
-    {% endfor %}
-  </div>
-{% endif %}
+        {% endfor %}
+    </div>
+    {% endif %}
 
     <!-- Welcome Card -->
     <div class="row justify-content-center align-items-center mt-4">
@@ -77,15 +75,6 @@
         </div>
     </div>
 
-    <!-- Add Bundle Button -->
-    <div class="row justify-content-center align-items-center mt-4 mx-8 px-8">
-        <div class="col-md-9">
-            <a href="{% url 'build:build' %}" class="btn btn-light text-light w-100" style="font-style: normal;"> 
-                Add Bundle <i class="fa fa-plus ms-2"></i>
-            </a>
-        </div>
-    </div>
-
     <!-- Bundle List Card -->
     <div class="row mt-5 justify-content-center align-items-center">
         <div class="col-md-11">
@@ -96,161 +85,226 @@
                     </div>
                 </div>
 
+                <!-- Toolbar: Search / Filter / Add Bundle -->
+                <div class="row align-items-center g-2 p-3 border-bottom">
+                    <div class="col">
+                        <input type="text" id="bundle-search" class="form-control" placeholder="Search by name or LID...">
+                    </div>
+                    <div class="col-auto">
+                        <select id="type-filter" class="form-select">
+                            <option value="">All types</option>
+                            <option value="Archive">Archive</option>
+                            <option value="External">External</option>
+                        </select>
+                    </div>
+                    <div class="col-auto">
+                        <a href="{% url 'build:build' %}" class="btn btn-light text-light" style="font-style: normal;">
+                            Add Bundle <i class="fa fa-plus ms-2"></i>
+                        </a>
+                    </div>
+                </div>
+
                 <!-- Delete form -->
                 <form method="POST" action="{% url 'friends:delete_bundles' %}">
                     {% csrf_token %}
 
                     <!-- Select All / Delete Toolbar -->
                     {% if bundles %}
-                    <div class="d-flex justify-content-between align-items-center p-3 mb-3 bg-light rounded shadow-sm">
+                    <div class="d-flex justify-content-between align-items-center p-3 mb-2 bg-light rounded shadow-sm">
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" id="select-all-modern">
                             <label class="form-check-label fw-semibold" for="select-all-modern">
                                 Select All Bundles
                             </label>
                         </div>
-                        <button type="button" id="delete-selected-btn" class="btn btn-danger d-none shadow-sm">
+                        <button type="button" id="delete-selected-btn" class="btn btn-danger btn-keep-bg d-none shadow-sm">
                             <i class="fa fa-trash me-2"></i>Delete Selected
                         </button>
                     </div>
                     {% endif %}
 
-                    <!-- Bundle Carousel -->
-                    <div class="row">
-                        <div class="carousel" id="bundle-carousel">
-                            <div class="carousel-inner" role="listbox">
-                                {% if bundles %}
-                                    {% for bundle in bundles %}
-                                        <div class="carousel-item {% if forloop.first %}active{% endif %}">
-                                            <div class="card bundle-card text-center">
+                    <!-- Bundle Grid -->
+                    {% if bundles %}
+                    <div class="row row-cols-1 row-cols-md-2 row-cols-xl-4 g-3 p-3" id="bundle-grid">
+                            {% for bundle in bundles %}
+                            <div class="col bundle-col"
+                                 data-name="{{ bundle.name|lower }}"
+                                 data-lid="{{ bundle.lid|lower }}"
+                                 data-type="{{ bundle.bundle_type }}">
+                                <div class="card bundle-card text-center h-100">
 
-                                                <!-- Checkbox -->
-                                                <div class="p-2">
-                                                    <input type="checkbox" name="bundle_ids" value="{{ bundle.id }}" class="bundle-checkbox" onclick="event.stopPropagation();">
-                                                </div>
-
-                                                <a href="{{ bundle.absolute_url }}">
-                                                    {% if bundle.bundle_type == 'Archive' %}
-                                                        <img class="img-fluid" src="{% static 'images/bundle_archive.png' %}" alt="Archive Bundle">
-                                                    {% elif bundle.bundle_type == 'External' %}
-                                                        <img class="img-fluid" src="{% static 'images/bundle_external.png' %}" alt="External Bundle">
-                                                    {% else %}
-                                                        <img class="img-fluid" src="{% static 'images/null.png' %}" alt="Bundle Image">
-                                                    {% endif %}
-
-                                                    <div class="card-body">
-                                                        <h4 class="card-title" style="font-style: normal;"> {{ bundle }} </h4>
-                                                        <p class="card-text"> {{ bundle.lid }} </p>                        
-                                                    </div>
-                                                </a>
-
-                                            </div>
-                                        </div>
-                                    {% endfor %}
-                                {% else %}
-                                    <div class="carousel-item active">
-                                        <div class="card bundle-card">
-                                            <img class="img-fluid" src="{% static 'images/null.png' %}" alt="Null">
-                                            <div class="card-body">
-                                                <h4 class="card-title text-center"> No Bundles </h4>                      
-                                            </div>
-                                        </div>
+                                    <!-- Checkbox -->
+                                    <div class="px-2 pt-2 pb-0 text-start">
+                                        <input type="checkbox" name="bundle_ids" value="{{ bundle.id }}"
+                                            class="bundle-checkbox"
+                                            onclick="event.stopPropagation();">
                                     </div>
-                                {% endif %}
+
+                                    <a href="{{ bundle.absolute_url }}">
+                                        {% if bundle.bundle_type == 'Archive' %}
+                                            <img class="img-fluid" src="{% static 'images/bundle_archive.png' %}" alt="Archive Bundle" style="max-height: 130px; width: auto;">
+                                        {% elif bundle.bundle_type == 'External' %}
+                                            <img class="img-fluid" src="{% static 'images/bundle_external.png' %}" alt="External Bundle" style="max-height: 130px; width: auto;">
+                                        {% else %}
+                                            <img class="img-fluid" src="{% static 'images/null.png' %}" alt="Bundle Image" style="max-height: 130px; width: auto;">
+                                        {% endif %}
+
+                                        <div class="card-body py-1 px-2">
+                                            <h5 class="card-title mb-1" style="font-style: normal;">{{ bundle }}</h5>
+                                            <p class="card-text mb-1">{{ bundle.lid }}</p>
+                                            {% if bundle.bundle_type == 'External' %}
+                                                {% with status=bundle.get_status %}
+                                                <span class="badge rounded-pill
+                                                    {% if status == 'submitted' %}bg-primary
+                                                    {% elif status == 'ready' %}bg-success
+                                                    {% else %}bg-warning text-dark{% endif %}"
+                                                    style="font-size: 0.7rem;">
+                                                    {% if status == 'submitted' %}Submitted
+                                                    {% elif status == 'ready' %}Ready
+                                                    {% else %}In Progress{% endif %}
+                                                </span>
+                                                {% endwith %}
+                                            {% endif %}
+                                            {% if bundle.updated_at %}
+                                            <p class="card-text mb-2">
+                                                <small class="text-muted">
+                                                    <i class="fa fa-calendar me-1"></i>Last updated {{ bundle.updated_at|date:"M j, Y" }}
+                                                </small>
+                                            </p>
+                                            {% endif %}
+                                        </div>
+                                    </a>
+
+                                </div>
                             </div>
-
-                            <!-- Carousel Controls -->
-                            <button class="carousel-control-prev" type="button" data-bs-target="#bundle-carousel" data-bs-slide="prev">
-                                <i class="fa fa-chevron-left fa-3x text-dark"></i>
-                            </button>
-
-                            <button class="carousel-control-next" type="button" data-bs-target="#bundle-carousel" data-bs-slide="next">
-                                <i class="fa fa-chevron-right fa-3x text-dark"></i>
-                            </button>
-                        </div>
+                            {% endfor %}
                     </div>
+                    {% else %}
+                    <div class="d-flex flex-column align-items-center justify-content-center py-5">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" fill="none" viewBox="0 0 72 72" class="mb-4" aria-hidden="true">
+                            <rect x="10" y="18" width="52" height="42" rx="4" fill="#e9ecef" stroke="#adb5bd" stroke-width="2"/>
+                            <rect x="10" y="18" width="24" height="8" rx="2" fill="#ced4da" stroke="#adb5bd" stroke-width="2"/>
+                            <line x1="20" y1="36" x2="52" y2="36" stroke="#adb5bd" stroke-width="2" stroke-linecap="round"/>
+                            <line x1="20" y1="44" x2="52" y2="44" stroke="#adb5bd" stroke-width="2" stroke-linecap="round"/>
+                            <line x1="20" y1="52" x2="40" y2="52" stroke="#adb5bd" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                        <h5 class="fw-semibold mb-2">No bundles yet</h5>
+                        <p class="text-muted mb-4">Create your first bundle to get started.</p>
+                        <a href="{% url 'build:build' %}" class="btn btn-keep-bg text-white" style="background-color: teal;">
+                            Add your first bundle <i class="fa fa-plus ms-2"></i>
+                        </a>
+                    </div>
+                    {% endif %}
+
+                    <!-- No-results message -->
+                    <div id="no-results" class="text-center text-muted py-4 d-none">
+                        No bundles match your search.
+                    </div>
+
                 </form>
 
             </div>
         </div>
     </div>
 
-    <!-- Delete Confirmation Modal -->
-    <div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-hidden="true">
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow">
-
-        <div class="modal-header">
-            <h5 class="modal-title">Confirm Deletion</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-
-        <div class="modal-body">
-            <p class="mb-0">
-            Are you sure you want to delete the selected bundles?
-            </p>
-            <small class="text-muted text-italic">
-            <em>This action cannot be undone!</em>
-            </small>
-        </div>
-
-        <div class="modal-footer">
-            <button type="button" class="btn btn-light" data-bs-dismiss="modal">
-            Cancel
-            </button>
-            <button type="button" id="confirm-delete-btn" class="btn btn-danger">
-            Delete
-            </button>
-        </div>
-
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Deletion</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-0">Are you sure you want to delete the selected bundles?</p>
+                <small class="text-muted"><em>This action cannot be undone!</em></small>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" id="confirm-delete-btn" class="btn btn-danger btn-keep-bg">Delete</button>
+            </div>
         </div>
     </div>
 </div>
 
-
-
-</div>
-
-<!-- JS for Select All + Delete -->
+<!-- JS for Select All + Delete + Search/Filter -->
 <script>
 
+// --- Bulk Delete ---
 const selectAll = document.getElementById('select-all-modern');
 const bundleCheckboxes = document.querySelectorAll('.bundle-checkbox');
 const deleteBtn = document.getElementById('delete-selected-btn');
-const deleteModal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
 const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
+const deleteModalEl = document.getElementById('deleteConfirmModal');
+const deleteModal = deleteModalEl ? new bootstrap.Modal(deleteModalEl) : null;
 
-// Toggle all checkboxes
-selectAll.addEventListener('change', () => {
-    bundleCheckboxes.forEach(cb => cb.checked = selectAll.checked);
-    toggleDeleteButton();
-});
+if (selectAll) {
+    selectAll.addEventListener('change', () => {
+        bundleCheckboxes.forEach(cb => cb.checked = selectAll.checked);
+        toggleDeleteButton();
+    });
+}
 
-// Show/hide delete button based on selection
 bundleCheckboxes.forEach(cb => cb.addEventListener('change', toggleDeleteButton));
 
 function toggleDeleteButton() {
     const anyChecked = [...bundleCheckboxes].some(cb => cb.checked);
-    deleteBtn.classList.toggle('d-none', !anyChecked);
+    if (deleteBtn) deleteBtn.classList.toggle('d-none', !anyChecked);
 }
 
-// Confirm delete
-deleteBtn.addEventListener('click', () => {
-    const anyChecked = [...bundleCheckboxes].some(cb => cb.checked);
-    if (!anyChecked) return;
+if (deleteBtn) {
+    deleteBtn.addEventListener('click', () => {
+        if ([...bundleCheckboxes].some(cb => cb.checked)) deleteModal.show();
+    });
+}
 
-    deleteModal.show();
-});
+if (confirmDeleteBtn) {
+    confirmDeleteBtn.addEventListener('click', () => {
+        deleteBtn.closest('form').submit();
+    });
+}
 
-confirmDeleteBtn.addEventListener('click', () => {
-    deleteBtn.closest('form').submit();
-});
+// --- Search + Filter ---
+const searchInput = document.getElementById('bundle-search');
+const typeFilter = document.getElementById('type-filter');
+const bundleCols = document.querySelectorAll('.bundle-col');
+const noResults = document.getElementById('no-results');
 
+function filterBundles() {
+    const query = (searchInput.value || '').toLowerCase().trim();
+    const type = typeFilter.value;
+    let visible = 0;
+
+    bundleCols.forEach(col => {
+        const name = col.dataset.name || '';
+        const lid = col.dataset.lid || '';
+        const colType = col.dataset.type || '';
+
+        const matchesSearch = !query || name.includes(query) || lid.includes(query);
+        const matchesType = !type || colType === type;
+
+        if (matchesSearch && matchesType) {
+            col.classList.remove('d-none');
+            visible++;
+        } else {
+            col.classList.add('d-none');
+        }
+    });
+
+    if (noResults) noResults.classList.toggle('d-none', visible > 0 || bundleCols.length === 0);
+}
+
+if (searchInput) searchInput.addEventListener('input', filterBundles);
+if (typeFilter) typeFilter.addEventListener('change', filterBundles);
+
+// --- Toasts ---
 document.addEventListener('DOMContentLoaded', function () {
-  document.querySelectorAll('.toast').forEach(function (toastEl) {
-    const t = new bootstrap.Toast(toastEl);
-    t.show();
-  });
+    document.querySelectorAll('.toast').forEach(function (toastEl) {
+        const t = new bootstrap.Toast(toastEl);
+        t.show();
+    });
 });
 
 </script>
