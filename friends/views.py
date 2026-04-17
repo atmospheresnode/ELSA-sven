@@ -339,7 +339,12 @@ def friend_settings(request, pk_user):
 @login_required
 def bundle_hub(request):
     bundles = Bundle.objects.filter(user=request.user)
-    return render(request, 'friends/bundle_hub.html', {'bundles': bundles})
+    return render(request, 'friends/bundle_hub.html', {
+        'bundles': bundles,
+        'total_count': bundles.count(),
+        'archive_count': bundles.filter(bundle_type='Archive').count(),
+        'external_count': bundles.filter(bundle_type='External').count(),
+    })
 
 @login_required
 def delete_bundles(request):
