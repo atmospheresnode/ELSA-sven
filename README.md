@@ -20,13 +20,19 @@ This section provides a timeline of ELSA's release history, highlighting key upd
 
 ### **Current Version** 
 
+> ### **Version 1.30.0 (April 17, 2026)**
+- Bundle Hub: Replaced the carousel with a responsive bundle grid.
+- Bundle Hub: Added search and bundle type filtering.
+- Bundle Hub: Bundle cards now show the last updated date.
+- Bundle Hub: External bundle cards now show a status badge.
+
+### **Previous Versions** 
+
 > ### **Version 1.29.0 (March 27, 2026)**
 - Delete NetCDF: Fixed an issue where the XML file was not deleted when removing a NetCDF file.
 - Delete Document: Fixed an issue where the XML file was not deleted when removing a document.
 - NetCDF File Upload: Updated the status bar to display "Processing NetCDF..." while the server processes the file after upload.
 - External Bundle: Implemented the Submit functionality, which sends an email with the bundle archive path and a download link.
-
-### **Previous Versions** 
 
 > ### **Version 1.28.0 (March 20, 2026)**
 - External Bundle: A real-time progress bar has been added for NetCDF file uploads.

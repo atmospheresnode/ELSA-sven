@@ -39,7 +39,7 @@ Specify Some Data
     }
     
     /* Header Styles */
-    .header-gradient {
+    /* .header-gradient {
         background: linear-gradient(135deg, #008B8B, #004d4d);
         color: white;
         padding: 8px;
@@ -57,7 +57,7 @@ Specify Some Data
         background-color: #2F4F4F;
         color: white;
         border-radius: 12px 12px 0 0;
-    }
+    } */
     
     /* Submit Button */
     .btn-submit {
@@ -72,23 +72,29 @@ Specify Some Data
         background-color: #004d4d;
     }
 </style>
+<div class="container-fluid">
+    <div class="row justify-content-center align-items-center py-4">
+        <div class="col-12 col-lg-7 col-xl-8">
+            <div class="card">
+                <h5 class="card-header bg-secondary text-light text-center position-relative">
+                    Fill Data Tables
+                </h5>
+                <div class="card-body m-4">                        
+                    <!-- Header Section -->
 
-<div class="container my-5">
-    
-    <!-- Header Section -->
-    <div class="row mb-4">
-        <div class="col-md-12">
-            <div class="header-gradient">
-                <h3>Fill Data Tables</h2>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Form Card -->
-        <div class="row mb-4">
-            <div class="col-md-12">
-                <div class="card card-custom">
-                    <div class="card-body">
+                    <!-- <div class="row mb-4">
+                        <div class="col-md-12">
+                            <div class="header-gradient">
+                                <h3>Fill Data Tables</h2>
+                                </div>
+                            </div>
+                        </div> -->
+                        
+                        <!-- Form Card -->
+                        <!-- <div class="row mb-4">
+                            <div class="col-md-12">
+                                <div class="card card-custom">
+                                    <div class="card-body"> -->
                         <form id="data_form" method="post" action="{% url 'build:table_creation' bundle.pk data.pk %}">
                             {% csrf_token %}
                             {% if data.data_type == 'Table Delimited' %}
@@ -523,24 +529,23 @@ Specify Some Data
                         </div>
                         {% endif %}
                         <!-- {{ data_form.as_p }} -->
+                    
                         <div class="text-center mt-3">
-                            <button type="submit" class="btn btn-success btn-md">Submit</button>
-                        </div>
+                                <button type="submit" class="btn btn-success btn-md">Submit</button>
+                        </div>     
                     </form>
                 </div>
+                        
+                <!-- Back Button -->
+                <div class="row mt-3">
+                    <div class="col-md-12 d-flex align-items-center justify-content-center">
+                        <a href="{% url 'build:bundle' bundle.pk %}" class="btn bi" style="background-color: #008B8B; color: white;">
+                            <i class="fa fa-arrow-circle-left" style="margin-right: 5px;"></i> Bundle Details
+                        </a>
+                    </div>
+                </div>                                                     
             </div>
         </div>
     </div>
-    
-    <!-- Back Button -->
-    <div class="row mt-3">
-        <div class="col-md-12 d-flex align-items-center justify-content-center">
-            <a href="{% url 'build:bundle' bundle.pk %}" class="btn bi bi-arrow-return-left" style="background-color: #008B8B; color: white;">
-                <i class="fa fa-arrow-circle-left" style="margin-right: 5px;"></i> Bundle Details
-            </a>
-        </div>
-    </div>
-    
 </div>
-
 {% endblock %}
