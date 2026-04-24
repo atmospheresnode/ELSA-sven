@@ -1165,13 +1165,13 @@ class EditTableFieldsForm(forms.Form):
 
         super(EditTableFieldsForm, self).__init__(*args, **kwargs)
 
-        self.data = Data.objects.get(pk=self.pk_data)
+        self.data_instance = Data.objects.get(pk=self.pk_data)
 
-        if self.data.data_type == 'Table Delimited':
+        if self.data_instance.data_type == 'Table Delimited':
             self.table = Table_Delimited.objects.get(pk=self.pk_table)
-        elif self.data.data_type == 'Table Binary':
+        elif self.data_instance.data_type == 'Table Binary':
             self.table = Table_Binary.objects.get(pk=self.pk_table)
-        elif self.data.data_type == 'Table Character':
+        elif self.data_instance.data_type == 'Table Character':
             self.table = Table_Fixed_Width.objects.get(pk=self.pk_table)
 
         # Add fields for table 
@@ -1189,7 +1189,7 @@ class EditTableFieldsForm(forms.Form):
             description_label = f"Field {i + 1} Description"
             max_field_length_label = f"Field {i+1} Maximum Field Length"
 
-            if self.data.data_type == 'Table Delimited':
+            if self.data_instance.data_type == 'Table Delimited':
                 self.fields[f'name_{i}'] = forms.CharField(
                     required=False, 
                     label=name_label,
@@ -1211,7 +1211,7 @@ class EditTableFieldsForm(forms.Form):
                     label=description_label,
                     widget=forms.TextInput(attrs={'class': 'form-control form-outline'})
                 )
-            elif self.data.data_type == 'Table Binary':
+            elif self.data_instance.data_type == 'Table Binary':
                 self.fields[f'name_{i}'] = forms.CharField(
                     required=False, 
                     label=name_label,
@@ -1237,7 +1237,7 @@ class EditTableFieldsForm(forms.Form):
                     label=description_label,
                     widget=forms.TextInput(attrs={'class': 'form-control form-outline'})
                 )
-            elif self.data.data_type == 'Table Character':
+            elif self.data_instance.data_type == 'Table Character':
                 self.fields[f'name_{i}'] = forms.CharField(
                     required=False, 
                     label=name_label,
