@@ -125,6 +125,7 @@
 
                     <!-- Bundle Grid -->
                     {% if bundles %}
+                    <div style="max-height: 520px; overflow-y: auto; overflow-x: hidden;">
                     <div class="row row-cols-1 row-cols-md-2 row-cols-xl-4 g-3 p-3" id="bundle-grid">
                             {% for bundle in bundles %}
                             <div class="col bundle-col"
@@ -178,6 +179,7 @@
                                 </div>
                             </div>
                             {% endfor %}
+                    </div>
                     </div>
                     {% else %}
                     <div class="d-flex flex-column align-items-center justify-content-center py-5">
