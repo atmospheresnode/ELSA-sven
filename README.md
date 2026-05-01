@@ -24,6 +24,7 @@ This section provides a timeline of ELSA's release history, highlighting key upd
 - Build Bundle: UI changes to bundle type selection (radio card button has been introduced).
 - About: Fixed the broken link for the PDS4 Standard.
 - netCDF Upload: The .nc extension check has been removed. Server-side magic byte validation has been introduced.
+- netCDF XML Generation: Fixed bug to populate XML file with coordinate metadata and new variable metadata. 
 
 ### **Previous Versions** 
 
