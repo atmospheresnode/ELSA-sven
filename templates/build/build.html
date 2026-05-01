@@ -3,114 +3,161 @@
 
 {% block body_block %}
 
+<style>
+    .bundle-type-card {
+        border: 2px solid #dee2e6;
+        border-radius: 0.5rem;
+        cursor: pointer;
+        box-shadow: none !important;
+        transition: border-color 0.15s ease, background-color 0.15s ease;
+    }
+    .bundle-type-card:hover {
+        border-color: #adb5bd;
+    }
+    .btn-check:checked + .bundle-type-card {
+        border-color: teal;
+        background-color: rgba(0, 128, 128, 0.06);
+    }
+    .bundle-type-icon {
+        color: #adb5bd;
+        transition: color 0.15s ease;
+    }
+    .btn-check:checked + .bundle-type-card .bundle-type-icon {
+        color: teal;
+    }
+    .bundle-type-invalid .bundle-type-card {
+        border-color: #dc3545;
+    }
+</style>
+
 <div class="container-fluid">
     <div class="row justify-content-center align-items-center py-4">
         <div class="col-12 col-lg-9 col-xl-10">
             <div class="card">
                 <div class="card-body m-4">
-                    <h2 class="mb-5 pb-2 pb-md-0 mb-md-4">Building a Bundle?</h2>
-                    <p class="pb-4">
-                        ELSA helps you to build PDS4 compliant labels for your data by building your bundle all at once and will provide a downloadable template package partially filled-out for you to work with your node representative. 
-                        To begin, ELSA needs some basic information about your bundle and select the version of the PDS4 you want to use (ELSA will default to the latest supported version - Unless you need an earlier version, use this default). 
-                        NOTE: Once the bundle is named, you will be directed to a 'Bundle View' that will prompt you for various parts of the bundles including the ability to add collections. 
-                        Some collections are required by the ATM node and will be automatically generated for your use. 
-                        Namely you will be expected to provide documentation for your bundle - a document collection has been generated for that purpose. 
-                        XML_Schema and Context collections will also be generated for you. 
-                        These serve as system augmentations for the PDS and will be completely handled by ELSA. 
+
+                    <!-- Page Header -->
+                    <h2 class="mb-3">Building a Bundle?</h2>
+                    <p class="pb-3">
+                        ELSA helps you to build PDS4 compliant labels for your data by building your bundle all at 
+                        once and will provide a downloadable template package partially filled-out for you to work 
+                        with your node representative. To begin, ELSA needs some basic information about your bundle 
+                        and select the version of the PDS4 you want to use (ELSA will default to the latest supported 
+                        version - Unless you need an earlier version, use this default). NOTE: Once the bundle is named, 
+                        you will be directed to a 'Bundle View' that will prompt you for various parts of the bundles 
+                        including the ability to add collections. Some collections are required by the ATM node and will 
+                        be automatically generated for your use. Namely you will be expected to provide documentation for 
+                        your bundle - a document collection has been generated for that purpose. XML_Schema and Context 
+                        collections will also be generated for you. These serve as system augmentations for the PDS and 
+                        will be completely handled by ELSA.
                     </p>
 
-                    <hr>
+                    <hr class="mb-4">
 
-                    <!-- Bundle Info Header -->
-                    <h2 class="mb-5 py-2 pb-md-0 mb-md-4">Provide Bundle Information</h2>
+                    <h4 class="mb-4">Provide Bundle Information</h4>
 
-                    <!-- Bundle Creator -->
                     <form id="form_bundle" method="post" action="{% url 'build:build' %}">
                         {% csrf_token %}
-                        
-                        <!-- Bundle Name -->
-                        <div class="mb-4 form-outline">
-                            {{ form_bundle.name }}
 
-                            <!-- Bundle Name Guideline Tooltip -->
-                            <span tabindex="1" data-toggle="tooltip" 
-                                title="The name of your bundle is the unique name you would like your bundle to be archived as. The version of your bundle should be the most up-to-date version unless otherwise noted by your node personnel. The type of bundle depends on your data. If your bundle is meant to be archived, choose archive. This option is what most bundle types are. If your bundle contains supplemental data to an already archived bundle, choose supplemental. Each bundle contains a document, context, and xml_schema collection. All other collections contained in your bundle will be decided between you, {{ user.first_name }}, and your node personnel. If you are working directly with ATM and are unsure of which collections are in your bundle, send a message to ELSA and someone from ATM will get back to you shortly. If you are working with another node, please contact your node.">
-                                <button type="button" class="btn btn-block" style="pointer-events: none; border: none;" disabled>
-                                    <i class="fa fa-question"></i>
-                                </button>
-                            </span>
+                        <!-- Bundle Name -->
+                        <div class="mb-4">
+                            <label for="bundle_name" class="form-label fw-medium">Bundle Name <span class="text-danger">*</span></label>
+                            {{ form_bundle.name }}
+                            <div class="form-text">Use a unique, descriptive name. Spaces will be converted to underscores automatically.</div>
                         </div>
 
-                        <div class="mb-4 form-outline">
+                        <!-- Bundle ID -->
+                        <div class="mb-4">
+                            <label for="bundleID" class="form-label fw-medium">Bundle ID <span class="text-muted fw-normal small">(optional)</span></label>
                             {{ form_bundle.bundleID }}
-
-                            <!-- Bundle ID Guideline Tooltip -->
-                            <span tabindex="1" data-toggle="tooltip" 
-                                title="Bundle IDs let you shorten or customize long bundle names. For example, Mars Phoenix Atmospheric Opacity (auto generated as mars_phoenix_atmospheric_opacity) could be written as phx_ao">
-                                <button type="button" class="btn btn-block" style="pointer-events: none; border: none;" disabled>
-                                    <i class="fa fa-question"></i>
-                                </button>
-                            </span>
+                            <div class="form-text">A short custom identifier. Leave blank to auto-generate from the bundle name.</div>
                         </div>
 
                         <!-- Bundle Type -->
-                        <div class="mb-4 form-outline">
-                            <div class="row">
-                                <div class="col-md-2 mt-2">
-                                    <h6>Bundle Type</h6>
+                        <div class="mb-4">
+                            <label class="form-label fw-medium">Bundle Type <span class="text-danger">*</span></label>
+                            <div class="row g-3" id="bundle-type-group">
+                                <div class="col-6">
+                                    <input type="radio" class="btn-check" name="bundle_type" id="type_archive" value="Archive" autocomplete="off">
+                                    <label class="card w-100 bundle-type-card" for="type_archive">
+                                        <div class="card-body py-2 px-3">
+                                            <div class="d-flex align-items-center">
+                                                <i class="fa fa-archive bundle-type-icon me-2"></i>
+                                                <span class="fw-medium">Archive</span>
+                                            </div>
+                                        </div>
+                                    </label>
                                 </div>
-
-                                <div class="col-md-10" style="pointer-events: auto; cursor: pointer;">
-                                    {{ form_bundle.bundle_type }}
-
-                                    <span class="me-2" tabindex="0">
-                                        <i class="fa fa-chevron-down text-muted"></i>
-                                    </span>
-
+                                <div class="col-6">
+                                    <input type="radio" class="btn-check" name="bundle_type" id="type_external" value="External" autocomplete="off">
+                                    <label class="card w-100 bundle-type-card" for="type_external">
+                                        <div class="card-body py-2 px-3">
+                                            <div class="d-flex align-items-center">
+                                                <i class="fa fa-share-square-o bundle-type-icon me-2"></i>
+                                                <span class="fw-medium">External</span>
+                                            </div>
+                                        </div>
+                                    </label>
                                 </div>
+                            </div>
+                            <div id="bundle-type-error" class="d-none mt-1">
+                                <span class="text-danger small">Bundle type is required.</span>
                             </div>
                         </div>
 
                         <!-- Bundle Version -->
-                        <div class="mb-4 form-outline">
-                            <div class="row">
-                                <div class="col-md-2 mt-2">
-                                    <h6>Bundle Version</h6>
-                                </div>
-
-                                <div class="col-md-10" style="pointer-events: auto; cursor: pointer;">
-                                    {{ form_bundle.version }}
-
-                                    <span class="me-2" tabindex="0">
-                                        <i class="fa fa-chevron-down text-muted"></i>
-                                    </span>
-                                </div>
-                            </div>
+                        <div class="mb-4">
+                            <label for="bundle_version" class="form-label fw-medium">Bundle Version <span class="text-danger">*</span></label>
+                            {{ form_bundle.version }}
+                            <div class="form-text">ELSA defaults to the latest supported PDS4 version. Only change if instructed by your node representative.</div>
                         </div>
 
-                        <!-- Walkthrough Option -->
+                        <!-- Walkthrough -->
                         <div class="mb-4">
-                            <div class="card bg-light">
+                            <div class="card border bg-light">
                                 <div class="card-body">
-                                    <h5 class="card-title">Enable Bundle Walkthrough?</h5>
-                                    <p class="card-text text-muted">New to bundle creation or need a refresher? Let ELSA assist you. Enable the guided walkthrough for a step-by-step tour of the primary bundle setup process.</p>
-                                    
+                                    <h6 class="fw-semibold mb-1">Enable Guided Walkthrough?</h6>
+                                    <p class="text-muted small mb-3">New to bundle creation or need a refresher? ELSA can guide you step-by-step through the primary setup process.</p>
                                     <div class="form-check form-switch">
                                         <input class="form-check-input" type="checkbox" id="enableWalkthrough" name="enable_walkthrough" checked>
-                                        <label class="form-check-label" for="enableWalkthrough">Yes, walk me through the process!</label>
+                                        <label class="form-check-label fw-medium" for="enableWalkthrough">Yes, walk me through it!</label>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Create Bundle -->
-                        <button type="submit" class="btn btn-light text-light">Submit</button>
+                        <!-- Submit -->
+                        <button type="submit" class="btn btn-light text-light">Start Building</button>
+
                     </form>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+    document.getElementById('form_bundle').addEventListener('submit', function(e) {
+        const selected = document.querySelector('input[name="bundle_type"]:checked');
+        const errorEl = document.getElementById('bundle-type-error');
+        const group = document.getElementById('bundle-type-group');
+        if (!selected) {
+            e.preventDefault();
+            errorEl.classList.remove('d-none');
+            group.classList.add('bundle-type-invalid');
+            group.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else {
+            errorEl.classList.add('d-none');
+            group.classList.remove('bundle-type-invalid');
+        }
+    });
+
+    document.querySelectorAll('input[name="bundle_type"]').forEach(function(radio) {
+        radio.addEventListener('change', function() {
+            document.getElementById('bundle-type-error').classList.add('d-none');
+            document.getElementById('bundle-type-group').classList.remove('bundle-type-invalid');
+        });
+    });
+</script>
+
 {% endblock %}
-
-

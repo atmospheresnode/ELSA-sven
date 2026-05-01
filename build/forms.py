@@ -138,9 +138,8 @@ class BundleForm(forms.ModelForm):
     )
 
     version = forms.ChoiceField(required=True, choices=VERSION_CHOICES, widget = forms.Select(attrs={
-            'class': 'form-control',
+            'class': 'form-select',
             'id': 'bundle_version',
-            'placeholder': 'Bundle Version'
         })
     )
 
@@ -1577,23 +1576,16 @@ class MultipleNetCDFUploadForm(forms.Form):
     netcdf_files = forms.FileField(
         widget=forms.ClearableFileInput(attrs={
             'multiple': True,
-            'accept': '.nc',
             'class': 'form-control'
         }),
-        label='Select NetCDF files (.nc)',
+        label='Select NetCDF files',
         required=True
     )
 
     def clean_netcdf_files(self):
         files = self.files.getlist('netcdf_files')
-        
+
         if not files:
             raise forms.ValidationError("No files were selected.")
 
-        for file in files:
-            if not file.name.endswith('.nc'):
-                raise forms.ValidationError(
-                    f"File type not allowed: '{file.name}'. Only .nc files are accepted."
-                )
-        
         return files
