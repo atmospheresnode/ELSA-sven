@@ -1844,7 +1844,7 @@
                                        <div class="mb-3">
                                              {{ form_netcdf.netcdf_files.label_tag }}
                                              {{ form_netcdf.netcdf_files }}
-                                             <div class="form-text">You can select multiple .nc files.</div>
+                                             <div class="form-text">You can select multiple NetCDF files (.nc or extensionless).</div>
                                        </div>
 
                                        <!-- File summary -->
@@ -2343,6 +2343,25 @@
 
                // On complete
                 xhr.addEventListener('load', function() {
+                     if (xhr.status === 400) {
+                        // Validation error from server (e.g. magic byte check failed)
+                        let errorMsg = 'Upload failed.';
+                        try { errorMsg = JSON.parse(xhr.responseText).error; } catch(e) {}
+                        progressWrapper.style.display = 'none';
+                        uploadBtn.disabled = false;
+                        uploadBtn.textContent = 'Upload';
+
+                        let alertBox = document.getElementById('netcdf-upload-error');
+                        if (!alertBox) {
+                           alertBox = document.createElement('div');
+                           alertBox.id = 'netcdf-upload-error';
+                           netcdfForm.insertAdjacentElement('beforebegin', alertBox);
+                        }
+                        alertBox.className = 'alert alert-danger alert-dismissible fade show mt-2';
+                        alertBox.innerHTML = errorMsg + '<button type="button" class="btn-close float-end" data-bs-dismiss="alert"></button>';
+                        return;
+                     }
+
                      progressBar.style.width = '100%';
                      progressBar.classList.remove('progress-bar-animated', 'bg-info');
                      progressBar.classList.add('bg-success');
