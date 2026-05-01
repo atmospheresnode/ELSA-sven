@@ -11,7 +11,7 @@ from itertools import chain
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
-from django.http import HttpResponse, HttpRequest
+from django.http import HttpResponse, HttpRequest, JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.template import RequestContext
 from django import forms
@@ -893,6 +893,12 @@ def bundle(request, pk_bundle):
                 
                 files_uploaded = False
                 for f in files:
+                    if not is_netcdf_file(f):
+                        return JsonResponse(
+                            {'error': '"{}" is not a valid NetCDF file. Only NetCDF classic, 64-bit, or HDF5-based files are accepted.'.format(f.name)},
+                            status=400
+                        )
+
                     file_title = f.name
                     if len(file_title) > 100:
                         file_title = file_title[:100]
@@ -900,10 +906,10 @@ def bundle(request, pk_bundle):
                     # Create the NetCDFFile object using your model's fields
                     netcdf_obj = NetCDFFile(
                         bundle=bundle,
-                        file=f,         
-                        title=file_title 
+                        file=f,
+                        title=file_title
                     )
-                    
+
                     netcdf_obj.save()
                     files_uploaded = True
 
