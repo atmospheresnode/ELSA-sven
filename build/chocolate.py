@@ -40,6 +40,19 @@ def replace_all( r, s, t ):
     return r
 
 
+def is_netcdf_file(file_obj):
+    """Return True if file_obj contains valid NetCDF magic bytes."""
+    header = file_obj.read(8)
+    file_obj.seek(0)
+    # NetCDF classic / 64-bit offset: 'CDF\x01' or 'CDF\x02'
+    if len(header) >= 4 and header[:3] == b'CDF' and header[3:4] in (b'\x01', b'\x02'):
+        return True
+    # NetCDF-4 / HDF5
+    if header == b'\x89HDF\r\n\x1a\n':
+        return True
+    return False
+
+
 # make_directory makes a directory at the given path.  If the path already exists, it does nothing.  Without having the second condition, our page would throw an error if the path already exists.  
 def make_directory(path):
     try:
