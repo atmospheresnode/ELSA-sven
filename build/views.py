@@ -4031,7 +4031,7 @@ def variable_coord_to_product(bundle):
         if id_area is not None:
 
             # Find Existing Element <pds:logical_identifier> and Append to It
-            lid_elem = id_area.find("pds:logical_identifier", namespaces=NS)
+            lid_elem = id_area.find("logical_identifier", namespaces=NS)
             if lid_elem is not None and lid_elem.text:
                 # Append your suffix
                 lid_elem.text = f"{lid_elem.text}:{subdir_name.lower()}:{nc_filename}"
@@ -4050,11 +4050,12 @@ def variable_coord_to_product(bundle):
         # 4. Locate <ama:Model_Output> inside <Discipline_Area>/<ama:AMA>
         # =====================================================================================
         model_output = root.find(
-            ".//pds:Context_Area/pds:Discipline_Area/ama:AMA/ama:Model_Output",
+            ".//Context_Area/Discipline_Area/ama:AMA/ama:Model_Output",
             namespaces=NS
         )
 
         if model_output is None:
+            print("Could not find <ama:Model_Output> under <ama:AMA> in template.")
             raise ValueError("Could not find <ama:Model_Output> under <ama:AMA> in template.")
 
         # =====================================================================================
@@ -4064,6 +4065,7 @@ def variable_coord_to_product(bundle):
         variable_elements = dataframe_to_variable_elements(variable_metadata, NS, [])
 
         for elem in variable_elements:
+            print(elem)
             model_output.append(elem)
 
         coord_elements = dataframe_to_coord_elements(coord_metadata, NS, allowed_coord_fields)
