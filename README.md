@@ -20,13 +20,17 @@ This section provides a timeline of ELSA's release history, highlighting key upd
 
 ### **Current Version** 
 
+> ### **Version 1.33.0 (May 08, 2026)**
+- About page: Updated educational text content.
+- Create a bundle page: Added descriptive text next to radio card buttons for bundle type selection.
+
+### **Previous Versions** 
+
 > ### **Version 1.32.0 (May 01, 2026)**
 - Build Bundle: UI changes to bundle type selection (radio card button has been introduced).
 - About: Fixed the broken link for the PDS4 Standard.
 - netCDF Upload: The .nc extension check has been removed. Server-side magic byte validation has been introduced.
 - netCDF XML Generation: Fixed bug to populate XML file with coordinate metadata and new variable metadata. 
-
-### **Previous Versions** 
 
 > ### **Version 1.31.0 (April 24, 2026)**
 - Bundle Hub: Introduced a vertical scroller on the hub.
