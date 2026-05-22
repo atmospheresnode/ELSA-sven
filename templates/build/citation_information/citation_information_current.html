@@ -7,39 +7,24 @@
         <div class="col-12 col-lg-9 col-xl-8">
             <div class="card border-0 rounded-lg shadow-md">
                 <div class="card-header text-white text-center" style="background-color: #2F4F4F">
-                    <h3 class="mb-2 mt-2">Citation Information</h3>
+                    <h3 class="mb-1 mt-2">Citation Information</h3>
+                    <p class="mb-2 small opacity-75">Enter the identification details for each author and editor below.</p>
                 </div>
                 <div class="card-body p-4 p-lg-5">
 
                     <form method="post" class="needs-validation" novalidate>
                         {% csrf_token %}
 
-                        <!-- General Fields -->
-                        <div class="row mb-4">
-                            {% for field in form %}
-                                <div class="col-12 col-md-6 mb-3">
-                                    <label for="{{ field.id_for_label }}" class="form-label fw-semibold">{{ field.label }}</label>
-                                    <div class="form-control-wrapper">{{ field }}</div>
-                                    {% if field.help_text %}
-                                        <small class="form-text text-muted">{{ field.help_text }}</small>
-                                    {% endif %}
-                                    {% for error in field.errors %}
-                                        <div class="invalid-feedback d-block">{{ error }}</div>
-                                    {% endfor %}
-                                </div>
-                            {% endfor %}
-                        </div>
-
                         <!-- Tabs -->
-                        <ul class="nav nav-tabs mb-4" id="citationTabs" role="tablist">
+                        <ul class="nav nav-tabs mb-0" id="citationTabs" role="tablist">
                             <li class="nav-item" role="presentation">
                                 <button class="nav-link active" id="authors-tab" data-bs-toggle="tab" data-bs-target="#authors" type="button" role="tab" aria-controls="authors" aria-selected="true">
-                                    Authors
+                                    Authors <span class="fw-normal fst-italic small">(data providers)</span>
                                 </button>
                             </li>
                             <li class="nav-item" role="presentation">
                                 <button class="nav-link" id="editors-tab" data-bs-toggle="tab" data-bs-target="#editors" type="button" role="tab" aria-controls="editors" aria-selected="false">
-                                    Editors
+                                    Editors <span class="fw-normal fst-italic small">(node contacts)</span>
                                 </button>
                             </li>
                         </ul>
@@ -47,6 +32,22 @@
                         <div class="tab-content" id="citationTabsContent">
                             <!-- AUTHORS TAB -->
                             <div class="tab-pane fade show active" id="authors" role="tabpanel" aria-labelledby="authors-tab">
+
+                                <!-- Read-only summary -->
+                                <div class="d-flex gap-4 mb-4 p-3 bg-white border rounded">
+                                    <div>
+                                        <i class="bi bi-person-fill text-primary me-1"></i>
+                                        <strong>{{ citation_information.number_of_authors_people }}</strong>
+                                        person{% if citation_information.number_of_authors_people != 1 %}s{% endif %}
+                                    </div>
+                                    <div>
+                                        <i class="bi bi-building text-success me-1"></i>
+                                        <strong>{{ citation_information.number_of_authors_organization }}</strong>
+                                        organization{% if citation_information.number_of_authors_organization != 1 %}s{% endif %}
+                                        <small class="text-muted ms-1">(set to 0 unless used)</small>
+                                    </div>
+                                </div>
+
                                 <!-- People -->
                                 <div class="mb-4">
                                     <h5 class="border-bottom pb-2 mb-3">
@@ -56,9 +57,7 @@
                                         {% for field in form_edit_citation_information %}
                                             {% if 'author' in field.name and 'person' in field.name %}
                                                 <div class="col-12 col-md-6 mb-3">
-                                                    <label for="{{ field.id_for_label }}" class="form-label fw-semibold">
-                                                        {{ field.label }}
-                                                    </label>
+                                                    <label for="{{ field.id_for_label }}" class="form-label fw-semibold">{{ field.label }}</label>
                                                     <div class="form-control-wrapper">{{ field }}</div>
                                                     {% if field.help_text %}
                                                         <small class="form-text text-muted">{{ field.help_text }}</small>
@@ -72,7 +71,8 @@
                                     </div>
                                 </div>
 
-                                <!-- Organizations -->
+                                <!-- Organizations (only shown when count > 0) -->
+                                {% if citation_information.number_of_authors_organization > 0 %}
                                 <div>
                                     <h5 class="border-bottom pb-2 mb-3">
                                         <i class="bi bi-building text-success me-1"></i> Organizations
@@ -81,9 +81,7 @@
                                         {% for field in form_edit_citation_information %}
                                             {% if 'author' in field.name and 'org' in field.name %}
                                                 <div class="col-12 col-md-6 mb-3">
-                                                    <label for="{{ field.id_for_label }}" class="form-label fw-semibold">
-                                                        {{ field.label }}
-                                                    </label>
+                                                    <label for="{{ field.id_for_label }}" class="form-label fw-semibold">{{ field.label }}</label>
                                                     <div class="form-control-wrapper">{{ field }}</div>
                                                     {% if field.help_text %}
                                                         <small class="form-text text-muted">{{ field.help_text }}</small>
@@ -96,10 +94,27 @@
                                         {% endfor %}
                                     </div>
                                 </div>
+                                {% endif %}
                             </div>
 
                             <!-- EDITORS TAB -->
                             <div class="tab-pane fade" id="editors" role="tabpanel" aria-labelledby="editors-tab">
+
+                                <!-- Read-only summary -->
+                                <div class="d-flex gap-4 mb-4 p-3 bg-white border rounded">
+                                    <div>
+                                        <i class="bi bi-person-fill text-primary me-1"></i>
+                                        <strong>{{ citation_information.number_of_editors_people }}</strong>
+                                        person{% if citation_information.number_of_editors_people != 1 %}s{% endif %}
+                                    </div>
+                                    <div>
+                                        <i class="bi bi-building text-success me-1"></i>
+                                        <strong>{{ citation_information.number_of_editors_organization }}</strong>
+                                        organization{% if citation_information.number_of_editors_organization != 1 %}s{% endif %}
+                                        <small class="text-muted ms-1">(set to 0 unless used)</small>
+                                    </div>
+                                </div>
+
                                 <!-- People -->
                                 <div class="mb-4">
                                     <h5 class="border-bottom pb-2 mb-3">
@@ -109,9 +124,7 @@
                                         {% for field in form_edit_citation_information %}
                                             {% if 'editor' in field.name and 'person' in field.name %}
                                                 <div class="col-12 col-md-6 mb-3">
-                                                    <label for="{{ field.id_for_label }}" class="form-label fw-semibold">
-                                                        {{ field.label }}
-                                                    </label>
+                                                    <label for="{{ field.id_for_label }}" class="form-label fw-semibold">{{ field.label }}</label>
                                                     <div class="form-control-wrapper">{{ field }}</div>
                                                     {% if field.help_text %}
                                                         <small class="form-text text-muted">{{ field.help_text }}</small>
@@ -125,7 +138,8 @@
                                     </div>
                                 </div>
 
-                                <!-- Organizations -->
+                                <!-- Organizations (only shown when count > 0) -->
+                                {% if citation_information.number_of_editors_organization > 0 %}
                                 <div>
                                     <h5 class="border-bottom pb-2 mb-3">
                                         <i class="bi bi-building text-success me-1"></i> Organizations
@@ -134,9 +148,7 @@
                                         {% for field in form_edit_citation_information %}
                                             {% if 'editor' in field.name and 'org' in field.name %}
                                                 <div class="col-12 col-md-6 mb-3">
-                                                    <label for="{{ field.id_for_label }}" class="form-label fw-semibold">
-                                                        {{ field.label }}
-                                                    </label>
+                                                    <label for="{{ field.id_for_label }}" class="form-label fw-semibold">{{ field.label }}</label>
                                                     <div class="form-control-wrapper">{{ field }}</div>
                                                     {% if field.help_text %}
                                                         <small class="form-text text-muted">{{ field.help_text }}</small>
@@ -149,6 +161,7 @@
                                         {% endfor %}
                                     </div>
                                 </div>
+                                {% endif %}
                             </div>
                         </div>
 
@@ -197,7 +210,7 @@
 
         var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
         tooltipTriggerList.forEach(function (tooltipTriggerEl) {
-        new bootstrap.Tooltip(tooltipTriggerEl)
+            new bootstrap.Tooltip(tooltipTriggerEl)
         })
 
         const formControls = document.querySelectorAll('input, select, textarea');
