@@ -1116,9 +1116,10 @@ def bundle(request, pk_bundle):
             all_labels.append(product_bundle)
             all_labels.extend(product_collections_list)
             # I think this works -Said
-            all_labels.extend(Table_Delimited.objects.filter(bundle=bundle))
-            all_labels.extend(Table_Binary.objects.filter(bundle=bundle))
-            all_labels.extend(Table_Fixed_Width.objects.filter(bundle=bundle))
+            # Commenting this out for now because it is placing an error and not sure if it's needed -Nicholas
+            # all_labels.extend(Table_Delimited.objects.filter(bundle=bundle))
+            # all_labels.extend(Table_Binary.objects.filter(bundle=bundle))
+            # all_labels.extend(Table_Fixed_Width.objects.filter(bundle=bundle))
 
             for label in all_labels:
                 
@@ -3081,17 +3082,21 @@ def Table_Creation(request, pk_bundle, pk_data):
     if request.user == bundle.user:
         if data.data_type == 'Table Delimited':
             print("delim form chosen")
-            data_form = Table_Delimited_Form(request.POST or None, pk_data=pk_data, pk_ins=data.name, pk_bun=pk_bundle)
+            existing_table = Table_Delimited.objects.filter(data=data).first()
+            data_form = Table_Delimited_Form(request.POST or None, instance=existing_table, pk_data=pk_data, pk_ins=data.name, pk_bun=pk_bundle)
 
         elif data.data_type == 'Table Binary':
             print("binary form chosen")
-            data_form = Table_Binary_Form(request.POST or None, pk_data=pk_data, pk_ins=data.name, pk_bun=pk_bundle)
+            existing_table = Table_Binary.objects.filter(data=data).first()
+            data_form = Table_Binary_Form(request.POST or None, instance=existing_table, pk_data=pk_data, pk_ins=data.name, pk_bun=pk_bundle)
 
         elif data.data_type == 'Table Character':
             print("character form chosen")
-            data_form = Table_Fixed_Width_Form(request.POST or None, pk_data=pk_data, pk_ins=data.name, pk_bun=pk_bundle)
+            existing_table = Table_Fixed_Width.objects.filter(data=data).first()
+            data_form = Table_Fixed_Width_Form(request.POST or None, instance=existing_table, pk_data=pk_data, pk_ins=data.name, pk_bun=pk_bundle)
 
         elif data.data_type == 'Array':
+            existing_table = None
             data_form = ArrayForm(request.POST or None)
 
         context_dict = {
@@ -3103,8 +3108,10 @@ def Table_Creation(request, pk_bundle, pk_data):
         
         if data_form.is_valid():
             print('data form valid')
+
             form = data_form.save(commit=False)
             form.bundle = bundle
+            form.data = data
             form.save()
             cleaned_form = data_form.cleaned_data
 
@@ -3125,6 +3132,7 @@ def Table_Creation(request, pk_bundle, pk_data):
             context_products.extend(bundle.instruments.all())
             context_products.extend(bundle.telescopes.all())
             context_products.extend(bundle.targets.all())
+            
             for context_product in context_products:
                 write_into_label(context_product, form, None)
 
