@@ -1082,6 +1082,55 @@ class Table_Delimited_Form(forms.ModelForm):
         self.fields['data'] = forms.ModelChoiceField(queryset=Data.objects.filter(name=self.pk_ins), required = True)
         self.fields['collection'] = forms.ModelChoiceField(queryset=AdditionalCollections.objects.filter(bundle=self.pk_bun), required = True)
 
+    # name = models.CharField(max_length=256, blank=True)
+    # offset = models.IntegerField(default=0)
+    # object_length = models.IntegerField(default=1)
+    # description = models.CharField(max_length=5000, default="unset")
+    # records = models.IntegerField(default=1)
+    # field_delimiter = models.CharField(max_length=256, choices=DELIMITER_CHOICES, default="Comma", blank=True)
+    # fields = models.IntegerField(default=1)
+    # facet1 = models.CharField(max_length=256, choices=PRIMARY_RESULTS_SUMMARY_FACET_CHOICES, default="Meteorology", blank=True)
+    # data = models.ForeignKey(Data, on_delete=models.CASCADE, null=True)
+    # collection = models.ForeignKey(AdditionalCollections, on_delete = models.CASCADE, default='',)
+        self.fields['name'].widget.attrs.update({
+            'class': 'form-control form-outline'
+        })
+
+        self.fields['offset'].widget.attrs.update({
+            'class': 'form-control form-outline'
+        })
+
+        self.fields['object_length'].widget.attrs.update({
+            'class': 'form-control form-outline'
+        })
+
+        self.fields['description'].widget.attrs.update({
+            'class': 'form-control form-outline'
+        })
+
+        self.fields['records'].widget.attrs.update({
+            'class': 'form-control form-outline'
+        }) 
+
+        self.fields['field_delimiter'].widget.attrs.update({
+            'class': 'form-control form-outline'
+        })
+
+        self.fields['fields'].widget.attrs.update({
+            'class': 'form-control form-outline'
+        })     
+
+        self.fields['facet1'].widget.attrs.update({
+            'class': 'form-control form-outline'
+        })
+
+        self.fields['data'].widget.attrs.update({
+            'class': 'form-control form-outline'
+        })
+
+        self.fields['collection'].widget.attrs.update({
+            'class': 'form-control form-outline'
+        })   
 class Table_Binary_Form(forms.ModelForm):
 
     # data = forms.ModelChoiceField(queryset=Data.objects.all(), required=False)
@@ -1101,7 +1150,7 @@ class Table_Binary_Form(forms.ModelForm):
         if data.header:
             self.fields['local_identifier'] = forms.CharField(
                 required=True,
-                # widget=forms.TextInput(attrs={'class': 'form-control form-outline'})
+                widget=forms.TextInput(attrs={'class': 'form-control form-outline'})
             )
 
             # self.fields['header_offset'] = forms.IntegerField(
@@ -1111,14 +1160,50 @@ class Table_Binary_Form(forms.ModelForm):
 
             self.fields['header_object_length'] = forms.IntegerField(
                 required=True,
-                # widget=forms.NumberInput(attrs={'class': 'form-control form-outline'})
+                widget=forms.NumberInput(attrs={'class': 'form-control form-outline'})
             )
+
+    # name = models.CharField(max_length=256, blank=True)
+    # offset = models.IntegerField(default=1)
+    # records = models.IntegerField(default=1)
+    # fields = models.IntegerField(default=1)
+    # facet1 = models.CharField(max_length=256, choices=PRIMARY_RESULTS_SUMMARY_FACET_CHOICES, default="Meteorology", blank=True)
+    # data = models.ForeignKey(Data, on_delete=models.CASCADE, null=True)
+    # collection = models.ForeignKey(AdditionalCollections, on_delete = models.CASCADE, default='',)
+    # bundle = models.ForeignKey(Bundle, on_delete=models.CASCADE, null=True,)      
 
         self.fields['offset'] = forms.IntegerField(min_value=0, required=False)
 
         self.fields['data'] = forms.ModelChoiceField(queryset=Data.objects.filter(name=self.pk_ins), required = True)
         self.fields['collection'] = forms.ModelChoiceField(queryset=AdditionalCollections.objects.filter(bundle=self.pk_bun), required = True)
 
+        self.fields['name'].widget.attrs.update({
+            'class': 'form-control form-outline'
+        })
+
+        self.fields['records'].widget.attrs.update({
+            'class': 'form-control form-outline'
+        })
+
+        self.fields['fields'].widget.attrs.update({
+            'class': 'form-control form-outline'
+        })  
+
+        self.fields['facet1'].widget.attrs.update({
+            'class': 'form-control form-outline'
+        })
+
+        self.fields['offset'].widget.attrs.update({
+            'class': 'form-control form-outline'
+        })
+
+        self.fields['data'].widget.attrs.update({
+            'class': 'form-control form-outline'
+        })
+
+        self.fields['collection'].widget.attrs.update({
+            'class': 'form-control form-outline'
+        })       
 
 class Table_Fixed_Width_Form(forms.ModelForm):
 
@@ -1156,6 +1241,42 @@ class Table_Fixed_Width_Form(forms.ModelForm):
 
         self.fields['data'] = forms.ModelChoiceField(queryset=Data.objects.filter(name=self.pk_ins), required = True)
         self.fields['collection'] = forms.ModelChoiceField(queryset=AdditionalCollections.objects.filter(bundle=self.pk_bun), required = True)
+
+        self.fields['name'].widget.attrs.update({
+            'class': 'form-control form-outline'
+        })
+
+        self.fields['offset'].widget.attrs.update({
+            'class': 'form-control form-outline'
+        })
+
+        self.fields['object_length'].widget.attrs.update({
+            'class': 'form-control form-outline'
+        })
+
+        self.fields['description'].widget.attrs.update({
+            'class': 'form-control form-outline'
+        })
+
+        self.fields['records'].widget.attrs.update({
+            'class': 'form-control form-outline'
+        }) 
+
+        self.fields['fields'].widget.attrs.update({
+            'class': 'form-control form-outline'
+        })     
+
+        self.fields['facet1'].widget.attrs.update({
+            'class': 'form-control form-outline'
+        })
+
+        self.fields['data'].widget.attrs.update({
+            'class': 'form-control form-outline'
+        })
+
+        self.fields['collection'].widget.attrs.update({
+            'class': 'form-control form-outline'
+        })   
 
 class EditTableFieldsForm(forms.Form):
 
