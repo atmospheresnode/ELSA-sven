@@ -11,7 +11,7 @@ from itertools import chain
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
-from django.http import HttpResponse, HttpRequest
+from django.http import HttpResponse, HttpRequest, JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.template import RequestContext
 from django import forms
@@ -731,7 +731,10 @@ def bundle(request, pk_bundle):
 
         form_alias = AliasForm(request.POST or None) 
         form_bundle = BundleForm(request.POST or None) 
-        form_citation_information = CitationInformationForm(request.POST or None)
+        form_citation_information = CitationInformationForm(
+            request.POST or None,
+            initial={'publication_year': timezone.now().year}
+        )
         form_modification_history = ModificationHistoryForm(request.POST or None)     
         form_data = DataForm(request.POST or None, pk_bun=pk_bundle)
         form_document = ProductDocumentForm(request.POST or None)
@@ -893,6 +896,12 @@ def bundle(request, pk_bundle):
                 
                 files_uploaded = False
                 for f in files:
+                    if not is_netcdf_file(f):
+                        return JsonResponse(
+                            {'error': '"{}" is not a valid NetCDF file. Only NetCDF classic, 64-bit, or HDF5-based files are accepted.'.format(f.name)},
+                            status=400
+                        )
+
                     file_title = f.name
                     if len(file_title) > 100:
                         file_title = file_title[:100]
@@ -900,10 +909,10 @@ def bundle(request, pk_bundle):
                     # Create the NetCDFFile object using your model's fields
                     netcdf_obj = NetCDFFile(
                         bundle=bundle,
-                        file=f,         
-                        title=file_title 
+                        file=f,
+                        title=file_title
                     )
-                    
+
                     netcdf_obj.save()
                     files_uploaded = True
 
@@ -1505,7 +1514,10 @@ def citation_information(request, pk_bundle):
         #     'description': citation_information.description,
         #     'keyword': citation_information.keyword,
         # }
-        form_citation_information = CitationInformationForm(request.POST or None)
+        form_citation_information = CitationInformationForm(
+            request.POST or None,
+            initial={'publication_year': timezone.now().year}
+        )
         # if form_citation_information and form_citation_information.has_changed:
         #     print('changed: {}', format(form_citation_information.changed_data))
 
@@ -1615,6 +1627,7 @@ def edit_citation_information(request, pk_bundle, pk_citation_information):
         context_dict = {
             'form_edit_citation_information': form_edit_citation_information,
             'bundle': bundle,
+            'citation_information': citation_information,
         }
 
             # return render(request, 'build/citation_information/citation_information_current.html', context_dict)
@@ -4033,7 +4046,7 @@ def variable_coord_to_product(bundle):
         if id_area is not None:
 
             # Find Existing Element <pds:logical_identifier> and Append to It
-            lid_elem = id_area.find("pds:logical_identifier", namespaces=NS)
+            lid_elem = id_area.find("logical_identifier", namespaces=NS)
             if lid_elem is not None and lid_elem.text:
                 # Append your suffix
                 lid_elem.text = f"{lid_elem.text}:{subdir_name.lower()}:{nc_filename}"
@@ -4052,11 +4065,12 @@ def variable_coord_to_product(bundle):
         # 4. Locate <ama:Model_Output> inside <Discipline_Area>/<ama:AMA>
         # =====================================================================================
         model_output = root.find(
-            ".//pds:Context_Area/pds:Discipline_Area/ama:AMA/ama:Model_Output",
+            ".//Context_Area/Discipline_Area/ama:AMA/ama:Model_Output",
             namespaces=NS
         )
 
         if model_output is None:
+            print("Could not find <ama:Model_Output> under <ama:AMA> in template.")
             raise ValueError("Could not find <ama:Model_Output> under <ama:AMA> in template.")
 
         # =====================================================================================
@@ -4066,6 +4080,7 @@ def variable_coord_to_product(bundle):
         variable_elements = dataframe_to_variable_elements(variable_metadata, NS, [])
 
         for elem in variable_elements:
+            print(elem)
             model_output.append(elem)
 
         coord_elements = dataframe_to_coord_elements(coord_metadata, NS, allowed_coord_fields)
@@ -4193,5 +4208,105 @@ def delete_collection(request, pk_bundle, pk_collection):
     else:
         print('unauthorized user attempting to access a restricted area.')
         return redirect('main:restricted_access')
+
+
+@login_required
+def submit_feedback(request):
+    if request.method != 'POST':
+        return JsonResponse({'success': False}, status=405)
+
+    category = request.POST.get('category', '').strip()
+    bundle_type = request.POST.get('bundle_type', '').strip()
+    description = request.POST.get('description', '').strip()
+    user_email = request.POST.get('user_email', '').strip()
+
+    if not category or not description:
+        return JsonResponse({'success': False, 'error': 'Category and description are required.'}, status=400)
+
+    submitted_at = localtime(timezone.now()).strftime('%B %d, %Y at %I:%M %p %Z')
+    subject = f'[ELSA Beta Feedback] {category} — {request.user.username}'
+    body = f"""
+<!DOCTYPE html>
+<html>
+<body style="margin:0;padding:0;background-color:#f4f4f4;font-family:Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f4;padding:32px 0;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+
+          <!-- Header -->
+          <tr>
+            <td style="background-color:#2F4F4F;padding:24px 32px;">
+              <p style="margin:0;color:#ffffff;font-size:11px;letter-spacing:1px;text-transform:uppercase;">ELSA Beta Feedback</p>
+              <h1 style="margin:6px 0 0;color:#ffffff;font-size:22px;">{category}</h1>
+            </td>
+          </tr>
+
+          <!-- Details -->
+          <tr>
+            <td style="padding:28px 32px 8px;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="padding:8px 0;border-bottom:1px solid #eeeeee;">
+                    <span style="font-size:11px;color:#888888;text-transform:uppercase;letter-spacing:0.5px;">Submitted by</span><br>
+                    <span style="font-size:15px;color:#222222;">{request.user.username}</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:8px 0;border-bottom:1px solid #eeeeee;">
+                    <span style="font-size:11px;color:#888888;text-transform:uppercase;letter-spacing:0.5px;">Reply-to email</span><br>
+                    <span style="font-size:15px;color:#222222;">{user_email if user_email else '<em style="color:#aaaaaa;">not provided</em>'}</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:8px 0;border-bottom:1px solid #eeeeee;">
+                    <span style="font-size:11px;color:#888888;text-transform:uppercase;letter-spacing:0.5px;">Context</span><br>
+                    <span style="font-size:15px;color:#222222;">{bundle_type if bundle_type else 'Not specified'}</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:8px 0;border-bottom:1px solid #eeeeee;">
+                    <span style="font-size:11px;color:#888888;text-transform:uppercase;letter-spacing:0.5px;">Submitted</span><br>
+                    <span style="font-size:15px;color:#222222;">{submitted_at}</span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Description -->
+          <tr>
+            <td style="padding:8px 32px 32px;">
+              <p style="margin:16px 0 8px;font-size:11px;color:#888888;text-transform:uppercase;letter-spacing:0.5px;">Description</p>
+              <div style="background-color:#f8f8f8;border-left:4px solid #2F4F4F;border-radius:4px;padding:16px 20px;font-size:15px;color:#333333;line-height:1.6;white-space:pre-wrap;">{description}</div>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color:#f8f8f8;padding:16px 32px;border-top:1px solid #eeeeee;">
+              <p style="margin:0;font-size:12px;color:#aaaaaa;">This message was sent automatically by ELSA &mdash; Educational Labeling System @Atmospheres, NMSU.</p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+"""
+    email = EmailMessage(
+        subject=subject,
+        body=body,
+        from_email='atm-elsa@nmsu.edu',
+        #to=['lneakras@nmsu.edu', 'rupakdey@nmsu.edu'],
+        to=['rupakdey@nmsu.edu'], #for testing only
+        reply_to=[user_email] if user_email else [],
+    )
+    email.content_subtype = 'html'
+    email.send(fail_silently=True)
+
+    return JsonResponse({'success': True})
 
         
