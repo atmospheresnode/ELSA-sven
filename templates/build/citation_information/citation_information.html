@@ -23,8 +23,48 @@
 
                     <form action="{% url 'build:citation_information' bundle.pk %}" method="post" id="form_citation_information" class="pt-3">
                         {% csrf_token %}
-        
-                        {{ form_citation_information }}
+
+                        <!-- Authors -->
+                        <h5 class="fw-semibold mt-3 mb-2">Authors <span class="fw-normal fst-italic text-muted">(data providers)</span></h5>
+                        <div class="mb-3">
+                            <label class="form-label">Number of Persons</label>
+                            {{ form_citation_information.number_of_authors_people }}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Number of Organizations*</label>
+                            {{ form_citation_information.number_of_authors_organization }}
+                        </div>
+
+                        <!-- Editors -->
+                        <h5 class="fw-semibold mt-4 mb-2">Editors <span class="fw-normal fst-italic text-muted">(node contacts)</span></h5>
+                        <div class="mb-3">
+                            <label class="form-label">Number of Persons</label>
+                            {{ form_citation_information.number_of_editors_people }}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Number of Organizations*</label>
+                            {{ form_citation_information.number_of_editors_organization }}
+                        </div>
+
+                        <p class="text-muted small">* Organizations should be set to 0 unless used.</p>
+
+                        <hr>
+
+                        <!-- General -->
+                        <div class="mb-3 mt-3">
+                            <label class="form-label">Publication Year<span class="text-danger ms-1" title="Required">*</span></label>
+                            {{ form_citation_information.publication_year }}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Description (255-character summary)<span class="text-danger ms-1" title="Required">*</span></label>
+                            {{ form_citation_information.description }}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Keyword <span class="text-muted fw-normal">(separate multiple with a semicolon)</span></label>
+                            {{ form_citation_information.keyword }}
+                        </div>
+
+                        {{ form_citation_information.errors }}
                         
                         <!-- Create Cite Info -->
                         <br>
