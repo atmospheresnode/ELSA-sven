@@ -20,11 +20,15 @@ This section provides a timeline of ELSA's release history, highlighting key upd
 
 ### **Current Version** 
 
+> ### **Version 1.34.0 (May 22, 2026)**
+- Beta Feedback Form: A new feedback form has been introduced for users to provide feedback on ELSA.
+- Citation Information: The layout has been updated with new text.
+
+### **Previous Versions** 
+
 > ### **Version 1.33.0 (May 08, 2026)**
 - About page: Updated educational text content.
 - Create a bundle page: Added descriptive text next to radio card buttons for bundle type selection.
-
-### **Previous Versions** 
 
 > ### **Version 1.32.0 (May 01, 2026)**
 - Build Bundle: UI changes to bundle type selection (radio card button has been introduced).
