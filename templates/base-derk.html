@@ -161,5 +161,135 @@
         </footer>
         {% endif %}
     </div>
+
+    {% if user.is_authenticated %}
+    <!-- Beta Feedback Button -->
+    <button type="button"
+            class="btn text-white position-fixed"
+            style="bottom: 1.5rem; right: 1.5rem; background-color: teal; z-index: 1050; box-shadow: 0 2px 8px rgba(0,0,0,0.25);"
+            data-bs-toggle="modal" data-bs-target="#betaFeedbackModal">
+        <i class="bi bi-chat-dots-fill me-1"></i> Beta Feedback
+    </button>
+
+    <!-- Beta Feedback Modal -->
+    <div class="modal fade" id="betaFeedbackModal" tabindex="-1" aria-labelledby="betaFeedbackModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header text-white" style="background-color: #2F4F4F;">
+                    <h5 class="modal-title" id="betaFeedbackModalLabel">
+                        <i class="bi bi-chat-dots-fill me-2"></i> Beta Feedback
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted small mb-3">Help us improve ELSA. Your feedback goes directly to the development team.</p>
+                    <form id="betaFeedbackForm">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="feedbackCategory" class="form-label fw-semibold">Category <span class="text-danger">*</span></label>
+                            <select class="form-select" id="feedbackCategory" name="category" required>
+                                <option value="" disabled selected>Select a category...</option>
+                                <option value="Bug Report">Bug Report</option>
+                                <option value="Suggestion">Suggestion</option>
+                                <option value="Question">Question</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Context</label>
+                            <div class="d-flex gap-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="bundle_type" id="bundleTypeGeneral" value="General" checked>
+                                    <label class="form-check-label" for="bundleTypeGeneral">General</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="bundle_type" id="bundleTypeExternal" value="External bundle">
+                                    <label class="form-check-label" for="bundleTypeExternal">External bundle</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="bundle_type" id="bundleTypeArchive" value="Archive bundle">
+                                    <label class="form-check-label" for="bundleTypeArchive">Archive bundle</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="feedbackDescription" class="form-label fw-semibold">Description <span class="text-danger">*</span></label>
+                            <textarea class="form-control" id="feedbackDescription" name="description" rows="4"
+                                      placeholder="Describe the issue, idea, or question..." required></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="feedbackEmail" class="form-label fw-semibold">Your email <span class="text-muted fw-normal">(optional, for follow-up)</span></label>
+                            <input type="email" class="form-control" id="feedbackEmail" name="user_email" placeholder="you@example.com">
+                        </div>
+                        <div id="feedbackAlert" class="d-none"></div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn text-white" style="background-color: teal;" id="feedbackSubmitBtn">
+                        Submit Feedback
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Feedback success toast -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1100;">
+        <div id="feedbackToast" class="toast align-items-center text-white border-0" style="background-color: #2F4F4F;" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="5000">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="bi bi-check-circle-fill me-2"></i>
+                    <strong>Thank you for your feedback!</strong> We will review it and reach out if needed.
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    document.getElementById('feedbackSubmitBtn').addEventListener('click', function () {
+        const form = document.getElementById('betaFeedbackForm');
+        const alertEl = document.getElementById('feedbackAlert');
+        const btn = this;
+
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
+
+        btn.disabled = true;
+        btn.textContent = 'Sending...';
+
+        const data = new FormData(form);
+
+        fetch("{% url 'build:submit_feedback' %}", {
+            method: 'POST',
+            headers: {'X-CSRFToken': data.get('csrfmiddlewaretoken')},
+            body: data,
+        })
+        .then(r => r.json())
+        .then(json => {
+            if (json.success) {
+                form.reset();
+                bootstrap.Modal.getInstance(document.getElementById('betaFeedbackModal')).hide();
+                new bootstrap.Toast(document.getElementById('feedbackToast')).show();
+            } else {
+                alertEl.className = 'alert alert-danger mt-2';
+                alertEl.textContent = json.error || 'Something went wrong. Please try again.';
+            }
+        })
+        .catch(() => {
+            alertEl.className = 'alert alert-danger mt-2';
+            alertEl.textContent = 'Network error. Please try again.';
+        })
+        .finally(() => {
+            btn.disabled = false;
+            btn.textContent = 'Submit Feedback';
+        });
+    });
+    </script>
+    {% endif %}
+
 </body>
 </html>

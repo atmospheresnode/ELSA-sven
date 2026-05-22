@@ -125,6 +125,9 @@ urlpatterns = [
     
     # Submit Bundle for Review
     re_path(r'^(?P<pk_bundle>\d+)/submit/$', views.submit_bundle_internal, name='submit_bundle_internal'),
+
+    # Beta Feedback
+    re_path(r'^feedback/$', views.submit_feedback, name='submit_feedback'),
     
     # XML_Schema --> A view that no one sees.  So no xml_schema url.  This might even be removed 
     # completely from PDS4
