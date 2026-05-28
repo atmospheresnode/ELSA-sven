@@ -23,6 +23,7 @@ This section provides a timeline of ELSA's release history, highlighting key upd
 > ### **Version 1.34.0 (May 22, 2026)**
 - Beta Feedback Form: A new feedback form has been introduced for users to provide feedback on ELSA.
 - Citation Information: The layout has been updated with new text.
+- Document Products: Updated form design as well as small bug fixes
 
 ### **Previous Versions** 
 
