@@ -633,6 +633,8 @@ def data_prep(request, bundle, data_enum):
 
     data = Data.objects.get(pk=bundle)
     bundle = Bundle.objects.get(pk=bundle)
+    if request.user != bundle.user:
+        return redirect('main:restricted_access')
     data_prep_form = DataPrepForm
 
     '''
@@ -1347,6 +1349,7 @@ def submit_bundle_internal(request, pk_bundle):
 
 
 # The bundle_download view is not a page.  When a user chooses to download a bundle, this 'view' manifests and begins the downloading process.
+@login_required
 def bundle_download(request, pk_bundle):
     # Get Bundle
     bundle = Bundle.objects.get(pk=pk_bundle)
@@ -1476,6 +1479,7 @@ def bundle_delete_new(request, pk_bundle):
         return redirect('main:restricted_access')
 
 
+@login_required
 def success_delete(request):
     return render(request, 'build/bundle/success_delete.html')
 
@@ -2322,8 +2326,11 @@ def context_search_target_and_instrument(request, pk_bundle, pk_investigation, p
 
 #     return render(request, 'build/collections/collections_additional.html', {"pk_bundle": pk_bundle, "bundle": bundle, "form_additional_collections": form_additional_collections, "form_document": form_document})
 #     #return render(request, template, {"pk_bundle": pk_bundle, "bundle": bundle, "form_additional_collections": form_additional_collections, "form_document": form_document})
+@login_required
 def annex_collection_document(request, pk_bundle):
     bundle = Bundle.objects.get(pk=pk_bundle)
+    if request.user != bundle.user:
+        return redirect('main:restricted_access')
     annex_form_document = AnnexProductDocumentForm(request.POST or None)
 
     if annex_form_document.is_valid():        
@@ -2359,8 +2366,11 @@ def annex_collection_document(request, pk_bundle):
 
     return render(request, 'build/collections/annex_collection_document.html', {"pk_bundle": pk_bundle, "bundle": bundle, "annex_form_document": annex_form_document})
 
+@login_required
 def collection_document(request, pk_bundle):
     bundle = Bundle.objects.get(pk=pk_bundle)
+    if request.user != bundle.user:
+        return redirect('main:restricted_access')
     form_document = ProductDocumentForm(request.POST or None)
 
     if form_document.is_valid():        
@@ -2392,8 +2402,11 @@ def collection_document(request, pk_bundle):
 
     return render(request, 'build/collections/collection_document.html', {"pk_bundle": pk_bundle, "bundle": bundle, "form_document": form_document})
 
+@login_required
 def collection_additional(request, pk_bundle):
     bundle = Bundle.objects.get(pk=pk_bundle)
+    if request.user != bundle.user:
+        return redirect('main:restricted_access')
     form_additional_collections = AdditionalCollectionForm(request.POST or None, bundle=bundle)
     return render(request, 'build/collections/collection_additional.html', {"pk_bundle": pk_bundle, "bundle": bundle, "form_additional_collections": form_additional_collections})
 
@@ -2784,7 +2797,7 @@ def annex_product_document(request, pk_bundle, pk_product_document):
 
             for change in annex_form_product_document.changed_data:
                 if change == 'document_name':
-                   product_document.document_name = annex_form_product_document['document_name'].value()
+                   product_document.document_name = os.path.basename(annex_form_product_document['document_name'].value())
                 
                 elif change == 'local_id':
                     product_document.local_id = annex_form_product_document['local_id'].value()
@@ -4292,8 +4305,8 @@ def submit_feedback(request):
         subject=subject,
         body=body,
         from_email='atm-elsa@nmsu.edu',
-        #to=['lneakras@nmsu.edu', 'rupakdey@nmsu.edu'],
-        to=['rupakdey@nmsu.edu'], #for testing only
+        to=['lneakras@nmsu.edu', 'rupakdey@nmsu.edu'],
+        #to=['rupakdey@nmsu.edu'], #for testing only
         reply_to=[user_email] if user_email else [],
     )
     email.content_subtype = 'html'
