@@ -234,18 +234,8 @@
         </div>
     </div>
 
-    <!-- Feedback success toast -->
-    <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1100;">
-        <div id="feedbackToast" class="toast align-items-center text-white border-0" style="background-color: #2F4F4F;" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="5000">
-            <div class="d-flex">
-                <div class="toast-body">
-                    <i class="bi bi-check-circle-fill me-2"></i>
-                    <strong>Thank you for your feedback!</strong> We will review it and reach out if needed.
-                </div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-            </div>
-        </div>
-    </div>
+    <!-- Toast container (toasts injected here dynamically) -->
+    <div id="feedbackToastContainer" class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1100;"></div>
 
     <script>
     document.getElementById('feedbackSubmitBtn').addEventListener('click', function () {
@@ -273,7 +263,22 @@
             if (json.success) {
                 form.reset();
                 bootstrap.Modal.getInstance(document.getElementById('betaFeedbackModal')).hide();
-                new bootstrap.Toast(document.getElementById('feedbackToast')).show();
+                const toastEl = document.createElement('div');
+                toastEl.className = 'toast align-items-center text-white border-0';
+                toastEl.style.backgroundColor = '#2F4F4F';
+                toastEl.setAttribute('role', 'alert');
+                toastEl.innerHTML = `
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            <i class="bi bi-check-circle-fill me-2"></i>
+                            <strong>Thank you for your feedback!</strong> We will review it and reach out if needed.
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>`;
+                document.getElementById('feedbackToastContainer').appendChild(toastEl);
+                const toast = new bootstrap.Toast(toastEl, {delay: 5000});
+                toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
+                toast.show();
             } else {
                 alertEl.className = 'alert alert-danger mt-2';
                 alertEl.textContent = json.error || 'Something went wrong. Please try again.';
