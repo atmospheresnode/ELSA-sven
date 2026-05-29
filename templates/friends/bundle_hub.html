@@ -104,20 +104,22 @@
                 </div>
 
                 <!-- Delete form -->
-                <form method="POST" action="{% url 'friends:delete_bundles' %}">
+                <form method="POST" action="{% url 'friends:delete_bundles' %}" id="bulk-delete-form">
                     {% csrf_token %}
 
                     <!-- Select All / Delete Toolbar -->
                     {% if bundles %}
-                    <div class="d-flex justify-content-between align-items-center p-3 mb-2 bg-light rounded shadow-sm">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="select-all-modern">
-                            <label class="form-check-label fw-semibold" for="select-all-modern">
-                                Select All Bundles
+                    <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom" id="selection-toolbar">
+                        <div class="form-check mb-0">
+                            <input class="form-check-input" type="checkbox" id="select-all">
+                            <label class="form-check-label text-muted" for="select-all" id="select-all-label">
+                                Select all
                             </label>
                         </div>
-                        <button type="button" id="delete-selected-btn" class="btn btn-danger btn-keep-bg d-none shadow-sm">
-                            <i class="fa fa-trash me-2"></i>Delete Selected
+                        <button type="button" id="delete-selected-btn"
+                                class="btn btn-sm btn-danger btn-keep-bg d-none">
+                            <i class="bi bi-trash me-1"></i>
+                            <span id="delete-btn-label">Delete</span>
                         </button>
                     </div>
                     {% endif %}
@@ -133,11 +135,47 @@
                                  data-type="{{ bundle.bundle_type }}">
                                 <div class="card bundle-card text-center h-100">
 
-                                    <!-- Checkbox -->
-                                    <div class="px-2 pt-2 pb-0 text-start">
+                                    <!-- Card top: checkbox + kebab -->
+                                    <div class="d-flex justify-content-between align-items-center px-2 pt-2 pb-0">
                                         <input type="checkbox" name="bundle_ids" value="{{ bundle.id }}"
-                                            class="bundle-checkbox"
-                                            onclick="event.stopPropagation();">
+                                               class="form-check-input bundle-checkbox card-checkbox"
+                                               onclick="event.stopPropagation();">
+                                        <div class="dropdown">
+                                            <button class="btn btn-sm btn-link text-muted p-0 lh-1"
+                                                    type="button"
+                                                    data-bs-toggle="dropdown"
+                                                    aria-expanded="false"
+                                                    onclick="event.stopPropagation();">
+                                                <i class="bi bi-three-dots-vertical"></i>
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="min-width: 160px;">
+                                                <li>
+                                                    <a class="dropdown-item" href="{{ bundle.absolute_url }}">
+                                                        <i class="bi bi-box-arrow-up-right me-2 text-muted"></i>Open
+                                                    </a>
+                                                </li>
+                                                <li>
+                                                    <a class="dropdown-item" href="{{ bundle.absolute_url }}" target="_blank">
+                                                        <i class="bi bi-window me-2 text-muted"></i>Open in new tab
+                                                    </a>
+                                                </li>
+                                                <li>
+                                                    <a class="dropdown-item" href="{% url 'build:bundle_download' bundle.pk %}">
+                                                        <i class="bi bi-download me-2 text-muted"></i>Download
+                                                    </a>
+                                                </li>
+                                                <li><hr class="dropdown-divider"></li>
+                                                <li>
+                                                    <button type="button"
+                                                            class="dropdown-item text-danger kebab-delete"
+                                                            data-bundle-id="{{ bundle.id }}"
+                                                            data-bundle-name="{{ bundle.name }}"
+                                                            onclick="event.stopPropagation();">
+                                                        <i class="bi bi-trash me-2"></i>Delete
+                                                    </button>
+                                                </li>
+                                            </ul>
+                                        </div>
                                     </div>
 
                                     <a href="{{ bundle.absolute_url }}">
@@ -219,51 +257,114 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <p class="mb-0">Are you sure you want to delete the selected bundles?</p>
-                <small class="text-muted"><em>This action cannot be undone!</em></small>
+                <p class="mb-1" id="delete-modal-message">Are you sure you want to delete the selected bundles?</p>
+                <small class="text-muted"><em>This action cannot be undone.</em></small>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
                 <button type="button" id="confirm-delete-btn" class="btn btn-danger btn-keep-bg">Delete</button>
             </div>
         </div>
     </div>
 </div>
 
-<!-- JS for Select All + Delete + Search/Filter -->
+<style>
+    .card-checkbox {
+        opacity: 0;
+        transition: opacity 0.15s ease;
+    }
+    .bundle-card:hover .card-checkbox,
+    .card-checkbox:checked,
+    .selection-active .card-checkbox {
+        opacity: 1;
+    }
+</style>
+
+<!-- JS for Select All + Kebab + Search/Filter -->
 <script>
 
-// --- Bulk Delete ---
-const selectAll = document.getElementById('select-all-modern');
+// --- Refs ---
+const bundleGrid = document.getElementById('bundle-grid');
+const selectAll = document.getElementById('select-all');
+const selectAllLabel = document.getElementById('select-all-label');
 const bundleCheckboxes = document.querySelectorAll('.bundle-checkbox');
 const deleteBtn = document.getElementById('delete-selected-btn');
+const deleteBtnLabel = document.getElementById('delete-btn-label');
 const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
 const deleteModalEl = document.getElementById('deleteConfirmModal');
 const deleteModal = deleteModalEl ? new bootstrap.Modal(deleteModalEl) : null;
+const deleteModalMessage = document.getElementById('delete-modal-message');
+const totalBundles = bundleCheckboxes.length;
+
+// Tracks whether we're deleting a single bundle via kebab (null = bulk)
+let singleDeleteId = null;
+
+// --- Selection state ---
+function updateSelectionUI() {
+    const checked = [...bundleCheckboxes].filter(cb => cb.checked).length;
+
+    // Indeterminate state
+    if (selectAll) {
+        selectAll.indeterminate = checked > 0 && checked < totalBundles;
+        selectAll.checked = checked === totalBundles && totalBundles > 0;
+    }
+
+    // Label
+    if (selectAllLabel) {
+        selectAllLabel.textContent = checked > 0
+            ? `${checked} of ${totalBundles} selected`
+            : 'Select all';
+    }
+
+    // Delete button
+    if (deleteBtn) {
+        const visible = checked > 0;
+        deleteBtn.classList.toggle('d-none', !visible);
+        if (deleteBtnLabel) deleteBtnLabel.textContent = `Delete (${checked})`;
+    }
+
+    // Keep all checkboxes visible while selection is active
+    if (bundleGrid) bundleGrid.classList.toggle('selection-active', checked > 0);
+}
 
 if (selectAll) {
     selectAll.addEventListener('change', () => {
         bundleCheckboxes.forEach(cb => cb.checked = selectAll.checked);
-        toggleDeleteButton();
+        updateSelectionUI();
     });
 }
 
-bundleCheckboxes.forEach(cb => cb.addEventListener('change', toggleDeleteButton));
+bundleCheckboxes.forEach(cb => cb.addEventListener('change', updateSelectionUI));
 
-function toggleDeleteButton() {
-    const anyChecked = [...bundleCheckboxes].some(cb => cb.checked);
-    if (deleteBtn) deleteBtn.classList.toggle('d-none', !anyChecked);
-}
-
+// --- Bulk delete ---
 if (deleteBtn) {
     deleteBtn.addEventListener('click', () => {
-        if ([...bundleCheckboxes].some(cb => cb.checked)) deleteModal.show();
+        singleDeleteId = null;
+        const checked = [...bundleCheckboxes].filter(cb => cb.checked).length;
+        deleteModalMessage.textContent = `Are you sure you want to delete ${checked} bundle${checked > 1 ? 's' : ''}?`;
+        deleteModal.show();
     });
 }
 
+// --- Kebab single delete ---
+document.querySelectorAll('.kebab-delete').forEach(btn => {
+    btn.addEventListener('click', function () {
+        singleDeleteId = this.dataset.bundleId;
+        const name = this.dataset.bundleName;
+        deleteModalMessage.textContent = `Are you sure you want to delete "${name}"?`;
+        deleteModal.show();
+    });
+});
+
+// --- Confirm delete ---
 if (confirmDeleteBtn) {
     confirmDeleteBtn.addEventListener('click', () => {
-        deleteBtn.closest('form').submit();
+        const form = document.getElementById('bulk-delete-form');
+        if (singleDeleteId) {
+            // Uncheck all, check only the target, then submit
+            bundleCheckboxes.forEach(cb => cb.checked = cb.value === singleDeleteId);
+        }
+        form.submit();
     });
 }
 
