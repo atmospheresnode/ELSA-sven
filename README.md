@@ -20,13 +20,16 @@ This section provides a timeline of ELSA's release history, highlighting key upd
 
 ### **Current Version** 
 
+> ### **Version 1.36.0 (June 05, 2026)**
+- External Bundle: Fixed an issue where uploaded NetCDF files were not generating XML labels.
+
+### **Previous Versions** 
+
 > ### **Version 1.35.0 (May 29, 2026)**
 - Bundle Hub: A kebab menu has been added to each bundle card for quick access to bundle actions.
 - External Bundle: The "Add Data Products" button has been removed from model output collections.
 - Security: Several security vulnerabilities have been identified and resolved.
 - Archive: Minor bug fixes.
-
-### **Previous Versions** 
 
 > ### **Version 1.34.0 (May 22, 2026)**
 - Beta Feedback Form: A new feedback form has been introduced for users to provide feedback on ELSA.
