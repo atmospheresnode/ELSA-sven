@@ -861,6 +861,7 @@
                            <div class="card-header">
                               <p>Choose the target(s) you wish to add to your bundle. This is a complete list of availabe targets, independent of any investigations chosen.</p>
                            </div>
+                           
                            <form class="card-header black-text text-left z-depth-2"id="query01" method="post" action="{% url 'build:context_search_target' bundle.pk %}">
                               
                               {% csrf_token %}
@@ -869,7 +870,7 @@
                               {{ form.non_field_errors }}
                               
                            <div class="d-flex">
-                              <input type="submit" class="btn btn-light text-light mt-4" value="Submit"/>
+                              <input type="submit" name="submit_target" class="btn btn-light text-light mt-4" value="Submit"/>
                               <input type="button" class="btn btn-light text-light mt-4 ms-auto" data-bs-toggle="modal" data-bs-target="#contactModal" value="Contact">
                            </div>
                                  
