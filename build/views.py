@@ -25,6 +25,7 @@ import lxml.etree as ET # for XML parsing- Added by Rupak
 # Libraries for handilng netCDF files
 import io
 from django.core.mail import EmailMessage
+from django.core.cache import cache
 from django.utils import timezone
 from django.utils.timezone import localtime
 
@@ -895,8 +896,8 @@ def bundle(request, pk_bundle):
 
             if form_netcdf.is_valid():
                 files = form_netcdf.cleaned_data['netcdf_files']
-                
-                files_uploaded = False
+
+                created_objs = []
                 for f in files:
                     if not is_netcdf_file(f):
                         return JsonResponse(
@@ -916,17 +917,22 @@ def bundle(request, pk_bundle):
                     )
 
                     netcdf_obj.save()
-                    files_uploaded = True
+                    created_objs.append(netcdf_obj)
 
-        
-                if files_uploaded:
+
+                if created_objs:
                     print('before call')
-                    try:
-                        variable_coord_to_product(bundle=bundle)
-                    except Exception as e:
-                        print('Warning: Could not process NetCDF file: {}'.format(e))
+                    # Process only the files just uploaded for this bundle.
+                    errors = variable_coord_to_product(bundle, created_objs)
                     print('after call')
-                
+                    if errors:
+                        # Files are saved but metadata extraction failed; tell the user which.
+                        return JsonResponse(
+                            {'error': 'Uploaded, but metadata could not be extracted from: '
+                                      + '; '.join(errors)},
+                            status=400
+                        )
+
                 return HttpResponseRedirect('/elsa/build/' + str(bundle.pk) + '/')
 
         if form_investigation.is_valid():
@@ -3815,9 +3821,21 @@ import urllib.request
 # =========================================================================================
 # Function to Load & Parse the  AMA LDD so that we know
 # what Coordinate Elements are permitted and in what order they are expected
+# Fetch and cache the raw LDD schema bytes so we don't hit the network on every
+# NetCDF upload. Cached for 1 hour (matches the About-page release-notes pattern).
+# A short timeout ensures a slow/unreachable PDS server fails fast instead of hanging.
+def _fetch_ldd_content(ldd_url: str) -> bytes:
+    cache_key = 'ldd_schema:' + ldd_url
+    xml_content = cache.get(cache_key)
+    if xml_content is None:
+        with urllib.request.urlopen(ldd_url, timeout=15) as response:
+            xml_content = response.read()
+        cache.set(cache_key, xml_content, 60 * 60)
+    return xml_content
+
+
 def get_allowed_coord_fields_from_ldd_url(ldd_url: str, ns: dict) -> list:
-    with urllib.request.urlopen(ldd_url) as response:
-        xml_content = response.read()
+    xml_content = _fetch_ldd_content(ldd_url)
 
     root = ET.fromstring(xml_content)
 
@@ -3830,11 +3848,10 @@ def get_allowed_coord_fields_from_ldd_url(ldd_url: str, ns: dict) -> list:
         elem.attrib["name"]
         for elem in coord_type.findall("xs:element", namespaces=ns) ]
 
-# Function to Load & Parse the AMA LDD so that we know 
+# Function to Load & Parse the AMA LDD so that we know
 # what Variable Elements are permitted and in what order they are expected
 def get_allowed_variable_fields_from_ldd_url(ldd_url: str, ns: dict) -> list:
-    with urllib.request.urlopen(ldd_url) as response:
-        xml_content = response.read()
+    xml_content = _fetch_ldd_content(ldd_url)
 
     root = ET.fromstring(xml_content)
 
@@ -3937,7 +3954,14 @@ def dataframe_to_coord_elements(coord_metadata: pd.DataFrame, NS: dict, allowed_
 def normalize(field):
     return field.lower().replace("_", "")
 
-def variable_coord_to_product(bundle):
+def variable_coord_to_product(bundle, netcdf_objs):
+    """Extract metadata from each uploaded NetCDF file and generate its PDS4 XML label.
+
+    Processes ONLY the NetCDFFile objects passed in (scoped to this bundle) rather than
+    every .nc file on disk. Each object's `processed` / `processing_error` fields are
+    updated so the UI can report status. Returns a list of human-readable error strings
+    for files that failed; an empty list means everything succeeded.
+    """
     # =========================================================================================
     # Set Up XML Namespace
     # =========================================================================================
@@ -3950,206 +3974,217 @@ def variable_coord_to_product(bundle):
     ET.register_namespace('ama', NS['ama'])  # Needed to preserve ama prefix in output
     ET.register_namespace('pds', NS['pds'])  # Add this alongside ama
 
-
     # =========================================================================================
     # Load Online Local Data Dictionary & Extract Permitted Variable/Coordinate Fields
+    # (cached for an hour; see _fetch_ldd_content)
     # =========================================================================================
     ldd_url = 'https://pds.nasa.gov/pds4/ama/v1/PDS4_AMA_1O00_1300.xsd'
     allowed_variable_fields = get_allowed_variable_fields_from_ldd_url(ldd_url, NS)
     allowed_coord_fields = get_allowed_coord_fields_from_ldd_url(ldd_url, NS)
-    
-    # =========================================================================================
-    # MAIN PROGRAM FUNCTIONALITY:
-    # =========================================================================================
 
-    # =========================================================================================
-    # Search for All netCDF Files in A Specified Working Directory
-    # Include Sub-Directories
-    # =========================================================================================
-    # 1. Set the top-level working directory
-    working_dir = os.path.join(settings.BASE_DIR, 'uploads')
-
-    # 2. Recursively find all .nc files
     os.environ['HDF5_USE_FILE_LOCKING'] = 'FALSE'
-    netcdf_files = glob.glob(os.path.join(working_dir, "**", "*.nc"), recursive=True)
-    # =========================================================================================
-    # Loop Through NetCDF Files
-    # =========================================================================================
-    for nc_path in netcdf_files:
-        # Define output file name (e.g. 00000_atmos_average.nc → 00000.atmos_average.xml)
-        base = os.path.basename(nc_path)
-        xml_name = base.replace(".nc", ".xml")
 
-        # Extract base filename and directory
-        nc_filename = os.path.basename(nc_path)  # e.g., 00000.atmos_average.nc
-        nc_name, _ = os.path.splitext(nc_filename)  # e.g., 00000.atmos_average
-        subdir_name = os.path.basename(os.path.dirname(nc_path))  # e.g., Simulation02
+    errors = []
+    for nc_obj in netcdf_objs:
+        try:
+            nc_path = nc_obj.file.path
+            if not os.path.exists(nc_path):
+                raise FileNotFoundError('Uploaded file is missing from disk.')
 
-        # Write XML to the same subdirectory as the .nc file
-        # output_dir = os.path.dirname(nc_path)
-        output_dir = bundle.directory()
-        output_path = os.path.join(output_dir, xml_name)
+            _process_single_netcdf(bundle, nc_path, NS, allowed_variable_fields, allowed_coord_fields)
 
-        # =====================================================================================
-        # 1. Open NetCDF File and Extract Variable & Coordinate Metadata into a Pandas Table
-        # =====================================================================================
-        DS = xr.open_dataset(nc_path, decode_times=False, engine='netcdf4')
+            nc_obj.processed = True
+            nc_obj.processing_error = ''
+            nc_obj.save(update_fields=['processed', 'processing_error'])
+        except Exception as e:
+            print('Error processing NetCDF "{}": {}'.format(nc_obj.title, e))
+            nc_obj.processed = False
+            nc_obj.processing_error = str(e)
+            nc_obj.save(update_fields=['processed', 'processing_error'])
+            errors.append('{}: {}'.format(nc_obj.title, e))
 
-        # variable metadata
-        metadata = {}
-        for var_name, var in DS.variables.items():
-
-            metadata[var_name] = var.attrs
-
-            # Add dimensions to the metadata dictionary
-            metadata[var_name]['dimensions'] = ', '.join(var.dims)
-
-        # Convert metadata to a DataFrame
-        variable_metadata = pd.DataFrame(metadata)
+    return errors
 
 
-        # now coordinate metadata
-        # Get additional "Derived" metadata (e.g. bhttps://nmsu.zoom.us/j/81293352754oundaries, grid spacing, etc)
-        metadata = {}
+def _process_single_netcdf(bundle, nc_path, NS, allowed_variable_fields, allowed_coord_fields):
+    """Generate the PDS4 XML label for a single NetCDF file. Raises on failure."""
+    # Define output file name. Files may be uploaded WITHOUT a .nc extension
+    # (validation is by magic bytes, not extension), so strip a trailing .nc only
+    # if present and always append .xml. This avoids producing extensionless labels
+    # for extensionless uploads (e.g. 00000.atmos_average → 00000.atmos_average.xml).
+    base = os.path.basename(nc_path)
+    nc_filename = base  # e.g., 00000.atmos_average.nc OR 00000.atmos_average
+    nc_name = base[:-3] if base.endswith('.nc') else base  # e.g., 00000.atmos_average
+    xml_name = nc_name + '.xml'
+    subdir_name = os.path.basename(os.path.dirname(nc_path))  # e.g., Simulation02
 
-        # Iterate over coordinates
-        for coord_name, coord in DS.coords.items():
+    # Write XML to the bundle's archive directory
+    output_dir = bundle.directory()
+    output_path = os.path.join(output_dir, xml_name)
 
-            # Initialize a dictionary for the coordinate's metadata
-            coord_metadata = {}
+    # =====================================================================================
+    # 1. Open NetCDF File and Extract Variable & Coordinate Metadata into a Pandas Table
+    # =====================================================================================
+    DS = xr.open_dataset(nc_path, decode_times=False, engine='netcdf4')
 
-            # Add the minimum_boundary key to the coordinate's metadata
-            coord_metadata['minimum_boundary'] = DS[coord_name].min().item()
-            coord_metadata['maximum_boundary'] = DS[coord_name].max().item()
+    # variable metadata
+    metadata = {}
+    for var_name, var in DS.variables.items():
 
-            # Check if coordinate is an array (if yes, find spacing assuming spacing is the same)
-            #if len(coord) > 1:
-            #    coord_metadata['grid_spacing'] = DS[coord_name][1].values - DS[coord_name][0].values
-            #else:
-            #    coord_metadata['grid_spacing'] = None
+        metadata[var_name] = var.attrs
 
-            # Check if coordinate has units attribute
-            if 'units' in coord.attrs:
-                coord_metadata['units'] = coord.attrs['units']
-            else:
-                coord_metadata['units'] = None
+        # Add dimensions to the metadata dictionary
+        metadata[var_name]['dimensions'] = ', '.join(var.dims)
 
-            # Add the coordinate's metadata to the metadata dictionary
-            metadata[coord_name] = coord_metadata
-
-        # Create a DataFrame from the metadata dictionary
-        coord_metadata= pd.DataFrame(metadata)
-
-        # =====================================================================================
-        # 2. Load & Parse Template XML
-        # =====================================================================================
-        source_file = os.path.join(PDS4_LABEL_TEMPLATE_DIRECTORY, 'base_templates')
-        source_file = os.path.join(source_file, 'Template_PE.xml') # May have to change to Template_PE_document.xml
-        tree = ET.parse(source_file)
-        root = tree.getroot()
+    # Convert metadata to a DataFrame
+    variable_metadata = pd.DataFrame(metadata)
 
 
+    # now coordinate metadata
+    # Get additional "Derived" metadata (e.g. boundaries, grid spacing, etc)
+    metadata = {}
 
-        # =====================================================================================
-        # 3. Locate <Identification_Area> and Insert <pds:logical_identifier>, <pds:title>
-        # =====================================================================================
-        # Find the Identification_Area
-        id_area = root.find(".//pds:Identification_Area", namespaces=NS)
+    # Iterate over coordinates
+    for coord_name, coord in DS.coords.items():
 
-        if id_area is not None:
+        # Initialize a dictionary for the coordinate's metadata
+        coord_metadata = {}
 
-            # Find Existing Element <pds:logical_identifier> and Append to It
-            lid_elem = id_area.find("logical_identifier", namespaces=NS)
-            if lid_elem is not None and lid_elem.text:
-                # Append your suffix
-                lid_elem.text = f"{lid_elem.text}:{subdir_name.lower()}:{nc_filename}"
-            else:
-                # If missing or empty, just set it
-                lid_elem = ET.SubElement(id_area, f"{{{NS['pds']}}}logical_identifier")
-                lid_elem.text = f"urn:nasa:pds-ama:sample_bundle:{subdir_name.lower()}:{nc_filename}"
+        # Add the minimum_boundary key to the coordinate's metadata
+        coord_metadata['minimum_boundary'] = DS[coord_name].min().item()
+        coord_metadata['maximum_boundary'] = DS[coord_name].max().item()
 
-            # Find the <pds:title> Element and Populate
-            title_elem = id_area.find("pds:title", namespaces=NS)
-            if title_elem is None:
-                title_elem = ET.SubElement(id_area, f"{{{NS['pds']}}}title")
-            title_elem.text = f"{nc_name}"
+        # Check if coordinate is an array (if yes, find spacing assuming spacing is the same)
+        #if len(coord) > 1:
+        #    coord_metadata['grid_spacing'] = DS[coord_name][1].values - DS[coord_name][0].values
+        #else:
+        #    coord_metadata['grid_spacing'] = None
 
-        # =====================================================================================
-        # 4. Locate <ama:Model_Output> inside <Discipline_Area>/<ama:AMA>
-        # =====================================================================================
-        model_output = root.find(
-            ".//Context_Area/Discipline_Area/ama:AMA/ama:Model_Output",
-            namespaces=NS
-        )
+        # Check if coordinate has units attribute
+        if 'units' in coord.attrs:
+            coord_metadata['units'] = coord.attrs['units']
+        else:
+            coord_metadata['units'] = None
 
-        if model_output is None:
-            print("Could not find <ama:Model_Output> under <ama:AMA> in template.")
-            raise ValueError("Could not find <ama:Model_Output> under <ama:AMA> in template.")
+        # Add the coordinate's metadata to the metadata dictionary
+        metadata[coord_name] = coord_metadata
 
-        # =====================================================================================
-        # 5. Insert New Variable & Coordinate Metadata
-        # =====================================================================================
-        variable_elements = dataframe_to_variable_elements(variable_metadata, NS, allowed_variable_fields)
-        variable_elements = dataframe_to_variable_elements(variable_metadata, NS, [])
+    # Create a DataFrame from the metadata dictionary
+    coord_metadata= pd.DataFrame(metadata)
 
-        for elem in variable_elements:
-            print(elem)
-            model_output.append(elem)
-
-        coord_elements = dataframe_to_coord_elements(coord_metadata, NS, allowed_coord_fields)
-
-        for elem in coord_elements:
-            model_output.append(elem)
-
-        # =====================================================================================
-        # 6. Write to Output File
-        # =====================================================================================
-        with open(output_path, "w", encoding="utf-8") as f:
-            f.write(ET.tostring(root, encoding='unicode'))
-
-        update = Version()
-
-        update.version_update_old(bundle.version, source_file, output_path)
+    # =====================================================================================
+    # 2. Load & Parse Template XML
+    # =====================================================================================
+    source_file = os.path.join(PDS4_LABEL_TEMPLATE_DIRECTORY, 'base_templates')
+    source_file = os.path.join(source_file, 'Template_PE.xml') # May have to change to Template_PE_document.xml
+    tree = ET.parse(source_file)
+    root = tree.getroot()
 
 
-        alias_set = Alias.objects.filter(bundle=bundle)
-        citation_information_set = Citation_Information.objects.filter(bundle=bundle)
-        modification_history_set = Modification_History.objects.filter(bundle=bundle)
 
-        products = []
-        products.extend(bundle.investigations.all())
-        products.extend(bundle.instrument_hosts.all())
-        products.extend(bundle.facilities.all())
-        products.extend(bundle.instruments.all())
-        products.extend(bundle.telescopes.all())
-        products.extend(bundle.targets.all())
+    # =====================================================================================
+    # 3. Locate <Identification_Area> and Insert <pds:logical_identifier>, <pds:title>
+    # =====================================================================================
+    # Find the Identification_Area
+    id_area = root.find(".//pds:Identification_Area", namespaces=NS)
 
-        for citation_information in citation_information_set:
-            products.append(citation_information)
-        for alias in alias_set:
-            products.append(alias)
-        for modification_history in modification_history_set:
-            products.append(modification_history)
+    if id_area is not None:
 
-        print(products)
+        # Find Existing Element <pds:logical_identifier> and Append to It
+        lid_elem = id_area.find("logical_identifier", namespaces=NS)
+        if lid_elem is not None and lid_elem.text:
+            # Append your suffix
+            lid_elem.text = f"{lid_elem.text}:{subdir_name.lower()}:{nc_filename}"
+        else:
+            # If missing or empty, just set it
+            lid_elem = ET.SubElement(id_area, f"{{{NS['pds']}}}logical_identifier")
+            lid_elem.text = f"urn:nasa:pds-ama:sample_bundle:{subdir_name.lower()}:{nc_filename}"
 
-        for product in products:
-            # print('- Label: {}'.format(label))
-            print(' ... Opening Label ... ')
-            label_list = open_label_with_tree(output_path)
-            label_root = label_list[1]
-            print(label_root)
-            print(' ... Building Label ... ')
-            label_root = product.fill_label(label_root)
-            #alias.alias_list.append(label_root)
+        # Find the <pds:title> Element and Populate
+        title_elem = id_area.find("pds:title", namespaces=NS)
+        if title_elem is None:
+            title_elem = ET.SubElement(id_area, f"{{{NS['pds']}}}title")
+        title_elem.text = f"{nc_name}"
 
-            # Close appropriate label(s)
-            print(' ... Closing Label ... ')
-            close_label(output_path, label_root, label_list[2])
+    # =====================================================================================
+    # 4. Locate <ama:Model_Output> inside <Discipline_Area>/<ama:AMA>
+    # =====================================================================================
+    # Context_Area and Discipline_Area live in the default (pds) namespace in the
+    # template, so they must be prefixed too — unprefixed names only match
+    # no-namespace elements in ElementTree and the lookup would return None.
+    model_output = root.find(
+        ".//pds:Context_Area/pds:Discipline_Area/ama:AMA/ama:Model_Output",
+        namespaces=NS
+    )
 
-        # Temporary remove netcdf file before figuring out how to move it
-        os.remove(nc_path)
-        print('removed: ' + nc_path)
+    if model_output is None:
+        print("Could not find <ama:Model_Output> under <ama:AMA> in template.")
+        raise ValueError("Could not find <ama:Model_Output> under <ama:AMA> in template.")
+
+    # =====================================================================================
+    # 5. Insert New Variable & Coordinate Metadata
+    # =====================================================================================
+    variable_elements = dataframe_to_variable_elements(variable_metadata, NS, allowed_variable_fields)
+    variable_elements = dataframe_to_variable_elements(variable_metadata, NS, [])
+
+    for elem in variable_elements:
+        print(elem)
+        model_output.append(elem)
+
+    coord_elements = dataframe_to_coord_elements(coord_metadata, NS, allowed_coord_fields)
+
+    for elem in coord_elements:
+        model_output.append(elem)
+
+    # =====================================================================================
+    # 6. Write to Output File
+    # =====================================================================================
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write(ET.tostring(root, encoding='unicode'))
+
+    update = Version()
+
+    update.version_update_old(bundle.version, source_file, output_path)
+
+
+    alias_set = Alias.objects.filter(bundle=bundle)
+    citation_information_set = Citation_Information.objects.filter(bundle=bundle)
+    modification_history_set = Modification_History.objects.filter(bundle=bundle)
+
+    products = []
+    products.extend(bundle.investigations.all())
+    products.extend(bundle.instrument_hosts.all())
+    products.extend(bundle.facilities.all())
+    products.extend(bundle.instruments.all())
+    products.extend(bundle.telescopes.all())
+    products.extend(bundle.targets.all())
+
+    for citation_information in citation_information_set:
+        products.append(citation_information)
+    for alias in alias_set:
+        products.append(alias)
+    for modification_history in modification_history_set:
+        products.append(modification_history)
+
+    print(products)
+
+    for product in products:
+        # print('- Label: {}'.format(label))
+        print(' ... Opening Label ... ')
+        label_list = open_label_with_tree(output_path)
+        label_root = label_list[1]
+        print(label_root)
+        print(' ... Building Label ... ')
+        label_root = product.fill_label(label_root)
+        #alias.alias_list.append(label_root)
+
+        # Close appropriate label(s)
+        print(' ... Closing Label ... ')
+        close_label(output_path, label_root, label_list[2])
+
+    # Temporary remove netcdf file before figuring out how to move it
+    os.remove(nc_path)
+    print('removed: ' + nc_path)
 
 
 

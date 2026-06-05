@@ -1893,7 +1893,7 @@
                                              </button>
                                              <button type="button" class="btn btn-sm btn-outline-danger btn-keep-bg"
                                                 data-bs-toggle="modal" data-bs-target="#bulkDeleteNetCDFModal"
-                                                id="bulkDeleteBtn" disabled>
+                                                id="bulkDeleteBtn">
                                                 <i class="bi bi-trash me-1"></i> Delete Selected
                                              </button>
                                           </div>
@@ -1909,9 +1909,19 @@
                                                          name="selected_netcdf" value="{{ nc_file.pk }}" id="nc_{{ nc_file.pk }}">
                                                       <i class="bi bi-file-earmark-code me-2 text-secondary"></i>
                                                       <a href="{{ nc_file.file.url }}" target="_blank" class="text-truncate"
-                                                         style="max-width: 180px;" title="{{ nc_file.title }}">
+                                                         style="max-width: 150px;" title="{{ nc_file.title }}">
                                                          {{ nc_file.title }}
                                                       </a>
+                                                      {% if nc_file.processed %}
+                                                         <span class="badge bg-success ms-2" title="Metadata extracted and XML label generated.">
+                                                            <i class="bi bi-check-circle-fill me-1"></i>Processed
+                                                         </span>
+                                                      {% else %}
+                                                         <span class="badge bg-danger ms-2"
+                                                            title="{% if nc_file.processing_error %}{{ nc_file.processing_error }}{% else %}Metadata was not extracted from this file.{% endif %}">
+                                                            <i class="bi bi-exclamation-triangle-fill me-1"></i>Not processed
+                                                         </span>
+                                                      {% endif %}
                                                 </div>
                                                 <span class="text-muted small">{{ nc_file.uploaded_at|date:"M d, H:i" }}</span>
                                              </li>
@@ -1922,32 +1932,6 @@
                                              </li>
                                              {% endfor %}
                                           </ul>
-                                    </div>
-
-                                    <!-- Bulk Delete Confirmation Modal -->
-                                    <div class="modal fade" id="bulkDeleteNetCDFModal" tabindex="-1" aria-hidden="true">
-                                          <div class="modal-dialog modal-dialog-centered">
-                                             <div class="modal-content">
-                                                <div class="modal-header border-0 pb-0">
-                                                      <h5 class="modal-title text-danger">
-                                                         <i class="bi bi-exclamation-triangle me-2"></i>Delete Selected Files
-                                                      </h5>
-                                                      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                                </div>
-                                                <div class="modal-body">
-                                                      <p>Are you sure you want to delete the selected NetCDF files?</p>
-                                                      <p class="text-muted small mb-0">
-                                                         <i class="bi bi-info-circle me-1"></i>This action cannot be undone.
-                                                      </p>
-                                                </div>
-                                                <div class="modal-footer border-0">
-                                                      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                                      <button type="submit" class="btn btn-danger btn-keep-bg">
-                                                         <i class="bi bi-trash me-1"></i> Delete
-                                                      </button>
-                                                </div>
-                                             </div>
-                                          </div>
                                     </div>
 
                                  </form>
@@ -2255,141 +2239,140 @@
             });
 
             // Bootstrap tooltips (External bundle block)
-            const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-            tooltipTriggerList.forEach(function (tooltipTriggerEl) {
-               new bootstrap.Tooltip(tooltipTriggerEl);
-            });
+            // Isolated in try/catch: if the Bootstrap bundle isn't available (or its
+            // global collides with MDB), tooltip init must NOT halt the rest of this
+            // script — otherwise the NetCDF delete wiring and upload progress bar below
+            // never attach.
+            try {
+               const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+               tooltipTriggerList.forEach(function (tooltipTriggerEl) {
+                  if (window.bootstrap && bootstrap.Tooltip) {
+                     new bootstrap.Tooltip(tooltipTriggerEl);
+                  }
+               });
+            } catch (err) {
+               console.warn('Tooltip init skipped:', err);
+            }
 
 
-
-            // NetCDF select all + enable/disable delete button
-            const netcdfCheckboxes = document.querySelectorAll('.netcdf-checkbox');
-            const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
 
             function toggleSelectAll() {
-               const allChecked = [...netcdfCheckboxes].every(c => c.checked);
-               netcdfCheckboxes.forEach(cb => cb.checked = !allChecked);
-               updateBulkDeleteBtn();
+               var boxes = document.querySelectorAll('.netcdf-checkbox');
+               var allChecked = Array.from(boxes).every(function(c) { return c.checked; });
+               boxes.forEach(function(cb) { cb.checked = !allChecked; });
             }
 
-            function updateBulkDeleteBtn() {
-               const checkedCount = document.querySelectorAll('.netcdf-checkbox:checked').length;
-               const anyChecked = checkedCount > 0;
-               if (bulkDeleteBtn) bulkDeleteBtn.disabled = !anyChecked;
-
-               const selectAllWrapper = document.getElementById('selectAllWrapper');
-               if (selectAllWrapper) selectAllWrapper.style.display = anyChecked ? 'inline-block' : 'none';
-            }
-
-            netcdfCheckboxes.forEach(cb => {
-               cb.addEventListener('change', function() {
-                  updateBulkDeleteBtn();
+            // When the delete modal is about to show, copy checked IDs into its own form.
+            // If nothing is selected, block the modal from opening.
+            document.addEventListener('show.bs.modal', function(e) {
+               if (e.target.id !== 'bulkDeleteNetCDFModal') return;
+               var checked = document.querySelectorAll('.netcdf-checkbox:checked');
+               if (checked.length === 0) { e.preventDefault(); return; }
+               var container = document.getElementById('ncDeleteHiddenIds');
+               if (!container) return;
+               container.innerHTML = '';
+               checked.forEach(function(cb) {
+                  var inp = document.createElement('input');
+                  inp.type = 'hidden';
+                  inp.name = 'selected_netcdf';
+                  inp.value = cb.value;
+                  container.appendChild(inp);
                });
             });
 
 
-         // NetCDF upload progress bar
-         const netcdfForm = document.getElementById('netcdfUploadForm');
-         const uploadBtn = document.getElementById('uploadBtn');
-         const progressWrapper = document.getElementById('uploadProgressWrapper');
-         const progressBar = document.getElementById('uploadProgressBar');
-         const uploadPercent = document.getElementById('uploadPercent');
-         const uploadStatusText = document.getElementById('uploadStatusText');
-         const uploadSuccessMsg = document.getElementById('uploadSuccessMsg');
-         const fileSummary = document.getElementById('fileSummary');
-         const netcdfFileInput = document.querySelector('input[name="netcdf_files"]');
+         // NetCDF upload progress — event delegation handles duplicate form IDs across
+         // multiple collection tab panes. Progress elements are resolved relative to the
+         // form that was actually submitted.
+         document.addEventListener('change', function(e) {
+            var input = e.target;
+            if (!input || input.name !== 'netcdf_files') return;
+            var form = input.closest('form');
+            var fileSummary = form ? form.querySelector('#fileSummary') : null;
+            if (!fileSummary) return;
+            var files = input.files;
+            if (files && files.length > 0) {
+               var sizeMB = ([...files].reduce(function(a, f) { return a + f.size; }, 0) / 1048576).toFixed(2);
+               fileSummary.textContent = files.length + ' file' + (files.length > 1 ? 's' : '') + ' selected — ' + sizeMB + ' MB total';
+               fileSummary.style.display = 'block';
+            } else {
+               fileSummary.style.display = 'none';
+            }
+         });
 
-         // Show file summary when files are selected
-         if (netcdfFileInput) {
-            netcdfFileInput.addEventListener('change', function() {
-               const files = this.files;
-               if (files.length > 0) {
-                     const totalSize = [...files].reduce((acc, f) => acc + f.size, 0);
-                     const sizeMB = (totalSize / (1024 * 1024)).toFixed(2);
-                     fileSummary.textContent = `${files.length} file${files.length > 1 ? 's' : ''} selected — ${sizeMB} MB total`;
-                     fileSummary.style.display = 'block';
-               } else {
-                     fileSummary.style.display = 'none';
+         document.addEventListener('submit', function(e) {
+            var form = e.target;
+            if (!form || form.id !== 'netcdfUploadForm') return;
+            e.preventDefault();
+
+            var uploadBtn      = form.querySelector('#uploadBtn');
+            var progressWrapper = form.querySelector('#uploadProgressWrapper');
+            var progressBar    = form.querySelector('#uploadProgressBar');
+            var uploadPercent  = form.querySelector('#uploadPercent');
+            var uploadStatusText = form.querySelector('#uploadStatusText');
+            var uploadSuccessMsg = form.querySelector('#uploadSuccessMsg');
+
+            var formData = new FormData(form);
+            var xhr = new XMLHttpRequest();
+
+            if (progressWrapper) progressWrapper.style.display = 'block';
+            if (uploadBtn) { uploadBtn.disabled = true; uploadBtn.textContent = 'Uploading...'; }
+            if (uploadSuccessMsg) uploadSuccessMsg.style.display = 'none';
+
+            xhr.upload.addEventListener('progress', function(ev) {
+               if (ev.lengthComputable && progressBar) {
+                  var pct = Math.round((ev.loaded / ev.total) * 100);
+                  progressBar.style.width = pct + '%';
+                  progressBar.setAttribute('aria-valuenow', pct);
+                  if (uploadPercent) uploadPercent.textContent = pct + '%';
+                  if (uploadStatusText) uploadStatusText.textContent = pct < 100 ? 'Uploading...' : 'Processing NetCDF...';
+                  if (pct === 100) {
+                     progressBar.classList.remove('bg-success');
+                     progressBar.classList.add('bg-info');
+                     if (uploadBtn) uploadBtn.textContent = 'Processing...';
+                  }
                }
             });
-         }
 
-         if (netcdfForm) {
-            netcdfForm.addEventListener('submit', function(e) {
-               e.preventDefault();
-
-               const formData = new FormData(netcdfForm);
-               const xhr = new XMLHttpRequest();
-
-               // Show progress bar, disable button
-               progressWrapper.style.display = 'block';
-               uploadBtn.disabled = true;
-               uploadBtn.textContent = 'Uploading...';
-               uploadSuccessMsg.style.display = 'none';
-
-               // Track upload progress
-               xhr.upload.addEventListener('progress', function(e) {
-                     if (e.lengthComputable) {
-                        const pct = Math.round((e.loaded / e.total) * 100);
-                        progressBar.style.width = pct + '%';
-                        progressBar.setAttribute('aria-valuenow', pct);
-                        uploadPercent.textContent = pct + '%';
-                        uploadStatusText.textContent = pct < 100 ? 'Uploading...' : 'Processing NetCDF...';
-                        // Switch bar style when upload finishes but server is still processing
-                        if (pct === 100) {
-                           progressBar.classList.remove('bg-success');
-                           progressBar.classList.add('bg-info');
-                           uploadBtn.textContent = 'Processing...';
-                        }
-                              }
-                        });
-
-               // On complete
-                xhr.addEventListener('load', function() {
-                     if (xhr.status === 400) {
-                        // Validation error from server (e.g. magic byte check failed)
-                        let errorMsg = 'Upload failed.';
-                        try { errorMsg = JSON.parse(xhr.responseText).error; } catch(e) {}
-                        progressWrapper.style.display = 'none';
-                        uploadBtn.disabled = false;
-                        uploadBtn.textContent = 'Upload';
-
-                        let alertBox = document.getElementById('netcdf-upload-error');
-                        if (!alertBox) {
-                           alertBox = document.createElement('div');
-                           alertBox.id = 'netcdf-upload-error';
-                           netcdfForm.insertAdjacentElement('beforebegin', alertBox);
-                        }
-                        alertBox.className = 'alert alert-danger alert-dismissible fade show mt-2';
-                        alertBox.innerHTML = errorMsg + '<button type="button" class="btn-close float-end" data-bs-dismiss="alert"></button>';
-                        return;
-                     }
-
-                     progressBar.style.width = '100%';
-                     progressBar.classList.remove('progress-bar-animated', 'bg-info');
-                     progressBar.classList.add('bg-success');
-                     uploadPercent.textContent = '100%';
-                     uploadStatusText.textContent = 'Done!';
-                     uploadSuccessMsg.style.display = 'block';
-                     uploadBtn.textContent = 'Upload';
-
-                     // Reload the page after a short delay to show updated file list
-                     setTimeout(() => { window.location.reload(); }, 1500);
-               });
-
-               // On error
-               xhr.addEventListener('error', function() {
-                     uploadStatusText.textContent = 'Upload failed. Please try again.';
-                     progressBar.classList.add('bg-danger');
-                     progressBar.classList.remove('bg-success', 'progress-bar-animated');
-                     uploadBtn.disabled = false;
-                     uploadBtn.textContent = 'Upload';
-               });
-
-               xhr.open('POST', netcdfForm.action || window.location.href);
-               xhr.send(formData);
+            xhr.addEventListener('load', function() {
+               if (xhr.status === 400) {
+                  var errorMsg = 'Upload failed.';
+                  try { errorMsg = JSON.parse(xhr.responseText).error; } catch (err) {}
+                  if (progressWrapper) progressWrapper.style.display = 'none';
+                  if (uploadBtn) { uploadBtn.disabled = false; uploadBtn.textContent = 'Upload'; }
+                  var alertBox = form.querySelector('.netcdf-upload-error');
+                  if (!alertBox) {
+                     alertBox = document.createElement('div');
+                     alertBox.className = 'netcdf-upload-error alert alert-danger alert-dismissible fade show mt-2';
+                     form.insertAdjacentElement('beforebegin', alertBox);
+                  }
+                  alertBox.innerHTML = errorMsg + '<button type="button" class="btn-close float-end" data-bs-dismiss="alert"></button>';
+                  return;
+               }
+               if (progressBar) {
+                  progressBar.style.width = '100%';
+                  progressBar.classList.remove('progress-bar-animated', 'bg-info');
+                  progressBar.classList.add('bg-success');
+               }
+               if (uploadPercent) uploadPercent.textContent = '100%';
+               if (uploadStatusText) uploadStatusText.textContent = 'Done!';
+               if (uploadSuccessMsg) uploadSuccessMsg.style.display = 'block';
+               if (uploadBtn) uploadBtn.textContent = 'Upload';
+               setTimeout(function() { window.location.reload(); }, 1500);
             });
-         }
+
+            xhr.addEventListener('error', function() {
+               if (uploadStatusText) uploadStatusText.textContent = 'Upload failed. Please try again.';
+               if (progressBar) {
+                  progressBar.classList.add('bg-danger');
+                  progressBar.classList.remove('bg-success', 'progress-bar-animated');
+               }
+               if (uploadBtn) { uploadBtn.disabled = false; uploadBtn.textContent = 'Upload'; }
+            });
+
+            xhr.open('POST', form.action || window.location.href);
+            xhr.send(formData);
+         });
 
          </script>
       </div>
@@ -3434,4 +3417,36 @@
 </div>
 </div>
       {% endif %}
+
+<!-- NetCDF Bulk Delete Modal — outside all cards/forms so overflow:hidden cannot interfere.
+     Has its own form; JS populates hidden inputs with the selected IDs on show. -->
+<div class="modal fade" id="bulkDeleteNetCDFModal" tabindex="-1" aria-hidden="true">
+   <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+         <div class="modal-header border-0 pb-0">
+            <h5 class="modal-title text-danger">
+               <i class="bi bi-exclamation-triangle me-2"></i>Delete Selected Files
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+         </div>
+         <div class="modal-body">
+            <p>Are you sure you want to delete the selected NetCDF files?</p>
+            <p class="text-muted small mb-0">
+               <i class="bi bi-info-circle me-1"></i>This action cannot be undone.
+            </p>
+         </div>
+         <div class="modal-footer border-0">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <form method="post" action="{% url 'build:bulk_delete_netcdf' pk_bundle=bundle.id %}" id="ncDeleteConfirmForm" class="d-inline">
+               {% csrf_token %}
+               <div id="ncDeleteHiddenIds"></div>
+               <button type="submit" class="btn btn-danger btn-keep-bg">
+                  <i class="bi bi-trash me-1"></i> Delete
+               </button>
+            </form>
+         </div>
+      </div>
+   </div>
+</div>
+
 {% endblock %}
