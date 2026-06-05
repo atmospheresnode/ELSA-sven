@@ -1931,7 +1931,10 @@ def context_search_target(request, pk_bundle):
                 write_into_label(i, product_bundle, product_collections_list)
 
         #return render(request, 'build/collections/annex_collection_document.html', context_dict)
-        return redirect('build:annex_collection_document', pk_bundle=pk_bundle)
+        if bundle.bundle_type == "External":
+            return redirect('build:annex_collection_document', pk_bundle=pk_bundle)
+        else:
+            return redirect('build:bundle', pk_bundle=pk_bundle)
 
 
     # Secure: Current user is not the user associated with the bundle, so...

@@ -20,13 +20,19 @@ This section provides a timeline of ELSA's release history, highlighting key upd
 
 ### **Current Version** 
 
-> ### **Version 1.34.0 (May 22, 2026)**
-- Beta Feedback Form: A new feedback form has been introduced for users to provide feedback on ELSA.
-- Citation Information: The layout has been updated with new text.
-- Document Products: Updated form design as well as small bug fixes
+> ### **Version 1.35.0 (May 29, 2026)**
+- Bundle Hub: A kebab menu has been added to each bundle card for quick access to bundle actions.
+- External Bundle: The "Add Data Products" button has been removed from model output collections.
+- Security: Several security vulnerabilities have been identified and resolved.
+- Archive: Minor bug fixes.
 
 ### **Previous Versions** 
 
+> ### **Version 1.34.0 (May 22, 2026)**
+- Beta Feedback Form: A new feedback form has been introduced for users to provide feedback on ELSA.
+- Citation Information: The layout has been updated with new text.
+- Document Products: Updated form design as well as small bug fixes.
+  
 > ### **Version 1.33.0 (May 08, 2026)**
 - About page: Updated educational text content.
 - Create a bundle page: Added descriptive text next to radio card buttons for bundle type selection.
