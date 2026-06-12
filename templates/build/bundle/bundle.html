@@ -940,6 +940,12 @@
                            <div class="card-header">
                               <p>Choose the target(s) you wish to add to your bundle. This is a complete list of availabe targets, independent of any investigations chosen.</p>
                            </div>
+                           <div class="alert alert-info d-flex align-items-start gap-2 m-3 mb-0" role="alert">
+                              <i class="bi bi-info-circle-fill mt-1"></i>
+                              <div>
+                                 <strong>Working with model or simulation data?</strong> Choose the "Laboratory Analog" entry for the body you're simulating (e.g., "Mars Laboratory Analog" for a Mars atmosphere simulation). It's not a physical lab sample, PDS4 just uses this name for the target.
+                              </div>
+                           </div>
                            <form class="card-header black-text text-left z-depth-2"id="query01" method="post" action="{% url 'build:context_search_target' bundle.pk %}">
                               
                                  {% csrf_token %}
@@ -2791,6 +2797,12 @@
                            <div class="card">
                            <div class="card-header">
                               <p>Choose the target(s) you wish to add to your bundle. This is a complete list of availabe targets, independent of any investigations chosen.</p>
+                           </div>
+                           <div class="alert alert-info d-flex align-items-start gap-2 m-3 mb-0" role="alert">
+                              <i class="bi bi-info-circle-fill mt-1"></i>
+                              <div>
+                                 <strong>Working with model or simulation data?</strong> Choose the "Laboratory Analog" entry for the body you're simulating (e.g., "Mars Laboratory Analog" for a Mars atmosphere simulation). It's not a physical lab sample, PDS4 just uses this name for the target.
+                              </div>
                            </div>
                            <form class="card-header black-text text-left z-depth-2"id="query01" method="post" action="{% url 'build:context_search_target' bundle.pk %}">
                               
