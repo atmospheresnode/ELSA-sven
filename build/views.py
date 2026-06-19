@@ -956,8 +956,7 @@ def bundle(request, pk_bundle):
 
             context_dict['context_successful_submit'] = True
 
-            return render(request, 'build/bundle/bundle.html', context_dict)
-            # return render(request, 'build/bundle/bundle.html', context_dict)
+            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
 
 
         # After ELSAs friend hits submit, if the forms are completed correctly, we should enter
