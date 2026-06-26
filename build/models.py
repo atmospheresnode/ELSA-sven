@@ -4644,15 +4644,20 @@ class Citation_Information(models.Model):
 
         # Default editors are Lynn Neakrase and Lyle Huber -- Could be changed later on
         list_editor = etree.SubElement(Citation_Information, 'List_Editor')
-        for given, family in [('Lynn', 'Neakrase'), ('Lyle', 'Huber')]:
+        for given, family, orcid in [
+            ('Lynn', 'Neakrase', '0000-0002-6370-5791'),
+            ('Lyle', 'Huber',    '0000-0002-1232-1982'),
+        ]:
             editor = etree.SubElement(list_editor, 'Person')
             given_name_el = etree.SubElement(editor, 'given_name')
             given_name_el.text = given
             family_name_el = etree.SubElement(editor, 'family_name')
             family_name_el.text = family
-            etree.SubElement(editor, 'person_orcid')  # placeholder — to be filled in later
+            orcid_el = etree.SubElement(editor, 'person_orcid')
+            orcid_el.text = orcid
             affiliation = etree.SubElement(editor, 'Affiliation')
-            etree.SubElement(affiliation, 'organization_name')  # placeholder — to be filled in later
+            org_name_el = etree.SubElement(affiliation, 'organization_name')
+            org_name_el.text = 'NASA Planetary Data System Atmospheres Node; New Mexico State University, Las Cruces, NM'
 
         return label_root
 
@@ -4708,25 +4713,39 @@ class Citation_Information(models.Model):
         list_editor = Citation_Information.find('{}List_Editor'.format(NAMESPACE))
         if list_editor is None:
             list_editor = etree.SubElement(Citation_Information, 'List_Editor')
-            for given, family in [('Lynn', 'Neakrase'), ('Lyle', 'Huber')]:
+            for given, family, orcid in [
+                ('Lynn', 'Neakrase', '0000-0002-6370-5791'),
+                ('Lyle', 'Huber',    '0000-0002-1232-1982'),
+            ]:
                 editor = etree.SubElement(list_editor, 'Person')
                 given_name_el = etree.SubElement(editor, 'given_name')
                 given_name_el.text = given
                 family_name_el = etree.SubElement(editor, 'family_name')
                 family_name_el.text = family
-                etree.SubElement(editor, 'person_orcid')
+                orcid_el = etree.SubElement(editor, 'person_orcid')
+                orcid_el.text = orcid
                 affiliation = etree.SubElement(editor, 'Affiliation')
-                etree.SubElement(affiliation, 'organization_name')
+                org_name_el = etree.SubElement(affiliation, 'organization_name')
+                org_name_el.text = 'NASA Planetary Data System Atmospheres Node; New Mexico State University, Las Cruces, NM'
         else:
             default_editors = [
-                {'given_name': 'Lynn', 'family_name': 'Neakrase'},
-                {'given_name': 'Lyle',  'family_name': 'Huber'},
+                {'given_name': 'Lynn', 'family_name': 'Neakrase', 'orcid': '0000-0002-6370-5791'},
+                {'given_name': 'Lyle',  'family_name': 'Huber',   'orcid': '0000-0002-1232-1982'},
             ]
+            affiliation_text = 'NASA Planetary Data System Atmospheres Node; New Mexico State University, Las Cruces, NM'
             for i, editor in enumerate(list_editor.findall('{}Person'.format(NAMESPACE))):
                 if i >= len(default_editors):
                     break
                 editor.find('{}given_name'.format(NAMESPACE)).text = default_editors[i]['given_name']
                 editor.find('{}family_name'.format(NAMESPACE)).text = default_editors[i]['family_name']
+                orcid_el = editor.find('{}person_orcid'.format(NAMESPACE))
+                if orcid_el is not None:
+                    orcid_el.text = default_editors[i]['orcid']
+                affiliation = editor.find('{}Affiliation'.format(NAMESPACE))
+                if affiliation is not None:
+                    org = affiliation.find('{}organization_name'.format(NAMESPACE))
+                    if org is not None:
+                        org.text = affiliation_text
 
         return label_root
     
