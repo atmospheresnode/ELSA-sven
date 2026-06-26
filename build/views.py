@@ -4008,6 +4008,10 @@ def variable_coord_to_product(bundle, netcdf_objs):
             if not os.path.exists(nc_path):
                 raise FileNotFoundError('Uploaded file is missing from disk.')
 
+            os.rename(nc_path, os.path.join(bundle.directory(), os.path.basename(nc_obj.file.path)))
+            nc_path = os.path.join(bundle.directory(), os.path.basename(nc_obj.file.path))
+            print(nc_path)
+
             _process_single_netcdf(bundle, nc_path, NS, allowed_variable_fields, allowed_coord_fields)
 
             nc_obj.processed = True
