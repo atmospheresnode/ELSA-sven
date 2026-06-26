@@ -14,30 +14,80 @@ Delete the alias if you no longer want it associated with your bundle.
 {% endblock %}
 
 {% block body_block %}
+<style>
+    .page-background {
+        position: relative;
+    }
+
+    .page-background::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background-image: url("/static/images/thumbnail_ELSA_Logo-black.png");
+        background-repeat: no-repeat;
+        background-position: left center;
+        background-size: 700px;
+        opacity: 0.25;
+        pointer-events: none;
+        z-index: 0;
+    }
+
+    .page-background > * {
+        position: relative;
+        z-index: 1;
+    }
+
+    /* Back Button */
+    .btn-custom {
+        display: inline-flex;
+        align-items: center; 
+        justify-content: center; 
+        color: white;
+        padding: 8px 16px;
+        background-color: #008B8B; /* Cadet Blue */
+        border: none;
+        border-radius: 5px;
+        text-decoration: none; 
+        cursor: pointer;
+        transition: background-color 0.3s;
+    }
+    
+    .btn-custom:hover {
+        background-color: #006d6d;
+    }
+    
+    .btn-custom i {
+        font-size: 18px;
+        margin-right: 5px;
+    }    
+</style>
+
+<div class="page-background">    
 <div class="d-flex justify-content-center align-items-center mt-4">
    <div class="col-md-6">
 
       <!--Alias Form-->
       <div id="displayAliasForm" class="card shadow-sm">
-         <div class="card-header text-white text-center" style="padding: 0.5rem 0.5rem; background-color: #2F4F4F">
-            <h4 class="mb-2 mt-2">
+         <div class="card">
+            <h4 class="card-header bg-secondary text-light text-center position-relative">
                 Edit Alias
             </h4>
-        </div>
+         
         
-        <div class="card-body p-4">
-         <form id="form_data" method="post" action="{% url 'build:alias_edit' bundle.pk alias.pk %}">
-            {% csrf_token %}
-            <div class="mb-3">
-               {{ form_alias.as_p }}
+            <div class="card-body m-4">
+               <form id="form_data" method="post" action="{% url 'build:alias_edit' bundle.pk alias.pk %}">
+                  {% csrf_token %}
+                  <div class="mb-3">
+                     {{ form_alias.as_p }}
+                  </div>
+               </form>
+            
+               <div class="d-flex justify-content-start gap-2 mt-3">
+                  <button form="form_data" class="btn btn-success btn-sm" type="submit">Update</button>
+                  <button class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#delete_modal" style="box-shadow: none;">Delete Alias</button>
+               </div>
             </div>
-         </form>
-      
-         <div class="d-flex justify-content-start gap-2 mt-3">
-            <button form="form_data" class="btn btn-success btn-sm" type="submit">Update</button>
-            <button class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#delete_modal" style="box-shadow: none;">Delete Alias</button>
          </div>
-      </div>
       </div>
    </div>
 </div>
@@ -82,12 +132,12 @@ Delete the alias if you no longer want it associated with your bundle.
 <div class="row mt-5 mb-0">
    <div class="col-md-12 d-flex align-items-center justify-content-center">
    <!-- Correct URL -->
-   <a href="{% url 'build:bundle' bundle.pk %}" class="btn bi bi-arrow-return-left" style="background-color: #008B8B; color: white;">
+   <a href="{% url 'build:bundle' bundle.pk %}" class="btn-custom">
        <i class="fa fa-arrow-circle-left"></i> Bundle Details
    </a>
    </div>
-</div> 
-
+</div>
+</div>
 {% endblock %}
 
 

@@ -20,10 +20,13 @@ This section provides a timeline of ELSA's release history, highlighting key upd
 
 ### **Current Version** 
 
-> ### **Version 1.36.0 (June 05, 2026)**
-- External Bundle: Fixed an issue where uploaded NetCDF files were not generating XML labels.
+> ### **Version 1.37.0 (June 12, 2026)**
+- External Bundle: Target selection page now includes a note clarifying that "Laboratory Analog" refers to model/simulation data, not a physical lab sample.
 
 ### **Previous Versions** 
+
+> ### **Version 1.36.0 (June 05, 2026)**
+- External Bundle: Fixed an issue where uploaded NetCDF files were not generating XML labels.
 
 > ### **Version 1.35.0 (May 29, 2026)**
 - Bundle Hub: A kebab menu has been added to each bundle card for quick access to bundle actions.
