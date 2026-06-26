@@ -4581,9 +4581,6 @@ class Citation_Information(models.Model):
     # author_list = models.CharField(max_length=MAX_CHAR_FIELD, blank=True)
     number_of_authors_people = models.PositiveIntegerField(default=0)
     number_of_authors_organization = models.PositiveIntegerField(default=0)
-    #editor_list = models.CharField(max_length=MAX_CHAR_FIELD, blank=True)
-    number_of_editors_people = models.PositiveIntegerField(default=0)
-    number_of_editors_organization = models.PositiveIntegerField(default=0)
     publication_year = models.CharField(max_length=MAX_CHAR_FIELD)
     description = models.CharField(max_length=MAX_TEXT_FIELD)
     keyword = models.CharField(max_length=MAX_CHAR_FIELD, blank=True)
@@ -4645,27 +4642,18 @@ class Citation_Information(models.Model):
                 parent_organization_name = etree.SubElement(parent_organization, 'parent_organization_name')
 
 
-        if self.number_of_editors_people > 0 or self.number_of_editors_organization > 0:
-            list_editor = etree.SubElement(Citation_Information, 'List_Editor')
+        # Default editors are Lynn Neakrase and Lyle Huber -- Could be changed later on
+        list_editor = etree.SubElement(Citation_Information, 'List_Editor')
+        for given, family in [('Lynn', 'Neakrase'), ('Lyle', 'Huber')]:
+            editor = etree.SubElement(list_editor, 'Person')
+            given_name_el = etree.SubElement(editor, 'given_name')
+            given_name_el.text = given
+            family_name_el = etree.SubElement(editor, 'family_name')
+            family_name_el.text = family
+            etree.SubElement(editor, 'person_orcid')  # placeholder — to be filled in later
+            affiliation = etree.SubElement(editor, 'Affiliation')
+            etree.SubElement(affiliation, 'organization_name')  # placeholder — to be filled in later
 
-            for _ in range(self.number_of_editors_people):
-                editor = etree.SubElement(list_editor, 'Person')
-                given_name = etree.SubElement(editor, 'given_name')
-                family_name = etree.SubElement(editor, 'family_name')
-                person_orcid = etree.SubElement(editor, 'person_orcid')
-                affiliation = etree.SubElement(editor, 'Affiliation')
-
-                organization_name = etree.SubElement(affiliation, 'organization_name')
-            
-            for _ in range(self.number_of_editors_organization):
-                organization = etree.SubElement(list_editor, 'Organization')
-                organization_name = etree.SubElement(organization, 'organization_name')
-                organization_rorid = etree.SubElement(organization, 'organization_rorid')
-                sequence_number = etree.SubElement(organization, 'sequence_number')
-                parent_organization = etree.SubElement(organization, 'Parent_Organization')
-
-                parent_organization_name = etree.SubElement(parent_organization, 'parent_organization_name')
-        
         return label_root
 
     def fill_label_values(self, label_root, cleaned_form):
@@ -4715,44 +4703,30 @@ class Citation_Information(models.Model):
 
                 authors_organization_count = authors_organization_count + 1
 
-        if self.number_of_editors_people > 0 or self.number_of_editors_organization > 0:
-            list_editor = Citation_Information.find('{}List_Editor'.format(NAMESPACE))
-
-            editors_people = list_editor.findall('{}Person'.format(NAMESPACE))
-
-            editor_people_count = 0
-
-            for editor in editors_people:
-                given_name = editor.find('{}given_name'.format(NAMESPACE))
-                given_name.text = cleaned_form.get(f'editor_person_{editor_people_count}_given_name')
-                family_name = editor.find('{}family_name'.format(NAMESPACE))
-                family_name.text = cleaned_form.get(f'editor_person_{editor_people_count}_family_name')
-                person_orcid = editor.find('{}person_orcid'.format(NAMESPACE))
-                person_orcid.text = cleaned_form.get(f'editor_person_{editor_people_count}_orcid')
-
-                affiliation = editor.find('{}Affiliation'.format(NAMESPACE))
-                organization_name = affiliation.find('{}organization_name'.format(NAMESPACE))
-                organization_name.text = cleaned_form.get(f'editor_person_{editor_people_count}_affiliation')
-
-                editor_people_count = editor_people_count + 1
-
-            editors_organization = list_editor.findall('{}Organization'.format(NAMESPACE))
-
-            editors_organization_count = 0
-
-            for editor in editors_organization:
-                organization_name = editor.find('{}organization_name'.format(NAMESPACE))
-                organization_name.text = cleaned_form.get(f'editor_org_{editors_organization_count}_name')
-                organization_rorid = editor.find('{}organization_rorid'.format(NAMESPACE))
-                organization_rorid.text = cleaned_form.get(f'editor_org_{editors_organization_count}_rorid')
-                sequence_number = editor.find('{}sequence_number'.format(NAMESPACE))
-                sequence_number.text = str(cleaned_form.get(f'editor_org_{editors_organization_count}_sequence_number'))
-
-                parent_organization = editor.find('{}Parent_Organization'.format(NAMESPACE))
-                parent_organization_name = parent_organization.find('{}parent_organization_name'.format(NAMESPACE))
-                parent_organization_name.text = cleaned_form.get(f'editor_org_{editors_organization_count}_parent_org_name')
-
-                editors_organization_count = editors_organization_count + 1
+        # Default editors are  Lynn Neakrase and Lyle Huber.
+        # If the label predates this change it may lack List_Editor - so creates it.
+        list_editor = Citation_Information.find('{}List_Editor'.format(NAMESPACE))
+        if list_editor is None:
+            list_editor = etree.SubElement(Citation_Information, 'List_Editor')
+            for given, family in [('Lynn', 'Neakrase'), ('Lyle', 'Huber')]:
+                editor = etree.SubElement(list_editor, 'Person')
+                given_name_el = etree.SubElement(editor, 'given_name')
+                given_name_el.text = given
+                family_name_el = etree.SubElement(editor, 'family_name')
+                family_name_el.text = family
+                etree.SubElement(editor, 'person_orcid')
+                affiliation = etree.SubElement(editor, 'Affiliation')
+                etree.SubElement(affiliation, 'organization_name')
+        else:
+            default_editors = [
+                {'given_name': 'Lynn', 'family_name': 'Neakrase'},
+                {'given_name': 'Lyle',  'family_name': 'Huber'},
+            ]
+            for i, editor in enumerate(list_editor.findall('{}Person'.format(NAMESPACE))):
+                if i >= len(default_editors):
+                    break
+                editor.find('{}given_name'.format(NAMESPACE)).text = default_editors[i]['given_name']
+                editor.find('{}family_name'.format(NAMESPACE)).text = default_editors[i]['family_name']
 
         return label_root
     

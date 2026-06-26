@@ -8,21 +8,21 @@
     Follow the step-by-step process below to build your bundle. You may skip any step during the walkthrough and still add or edit information later from the main bundle interface.
   </p>
 
-  <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-4 mt-4">
+  <div class="row row-cols-1 row-cols-md-2 {% if bundle.bundle_type != 'External' %}row-cols-lg-4{% else %}row-cols-lg-2{% endif %} g-4 mt-4">
 
+    {% if bundle.bundle_type != 'External' %}
     <!-- Step 1: Alias -->
     <div class="col">
       <div class="card h-100 shadow-sm">
         <div class="card-body">
           <div class="mb-3 text-primary">
             <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="currentColor" class="bi bi-tag" viewBox="0 0 16 16">
-                <!--<path> is an SVG(Scalable Vector Graphics) element used to draw complex shapes-->
                 <path d="M3 2a1 1 0 0 0-1 1v4.586a1 1 0 0 0 .293.707l6 6a1 1 0 0 0 1.414 0l4.586-4.586a1 1 0 0 0 0-1.414l-6-6A1 1 0 0 0 7.586 2H3zm3 1a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
             </svg>
           </div>
           <h5 class="card-title">Alias</h5>
           <p class="card-text">
-            PDS4 allows providers to add alternative names or identifiers as ‘Aliases’ for the bundle. These are optional and can be added later. If you know you have alternate names, add them now or skip this step.
+            PDS4 allows providers to add alternative names or identifiers as 'Aliases' for the bundle. These are optional and can be added later. If you know you have alternate names, add them now or skip this step.
           </p>
         </div>
       </div>
@@ -45,6 +45,7 @@
         </div>
       </div>
     </div>
+    {% endif %}
 
     <!-- Step 3: Citation Information -->
     <div class="col">
@@ -85,7 +86,11 @@
   </div>
 
   <div class="mt-5 d-flex justify-content-center">
+    {% if bundle.bundle_type == 'External' %}
+    <a href="{% url 'build:citation_information' bundle.id %}" class="btn btn-primary">Start Walkthrough</a>
+    {% else %}
     <a href="{% url 'build:alias' bundle.id %}" class="btn btn-primary">Start Walkthrough</a>
+    {% endif %}
   </div>
 </div>
 {% endblock %}
