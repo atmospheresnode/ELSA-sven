@@ -4185,8 +4185,8 @@ def _process_single_netcdf(bundle, nc_path, NS, allowed_variable_fields, allowed
         close_label(output_path, label_root, label_list[2])
 
     # Temporary remove netcdf file before figuring out how to move it
-    os.remove(nc_path)
-    print('removed: ' + nc_path)
+    # os.remove(nc_path)
+    print('netcdf_path:' + nc_path)
 
 
 
