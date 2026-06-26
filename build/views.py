@@ -18,6 +18,7 @@ from django import forms
 from django.forms import modelformset_factory
 from django.views.generic.edit import UpdateView, DeleteView
 from django.contrib import messages
+import datetime
 import shutil
 import lxml.etree as ET # for XML parsing- Added by Rupak
 # from lxml import etree # debug product obs only
@@ -592,6 +593,20 @@ def yes_intro_page(request, bundle_id):
     if request.user == bundle.user:
         print('authorized user: {}'.format(request.user))
         # ELSA's current user is the bundle user so begin view logic
+
+        # For External bundles, auto-create an initial Modification History so the
+        # user doesn't have to fill it in during the walkthrough.
+        if bundle.bundle_type == 'External' and not Modification_History.objects.filter(bundle=bundle).exists():
+            mod_history = Modification_History(
+                bundle=bundle,
+                description='Initial version',
+                modification_date=datetime.date.today().strftime('%Y-%m-%d'),
+                version_id='1.0',
+            )
+            mod_history.save()
+            product_bundle = Product_Bundle.objects.get(bundle=bundle)
+            product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+            write_into_label(mod_history, product_bundle, product_collections_list)
 
         # Declare context_dict for template
         context_dict = {
