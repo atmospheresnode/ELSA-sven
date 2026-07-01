@@ -1192,7 +1192,7 @@
                         <div class="row px-2">
                            <!-- This is where to change the linkage to one of the new pages -->
                            <!--Changed the view after build and added citation information.pk-->
-                           <form action="{% url 'build:bundle' bundle.pk %}" method="post" id="form_citation_information"> 
+                           <form action="{% url 'build:bundle' bundle.pk %}?next=bundle" method="post" id="form_citation_information"> 
                               {% csrf_token %}
                               
                               <!-- Author List -->
@@ -1251,7 +1251,7 @@
                         <div class="row px-2">
                            <!--This logic needs to be changed: When exists, it displays list author and list editor as carousel-->
                            <!--For now, it is displaying the same thing as when nothing exists; which is the main form to add citation information-->
-                           <form action="{% url 'build:bundle' bundle.pk %}" method="post" id="form_citation_information"> 
+                           <form action="{% url 'build:bundle' bundle.pk %}?next=bundle" method="post" id="form_citation_information"> 
                               {% csrf_token %}
                               
                               <!-- Author List -->
@@ -1332,10 +1332,15 @@
                                        <button type="submit" class="btn btn-light btn-sm">Edit</button>
                                     </form> {% endcomment %}
 
-                                    <button type="button" class="btn btn-light btn-sm"
+                                    <!--COMMENTED OUT FOR TESTING PURPOSES-->
+                                    <!-- <button type="button" class="btn btn-light btn-sm"
                                           onclick="alert('Edit functionality is currently under development.\nPlease delete and create a new citation to make any changes.\nWe apologize for the inconvenience!')">
                                        Edit
-                                    </button>
+                                    </button> -->
+                                    <a href="{% url 'build:edit_citation_information' bundle.pk citation_information.pk %}?next=bundle"
+                                       class="btn btn-light btn-sm">
+                                       Edit
+                                    </a>
                                  
                                     <!--implementing citation delete-->
                                     <form action="{% url 'build:citation_information_delete' bundle.pk citation_information.pk %}" method="post" style="display:inline;">
