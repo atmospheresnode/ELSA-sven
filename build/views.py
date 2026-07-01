@@ -109,7 +109,7 @@ def alias_edit(request, pk_bundle, pk_alias):  # DEPRECATED: to be replaced by e
         # Get Alias and its form
         alias = Alias.objects.get(pk=pk_alias)
         initial_alias = {
-            'atlernate_id': alias.alternate_id,
+            'alternate_id': alias.alternate_id,
             'alternate_title': alias.alternate_title,
             'comment': alias.comment,
         }
@@ -987,7 +987,14 @@ def bundle(request, pk_bundle):
             context_dict['form_citation_information'] = form_citation_information
 
             # # fixes the refresh duplication issue - deric
-            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/citation_information_current/' + str(citation_information.pk) + '/')
+            # return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/citation_information_current/' + str(citation_information.pk) + '/')
+            
+            next_page = request.GET.get('next')
+
+            if next_page == 'bundle':
+                return redirect(reverse('build:bundle', args=[pk_bundle]))
+            else:
+                return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/citation_information_current/' + str(citation_information.pk) + '/')
 
             # fixes the refresh duplication issue, use this one for offline testing - deric
             # return HttpResponseRedirect('/build/' + pk_bundle + '/')
@@ -1568,7 +1575,13 @@ def citation_information(request, pk_bundle):
             write_into_label(citation_information, product_bundle, product_collections_list)
 
             print('------------- End Build Citation Information -------------------')
-            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/citation_information_current/' + str(citation_information.pk) + '/')
+
+            next_page = request.GET.get('next')
+
+            if next_page == 'bundle':
+                return redirect(reverse('build:bundle', args=[pk_bundle]))
+            else:
+                return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/citation_information_current/' + str(citation_information.pk) + '/')
             # return redirect(reverse('build:context_search', args=[pk_bundle]))
             
         # Update context_dict with the current Citation_Information models associated with the user's bundle
@@ -1627,10 +1640,17 @@ def edit_citation_information(request, pk_bundle, pk_citation_information):
 
             #Adding a check for bundle type, so it skips context search if external selected - RUPAK
             # Context search is back for AMA, but I'm still living the if statement (for now) in case something changes on the archive end - Nicholas
+            next_page = request.GET.get('next')
             if bundle.bundle_type == 'External':
-                return redirect(reverse('build:context_search', args=[pk_bundle]))  
+                if next_page == 'bundle':
+                    return redirect(reverse('build:bundle', args=[pk_bundle]))
+                else:
+                    return redirect(reverse('build:context_search', args=[pk_bundle]))  
             else:
-                return redirect(reverse('build:context_search', args=[pk_bundle]))
+                if next_page == 'bundle':
+                    return redirect(reverse('build:bundle', args=[pk_bundle]))
+                else:
+                    return redirect(reverse('build:context_search', args=[pk_bundle]))  
 
 
         context_dict = {
