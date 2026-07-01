@@ -201,26 +201,16 @@ class CitationInformationForm(forms.ModelForm):
     #     'class': 'form-control form-outline',
     #     'id': 'author_list'
     # }))
-    number_of_authors_people = forms.IntegerField(required=True, widget= forms.NumberInput(attrs={
+    number_of_authors_people = forms.IntegerField(required=True, min_value=0, widget= forms.NumberInput(attrs={
         'class': 'form-control form-outline',
         'id': 'number of authors (people) for List_Author'
     }))
 
-    number_of_authors_organization = forms.IntegerField(required=True, widget= forms.NumberInput(attrs={
+    number_of_authors_organization = forms.IntegerField(required=True, min_value=0, widget= forms.NumberInput(attrs={
         'class': 'form-control form-outline',
         'id': 'number of authors (organization) for List_Author'
     }))
 
-    # new field for number of authors
-    number_of_editors_people = forms.IntegerField(required=True, widget= forms.NumberInput(attrs={
-        'class': 'form-control form-outline',
-        'id': 'number of editors (people) for List_Editor'
-    }))
-
-    number_of_editors_organization = forms.IntegerField(required=True, widget= forms.NumberInput(attrs={
-        'class': 'form-control form-outline',
-        'id': 'number of editors (organization) for List_Editor'
-    }))
     ##
 
     description = forms.CharField(required=True, widget = forms.TextInput(attrs={
@@ -252,12 +242,6 @@ class CitationInformationForm(forms.ModelForm):
 
         # Add fields for authors (organizations)
         self._add_organization_fields('author', self.initial.get('number_of_authors_organization', 0))
-
-        # Add fields for editors (people)
-        self._add_person_fields('editor', self.initial.get('number_of_editors_people', 0))
-
-        # Add fields for editors (organizations)
-        self._add_organization_fields('editor', self.initial.get('number_of_editors_organization', 0))
 
     def _add_person_fields(self, prefix, count):
         """Helper method to add fields for a person (author or editor)."""
@@ -319,12 +303,6 @@ class EditCitationInformationForm(forms.Form):
 
         # Add fields for authors (organizations)
         self._add_organization_fields('author', self.citation_information.number_of_authors_organization)
-
-        # Add fields for editors (people)
-        self._add_person_fields('editor', self.citation_information.number_of_editors_people)
-
-        # Add fields for editors (organizations)
-        self._add_organization_fields('editor', self.citation_information.number_of_editors_organization)
 
     def _add_person_fields(self, prefix, count):
         """Helper method to add fields for a person (author or editor)."""
