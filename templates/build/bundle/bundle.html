@@ -388,88 +388,58 @@
          </div>
 
          <!-- Bundle Progress Card-->
-         <div class="card">
+         <div class="card progress-sidebar">
          <h5 class="card-header bg-secondary text-white text-center">Bundle Progress <span class="ms-1 align-baseline" style="position: relative; top: -1px;" data-bs-toggle="tooltip" data-bs-placement="top" title="This section shows a qualitative depiction of the overall completion progress of this bundle."><i class="bi bi-info-circle"></i></span></h5>
          <div class="list-group list-group-flush">
             <!-- Alias -->
-            <div class="list-group-item d-flex justify-content-between align-items-center">
+            <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" data-bs-toggle="modal" data-bs-target="#alias_modal">
                Alias
                <span class="badge {% if status_dict.Alias %}bg-success{% else %}bg-danger{% endif %}">
-                  {% if status_dict.Alias %}
-                     <i class="bi bi-check-circle-fill"></i>
-                  {% else %}
-                     <i class="bi bi-x-circle-fill"></i>
-                  {% endif %}
+                  {% if status_dict.Alias %}<i class="bi bi-check-circle-fill"></i>{% else %}<i class="bi bi-x-circle-fill"></i>{% endif %}
                </span>
-            </div>
+            </a>
             <!-- Modification History -->
-            <div class="list-group-item d-flex justify-content-between align-items-center">
+            <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" data-bs-toggle="modal" data-bs-target="#mod_history_modal">
                Modification History
                <span class="badge {% if status_dict.Modification_History %}bg-success{% else %}bg-danger{% endif %}">
-                  {% if status_dict.Modification_History %}
-                     <i class="bi bi-check-circle-fill"></i>
-                  {% else %}
-                     <i class="bi bi-x-circle-fill"></i>
-                  {% endif %}
+                  {% if status_dict.Modification_History %}<i class="bi bi-check-circle-fill"></i>{% else %}<i class="bi bi-x-circle-fill"></i>{% endif %}
                </span>
-            </div>
+            </a>
             <!-- Citation Information -->
-            <div class="list-group-item d-flex justify-content-between align-items-center">
+            <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" data-bs-toggle="modal" data-bs-target="#citation_information_modal">
                Citation Information
                <span class="badge {% if status_dict.Citation_Information %}bg-success{% else %}bg-danger{% endif %}">
-                  {% if status_dict.Citation_Information %}
-                     <i class="bi bi-check-circle-fill"></i>
-                  {% else %}
-                     <i class="bi bi-x-circle-fill"></i>
-                  {% endif %}
+                  {% if status_dict.Citation_Information %}<i class="bi bi-check-circle-fill"></i>{% else %}<i class="bi bi-x-circle-fill"></i>{% endif %}
                </span>
-            </div>
+            </a>
             <!-- Investigations -->
-            <div class="list-group-item d-flex justify-content-between align-items-center">
+            <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" data-bs-toggle="modal" data-bs-target="#context_modal" data-tab="con_inv">
                Investigations
                <span class="badge {% if status_dict.Investigations %}bg-success{% else %}bg-danger{% endif %}">
-                  {% if status_dict.Investigations %}
-                     <i class="bi bi-check-circle-fill"></i>
-                  {% else %}
-                     <i class="bi bi-x-circle-fill"></i>
-                  {% endif %}
+                  {% if status_dict.Investigations %}<i class="bi bi-check-circle-fill"></i>{% else %}<i class="bi bi-x-circle-fill"></i>{% endif %}
                </span>
-            </div>
+            </a>
             <!-- Hosts -->
-            <div class="list-group-item d-flex justify-content-between align-items-center">
+            <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" data-bs-toggle="modal" data-bs-target="#context_modal" data-tab="con_ih">
                Hosts
                <span class="badge {% if status_dict.Hosts %}bg-success{% else %}bg-danger{% endif %}">
-                  {% if status_dict.Hosts %}
-                     <i class="bi bi-check-circle-fill"></i>
-                  {% else %}
-                     <i class="bi bi-x-circle-fill"></i>
-                  {% endif %}
+                  {% if status_dict.Hosts %}<i class="bi bi-check-circle-fill"></i>{% else %}<i class="bi bi-x-circle-fill"></i>{% endif %}
                </span>
-            </div>
-
+            </a>
             <!-- Instruments -->
-            <div class="list-group-item d-flex justify-content-between align-items-center">
+            <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" data-bs-toggle="modal" data-bs-target="#context_modal" data-tab="con_ins">
                Instruments
                <span class="badge {% if status_dict.Instruments %}bg-success{% else %}bg-danger{% endif %}">
-                  {% if status_dict.Instruments %}
-                     <i class="bi bi-check-circle-fill"></i>
-                  {% else %}
-                     <i class="bi bi-x-circle-fill"></i>
-                  {% endif %}
+                  {% if status_dict.Instruments %}<i class="bi bi-check-circle-fill"></i>{% else %}<i class="bi bi-x-circle-fill"></i>{% endif %}
                </span>
-            </div>
-
+            </a>
             <!-- Targets -->
-            <div class="list-group-item d-flex justify-content-between align-items-center">
+            <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" data-bs-toggle="modal" data-bs-target="#context_modal" data-tab="con_tar">
                Targets
                <span class="badge {% if status_dict.Targets %}bg-success{% else %}bg-danger{% endif %}">
-                  {% if status_dict.Targets %}
-                     <i class="bi bi-check-circle-fill"></i>
-                  {% else %}
-                     <i class="bi bi-x-circle-fill"></i>
-                  {% endif %}
+                  {% if status_dict.Targets %}<i class="bi bi-check-circle-fill"></i>{% else %}<i class="bi bi-x-circle-fill"></i>{% endif %}
                </span>
-            </div>
+            </a>
          </div>
       </div>
       </div>
@@ -521,6 +491,25 @@
             // Enable Bootstrap tooltips (info icons)
             document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (el) {
                new bootstrap.Tooltip(el);
+            });
+         </script>
+         <style>
+            .progress-sidebar a.list-group-item-action:hover { text-decoration: underline; }
+         </style>
+         <script>
+            // Open context modal to the right tab when triggered from the progress sidebar
+            document.querySelectorAll('[data-bs-target="#context_modal"][data-tab]').forEach(function(trigger) {
+               trigger.addEventListener('click', function() {
+                  var tabId = this.getAttribute('data-tab');
+                  var contextModal = document.getElementById('context_modal');
+                  contextModal.addEventListener('shown.bs.modal', function handler() {
+                     var tabBtn = contextModal.querySelector('[data-bs-target="#' + tabId + '"]');
+                     if (tabBtn && window.bootstrap) {
+                        bootstrap.Tab.getOrCreateInstance(tabBtn).show();
+                     }
+                     contextModal.removeEventListener('shown.bs.modal', handler);
+                  });
+               });
             });
          </script>
       </div>
@@ -1207,18 +1196,6 @@
                                  {{ form_citation_information.number_of_authors_organization }}
                               </div>
 
-                              <!-- Editor List -->
-                              <h6 class="mt-4 mb-1 fw-semibold">Editors <span class="fw-normal fst-italic text-muted">(node contacts)</span></h6>
-                              <div class="mt-3">
-                                 <label for="author_list">Number of Persons</label>
-                                 {{ form_citation_information.number_of_editors_people }}
-                              </div>
-
-                              <div class="mt-3">
-                                 <label for="author_list">Number of Organizations*</label>
-                                 {{ form_citation_information.number_of_editors_organization }}
-                              </div>
-
                               <p class="text-muted small mt-2">* Organizations should be set to 0 unless used.</p>
 
                               <!-- Keyword -->
@@ -1264,18 +1241,6 @@
                               <div class="mt-3">
                                  <label for="author_list">Number of Organizations*</label>
                                  {{ form_citation_information.number_of_authors_organization }}
-                              </div>
-
-                              <!-- Editor List -->
-                              <h6 class="mt-4 mb-1 fw-semibold">Editors <span class="fw-normal fst-italic text-muted">(node contacts)</span></h6>
-                              <div class="mt-3">
-                                 <label for="author_list">Number of Persons</label>
-                                 {{ form_citation_information.number_of_editors_people }}
-                              </div>
-
-                              <div class="mt-3">
-                                 <label for="author_list">Number of Organizations*</label>
-                                 {{ form_citation_information.number_of_editors_organization }}
                               </div>
 
                               <p class="text-muted small mt-2">* Organizations should be set to 0 unless used.</p>
@@ -2046,7 +2011,7 @@
          </div>
 
 
-         <div class="card">
+         <div class="card progress-sidebar">
          <h5 class="card-header bg-secondary text-white text-center position-relative">
             Bundle Progress
             <span class="ms-1 d-inline-flex align-items-center">
@@ -2057,41 +2022,32 @@
          </h5>
          <div class="list-group list-group-flush">
             <!-- Alias (Optional for External) -->
-            <div class="list-group-item d-flex justify-content-between align-items-center">
+            <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" data-bs-toggle="modal" data-bs-target="#alias_modal">
                Alias
                <span>
                   {% if status_dict.Alias %}
                      <span class="badge bg-success"><i class="bi bi-check-circle-fill"></i></span>
                   {% else %}
-                     <span class="badge bg-warning text-dark" data-bs-toggle="tooltip" data-bs-placement="left"
-                        title="Alias is optional for external bundles.">
+                     <span class="badge bg-warning text-dark" data-bs-toggle="tooltip" data-bs-placement="left" title="Alias is optional for external bundles.">
                         <i class="bi bi-exclamation-triangle-fill"></i>
                      </span>
                   {% endif %}
                </span>
-            </div>
+            </a>
             <!-- Modification History -->
-            <div class="list-group-item d-flex justify-content-between align-items-center">
+            <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" data-bs-toggle="modal" data-bs-target="#mod_history_modal">
                Modification History
                <span class="badge {% if status_dict.Modification_History %}bg-success{% else %}bg-danger{% endif %}">
-                  {% if status_dict.Modification_History %}
-                     <i class="bi bi-check-circle-fill"></i>
-                  {% else %}
-                     <i class="bi bi-x-circle-fill"></i>
-                  {% endif %}
+                  {% if status_dict.Modification_History %}<i class="bi bi-check-circle-fill"></i>{% else %}<i class="bi bi-x-circle-fill"></i>{% endif %}
                </span>
-            </div>
+            </a>
             <!-- Citation Information -->
-            <div class="list-group-item d-flex justify-content-between align-items-center">
+            <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" data-bs-toggle="modal" data-bs-target="#citation_information_modal">
                Citation Information
                <span class="badge {% if status_dict.Citation_Information %}bg-success{% else %}bg-danger{% endif %}">
-                  {% if status_dict.Citation_Information %}
-                     <i class="bi bi-check-circle-fill"></i>
-                  {% else %}
-                     <i class="bi bi-x-circle-fill"></i>
-                  {% endif %}
+                  {% if status_dict.Citation_Information %}<i class="bi bi-check-circle-fill"></i>{% else %}<i class="bi bi-x-circle-fill"></i>{% endif %}
                </span>
-            </div>
+            </a>
             {% comment %} <!-- Investigations -->
             <div class="list-group-item d-flex justify-content-between align-items-center">
                Investigations
@@ -2128,38 +2084,28 @@
             </div> {% endcomment %}
 
             <!-- Targets -->
-            <div class="list-group-item d-flex justify-content-between align-items-center">
+            <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" data-bs-toggle="modal" data-bs-target="#context_modal" data-tab="con_tar">
                Targets
                <span class="badge {% if status_dict.Targets %}bg-success{% else %}bg-danger{% endif %}">
-                  {% if status_dict.Targets %}
-                     <i class="bi bi-check-circle-fill"></i>
-                  {% else %}
-                     <i class="bi bi-x-circle-fill"></i>
-                  {% endif %}
+                  {% if status_dict.Targets %}<i class="bi bi-check-circle-fill"></i>{% else %}<i class="bi bi-x-circle-fill"></i>{% endif %}
                </span>
-            </div>
+            </a>
 
             <!-- Submit Button -->
             <div class="list-group-item p-3">
-               {% if status_dict.Modification_History and status_dict.Citation_Information and status_dict.Targets %}
-                  <button type="button" class="btn btn-success w-100" data-bs-toggle="modal" data-bs-target="#submitBundleModal">
-                     <i class="bi bi-send me-2"></i>
-                     {% if bundle.submitted_at %}Resubmit Bundle{% else %}Submit Bundle{% endif %}
-                  </button>
-                  {% if bundle.submitted_at %}
-                     <p class="text-muted small text-center mt-2 mb-0">
-                        <i class="bi bi-clock me-1"></i>
-                        Last submitted: {{ bundle.submitted_at|date:"M d, Y \a\t g:i A" }}
-                        <br>You can still edit your bundle and resubmit.
-                     </p>
-                  {% endif %}
-               {% else %}
-                  <button type="button" class="btn btn-secondary w-100" disabled
-                     data-bs-toggle="tooltip" data-bs-placement="top"
-                     title="Complete all required sections before submitting.">
-                     <i class="bi bi-send me-2"></i> Submit Bundle
-                  </button>
-                  <p class="text-muted small text-center mt-2 mb-0">Complete all required sections above to enable submission.</p>
+               <button type="button" id="externalSubmitBtn"
+                  class="btn {% if status_dict.Modification_History and status_dict.Citation_Information and status_dict.Targets %}btn-success{% else %}btn-outline-secondary{% endif %} w-100"
+                  data-bs-toggle="modal" data-bs-target="#reviewBundleModal"
+                  title="Complete all required sections to submit your bundle."
+                  data-bs-placement="top">
+                  <i class="bi bi-clipboard-check me-2"></i>Review &amp; Submit
+               </button>
+               {% if bundle.submitted_at %}
+                  <p class="text-muted small text-center mt-2 mb-0">
+                     <i class="bi bi-clock me-1"></i>
+                     Last submitted: {{ bundle.submitted_at|date:"M d, Y \a\t g:i A" }}
+                     <br>You can still edit your bundle and resubmit.
+                  </p>
                {% endif %}
             </div>
          </div>
@@ -2205,7 +2151,221 @@
                </div>
             </div>
          </div>
-       
+
+         <!-- Review & Submit Modal -->
+         <div class="modal fade" id="reviewBundleModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-xl">
+               <div class="modal-content">
+                  <div class="modal-header border-0 pb-0">
+                     <div>
+                        <h5 class="modal-title mb-0">
+                           <i class="bi bi-clipboard-check me-2 text-success"></i>Bundle Review
+                        </h5>
+                        <p class="text-muted small mb-0 mt-1">
+                           <span class="fw-semibold">{{ bundle.name }}</span>
+                           <span class="mx-2 text-muted">·</span>
+                           <span class="font-monospace">{{ bundle.lid }}</span>
+                        </p>
+                     </div>
+                     <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal" aria-label="Close"></button>
+                  </div>
+                  <div class="modal-body pt-3">
+                     <div class="row g-4">
+
+                        <!-- Left column: Required + Optional -->
+                        <div class="col-md-6">
+                           <p class="text-uppercase text-muted small fw-semibold mb-2">Required</p>
+                           <div class="list-group mb-4">
+
+                              <!-- Modification History -->
+                              <div class="list-group-item d-flex justify-content-between align-items-start py-3">
+                                 <div class="me-auto">
+                                    <div class="d-flex align-items-center gap-2 mb-1">
+                                       {% if status_dict.Modification_History %}
+                                          <i class="bi bi-check-circle-fill text-success"></i>
+                                       {% else %}
+                                          <i class="bi bi-x-circle-fill text-danger"></i>
+                                       {% endif %}
+                                       <span class="fw-semibold">Modification History</span>
+                                    </div>
+                                    <p class="text-muted small mb-1">
+                                       {% if status_dict.Modification_History %}
+                                          {{ modification_history_set_count }} entr{% if modification_history_set_count == 1 %}y{% else %}ies{% endif %}
+                                          {% if modification_history_set_count == 1 %}&mdash; auto-created when your bundle was built{% endif %}
+                                       {% else %}
+                                          <span class="text-danger">Not added</span>
+                                       {% endif %}
+                                    </p>
+                                    <p class="text-muted small mb-0">A log of changes made to this bundle over time. An initial entry is auto-created when you first build your bundle; you can add more to record edits before submission.</p>
+                                 </div>
+                                 <button type="button" class="btn btn-sm btn-outline-secondary ms-3 flex-shrink-0"
+                                    onclick="switchToModal('reviewBundleModal', 'mod_history_modal')">
+                                    Add <i class="bi bi-arrow-right ms-1"></i>
+                                 </button>
+                              </div>
+
+                              <!-- Citation Information -->
+                              <div class="list-group-item d-flex justify-content-between align-items-start py-3">
+                                 <div class="me-auto">
+                                    <div class="d-flex align-items-center gap-2 mb-1">
+                                       {% if status_dict.Citation_Information %}
+                                          <i class="bi bi-check-circle-fill text-success"></i>
+                                       {% else %}
+                                          <i class="bi bi-x-circle-fill text-danger"></i>
+                                       {% endif %}
+                                       <span class="fw-semibold">Citation Information</span>
+                                    </div>
+                                    <p class="text-muted small mb-0">
+                                       {% if status_dict.Citation_Information %}Added{% else %}<span class="text-danger">Not added</span>{% endif %}
+                                    </p>
+                                 </div>
+                                 <button type="button" class="btn btn-sm btn-outline-secondary ms-3 flex-shrink-0"
+                                    onclick="switchToModal('reviewBundleModal', 'citation_information_modal')">
+                                    {% if status_dict.Citation_Information %}Edit{% else %}Add{% endif %} <i class="bi bi-arrow-right ms-1"></i>
+                                 </button>
+                              </div>
+
+                              <!-- Targets -->
+                              <div class="list-group-item d-flex justify-content-between align-items-start py-3">
+                                 <div class="me-auto">
+                                    <div class="d-flex align-items-center gap-2 mb-1">
+                                       {% if status_dict.Targets %}
+                                          <i class="bi bi-check-circle-fill text-success"></i>
+                                       {% else %}
+                                          <i class="bi bi-x-circle-fill text-danger"></i>
+                                       {% endif %}
+                                       <span class="fw-semibold">Targets</span>
+                                    </div>
+                                    <p class="text-muted small mb-0">
+                                       {% with tc=targets|length %}
+                                          {% if tc %}{{ tc }} target{% if tc != 1 %}s{% endif %} selected{% else %}<span class="text-danger">No targets added</span>{% endif %}
+                                       {% endwith %}
+                                    </p>
+                                 </div>
+                                 <button type="button" class="btn btn-sm btn-outline-secondary ms-3 flex-shrink-0"
+                                    onclick="switchToModal('reviewBundleModal', 'context_modal')">
+                                    Edit <i class="bi bi-arrow-right ms-1"></i>
+                                 </button>
+                              </div>
+
+                           </div>
+
+                           <p class="text-uppercase text-muted small fw-semibold mb-2">Optional</p>
+                           <div class="list-group">
+
+                              <!-- Alias -->
+                              <div class="list-group-item d-flex justify-content-between align-items-start py-3">
+                                 <div class="me-auto">
+                                    <div class="d-flex align-items-center gap-2 mb-1">
+                                       {% if status_dict.Alias %}
+                                          <i class="bi bi-check-circle-fill text-success"></i>
+                                       {% else %}
+                                          <i class="bi bi-exclamation-triangle-fill text-warning"></i>
+                                       {% endif %}
+                                       <span class="fw-semibold">Alias</span>
+                                    </div>
+                                    <p class="text-muted small mb-1">
+                                       {% if status_dict.Alias %}
+                                          {{ alias_set_count }} alias{% if alias_set_count != 1 %}es{% endif %} added
+                                       {% else %}
+                                          Not added
+                                       {% endif %}
+                                    </p>
+                                    <p class="text-muted small mb-0">An alternate name or identifier for this bundle, such as a short name used in publications or a prior archive identifier.</p>
+                                 </div>
+                                 <button type="button" class="btn btn-sm btn-outline-secondary ms-3 flex-shrink-0"
+                                    onclick="switchToModal('reviewBundleModal', 'alias_modal')">
+                                    {% if status_dict.Alias %}Edit{% else %}Add{% endif %} <i class="bi bi-arrow-right ms-1"></i>
+                                 </button>
+                              </div>
+
+                           </div>
+                        </div>
+
+                        <!-- Right column: Content -->
+                        <div class="col-md-6">
+                           <p class="text-uppercase text-muted small fw-semibold mb-2">Content</p>
+                           <div class="list-group">
+
+                              <!-- Document Collection -->
+                              <div class="list-group-item d-flex justify-content-between align-items-start py-3">
+                                 <div class="me-auto">
+                                    <div class="d-flex align-items-center gap-2 mb-1">
+                                       {% with dc=documents|length %}
+                                          {% if dc %}
+                                             <i class="bi bi-check-circle-fill text-success"></i>
+                                          {% else %}
+                                             <i class="bi bi-folder2 text-muted"></i>
+                                          {% endif %}
+                                          <span class="fw-semibold">Document Collection</span>
+                                       </div>
+                                       <p class="text-muted small mb-0">
+                                          {{ dc }} document{% if dc != 1 %}s{% endif %}
+                                       </p>
+                                       {% endwith %}
+                                 </div>
+                                 <button type="button" class="btn btn-sm btn-outline-secondary ms-3 flex-shrink-0"
+                                    onclick="switchToModal('reviewBundleModal', 'document_modal')">
+                                    Manage <i class="bi bi-arrow-right ms-1"></i>
+                                 </button>
+                              </div>
+
+                              <!-- Data Collections -->
+                              {% for add_collection in additional_collections_set %}
+                              <div class="list-group-item py-3">
+                                 <div class="d-flex align-items-center gap-2 mb-1">
+                                    {% if netcdf_files|length %}
+                                       <i class="bi bi-check-circle-fill text-success"></i>
+                                    {% else %}
+                                       <i class="bi bi-folder2 text-muted"></i>
+                                    {% endif %}
+                                    <span class="fw-semibold">{{ add_collection.collection_name }}</span>
+                                    <span class="badge bg-light text-muted border small">{{ add_collection.collection_type }}</span>
+                                 </div>
+                                 <p class="text-muted small mb-2">
+                                    {{ netcdf_files|length }} NetCDF file{% if netcdf_files|length != 1 %}s{% endif %}
+                                 </p>
+                                 {% if netcdf_files %}
+                                 <ul class="list-unstyled mb-0 ps-1">
+                                    {% for nc in netcdf_files %}
+                                    <li class="small d-flex align-items-center gap-1 mb-1">
+                                       {% if nc.processed %}
+                                          <i class="bi bi-file-earmark-check text-success"></i>
+                                       {% else %}
+                                          <i class="bi bi-file-earmark-x text-danger"></i>
+                                       {% endif %}
+                                       <span class="text-muted font-monospace">{{ nc.title }}</span>
+                                    </li>
+                                    {% endfor %}
+                                 </ul>
+                                 {% endif %}
+                              </div>
+                              {% endfor %}
+
+                           </div>
+                        </div>
+
+                     </div>
+                  </div>
+                  <div class="modal-footer border-0 d-flex justify-content-between align-items-center">
+                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                     {% if status_dict.Modification_History and status_dict.Citation_Information and status_dict.Targets %}
+                        <button type="button" class="btn btn-success"
+                           onclick="switchToModal('reviewBundleModal', 'submitBundleModal')">
+                           <i class="bi bi-send me-1"></i>
+                           {% if bundle.submitted_at %}Resubmit{% else %}Submit{% endif %}
+                        </button>
+                     {% else %}
+                        <button type="button" class="btn btn-success" disabled>
+                           <i class="bi bi-send me-1"></i>
+                           {% if bundle.submitted_at %}Resubmit{% else %}Submit{% endif %}
+                        </button>
+                     {% endif %}
+                  </div>
+               </div>
+            </div>
+         </div>
+
 
          <div class="col-md-9">
             <div class="card d-flex">
@@ -2226,19 +2386,35 @@
 
          <!-- Only works here, idk why it doesnt work when moved to elsa.js - deric -->
          <script>
+            // Close one Bootstrap modal, then open another once the first is fully hidden.
+            function switchToModal(fromId, toId) {
+               var fromEl = document.getElementById(fromId);
+               var toEl   = document.getElementById(toId);
+               if (!fromEl || !toEl) return;
+               fromEl.addEventListener('hidden.bs.modal', function handler() {
+                  fromEl.removeEventListener('hidden.bs.modal', handler);
+                  bootstrap.Modal.getOrCreateInstance(toEl).show();
+               });
+               bootstrap.Modal.getInstance(fromEl).hide();
+            }
+
             const showFileContent = function(filename, content) {
                document.getElementById('fileName').textContent = filename;
                document.getElementById('fileContent').textContent = content;
             };
 
-            
             window.onload = function() {
                const defaultFileButton = document.getElementById('defaultFile');
                if (defaultFileButton) {
                   const filename = defaultFileButton.getAttribute('data-filename');
-                  const content = defaultFileButton.getAttribute('data-content'); 
-                  showFileContent(filename, content); 
+                  const content = defaultFileButton.getAttribute('data-content');
+                  showFileContent(filename, content);
                }
+               // Tooltip on the Review & Submit button — programmatic init avoids data-bs-toggle conflict with "modal".
+               try {
+                  var submitBtn = document.getElementById('externalSubmitBtn');
+                  if (submitBtn) new bootstrap.Tooltip(submitBtn);
+               } catch(e) {}
             };
 
             
@@ -2247,6 +2423,21 @@
                   const filename = this.getAttribute('data-filename');
                   const content = this.getAttribute('data-content');
                   showFileContent(filename, content);
+               });
+            });
+
+            // Open context modal to the right tab when triggered from the progress sidebar
+            document.querySelectorAll('[data-bs-target="#context_modal"][data-tab]').forEach(function(trigger) {
+               trigger.addEventListener('click', function() {
+                  var tabId = this.getAttribute('data-tab');
+                  var contextModal = document.getElementById('context_modal');
+                  contextModal.addEventListener('shown.bs.modal', function handler() {
+                     var tabBtn = contextModal.querySelector('[data-bs-target="#' + tabId + '"]');
+                     if (tabBtn && window.bootstrap) {
+                        bootstrap.Tab.getOrCreateInstance(tabBtn).show();
+                     }
+                     contextModal.removeEventListener('shown.bs.modal', handler);
+                  });
                });
             });
 
@@ -2293,7 +2484,7 @@
             });
 
 
-         // NetCDF upload progress — event delegation handles duplicate form IDs across
+         // NetCDF upload progress: event delegation handles duplicate form IDs across
          // multiple collection tab panes. Progress elements are resolved relative to the
          // form that was actually submitted.
          document.addEventListener('change', function(e) {
@@ -3070,18 +3261,6 @@
                                  {{ form_citation_information.number_of_authors_organization }}
                               </div>
 
-                              <!-- Editor List -->
-                              <h6 class="mt-4 mb-1 fw-semibold">Editors <span class="fw-normal fst-italic text-muted">(node contacts)</span></h6>
-                              <div class="mt-3">
-                                 <label for="author_list">Number of Persons</label>
-                                 {{ form_citation_information.number_of_editors_people }}
-                              </div>
-
-                              <div class="mt-3">
-                                 <label for="author_list">Number of Organizations*</label>
-                                 {{ form_citation_information.number_of_editors_organization }}
-                              </div>
-
                               <p class="text-muted small mt-2">* Organizations should be set to 0 unless used.</p>
 
                               <!-- Keyword -->
@@ -3127,18 +3306,6 @@
                               <div class="mt-3">
                                  <label for="author_list">Number of Organizations*</label>
                                  {{ form_citation_information.number_of_authors_organization }}
-                              </div>
-
-                              <!-- Editor List -->
-                              <h6 class="mt-4 mb-1 fw-semibold">Editors <span class="fw-normal fst-italic text-muted">(node contacts)</span></h6>
-                              <div class="mt-3">
-                                 <label for="author_list">Number of Persons</label>
-                                 {{ form_citation_information.number_of_editors_people }}
-                              </div>
-
-                              <div class="mt-3">
-                                 <label for="author_list">Number of Organizations*</label>
-                                 {{ form_citation_information.number_of_editors_organization }}
                               </div>
 
                               <p class="text-muted small mt-2">* Organizations should be set to 0 unless used.</p>

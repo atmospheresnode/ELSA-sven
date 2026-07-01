@@ -18,6 +18,7 @@ from django import forms
 from django.forms import modelformset_factory
 from django.views.generic.edit import UpdateView, DeleteView
 from django.contrib import messages
+import datetime
 import shutil
 import lxml.etree as ET # for XML parsing- Added by Rupak
 # from lxml import etree # debug product obs only
@@ -592,6 +593,20 @@ def yes_intro_page(request, bundle_id):
     if request.user == bundle.user:
         print('authorized user: {}'.format(request.user))
         # ELSA's current user is the bundle user so begin view logic
+
+        # For External bundles, auto-create an initial Modification History so the
+        # user doesn't have to fill it in during the walkthrough.
+        if bundle.bundle_type == 'External' and not Modification_History.objects.filter(bundle=bundle).exists():
+            mod_history = Modification_History(
+                bundle=bundle,
+                description='Initial version',
+                modification_date=datetime.date.today().strftime('%Y-%m-%d'),
+                version_id='1.0',
+            )
+            mod_history.save()
+            product_bundle = Product_Bundle.objects.get(bundle=bundle)
+            product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+            write_into_label(mod_history, product_bundle, product_collections_list)
 
         # Declare context_dict for template
         context_dict = {
@@ -4013,6 +4028,10 @@ def variable_coord_to_product(bundle, netcdf_objs):
             if not os.path.exists(nc_path):
                 raise FileNotFoundError('Uploaded file is missing from disk.')
 
+            os.rename(nc_path, os.path.join(bundle.directory(), os.path.basename(nc_obj.file.path)))
+            nc_path = os.path.join(bundle.directory(), os.path.basename(nc_obj.file.path))
+            print(nc_path)
+
             _process_single_netcdf(bundle, nc_path, NS, allowed_variable_fields, allowed_coord_fields)
 
             nc_obj.processed = True
@@ -4205,8 +4224,8 @@ def _process_single_netcdf(bundle, nc_path, NS, allowed_variable_fields, allowed
         close_label(output_path, label_root, label_list[2])
 
     # Temporary remove netcdf file before figuring out how to move it
-    os.remove(nc_path)
-    print('removed: ' + nc_path)
+    # os.remove(nc_path)
+    print('netcdf_path:' + nc_path)
 
 
 
