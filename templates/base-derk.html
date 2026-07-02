@@ -162,136 +162,156 @@
     </div>
 
     {% if user.is_authenticated %}
-    <!-- Beta Feedback Button -->
-    <button type="button"
+    <!-- ELSA Assistant Chat Widget (LLM pilot — replaces the Beta Feedback button) -->
+    <button type="button" id="elsaAssistantToggle"
             class="btn text-white position-fixed"
-            style="bottom: 1.5rem; right: 1.5rem; background-color: teal; z-index: 1050; box-shadow: 0 2px 8px rgba(0,0,0,0.25);"
-            data-bs-toggle="modal" data-bs-target="#betaFeedbackModal">
-        <i class="bi bi-chat-dots-fill me-1"></i> Beta Feedback
+            style="bottom: 1.5rem; right: 1.5rem; background-color: teal; z-index: 1050; box-shadow: 0 2px 8px rgba(0,0,0,0.25);">
+        <i class="bi bi-stars me-1"></i> ELSA Assistant
     </button>
 
-    <!-- Beta Feedback Modal -->
-    <div class="modal fade" id="betaFeedbackModal" tabindex="-1" aria-labelledby="betaFeedbackModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header text-white" style="background-color: #2F4F4F;">
-                    <h5 class="modal-title" id="betaFeedbackModalLabel">
-                        <i class="bi bi-chat-dots-fill me-2"></i> Beta Feedback
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <p class="text-muted small mb-3">Help us improve ELSA. Your feedback goes directly to the development team.</p>
-                    <form id="betaFeedbackForm">
-                        {% csrf_token %}
-                        <div class="mb-3">
-                            <label for="feedbackCategory" class="form-label fw-semibold">Category <span class="text-danger">*</span></label>
-                            <select class="form-select" id="feedbackCategory" name="category" required>
-                                <option value="" disabled selected>Select a category...</option>
-                                <option value="Bug Report">Bug Report</option>
-                                <option value="Suggestion">Suggestion</option>
-                                <option value="Question">Question</option>
-                                <option value="Other">Other</option>
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold">Context</label>
-                            <div class="d-flex gap-3">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="bundle_type" id="bundleTypeGeneral" value="General" checked>
-                                    <label class="form-check-label" for="bundleTypeGeneral">General</label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="bundle_type" id="bundleTypeExternal" value="External bundle">
-                                    <label class="form-check-label" for="bundleTypeExternal">External bundle</label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="bundle_type" id="bundleTypeArchive" value="Archive bundle">
-                                    <label class="form-check-label" for="bundleTypeArchive">Archive bundle</label>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label for="feedbackDescription" class="form-label fw-semibold">Description <span class="text-danger">*</span></label>
-                            <textarea class="form-control" id="feedbackDescription" name="description" rows="4"
-                                      placeholder="Describe the issue, idea, or question..." required></textarea>
-                        </div>
-                        <div class="mb-3">
-                            <label for="feedbackEmail" class="form-label fw-semibold">Your email <span class="text-muted fw-normal">(optional, for follow-up)</span></label>
-                            <input type="email" class="form-control" id="feedbackEmail" name="user_email" placeholder="you@example.com">
-                        </div>
-                        <div id="feedbackAlert" class="d-none"></div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn text-white" style="background-color: teal;" id="feedbackSubmitBtn">
-                        Submit Feedback
+    <div id="elsaAssistantPanel" class="position-fixed d-none"
+         style="bottom: 5rem; right: 1.5rem; width: 380px; max-width: calc(100vw - 2rem); z-index: 1050;">
+        <div class="card border-0 shadow-lg" style="border-radius: 12px; overflow: hidden;">
+            <div class="d-flex justify-content-between align-items-center text-white px-3 py-2" style="background-color: #2F4F4F;">
+                <span>
+                    <i class="bi bi-stars me-2"></i><strong>ELSA Assistant</strong>
+                    <span class="badge bg-warning text-dark ms-1" style="font-size: 0.6rem;">BETA</span>
+                </span>
+                <button type="button" class="btn-close btn-close-white" id="elsaAssistantClose" aria-label="Close"></button>
+            </div>
+            <div id="elsaAssistantMessages" class="px-3 py-3" style="height: 380px; overflow-y: auto; background-color: #f8f9fa;"></div>
+            <div class="border-top p-2 bg-white">
+                <form id="elsaAssistantForm" class="d-flex gap-2">
+                    {% csrf_token %}
+                    <input type="text" id="elsaAssistantInput" class="form-control form-control-sm"
+                           placeholder="Ask about ELSA or PDS4..." autocomplete="off" maxlength="2000">
+                    <button type="submit" class="btn btn-sm text-white" style="background-color: teal;" id="elsaAssistantSend" aria-label="Send">
+                        <i class="bi bi-send-fill"></i>
                     </button>
-                </div>
+                </form>
+                <p class="text-muted text-center mb-0 mt-1" style="font-size: 0.65rem;">
+                    AI-generated — verify important details. I can also pass feedback to the ELSA team.
+                </p>
             </div>
         </div>
     </div>
 
-    <!-- Toast container (toasts injected here dynamically) -->
-    <div id="feedbackToastContainer" class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1100;"></div>
-
     <script>
-    document.getElementById('feedbackSubmitBtn').addEventListener('click', function () {
-        const form = document.getElementById('betaFeedbackForm');
-        const alertEl = document.getElementById('feedbackAlert');
-        const btn = this;
+    (function () {
+        const toggle = document.getElementById('elsaAssistantToggle');
+        const panel = document.getElementById('elsaAssistantPanel');
+        const closeBtn = document.getElementById('elsaAssistantClose');
+        const messagesEl = document.getElementById('elsaAssistantMessages');
+        const form = document.getElementById('elsaAssistantForm');
+        const input = document.getElementById('elsaAssistantInput');
+        const sendBtn = document.getElementById('elsaAssistantSend');
+        const csrfToken = form.querySelector('[name=csrfmiddlewaretoken]').value;
 
-        if (!form.checkValidity()) {
-            form.reportValidity();
-            return;
+        const history = [];  // {role: 'user'|'model', text: string}
+        let greeted = false;
+
+        function renderText(text) {
+            let html = text
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+            html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+            html = html.replace(/^[-*] (.*)$/gm, '&bull;&nbsp;$1');
+            return html.replace(/\n/g, '<br>');
         }
 
-        btn.disabled = true;
-        btn.textContent = 'Sending...';
-
-        const data = new FormData(form);
-
-        fetch("{% url 'build:submit_feedback' %}", {
-            method: 'POST',
-            headers: {'X-CSRFToken': data.get('csrfmiddlewaretoken')},
-            body: data,
-        })
-        .then(r => r.json())
-        .then(json => {
-            if (json.success) {
-                form.reset();
-                bootstrap.Modal.getInstance(document.getElementById('betaFeedbackModal')).hide();
-                const toastEl = document.createElement('div');
-                toastEl.className = 'toast align-items-center text-white border-0';
-                toastEl.style.backgroundColor = '#2F4F4F';
-                toastEl.setAttribute('role', 'alert');
-                toastEl.innerHTML = `
-                    <div class="d-flex">
-                        <div class="toast-body">
-                            <i class="bi bi-check-circle-fill me-2"></i>
-                            <strong>Thank you for your feedback!</strong> We will review it and reach out if needed.
-                        </div>
-                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-                    </div>`;
-                document.getElementById('feedbackToastContainer').appendChild(toastEl);
-                const toast = new bootstrap.Toast(toastEl, {delay: 5000});
-                toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
-                toast.show();
+        function addBubble(role, html) {
+            const wrap = document.createElement('div');
+            wrap.className = 'd-flex mb-2 ' + (role === 'user' ? 'justify-content-end' : 'justify-content-start');
+            const bubble = document.createElement('div');
+            bubble.className = 'px-3 py-2 small';
+            bubble.style.maxWidth = '85%';
+            bubble.style.borderRadius = '14px';
+            bubble.style.lineHeight = '1.45';
+            if (role === 'user') {
+                bubble.style.backgroundColor = 'teal';
+                bubble.style.color = 'white';
+                bubble.style.borderBottomRightRadius = '4px';
             } else {
-                alertEl.className = 'alert alert-danger mt-2';
-                alertEl.textContent = json.error || 'Something went wrong. Please try again.';
+                bubble.style.backgroundColor = 'white';
+                bubble.style.border = '1px solid #dee2e6';
+                bubble.style.borderBottomLeftRadius = '4px';
             }
-        })
-        .catch(() => {
-            alertEl.className = 'alert alert-danger mt-2';
-            alertEl.textContent = 'Network error. Please try again.';
-        })
-        .finally(() => {
-            btn.disabled = false;
-            btn.textContent = 'Submit Feedback';
+            bubble.innerHTML = html;
+            wrap.appendChild(bubble);
+            messagesEl.appendChild(wrap);
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+            return wrap;
+        }
+
+        function addSystemNote(text) {
+            const note = document.createElement('p');
+            note.className = 'text-muted text-center my-2';
+            note.style.fontSize = '0.7rem';
+            note.textContent = text;
+            messagesEl.appendChild(note);
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+        }
+
+        function openPanel() {
+            panel.classList.remove('d-none');
+            if (!greeted) {
+                greeted = true;
+                addBubble('model', renderText(
+                    "Hi {{ user }}! I'm the ELSA Assistant. I can help with:\n" +
+                    "- Building and submitting your bundles\n" +
+                    "- PDS4 archiving questions\n" +
+                    "- Passing feedback to the ELSA team\n" +
+                    "What can I do for you?"
+                ));
+            }
+            input.focus();
+        }
+
+        toggle.addEventListener('click', function () {
+            panel.classList.contains('d-none') ? openPanel() : panel.classList.add('d-none');
         });
-    });
+        closeBtn.addEventListener('click', function () { panel.classList.add('d-none'); });
+
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            const text = input.value.trim();
+            if (!text || sendBtn.disabled) return;
+
+            history.push({role: 'user', text: text});
+            addBubble('user', renderText(text));
+            input.value = '';
+            sendBtn.disabled = true;
+            input.disabled = true;
+
+            const typing = addBubble('model', '<span class="text-muted"><i class="bi bi-three-dots"></i> thinking...</span>');
+
+            fetch("{% url 'assistant:chat' %}", {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken},
+                body: JSON.stringify({messages: history}),
+            })
+            .then(r => r.json().then(json => ({ok: r.ok, json: json})))
+            .then(({ok, json}) => {
+                typing.remove();
+                if (ok && json.success) {
+                    history.push({role: 'model', text: json.reply});
+                    addBubble('model', renderText(json.reply));
+                    if (json.feedback_sent) addSystemNote('✓ Feedback sent to the ELSA team');
+                } else {
+                    addBubble('model', renderText(json.error || 'Something went wrong. Please try again.'));
+                }
+            })
+            .catch(() => {
+                typing.remove();
+                addBubble('model', 'Network error — please try again.');
+            })
+            .finally(() => {
+                sendBtn.disabled = false;
+                input.disabled = false;
+                input.focus();
+            });
+        });
+    })();
     </script>
     {% endif %}
 
