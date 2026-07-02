@@ -103,10 +103,26 @@ class ChatEndpointTests(TestCase):
         self.assertIn('Upload freezes', mock_email.call_args.kwargs['body'])
 
     @patch('assistant.views.requests.post')
-    def test_upstream_rate_limit_maps_to_429(self, mock_post):
+    def test_all_models_exhausted_maps_to_429(self, mock_post):
         mock_post.return_value = FakeUpstream([], status_code=429)
         resp = self.post_chat({'messages': [{'role': 'user', 'text': 'hi'}]})
         self.assertEqual(resp.status_code, 429)
+        self.assertIn('daily usage limit', resp.json()['error'])
+        # One attempt per model in the fallback chain
+        from assistant.views import GEMINI_MODELS
+        self.assertEqual(mock_post.call_count, len(GEMINI_MODELS))
+
+    @patch('assistant.views.requests.post')
+    def test_fallback_to_next_model(self, mock_post):
+        mock_post.side_effect = [
+            FakeUpstream([], status_code=429),
+            FakeUpstream(['Fallback OK']),
+        ]
+        resp = self.post_chat({'messages': [{'role': 'user', 'text': 'hi'}]})
+        self.assertEqual(resp.status_code, 200)
+        done = [e for e in sse_events(resp) if e['type'] == 'done'][0]
+        self.assertEqual(done['reply'], 'Fallback OK')
+        self.assertEqual(mock_post.call_count, 2)
 
     @patch('assistant.views.RATE_LIMIT_PER_MINUTE', 2)
     @patch('assistant.views.requests.post')

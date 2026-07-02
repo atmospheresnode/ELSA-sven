@@ -14,13 +14,23 @@ from django.utils.timezone import localtime
 
 from .prompts import build_system_prompt
 
-# Newer models (gemini-3.x) hang or 429 on the free tier — override via
-# GEMINI_MODEL in settings once the account has quota for them.
-GEMINI_MODEL = getattr(settings, 'GEMINI_MODEL', 'gemini-2.5-flash')
-GEMINI_STREAM_URL = (
-    f'https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}'
-    ':streamGenerateContent?alt=sse'
-)
+# The free tier allows only ~20 requests/day *per model*, so we fall through a
+# chain of models — each has its own daily bucket. Newer models (gemini-3.x)
+# hang or 429 on the free tier entirely. Override the chain via GEMINI_MODELS
+# in settings (list, best model first) once the account has paid quota.
+GEMINI_MODELS = getattr(settings, 'GEMINI_MODELS', [
+    'gemini-2.5-flash',
+    'gemini-2.5-flash-lite',
+    'gemini-flash-lite-latest',
+    'gemini-2.0-flash',
+])
+
+
+def _stream_url(model):
+    return (
+        f'https://generativelanguage.googleapis.com/v1beta/models/{model}'
+        ':streamGenerateContent?alt=sse'
+    )
 
 # Server-side caps so a client can't blow up the free-tier quota with one request
 MAX_HISTORY_MESSAGES = 20
@@ -85,28 +95,41 @@ def chat(request):
     # upstream call or long stream never holds a MariaDB slot hostage.
     connections.close_all()
 
-    try:
-        upstream = requests.post(
-            GEMINI_STREAM_URL,
-            headers={'x-goog-api-key': api_key, 'Content-Type': 'application/json'},
-            json=body,
-            stream=True,
-            timeout=(10, 60),
-        )
-    except requests.RequestException:
-        return JsonResponse(
-            {'success': False, 'error': 'Could not reach the assistant service. Please try again.'},
-            status=502,
-        )
+    # Try each model in the chain until one accepts the request. A 429 means
+    # that model's own free-tier bucket is exhausted; 5xx means it's overloaded
+    # — either way the next model may still work.
+    upstream = None
+    saw_429 = False
+    saw_network_error = False
+    for model in GEMINI_MODELS:
+        try:
+            candidate = requests.post(
+                _stream_url(model),
+                headers={'x-goog-api-key': api_key, 'Content-Type': 'application/json'},
+                json=body,
+                stream=True,
+                timeout=(10, 60),
+            )
+        except requests.RequestException:
+            saw_network_error = True
+            continue
+        if candidate.status_code == 200:
+            upstream = candidate
+            break
+        saw_429 = saw_429 or candidate.status_code == 429
+        candidate.close()
 
-    if upstream.status_code == 429:
-        upstream.close()
-        return JsonResponse(
-            {'success': False, 'error': 'The assistant is receiving too many requests right now. Please wait a minute and try again.'},
-            status=429,
-        )
-    if upstream.status_code != 200:
-        upstream.close()
+    if upstream is None:
+        if saw_429:
+            return JsonResponse(
+                {'success': False, 'error': "The assistant has reached its free daily usage limit across all backup models. The limit resets overnight — please try again tomorrow, or use the Contact page for urgent questions."},
+                status=429,
+            )
+        if saw_network_error:
+            return JsonResponse(
+                {'success': False, 'error': 'Could not reach the assistant service. Please try again.'},
+                status=502,
+            )
         return JsonResponse(
             {'success': False, 'error': 'The assistant ran into a problem. Please try again later.'},
             status=502,
