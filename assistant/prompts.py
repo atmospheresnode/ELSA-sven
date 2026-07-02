@@ -6,6 +6,7 @@ The prompt has three layers:
 3. A per-user context section (the user's bundles and their completion state),
    rebuilt on every request so answers reflect current data.
 """
+import re
 
 FEEDBACK_MARKER_INSTRUCTIONS = """
 FEEDBACK CAPTURE:
@@ -78,11 +79,47 @@ STYLE:
 """
 
 
-def build_system_prompt(user):
+PAGE_DESCRIPTIONS = [
+    (re.compile(r'/build/(\d+)/'), 'bundle'),          # bundle detail page (pk in group 1)
+    (re.compile(r'/accounts/profile'), 'the Bundle Hub (their list of bundles)'),
+    (re.compile(r'/build/?$'), 'the bundle creation page'),
+    (re.compile(r'/about'), 'the About page'),
+    (re.compile(r'/contact'), 'the Contact page'),
+]
+
+
+def _page_context(user, page_path):
+    """Describe the page the user is currently viewing; resolve bundle pages to the bundle."""
+    if not page_path:
+        return None
+    for pattern, description in PAGE_DESCRIPTIONS:
+        match = pattern.search(page_path)
+        if not match:
+            continue
+        if description == 'bundle':
+            try:
+                from build.models import Bundle
+                bundle = Bundle.objects.get(pk=match.group(1), user=user)
+                return (
+                    f'the detail page of their "{bundle.name}" bundle '
+                    f'({bundle.bundle_type} bundle, status: {bundle.get_status().replace("_", " ")}). '
+                    'Questions like "this bundle" or "why can\'t I submit?" refer to this bundle.'
+                )
+            except Exception:
+                return None
+        return description
+    return f'the page at path "{page_path}"'
+
+
+def build_system_prompt(user, page_path=None):
     """Assemble the full system prompt including the user's live bundle context."""
     lines = [BASE_PROMPT, FEEDBACK_MARKER_INSTRUCTIONS]
 
     lines.append(f"\nCURRENT USER: {user.username}")
+
+    page = _page_context(user, page_path)
+    if page:
+        lines.append(f"CURRENT PAGE: The user is currently viewing {page}")
     try:
         from build.models import Bundle
         bundles = Bundle.objects.filter(user=user).order_by('-updated_at')[:20]
