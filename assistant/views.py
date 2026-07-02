@@ -4,8 +4,9 @@ import re
 import requests
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
+from django.core.cache import cache
 from django.core.mail import EmailMessage
-from django.http import JsonResponse
+from django.http import JsonResponse, StreamingHttpResponse
 from django.utils import timezone
 from django.utils.html import escape
 from django.utils.timezone import localtime
@@ -13,12 +14,20 @@ from django.utils.timezone import localtime
 from .prompts import build_system_prompt
 
 GEMINI_MODEL = 'gemini-2.5-flash'
-GEMINI_URL = f'https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent'
+GEMINI_STREAM_URL = (
+    f'https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}'
+    ':streamGenerateContent?alt=sse'
+)
 
 # Server-side caps so a client can't blow up the free-tier quota with one request
 MAX_HISTORY_MESSAGES = 20
 MAX_MESSAGE_CHARS = 4000
 
+# Per-user rate limits (shared free-tier quota protection)
+RATE_LIMIT_PER_MINUTE = 10
+RATE_LIMIT_PER_DAY = 100
+
+FEEDBACK_MARKER = '<<FEEDBACK'
 FEEDBACK_PATTERN = re.compile(
     r'<<FEEDBACK\s+category="(?P<category>[^"]+)"\s+context="(?P<context>[^"]+)">>'
     r'\s*(?P<description>.*?)\s*<</FEEDBACK>>',
@@ -49,6 +58,10 @@ def chat(request):
     if not contents:
         return JsonResponse({'success': False, 'error': 'Empty message.'}, status=400)
 
+    limited, message = _rate_limited(request.user)
+    if limited:
+        return JsonResponse({'success': False, 'error': message}, status=429)
+
     api_key = getattr(settings, 'GEMINI_API_KEY', '')
     if not api_key:
         return JsonResponse(
@@ -56,18 +69,22 @@ def chat(request):
             status=503,
         )
 
+    page_path = str(payload.get('page', ''))[:300]
+    system_prompt = build_system_prompt(request.user, page_path=page_path)
+
     body = {
-        'system_instruction': {'parts': [{'text': build_system_prompt(request.user)}]},
+        'system_instruction': {'parts': [{'text': system_prompt}]},
         'contents': contents,
         'generationConfig': {'maxOutputTokens': 1024, 'temperature': 0.4},
     }
 
     try:
-        response = requests.post(
-            GEMINI_URL,
+        upstream = requests.post(
+            GEMINI_STREAM_URL,
             headers={'x-goog-api-key': api_key, 'Content-Type': 'application/json'},
             json=body,
-            timeout=30,
+            stream=True,
+            timeout=(10, 60),
         )
     except requests.RequestException:
         return JsonResponse(
@@ -75,32 +92,121 @@ def chat(request):
             status=502,
         )
 
-    if response.status_code == 429:
+    if upstream.status_code == 429:
+        upstream.close()
         return JsonResponse(
             {'success': False, 'error': 'The assistant is receiving too many requests right now. Please wait a minute and try again.'},
             status=429,
         )
-    if response.status_code != 200:
+    if upstream.status_code != 200:
+        upstream.close()
         return JsonResponse(
             {'success': False, 'error': 'The assistant ran into a problem. Please try again later.'},
             status=502,
         )
 
+    response = StreamingHttpResponse(
+        _sse_stream(upstream, request.user),
+        content_type='text/event-stream',
+    )
+    response['Cache-Control'] = 'no-cache'
+    response['X-Accel-Buffering'] = 'no'  # disable proxy buffering so tokens flush immediately
+    return response
+
+
+def _sse_event(data):
+    return f'data: {json.dumps(data)}\n\n'
+
+
+def _held_back_chars(text):
+    """How many trailing chars of `text` could be the start of a feedback marker."""
+    for k in range(len(FEEDBACK_MARKER) - 1, 0, -1):
+        if text.endswith(FEEDBACK_MARKER[:k]):
+            return k
+    return 0
+
+
+def _sse_stream(upstream, user):
+    """Relay Gemini's SSE stream as delta events, withholding the feedback marker.
+
+    The marker may arrive split across chunks, so text is only emitted once it
+    can no longer be a marker prefix; everything from the marker onward is held
+    until the stream ends, then processed and replaced with the cleaned tail.
+    """
+    accumulated = ''
+    emitted = 0
+    marker_found = False
+
     try:
-        data = response.json()
-        reply = ''.join(
-            part.get('text', '')
-            for part in data['candidates'][0]['content']['parts']
-        )
-    except (KeyError, IndexError, ValueError):
-        return JsonResponse(
-            {'success': False, 'error': 'The assistant returned an unexpected response. Please try again.'},
-            status=502,
-        )
+        for line in upstream.iter_lines(decode_unicode=True):
+            if not line or not line.startswith('data: '):
+                continue
+            try:
+                chunk = json.loads(line[len('data: '):])
+                delta = ''.join(
+                    part.get('text', '')
+                    for part in chunk['candidates'][0]['content']['parts']
+                )
+            except (KeyError, IndexError, ValueError):
+                continue
+            if not delta:
+                continue
 
-    reply, feedback_sent = _process_feedback(reply, request.user)
+            accumulated += delta
+            if marker_found:
+                continue
 
-    return JsonResponse({'success': True, 'reply': reply.strip(), 'feedback_sent': feedback_sent})
+            marker_at = accumulated.find(FEEDBACK_MARKER)
+            if marker_at != -1:
+                marker_found = True
+                safe_end = marker_at
+            else:
+                safe_end = len(accumulated) - _held_back_chars(accumulated)
+
+            if safe_end > emitted:
+                yield _sse_event({'type': 'delta', 'text': accumulated[emitted:safe_end]})
+                emitted = safe_end
+    except requests.RequestException:
+        yield _sse_event({'type': 'error', 'error': 'The connection to the assistant was interrupted.'})
+        return
+    finally:
+        upstream.close()
+
+    if not accumulated.strip():
+        yield _sse_event({'type': 'error', 'error': 'The assistant returned an empty response. Please try again.'})
+        return
+
+    cleaned, feedback_sent = _process_feedback(accumulated, user)
+    # Emit whatever the client hasn't seen yet (text held back around the marker,
+    # or the fallback confirmation if the reply was only a marker block).
+    tail = cleaned[emitted:] if cleaned.startswith(accumulated[:emitted]) else ''
+    if not tail and feedback_sent and emitted == 0:
+        tail = cleaned
+    if tail:
+        yield _sse_event({'type': 'delta', 'text': tail})
+
+    yield _sse_event({'type': 'done', 'reply': cleaned.strip(), 'feedback_sent': feedback_sent})
+
+
+def _rate_limited(user):
+    """Cache-based throttle: per-minute and per-day message caps per user."""
+    minute_key = f'assistant-rl-minute-{user.pk}'
+    day_key = f'assistant-rl-day-{user.pk}'
+
+    cache.add(minute_key, 0, timeout=60)
+    cache.add(day_key, 0, timeout=60 * 60 * 24)
+    try:
+        minute_count = cache.incr(minute_key)
+        day_count = cache.incr(day_key)
+    except ValueError:
+        # Key expired between add() and incr() — let the request through
+        return False, ''
+
+    if day_count > RATE_LIMIT_PER_DAY:
+        return True, "You've reached the daily limit for the assistant. It resets tomorrow — for urgent questions, please use the Contact page."
+    if minute_count > RATE_LIMIT_PER_MINUTE:
+        return True, "You're sending messages a little too fast. Please wait a minute and try again."
+    return False, ''
 
 
 def _process_feedback(reply, user):

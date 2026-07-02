@@ -41,9 +41,23 @@ and is sent with each request (nothing is persisted server-side).
 
 ## Notes
 
-- Model: `gemini-2.5-flash` via the REST `generateContent` endpoint (see `views.py`).
-- Free-tier limits are roughly 10–15 requests/minute; the view returns a friendly
-  message on HTTP 429.
+- Model: `gemini-2.5-flash` via the REST `streamGenerateContent` (SSE) endpoint;
+  replies stream token-by-token to the widget (see `views.py`).
+- Page awareness: the widget sends `window.location.pathname` with each request;
+  on a bundle detail page the prompt includes that bundle's name/type/status, so
+  "this bundle" resolves correctly.
+- Per-user rate limits (Django cache): 10 messages/min, 100/day. Upstream free-tier
+  429s are also mapped to a friendly message.
 - History is capped server-side at 20 messages / 4,000 chars each per request.
+- Markdown rendering in the widget uses `marked` + `DOMPurify` (CDN), with a plain
+  escaping fallback if the CDN is unreachable.
 - The system prompt (persona, ELSA knowledge, feedback protocol, per-user bundle
-  context) is built in `prompts.py`.
+  context, current page) is built in `prompts.py`.
+
+## Tests
+
+The MariaDB user can't create test databases, so tests run on in-memory SQLite:
+
+```
+python3 manage.py test assistant --settings=assistant.test_settings
+```
