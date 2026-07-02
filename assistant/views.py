@@ -13,7 +13,9 @@ from django.utils.timezone import localtime
 
 from .prompts import build_system_prompt
 
-GEMINI_MODEL = 'gemini-2.5-flash'
+# Newer models (gemini-3.x) hang or 429 on the free tier — override via
+# GEMINI_MODEL in settings once the account has quota for them.
+GEMINI_MODEL = getattr(settings, 'GEMINI_MODEL', 'gemini-2.5-flash')
 GEMINI_STREAM_URL = (
     f'https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}'
     ':streamGenerateContent?alt=sse'
@@ -24,8 +26,8 @@ MAX_HISTORY_MESSAGES = 20
 MAX_MESSAGE_CHARS = 4000
 
 # Per-user rate limits (shared free-tier quota protection)
-RATE_LIMIT_PER_MINUTE = 10
-RATE_LIMIT_PER_DAY = 100
+RATE_LIMIT_PER_MINUTE = 20
+RATE_LIMIT_PER_DAY = 200
 
 FEEDBACK_MARKER = '<<FEEDBACK'
 FEEDBACK_PATTERN = re.compile(
