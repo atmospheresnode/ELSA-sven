@@ -15,15 +15,20 @@ from django.utils.timezone import localtime
 from .prompts import build_system_prompt
 
 # The free tier allows only ~20 requests/day *per model*, so we fall through a
-# chain of models — each has its own daily bucket. Newer models (gemini-3.x)
-# hang or 429 on the free tier entirely. Override the chain via GEMINI_MODELS
-# in settings (list, best model first) once the account has paid quota.
+# chain of models — each has its own daily bucket. Override the chain via
+# GEMINI_MODELS in settings (list, best model first).
 GEMINI_MODELS = getattr(settings, 'GEMINI_MODELS', [
+    'gemini-3.5-flash',
     'gemini-2.5-flash',
     'gemini-2.5-flash-lite',
     'gemini-flash-lite-latest',
     'gemini-2.0-flash',
 ])
+
+# The newest model often stalls under free-tier congestion. A short read
+# timeout makes the chain fall through in seconds instead of freezing the chat.
+MODEL_READ_TIMEOUT = {'gemini-3.5-flash': 15}
+DEFAULT_READ_TIMEOUT = 60
 
 
 def _stream_url(model):
@@ -108,7 +113,7 @@ def chat(request):
                 headers={'x-goog-api-key': api_key, 'Content-Type': 'application/json'},
                 json=body,
                 stream=True,
-                timeout=(10, 60),
+                timeout=(10, MODEL_READ_TIMEOUT.get(model, DEFAULT_READ_TIMEOUT)),
             )
         except requests.RequestException:
             saw_network_error = True
