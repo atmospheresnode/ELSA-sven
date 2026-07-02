@@ -6,6 +6,7 @@ from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
 from django.core.mail import EmailMessage
+from django.db import connections
 from django.http import JsonResponse, StreamingHttpResponse
 from django.utils import timezone
 from django.utils.html import escape
@@ -79,6 +80,10 @@ def chat(request):
         'contents': contents,
         'generationConfig': {'maxOutputTokens': 1024, 'temperature': 0.4},
     }
+
+    # All DB work is done (auth + prompt). Release the connection now so a slow
+    # upstream call or long stream never holds a MariaDB slot hostage.
+    connections.close_all()
 
     try:
         upstream = requests.post(
