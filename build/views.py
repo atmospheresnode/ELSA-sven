@@ -809,6 +809,8 @@ def bundle(request, pk_bundle):
         table_set.append(Table_Binary.objects.filter(bundle=bundle))
         table_set.append(Table_Fixed_Width.objects.filter(bundle=bundle))
 
+        current_collection = additional_collections_set.first()
+
         # Context dictionary for template
         context_dict = {
             'xml_content_set': xml_content_set,
@@ -855,7 +857,10 @@ def bundle(request, pk_bundle):
             'context_successful_submit': False,
             'additional_collection_successful_submit': False,
             'bundle_type': bundle.bundle_type,
-            
+
+            # To handle which collection the user is in
+            'current_collection': current_collection,
+
             # To handle NetCDF files
             'form_netcdf': form_netcdf,
             'netcdf_files': NetCDFFile.objects.filter(bundle=bundle)
@@ -3992,6 +3997,10 @@ def variable_coord_to_product(bundle, netcdf_objs):
             nc_path = nc_obj.file.path
             if not os.path.exists(nc_path):
                 raise FileNotFoundError('Uploaded file is missing from disk.')
+
+            os.rename(nc_path, os.path.join(bundle.directory(), os.path.basename(nc_obj.file.path)))
+            nc_path = os.path.join(bundle.directory(), os.path.basename(nc_obj.file.path))
+            print(nc_path)
 
             _process_single_netcdf(bundle, nc_path, NS, allowed_variable_fields, allowed_coord_fields)
 
