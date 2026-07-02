@@ -177,7 +177,12 @@
                     <i class="bi bi-stars me-2"></i><strong>ELSA Assistant</strong>
                     <span class="badge bg-warning text-dark ms-1" style="font-size: 0.6rem;">BETA</span>
                 </span>
-                <button type="button" class="btn-close btn-close-white" id="elsaAssistantClose" aria-label="Close"></button>
+                <span class="d-flex align-items-center gap-3">
+                    <button type="button" class="btn p-0 border-0 text-white" id="elsaAssistantExpand" aria-label="Expand" title="Expand">
+                        <i class="bi bi-arrows-angle-expand"></i>
+                    </button>
+                    <button type="button" class="btn-close btn-close-white" id="elsaAssistantClose" aria-label="Close"></button>
+                </span>
             </div>
             <div id="elsaAssistantMessages" class="px-3 py-3" style="height: 380px; overflow-y: auto; background-color: #f8f9fa;"></div>
             <div class="border-top p-2 bg-white">
@@ -283,6 +288,18 @@
             panel.classList.contains('d-none') ? openPanel() : panel.classList.add('d-none');
         });
         closeBtn.addEventListener('click', function () { panel.classList.add('d-none'); });
+
+        const expandBtn = document.getElementById('elsaAssistantExpand');
+        let expanded = false;
+        expandBtn.addEventListener('click', function () {
+            expanded = !expanded;
+            panel.style.width = expanded ? 'min(760px, calc(100vw - 2rem))' : '380px';
+            messagesEl.style.height = expanded ? 'min(65vh, 640px)' : '380px';
+            expandBtn.querySelector('i').className = expanded ? 'bi bi-arrows-angle-contract' : 'bi bi-arrows-angle-expand';
+            expandBtn.title = expanded ? 'Shrink' : 'Expand';
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+            input.focus();
+        });
 
         async function readSseStream(response, bubble) {
             const reader = response.body.getReader();
