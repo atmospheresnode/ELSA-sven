@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 {% load static %}
+{% load assistant_tags %}
 <html lang="en">
 
 <style>
@@ -163,6 +164,8 @@
 
     {% if user.is_authenticated %}
     <!-- ELSA Assistant Chat Widget (LLM pilot — replaces the Beta Feedback button) -->
+    {% assistant_enabled as assistant_on %}
+    {% if assistant_on %}
     <button type="button" id="elsaAssistantToggle"
             class="btn text-white position-fixed"
             style="bottom: 1.5rem; right: 1.5rem; background-color: teal; z-index: 1050; box-shadow: 0 2px 8px rgba(0,0,0,0.25);">
@@ -178,6 +181,9 @@
                     <span class="badge bg-warning text-dark ms-1" style="font-size: 0.6rem;">BETA</span>
                 </span>
                 <span class="d-flex align-items-center gap-3">
+                    <button type="button" class="btn p-0 border-0 text-white" id="elsaAssistantNew" aria-label="New chat" title="New chat">
+                        <i class="bi bi-plus-square"></i>
+                    </button>
                     <button type="button" class="btn p-0 border-0 text-white" id="elsaAssistantExpand" aria-label="Expand" title="Expand">
                         <i class="bi bi-arrows-angle-expand"></i>
                     </button>
@@ -207,6 +213,8 @@
     #elsaAssistantMessages ul, #elsaAssistantMessages ol { margin-bottom: 0.4rem; padding-left: 1.2rem; }
     #elsaAssistantMessages pre { background: #f1f3f5; padding: 0.5rem; border-radius: 6px; font-size: 0.75rem; margin-bottom: 0.4rem; }
     #elsaAssistantMessages code { font-size: 0.8em; }
+    .elsa-rate-btn { border: none; background: none; padding: 0 2px; color: #adb5bd; font-size: 0.75rem; cursor: pointer; }
+    .elsa-rate-btn.active { color: teal; }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
@@ -215,14 +223,15 @@
         const toggle = document.getElementById('elsaAssistantToggle');
         const panel = document.getElementById('elsaAssistantPanel');
         const closeBtn = document.getElementById('elsaAssistantClose');
+        const newBtn = document.getElementById('elsaAssistantNew');
         const messagesEl = document.getElementById('elsaAssistantMessages');
         const form = document.getElementById('elsaAssistantForm');
         const input = document.getElementById('elsaAssistantInput');
         const sendBtn = document.getElementById('elsaAssistantSend');
         const csrfToken = form.querySelector('[name=csrfmiddlewaretoken]').value;
 
-        const history = [];  // {role: 'user'|'model', text: string}
-        let greeted = false;
+        let conversationId = null;
+        let historyLoaded = false;
 
         function renderText(text) {
             if (window.marked && window.DOMPurify) {
@@ -238,7 +247,7 @@
 
         function addBubble(role, html) {
             const wrap = document.createElement('div');
-            wrap.className = 'd-flex mb-2 ' + (role === 'user' ? 'justify-content-end' : 'justify-content-start');
+            wrap.className = 'mb-2 d-flex flex-column ' + (role === 'user' ? 'align-items-end' : 'align-items-start');
             const bubble = document.createElement('div');
             bubble.className = 'px-3 py-2 small';
             bubble.style.maxWidth = '85%';
@@ -257,7 +266,31 @@
             wrap.appendChild(bubble);
             messagesEl.appendChild(wrap);
             messagesEl.scrollTop = messagesEl.scrollHeight;
-            return bubble;
+            return {wrap: wrap, bubble: bubble};
+        }
+
+        function addRating(wrap, messageId, current) {
+            if (!messageId) return;
+            const bar = document.createElement('div');
+            bar.className = 'mt-1';
+            [[1, 'bi-hand-thumbs-up'], [-1, 'bi-hand-thumbs-down']].forEach(function ([value, icon]) {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'elsa-rate-btn' + (current === value ? ' active' : '');
+                btn.innerHTML = '<i class="bi ' + icon + '"></i>';
+                btn.addEventListener('click', function () {
+                    const newValue = btn.classList.contains('active') ? 0 : value;
+                    fetch("{% url 'assistant:rate' %}", {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken},
+                        body: JSON.stringify({message_id: messageId, rating: newValue}),
+                    }).catch(function () {});
+                    bar.querySelectorAll('.elsa-rate-btn').forEach(b => b.classList.remove('active'));
+                    if (newValue !== 0) btn.classList.add('active');
+                });
+                bar.appendChild(btn);
+            });
+            wrap.appendChild(bar);
         }
 
         function addSystemNote(text) {
@@ -269,17 +302,34 @@
             messagesEl.scrollTop = messagesEl.scrollHeight;
         }
 
+        function greet() {
+            addBubble('model', renderText(
+                "Hi {{ user }}! I'm the ELSA Assistant. I can help with:\n" +
+                "- Building and submitting your bundles\n" +
+                "- PDS4 archiving questions\n" +
+                "- Passing feedback to the ELSA team\n" +
+                "What can I do for you?"
+            ));
+        }
+
         function openPanel() {
             panel.classList.remove('d-none');
-            if (!greeted) {
-                greeted = true;
-                addBubble('model', renderText(
-                    "Hi {{ user }}! I'm the ELSA Assistant. I can help with:\n" +
-                    "- Building and submitting your bundles\n" +
-                    "- PDS4 archiving questions\n" +
-                    "- Passing feedback to the ELSA team\n" +
-                    "What can I do for you?"
-                ));
+            if (!historyLoaded) {
+                historyLoaded = true;
+                fetch("{% url 'assistant:history' %}")
+                    .then(r => r.json())
+                    .then(function (data) {
+                        conversationId = data.conversation_id;
+                        if (data.messages && data.messages.length) {
+                            data.messages.forEach(function (m) {
+                                const {wrap} = addBubble(m.role, renderText(m.text));
+                                if (m.role === 'model') addRating(wrap, m.id, m.rating);
+                            });
+                        } else {
+                            greet();
+                        }
+                    })
+                    .catch(greet);
             }
             input.focus();
         }
@@ -288,6 +338,13 @@
             panel.classList.contains('d-none') ? openPanel() : panel.classList.add('d-none');
         });
         closeBtn.addEventListener('click', function () { panel.classList.add('d-none'); });
+
+        newBtn.addEventListener('click', function () {
+            conversationId = null;
+            messagesEl.innerHTML = '';
+            greet();
+            input.focus();
+        });
 
         const expandBtn = document.getElementById('elsaAssistantExpand');
         let expanded = false;
@@ -301,7 +358,7 @@
             input.focus();
         });
 
-        async function readSseStream(response, bubble) {
+        async function readSseStream(response, reply) {
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
             let buf = '';
@@ -322,12 +379,13 @@
 
                     if (ev.type === 'delta') {
                         acc += ev.text;
-                        bubble.innerHTML = renderText(acc);
+                        reply.bubble.innerHTML = renderText(acc);
                         messagesEl.scrollTop = messagesEl.scrollHeight;
                     } else if (ev.type === 'done') {
                         gotDone = true;
-                        history.push({role: 'model', text: ev.reply});
-                        bubble.innerHTML = renderText(ev.reply);
+                        conversationId = ev.conversation_id;
+                        reply.bubble.innerHTML = renderText(ev.reply);
+                        addRating(reply.wrap, ev.message_id, 0);
                         if (ev.feedback_sent) addSystemNote('✓ Feedback sent to the ELSA team');
                     } else if (ev.type === 'error') {
                         reader.cancel();
@@ -335,9 +393,8 @@
                     }
                 }
             }
-            if (!gotDone) {
-                if (acc) history.push({role: 'model', text: acc});
-                else throw new Error('The assistant returned an empty response. Please try again.');
+            if (!gotDone && !acc) {
+                throw new Error('The assistant returned an empty response. Please try again.');
             }
         }
 
@@ -346,18 +403,21 @@
             const text = input.value.trim();
             if (!text || sendBtn.disabled) return;
 
-            history.push({role: 'user', text: text});
             addBubble('user', renderText(text));
             input.value = '';
             sendBtn.disabled = true;
             input.disabled = true;
 
-            const bubble = addBubble('model', '<span class="text-muted"><i class="bi bi-three-dots"></i> thinking...</span>');
+            const reply = addBubble('model', '<span class="text-muted"><i class="bi bi-three-dots"></i> thinking...</span>');
 
             fetch("{% url 'assistant:chat' %}", {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken},
-                body: JSON.stringify({messages: history, page: window.location.pathname}),
+                body: JSON.stringify({
+                    conversation_id: conversationId,
+                    message: text,
+                    page: window.location.pathname,
+                }),
             })
             .then(async (r) => {
                 const type = r.headers.get('content-type') || '';
@@ -365,10 +425,10 @@
                     const json = await r.json().catch(() => ({}));
                     throw new Error(json.error || 'Something went wrong. Please try again.');
                 }
-                await readSseStream(r, bubble);
+                await readSseStream(r, reply);
             })
             .catch((err) => {
-                bubble.innerHTML = renderText(err.message || 'Network error — please try again.');
+                reply.bubble.innerHTML = renderText(err.message || 'Network error — please try again.');
             })
             .finally(() => {
                 sendBtn.disabled = false;
@@ -378,6 +438,7 @@
         });
     })();
     </script>
+    {% endif %}
     {% endif %}
 
 </body>

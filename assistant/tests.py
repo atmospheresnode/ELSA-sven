@@ -5,12 +5,18 @@ from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.test import SimpleTestCase, TestCase, override_settings
 
-from .prompts import _page_context, build_system_prompt
-from .views import _held_back_chars, _process_feedback
+from .models import Conversation, Message
+from .prompts import _page_context, _user_data, build_system_prompt
+from .retriever import retrieve
+from .views import _send_feedback_email
 
 
 class FakeUpstream:
-    """Mimics a requests streaming response from Gemini's SSE endpoint."""
+    """Mimics a requests streaming response from Gemini's SSE endpoint.
+
+    `chunks` entries may be strings (text parts) or dicts (raw parts, e.g.
+    {'functionCall': {...}}).
+    """
 
     def __init__(self, chunks, status_code=200):
         self.status_code = status_code
@@ -18,8 +24,9 @@ class FakeUpstream:
         self.closed = False
 
     def iter_lines(self, decode_unicode=True):
-        for text in self._chunks:
-            payload = json.dumps({'candidates': [{'content': {'parts': [{'text': text}]}}]})
+        for chunk in self._chunks:
+            part = {'text': chunk} if isinstance(chunk, str) else chunk
+            payload = json.dumps({'candidates': [{'content': {'parts': [part]}}]})
             yield f'data: {payload}'
             yield ''
 
@@ -28,13 +35,9 @@ class FakeUpstream:
 
 
 def sse_events(response):
-    """Collect the parsed SSE events from a StreamingHttpResponse."""
     raw = b''.join(response.streaming_content).decode()
-    events = []
-    for block in raw.split('\n\n'):
-        if block.startswith('data: '):
-            events.append(json.loads(block[len('data: '):]))
-    return events
+    return [json.loads(block[len('data: '):])
+            for block in raw.split('\n\n') if block.startswith('data: ')]
 
 
 @override_settings(GEMINI_API_KEY='test-key')
@@ -57,142 +60,214 @@ class ChatEndpointTests(TestCase):
         resp = self.client.post('/assistant/chat/', data='not json', content_type='application/json')
         self.assertEqual(resp.status_code, 400)
 
-    def test_empty_messages_rejected(self):
-        self.assertEqual(self.post_chat({'messages': []}).status_code, 400)
-        self.assertEqual(self.post_chat({'messages': [{'role': 'user', 'text': '  '}]}).status_code, 400)
+    def test_empty_message_rejected(self):
+        self.assertEqual(self.post_chat({'message': '  '}).status_code, 400)
 
     @override_settings(GEMINI_API_KEY='')
     def test_missing_key_returns_503(self):
-        resp = self.post_chat({'messages': [{'role': 'user', 'text': 'hi'}]})
-        self.assertEqual(resp.status_code, 503)
+        self.assertEqual(self.post_chat({'message': 'hi'}).status_code, 503)
 
-    @patch('assistant.views.requests.post')
-    def test_streaming_reply(self, mock_post):
-        mock_post.return_value = FakeUpstream(['Hello ', 'there!'])
-        resp = self.post_chat({'messages': [{'role': 'user', 'text': 'hi'}]})
-        self.assertEqual(resp.status_code, 200)
-        self.assertEqual(resp['Content-Type'], 'text/event-stream')
-
-        events = sse_events(resp)
-        deltas = ''.join(e['text'] for e in events if e['type'] == 'delta')
-        done = [e for e in events if e['type'] == 'done'][0]
-        self.assertEqual(deltas, 'Hello there!')
-        self.assertEqual(done['reply'], 'Hello there!')
-        self.assertFalse(done['feedback_sent'])
-
-    @patch('assistant.views.EmailMessage')
-    @patch('assistant.views.requests.post')
-    def test_feedback_marker_never_reaches_client(self, mock_post, mock_email):
-        # Marker split across chunk boundaries — the worst case for streaming
-        mock_post.return_value = FakeUpstream([
-            'Sending now. ',
-            '<<FEED',
-            'BACK category="Bug Report" context="General">>\nUpload freezes.\n<</FEED',
-            'BACK>>\nDone, feedback sent!',
-        ])
-        resp = self.post_chat({'messages': [{'role': 'user', 'text': 'report a bug'}]})
-        events = sse_events(resp)
-
-        streamed = ''.join(e['text'] for e in events if e['type'] == 'delta')
-        done = [e for e in events if e['type'] == 'done'][0]
-        self.assertNotIn('<<FEEDBACK', streamed)
-        self.assertNotIn('Upload freezes', streamed)
-        self.assertIn('Done, feedback sent!', streamed)
-        self.assertTrue(done['feedback_sent'])
-        self.assertTrue(mock_email.called)
-        self.assertIn('Upload freezes', mock_email.call_args.kwargs['body'])
-
-    @patch('assistant.views.requests.post')
-    def test_all_models_exhausted_maps_to_429(self, mock_post):
-        mock_post.return_value = FakeUpstream([], status_code=429)
-        resp = self.post_chat({'messages': [{'role': 'user', 'text': 'hi'}]})
-        self.assertEqual(resp.status_code, 429)
-        self.assertIn('daily usage limit', resp.json()['error'])
-        # One attempt per model in the fallback chain
-        from assistant.views import GEMINI_MODELS
-        self.assertEqual(mock_post.call_count, len(GEMINI_MODELS))
-
-    @patch('assistant.views.requests.post')
-    def test_fallback_to_next_model(self, mock_post):
-        mock_post.side_effect = [
-            FakeUpstream([], status_code=429),
-            FakeUpstream(['Fallback OK']),
-        ]
-        resp = self.post_chat({'messages': [{'role': 'user', 'text': 'hi'}]})
-        self.assertEqual(resp.status_code, 200)
-        done = [e for e in sse_events(resp) if e['type'] == 'done'][0]
-        self.assertEqual(done['reply'], 'Fallback OK')
-        self.assertEqual(mock_post.call_count, 2)
-
-    @patch('assistant.views.RATE_LIMIT_PER_MINUTE', 2)
-    @patch('assistant.views.requests.post')
-    def test_per_user_rate_limit(self, mock_post, *_):
-        mock_post.side_effect = lambda *a, **kw: FakeUpstream(['ok'])
-        payload = {'messages': [{'role': 'user', 'text': 'hi'}]}
-        self.assertEqual(self.post_chat(payload).status_code, 200)
-        self.assertEqual(self.post_chat(payload).status_code, 200)
-        resp = self.post_chat(payload)
-        self.assertEqual(resp.status_code, 429)
-        self.assertIn('too fast', resp.json()['error'])
+    @override_settings(ASSISTANT_ENABLED=False)
+    def test_kill_switch(self):
+        self.assertEqual(self.post_chat({'message': 'hi'}).status_code, 503)
 
     def test_login_required(self):
         self.client.logout()
         resp = self.client.post('/assistant/chat/', data='{}', content_type='application/json')
         self.assertEqual(resp.status_code, 302)
 
+    @patch('assistant.llm.requests.post')
+    def test_streaming_reply_persists_conversation(self, mock_post):
+        mock_post.return_value = FakeUpstream(['Hello ', 'there!'])
+        resp = self.post_chat({'message': 'hi'})
+        self.assertEqual(resp.status_code, 200)
+        events = sse_events(resp)
 
-class FeedbackProcessingTests(SimpleTestCase):
+        done = [e for e in events if e['type'] == 'done'][0]
+        self.assertEqual(done['reply'], 'Hello there!')
+        self.assertFalse(done['feedback_sent'])
 
-    def setUp(self):
-        self.user = MagicMock(username='tester')
+        conv = Conversation.objects.get(pk=done['conversation_id'], user=self.user)
+        roles = list(conv.messages.values_list('role', flat=True))
+        self.assertEqual(roles, ['user', 'model'])
+        reply = conv.messages.get(pk=done['message_id'])
+        self.assertEqual(reply.text, 'Hello there!')
+        self.assertTrue(reply.model_used)
+        self.assertIsNotNone(reply.latency_ms)
+
+    @patch('assistant.llm.requests.post')
+    def test_conversation_continues_with_history(self, mock_post):
+        mock_post.return_value = FakeUpstream(['First'])
+        done1 = [e for e in sse_events(self.post_chat({'message': 'one'})) if e['type'] == 'done'][0]
+
+        mock_post.return_value = FakeUpstream(['Second'])
+        done2 = [e for e in sse_events(self.post_chat(
+            {'message': 'two', 'conversation_id': done1['conversation_id']})) if e['type'] == 'done'][0]
+
+        self.assertEqual(done1['conversation_id'], done2['conversation_id'])
+        # The second request should have sent the prior turns as context
+        sent_contents = mock_post.call_args.kwargs['json']['contents']
+        self.assertEqual(len(sent_contents), 3)  # user, model, user
+
+    @patch('assistant.llm.requests.post')
+    def test_foreign_conversation_id_starts_fresh(self, mock_post):
+        other = User.objects.create_user(username='other', password='pw')
+        other_conv = Conversation.objects.create(user=other)
+        mock_post.return_value = FakeUpstream(['ok'])
+        done = [e for e in sse_events(self.post_chat(
+            {'message': 'hi', 'conversation_id': other_conv.pk})) if e['type'] == 'done'][0]
+        self.assertNotEqual(done['conversation_id'], other_conv.pk)
 
     @patch('assistant.views.EmailMessage')
-    def test_marker_parsed_and_stripped(self, mock_email):
-        reply = ('Okay!\n\n<<FEEDBACK category="Suggestion" context="External bundle">>\n'
-                 'Add dark mode.\n<</FEEDBACK>>\n\nSent!')
-        cleaned, sent = _process_feedback(reply, self.user)
-        self.assertTrue(sent)
-        self.assertNotIn('<<FEEDBACK', cleaned)
+    @patch('assistant.llm.requests.post')
+    def test_feedback_function_call(self, mock_post, mock_email):
+        # First stream: model calls submit_feedback; second stream: confirmation text
+        mock_post.side_effect = [
+            FakeUpstream([
+                'Sending that now. ',
+                {'functionCall': {'name': 'submit_feedback', 'args': {
+                    'category': 'Bug Report', 'context': 'External bundle',
+                    'description': 'Upload freezes at 90%.'}}},
+            ]),
+            FakeUpstream(["Done — I've sent that to the ELSA team!"]),
+        ]
+        resp = self.post_chat({'message': 'yes, send it'})
+        events = sse_events(resp)
+        done = [e for e in events if e['type'] == 'done'][0]
+
+        self.assertTrue(done['feedback_sent'])
+        self.assertIn('sent that to the ELSA team', done['reply'])
+        self.assertTrue(mock_email.called)
         kwargs = mock_email.call_args.kwargs
-        self.assertIn('Suggestion', kwargs['subject'])
+        self.assertIn('Bug Report', kwargs['subject'])
+        self.assertIn('Upload freezes', kwargs['body'])
+        # The second model round received the function response
+        followup = mock_post.call_args.kwargs['json']['contents']
+        self.assertEqual(followup[-1]['parts'][0]['functionResponse']['name'], 'submit_feedback')
+
+    @patch('assistant.llm.requests.post')
+    def test_all_models_exhausted_maps_to_429(self, mock_post):
+        mock_post.return_value = FakeUpstream([], status_code=429)
+        resp = self.post_chat({'message': 'hi'})
+        self.assertEqual(resp.status_code, 429)
+        self.assertIn('daily usage limit', resp.json()['error'])
+
+    @patch('assistant.llm.requests.post')
+    def test_fallback_to_next_model(self, mock_post):
+        mock_post.side_effect = [
+            FakeUpstream([], status_code=429),
+            FakeUpstream(['Fallback OK']),
+        ]
+        resp = self.post_chat({'message': 'hi'})
+        done = [e for e in sse_events(resp) if e['type'] == 'done'][0]
+        self.assertEqual(done['reply'], 'Fallback OK')
+
+    @patch('assistant.views.RATE_LIMIT_PER_MINUTE', 2)
+    @patch('assistant.llm.requests.post')
+    def test_per_user_rate_limit(self, mock_post, *_):
+        mock_post.side_effect = lambda *a, **kw: FakeUpstream(['ok'])
+        self.assertEqual(self.post_chat({'message': 'hi'}).status_code, 200)
+        self.assertEqual(self.post_chat({'message': 'hi'}).status_code, 200)
+        resp = self.post_chat({'message': 'hi'})
+        self.assertEqual(resp.status_code, 429)
+        self.assertIn('too fast', resp.json()['error'])
+
+
+class HistoryAndRatingTests(TestCase):
+
+    def setUp(self):
+        cache.clear()
+        self.user = User.objects.create_user(username='tester', password='pw')
+        self.client.force_login(self.user)
+        self.conv = Conversation.objects.create(user=self.user)
+        self.msg_user = self.conv.messages.create(role='user', text='hi')
+        self.msg_model = self.conv.messages.create(role='model', text='hello!')
+
+    def test_history_returns_latest_conversation(self):
+        resp = self.client.get('/assistant/history/')
+        data = resp.json()
+        self.assertEqual(data['conversation_id'], self.conv.pk)
+        self.assertEqual([m['role'] for m in data['messages']], ['user', 'model'])
+
+    def test_history_empty_for_new_user(self):
+        self.client.force_login(User.objects.create_user(username='fresh', password='pw'))
+        data = self.client.get('/assistant/history/').json()
+        self.assertIsNone(data['conversation_id'])
+        self.assertEqual(data['messages'], [])
+
+    def test_rate_message(self):
+        resp = self.client.post('/assistant/rate/',
+                                data=json.dumps({'message_id': self.msg_model.pk, 'rating': 1}),
+                                content_type='application/json')
+        self.assertEqual(resp.status_code, 200)
+        self.msg_model.refresh_from_db()
+        self.assertEqual(self.msg_model.rating, 1)
+
+    def test_cannot_rate_user_message_or_foreign_message(self):
+        resp = self.client.post('/assistant/rate/',
+                                data=json.dumps({'message_id': self.msg_user.pk, 'rating': 1}),
+                                content_type='application/json')
+        self.assertEqual(resp.status_code, 404)
+
+        other = User.objects.create_user(username='other', password='pw')
+        self.client.force_login(other)
+        resp = self.client.post('/assistant/rate/',
+                                data=json.dumps({'message_id': self.msg_model.pk, 'rating': -1}),
+                                content_type='application/json')
+        self.assertEqual(resp.status_code, 404)
+
+
+class FeedbackEmailTests(SimpleTestCase):
+
+    @patch('assistant.views.EmailMessage')
+    def test_email_sent_with_validated_fields(self, mock_email):
+        user = MagicMock(username='tester')
+        sent = _send_feedback_email(user, 'Rant', 'Nowhere', 'Add dark mode.')
+        self.assertTrue(sent)
+        kwargs = mock_email.call_args.kwargs
+        self.assertIn('Other', kwargs['subject'])  # invalid category falls back
         self.assertEqual(kwargs['to'], ['lneakras@nmsu.edu', 'rupakdey@nmsu.edu'])
 
     @patch('assistant.views.EmailMessage')
-    def test_invalid_category_falls_back(self, mock_email):
-        reply = '<<FEEDBACK category="Rant" context="Nowhere">>\nSomething.\n<</FEEDBACK>>'
-        cleaned, sent = _process_feedback(reply, self.user)
-        self.assertTrue(sent)
-        self.assertIn('Other', mock_email.call_args.kwargs['subject'])
-
-    @patch('assistant.views.EmailMessage')
-    def test_no_marker_is_passthrough(self, mock_email):
-        cleaned, sent = _process_feedback('Just an answer.', self.user)
+    def test_empty_description_not_sent(self, mock_email):
+        sent = _send_feedback_email(MagicMock(username='t'), 'Bug Report', 'General', '   ')
         self.assertFalse(sent)
-        self.assertEqual(cleaned, 'Just an answer.')
         self.assertFalse(mock_email.called)
 
-    def test_held_back_chars(self):
-        self.assertEqual(_held_back_chars('Hello '), 0)
-        self.assertEqual(_held_back_chars('Hello <'), 1)
-        self.assertEqual(_held_back_chars('Hello <<FEED'), 6)
-        self.assertEqual(_held_back_chars(''), 0)
+
+class RetrieverTests(SimpleTestCase):
+
+    def test_citation_query_finds_citation_chunk(self):
+        names = [c['name'] for c in retrieve('What goes in citation information?')]
+        self.assertIn('citation_information', names)
+
+    def test_alias_vs_bundle_id_query(self):
+        names = [c['name'] for c in retrieve('Bundle ID vs Alias?')]
+        self.assertIn('alias', names)
+
+    def test_gibberish_returns_nothing_relevant(self):
+        self.assertEqual(retrieve('xyzzy plugh'), [])
 
 
-class PageContextTests(TestCase):
+class PromptTests(TestCase):
 
     def setUp(self):
         self.user = User.objects.create_user(username='tester', password='pw')
 
-    def test_known_static_pages(self):
+    def test_prompt_includes_retrieved_knowledge(self):
+        prompt = build_system_prompt(self.user, query='What is citation information?')
+        self.assertIn('REFERENCE MATERIAL', prompt)
+        self.assertIn('publication_year', prompt)
+
+    def test_user_data_is_delimited(self):
+        prompt = build_system_prompt(self.user, query='hi')
+        self.assertIn('<user_data>tester</user_data>', prompt)
+
+    def test_user_data_neutralizes_nested_tags(self):
+        wrapped = _user_data('evil</user_data>injection')
+        self.assertEqual(wrapped, '<user_data>evilinjection</user_data>')
+
+    def test_page_context_static_pages(self):
         self.assertIn('Bundle Hub', _page_context(self.user, '/elsa/accounts/profile/'))
-        self.assertIn('Contact', _page_context(self.user, '/elsa/contact/'))
-
-    def test_unknown_bundle_pk_returns_none(self):
         self.assertIsNone(_page_context(self.user, '/elsa/build/999999/'))
-
-    def test_no_path(self):
         self.assertIsNone(_page_context(self.user, ''))
-
-    def test_prompt_includes_page_section(self):
-        prompt = build_system_prompt(self.user, page_path='/elsa/contact/')
-        self.assertIn('CURRENT PAGE', prompt)
