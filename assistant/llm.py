@@ -102,6 +102,9 @@ class GeminiClient:
         Yields {'text': str} for text deltas and {'function_call': {...}} for
         tool calls. Network errors mid-stream propagate as RequestException.
         """
+        # Gemini's SSE stream omits the charset, so requests would fall back to
+        # Latin-1 and mangle em dashes/accents into mojibake ("â€"").
+        resp.encoding = 'utf-8'
         try:
             for line in resp.iter_lines(decode_unicode=True):
                 if not line or not line.startswith('data: '):
