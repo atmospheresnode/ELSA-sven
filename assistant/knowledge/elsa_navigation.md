@@ -4,6 +4,9 @@ Key pages:
 - Bundle Hub (under your username menu, top right) — lists all your bundles as
   cards with search, a type filter (Archive / External), status badges, and
   stats (total / archive / external counts). New bundles are created from here.
+- Account (under your username menu, top right) — your profile details; the
+  Edit Profile button opens Settings, where you can change your first/last
+  name, email, agency, and password.
 - Bundle page — the workspace for one bundle. Shows the bundle name and Bundle
   ID (LID), Download and Delete buttons, the Bundle Components card (Alias,
   Modification History, Citation Information, Targets, and the Review & Submit

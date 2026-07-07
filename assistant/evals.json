@@ -46,5 +46,17 @@
   {
     "question": "What is a target in PDS4?",
     "must_include": ["Mars"]
+  },
+  {
+    "question": "How do I update my name?",
+    "must_include": ["Account", "Edit Profile"]
+  },
+  {
+    "question": "I forgot my password, what do I do?",
+    "must_include": ["reset", "login"]
+  },
+  {
+    "question": "How do I create a new bundle?",
+    "must_include": ["Bundle Hub"]
   }
 ]

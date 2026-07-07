@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 import time
 
 import requests
@@ -235,10 +236,12 @@ def _sse_stream(client, user, conversation, system_prompt, contents, started):
         _save_reply(conversation, '', model, started, feedback_sent, error_note or 'empty')
         return
 
-    reply = _save_reply(conversation, accumulated.strip(), model, started, feedback_sent, error_note)
+    # The model occasionally echoes the internal <user_data> markup — scrub it.
+    final_text = re.sub(r'</?user_data>', '', accumulated).strip()
+    reply = _save_reply(conversation, final_text, model, started, feedback_sent, error_note)
     yield _sse_event({
         'type': 'done',
-        'reply': accumulated.strip(),
+        'reply': final_text,
         'feedback_sent': feedback_sent,
         'conversation_id': conversation.pk,
         'message_id': reply.pk if reply else None,
