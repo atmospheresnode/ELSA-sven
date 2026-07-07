@@ -1,5 +1,6 @@
 import json
-import re
+import logging
+import time
 
 import requests
 from django.conf import settings
@@ -12,30 +13,11 @@ from django.utils import timezone
 from django.utils.html import escape
 from django.utils.timezone import localtime
 
+from .llm import GeminiClient, LLMUnavailable, QuotaExhausted
+from .models import Conversation, Message
 from .prompts import build_system_prompt
 
-# The free tier allows only ~20 requests/day *per model*, so we fall through a
-# chain of models — each has its own daily bucket. Override the chain via
-# GEMINI_MODELS in settings (list, best model first).
-GEMINI_MODELS = getattr(settings, 'GEMINI_MODELS', [
-    'gemini-3.5-flash',
-    'gemini-2.5-flash',
-    'gemini-2.5-flash-lite',
-    'gemini-flash-lite-latest',
-    'gemini-2.0-flash',
-])
-
-# The newest model often stalls under free-tier congestion. A short read
-# timeout makes the chain fall through in seconds instead of freezing the chat.
-MODEL_READ_TIMEOUT = {'gemini-3.5-flash': 15}
-DEFAULT_READ_TIMEOUT = 60
-
-
-def _stream_url(model):
-    return (
-        f'https://generativelanguage.googleapis.com/v1beta/models/{model}'
-        ':streamGenerateContent?alt=sse'
-    )
+logger = logging.getLogger('assistant')
 
 # Server-side caps so a client can't blow up the free-tier quota with one request
 MAX_HISTORY_MESSAGES = 20
@@ -45,40 +27,51 @@ MAX_MESSAGE_CHARS = 4000
 RATE_LIMIT_PER_MINUTE = 20
 RATE_LIMIT_PER_DAY = 200
 
-FEEDBACK_MARKER = '<<FEEDBACK'
-FEEDBACK_PATTERN = re.compile(
-    r'<<FEEDBACK\s+category="(?P<category>[^"]+)"\s+context="(?P<context>[^"]+)">>'
-    r'\s*(?P<description>.*?)\s*<</FEEDBACK>>',
-    re.DOTALL,
-)
-FEEDBACK_CATEGORIES = {'Bug Report', 'Suggestion', 'Question', 'Other'}
-FEEDBACK_CONTEXTS = {'General', 'External bundle', 'Archive bundle'}
+FEEDBACK_CATEGORIES = ['Bug Report', 'Suggestion', 'Question', 'Other']
+FEEDBACK_CONTEXTS = ['General', 'External bundle', 'Archive bundle']
+
+SUBMIT_FEEDBACK_TOOL = {
+    'name': 'submit_feedback',
+    'description': (
+        'Send user feedback (a bug report, suggestion, or question) to the ELSA '
+        'team by email. Only call this after the user has explicitly confirmed '
+        'they want the feedback sent.'
+    ),
+    'parameters': {
+        'type': 'OBJECT',
+        'properties': {
+            'category': {'type': 'STRING', 'enum': FEEDBACK_CATEGORIES},
+            'context': {'type': 'STRING', 'enum': FEEDBACK_CONTEXTS},
+            'description': {'type': 'STRING',
+                            'description': 'The feedback in the user\'s own words.'},
+        },
+        'required': ['category', 'description'],
+    },
+}
+
+
+def _assistant_enabled():
+    return getattr(settings, 'ASSISTANT_ENABLED', True)
 
 
 @login_required
 def chat(request):
+    if not _assistant_enabled():
+        return JsonResponse(
+            {'success': False, 'error': 'The assistant is temporarily disabled.'}, status=503)
     if request.method != 'POST':
         return JsonResponse({'success': False, 'error': 'POST required.'}, status=405)
 
     try:
         payload = json.loads(request.body)
-        messages = payload.get('messages', [])
-        assert isinstance(messages, list) and messages
+        message_text = str(payload.get('message', ''))[:MAX_MESSAGE_CHARS].strip()
+        assert message_text
     except (json.JSONDecodeError, AssertionError):
         return JsonResponse({'success': False, 'error': 'Invalid request.'}, status=400)
 
-    contents = []
-    for msg in messages[-MAX_HISTORY_MESSAGES:]:
-        role = 'model' if msg.get('role') == 'model' else 'user'
-        text = str(msg.get('text', ''))[:MAX_MESSAGE_CHARS]
-        if text.strip():
-            contents.append({'role': role, 'parts': [{'text': text}]})
-    if not contents:
-        return JsonResponse({'success': False, 'error': 'Empty message.'}, status=400)
-
-    limited, message = _rate_limited(request.user)
+    limited, limit_message = _rate_limited(request.user)
     if limited:
-        return JsonResponse({'success': False, 'error': message}, status=429)
+        return JsonResponse({'success': False, 'error': limit_message}, status=429)
 
     api_key = getattr(settings, 'GEMINI_API_KEY', '')
     if not api_key:
@@ -87,61 +80,48 @@ def chat(request):
             status=503,
         )
 
+    # Server-authoritative history: load the conversation from the DB.
+    conversation = None
+    conversation_id = payload.get('conversation_id')
+    if conversation_id:
+        conversation = Conversation.objects.filter(pk=conversation_id, user=request.user).first()
+    if conversation is None:
+        conversation = Conversation.objects.create(user=request.user)
+
+    conversation.messages.create(role='user', text=message_text)
+    conversation.save(update_fields=['updated_at'])
+
+    contents = [
+        {'role': m.role, 'parts': [{'text': m.text}]}
+        for m in conversation.messages.order_by('-created_at')[:MAX_HISTORY_MESSAGES][::-1]
+        if m.text.strip()
+    ]
+
     page_path = str(payload.get('page', ''))[:300]
-    system_prompt = build_system_prompt(request.user, page_path=page_path)
+    system_prompt = build_system_prompt(request.user, page_path=page_path, query=message_text)
 
-    body = {
-        'system_instruction': {'parts': [{'text': system_prompt}]},
-        'contents': contents,
-        'generationConfig': {'maxOutputTokens': 1024, 'temperature': 0.4},
-    }
-
-    # All DB work is done (auth + prompt). Release the connection now so a slow
-    # upstream call or long stream never holds a MariaDB slot hostage.
+    # All DB work is done (auth + history + prompt). Release the connection now
+    # so a slow upstream call or long stream never holds a MariaDB slot hostage.
     connections.close_all()
 
-    # Try each model in the chain until one accepts the request. A 429 means
-    # that model's own free-tier bucket is exhausted; 5xx means it's overloaded
-    # — either way the next model may still work.
-    upstream = None
-    saw_429 = False
-    saw_network_error = False
-    for model in GEMINI_MODELS:
-        try:
-            candidate = requests.post(
-                _stream_url(model),
-                headers={'x-goog-api-key': api_key, 'Content-Type': 'application/json'},
-                json=body,
-                stream=True,
-                timeout=(10, MODEL_READ_TIMEOUT.get(model, DEFAULT_READ_TIMEOUT)),
-            )
-        except requests.RequestException:
-            saw_network_error = True
-            continue
-        if candidate.status_code == 200:
-            upstream = candidate
-            break
-        saw_429 = saw_429 or candidate.status_code == 429
-        candidate.close()
-
-    if upstream is None:
-        if saw_429:
-            return JsonResponse(
-                {'success': False, 'error': "The assistant has reached its free daily usage limit across all backup models. The limit resets overnight — please try again tomorrow, or use the Contact page for urgent questions."},
-                status=429,
-            )
-        if saw_network_error:
-            return JsonResponse(
-                {'success': False, 'error': 'Could not reach the assistant service. Please try again.'},
-                status=502,
-            )
+    client = GeminiClient(api_key)
+    started = time.monotonic()
+    try:
+        model, upstream = client.open_stream(system_prompt, contents, tools=[SUBMIT_FEEDBACK_TOOL])
+    except QuotaExhausted:
         return JsonResponse(
-            {'success': False, 'error': 'The assistant ran into a problem. Please try again later.'},
+            {'success': False, 'error': "The assistant has reached its free daily usage limit across all backup models. The limit resets overnight — please try again tomorrow, or use the Contact page for urgent questions."},
+            status=429,
+        )
+    except LLMUnavailable:
+        return JsonResponse(
+            {'success': False, 'error': 'Could not reach the assistant service. Please try again.'},
             status=502,
         )
 
     response = StreamingHttpResponse(
-        _sse_stream(upstream, request.user),
+        _sse_stream(client, model, upstream, request.user, conversation,
+                    system_prompt, contents, started),
         content_type='text/event-stream',
     )
     response['Cache-Control'] = 'no-cache'
@@ -149,78 +129,126 @@ def chat(request):
     return response
 
 
+@login_required
+def history(request):
+    """Return the user's most recent conversation so the widget can restore it."""
+    if not _assistant_enabled():
+        return JsonResponse({'enabled': False, 'conversation_id': None, 'messages': []})
+    conversation = Conversation.objects.filter(user=request.user).first()
+    if conversation is None:
+        return JsonResponse({'enabled': True, 'conversation_id': None, 'messages': []})
+    messages = [
+        {'id': m.pk, 'role': m.role, 'text': m.text, 'rating': m.rating}
+        for m in conversation.messages.order_by('-created_at')[:50][::-1]
+    ]
+    return JsonResponse({'enabled': True, 'conversation_id': conversation.pk, 'messages': messages})
+
+
+@login_required
+def rate(request):
+    """Record a thumbs up/down on one of the user's assistant messages."""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'POST required.'}, status=405)
+    try:
+        payload = json.loads(request.body)
+        rating = int(payload.get('rating'))
+        assert rating in (1, -1, 0)
+        message_id = int(payload.get('message_id'))
+    except (json.JSONDecodeError, AssertionError, TypeError, ValueError):
+        return JsonResponse({'success': False, 'error': 'Invalid request.'}, status=400)
+
+    updated = Message.objects.filter(
+        pk=message_id, role='model', conversation__user=request.user,
+    ).update(rating=rating)
+    if not updated:
+        return JsonResponse({'success': False, 'error': 'Message not found.'}, status=404)
+    return JsonResponse({'success': True})
+
+
 def _sse_event(data):
     return f'data: {json.dumps(data)}\n\n'
 
 
-def _held_back_chars(text):
-    """How many trailing chars of `text` could be the start of a feedback marker."""
-    for k in range(len(FEEDBACK_MARKER) - 1, 0, -1):
-        if text.endswith(FEEDBACK_MARKER[:k]):
-            return k
-    return 0
+def _sse_stream(client, model, upstream, user, conversation, system_prompt, contents, started):
+    """Relay the model's stream as delta events, handling feedback tool calls.
 
-
-def _sse_stream(upstream, user):
-    """Relay Gemini's SSE stream as delta events, withholding the feedback marker.
-
-    The marker may arrive split across chunks, so text is only emitted once it
-    can no longer be a marker prefix; everything from the marker onward is held
-    until the stream ends, then processed and replaced with the cleaned tail.
+    A submit_feedback call pauses text delivery, emails the feedback, then runs
+    a second model turn (with the tool result) so the model can confirm to the
+    user in its own words.
     """
     accumulated = ''
-    emitted = 0
-    marker_found = False
+    feedback_sent = False
+    error_note = ''
 
     try:
-        for line in upstream.iter_lines(decode_unicode=True):
-            if not line or not line.startswith('data: '):
-                continue
-            try:
-                chunk = json.loads(line[len('data: '):])
-                delta = ''.join(
-                    part.get('text', '')
-                    for part in chunk['candidates'][0]['content']['parts']
-                )
-            except (KeyError, IndexError, ValueError):
-                continue
-            if not delta:
-                continue
+        function_call = None
+        for event in client.iter_events(upstream):
+            if 'text' in event:
+                accumulated += event['text']
+                yield _sse_event({'type': 'delta', 'text': event['text']})
+            elif 'function_call' in event:
+                function_call = event['function_call']
 
-            accumulated += delta
-            if marker_found:
-                continue
-
-            marker_at = accumulated.find(FEEDBACK_MARKER)
-            if marker_at != -1:
-                marker_found = True
-                safe_end = marker_at
-            else:
-                safe_end = len(accumulated) - _held_back_chars(accumulated)
-
-            if safe_end > emitted:
-                yield _sse_event({'type': 'delta', 'text': accumulated[emitted:safe_end]})
-                emitted = safe_end
-    except requests.RequestException:
-        yield _sse_event({'type': 'error', 'error': 'The connection to the assistant was interrupted.'})
-        return
-    finally:
-        upstream.close()
+        if function_call and function_call.get('name') == 'submit_feedback':
+            args = function_call.get('args', {})
+            feedback_sent = _send_feedback_email(
+                user,
+                category=str(args.get('category', 'Other')),
+                context=str(args.get('context', 'General')),
+                description=str(args.get('description', '')),
+            )
+            followup = contents + [
+                {'role': 'model', 'parts': [{'functionCall': function_call}]},
+                {'role': 'user', 'parts': [{'functionResponse': {
+                    'name': 'submit_feedback',
+                    'response': {'result': 'sent' if feedback_sent else 'failed'},
+                }}]},
+            ]
+            model, upstream2 = client.open_stream(system_prompt, followup,
+                                                  tools=[SUBMIT_FEEDBACK_TOOL])
+            for event in client.iter_events(upstream2):
+                if 'text' in event:
+                    accumulated += event['text']
+                    yield _sse_event({'type': 'delta', 'text': event['text']})
+    except (requests.RequestException, QuotaExhausted, LLMUnavailable) as exc:
+        error_note = type(exc).__name__
+        if not accumulated:
+            yield _sse_event({'type': 'error', 'error': 'The connection to the assistant was interrupted.'})
+            _save_reply(conversation, '', model, started, feedback_sent, error_note)
+            return
 
     if not accumulated.strip():
         yield _sse_event({'type': 'error', 'error': 'The assistant returned an empty response. Please try again.'})
+        _save_reply(conversation, '', model, started, feedback_sent, error_note or 'empty')
         return
 
-    cleaned, feedback_sent = _process_feedback(accumulated, user)
-    # Emit whatever the client hasn't seen yet (text held back around the marker,
-    # or the fallback confirmation if the reply was only a marker block).
-    tail = cleaned[emitted:] if cleaned.startswith(accumulated[:emitted]) else ''
-    if not tail and feedback_sent and emitted == 0:
-        tail = cleaned
-    if tail:
-        yield _sse_event({'type': 'delta', 'text': tail})
+    reply = _save_reply(conversation, accumulated.strip(), model, started, feedback_sent, error_note)
+    yield _sse_event({
+        'type': 'done',
+        'reply': accumulated.strip(),
+        'feedback_sent': feedback_sent,
+        'conversation_id': conversation.pk,
+        'message_id': reply.pk if reply else None,
+    })
 
-    yield _sse_event({'type': 'done', 'reply': cleaned.strip(), 'feedback_sent': feedback_sent})
+
+def _save_reply(conversation, text, model, started, feedback_sent, error_note):
+    """Persist the assistant's reply with observability metadata."""
+    latency_ms = int((time.monotonic() - started) * 1000)
+    try:
+        message = conversation.messages.create(
+            role='model', text=text, model_used=model,
+            latency_ms=latency_ms, feedback_sent=feedback_sent,
+            error=error_note[:200],
+        )
+        conversation.save(update_fields=['updated_at'])
+        logger.info('assistant: user=%s conv=%s model=%s latency_ms=%s chars=%s feedback=%s error=%s',
+                    conversation.user_id, conversation.pk, model, latency_ms,
+                    len(text), feedback_sent, error_note or '-')
+        return message
+    except Exception:
+        logger.exception('assistant: failed to persist reply for conv=%s', conversation.pk)
+        return None
 
 
 def _rate_limited(user):
@@ -244,26 +272,15 @@ def _rate_limited(user):
     return False, ''
 
 
-def _process_feedback(reply, user):
-    """Detect the assistant's feedback marker, email it to staff, strip it from the reply."""
-    match = FEEDBACK_PATTERN.search(reply)
-    if not match:
-        return reply, False
-
-    category = match.group('category')
-    context = match.group('context')
-    description = escape(match.group('description'))
-
-    cleaned = FEEDBACK_PATTERN.sub('', reply).strip()
-    if not cleaned:
-        cleaned = "Done — I've sent your feedback to the ELSA team. Thank you!"
-
+def _send_feedback_email(user, category, context, description):
+    """Email feedback to staff, mirroring the retired Beta Feedback form."""
+    description = escape(description.strip())
+    if not description:
+        return False
     if category not in FEEDBACK_CATEGORIES:
         category = 'Other'
     if context not in FEEDBACK_CONTEXTS:
         context = 'General'
-    if not description.strip():
-        return cleaned, False
 
     submitted_at = localtime(timezone.now()).strftime('%B %d, %Y at %I:%M %p %Z')
     subject = f'[ELSA Beta Feedback] {category} — {user.username} (via Assistant)'
@@ -331,5 +348,4 @@ def _process_feedback(reply, user):
     )
     email.content_subtype = 'html'
     email.send(fail_silently=True)
-
-    return cleaned, True
+    return True
