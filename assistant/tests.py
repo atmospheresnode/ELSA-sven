@@ -165,9 +165,10 @@ class ChatEndpointTests(TestCase):
         events = sse_events(resp)
         done = [e for e in events if e['type'] == 'done'][0]
         self.assertEqual(done['reply'], 'Fallback OK')
-        # The user was told a backup model is being tried
+        # The user got a friendly still-working note (no internals leaked)
         statuses = [e for e in events if e['type'] == 'status']
-        self.assertTrue(statuses and 'backup' in statuses[0]['text'])
+        self.assertTrue(statuses)
+        self.assertNotIn('model', statuses[0]['text'].lower())
 
     @patch('assistant.views.RATE_LIMIT_PER_MINUTE', 2)
     @patch('assistant.llm.requests.post')

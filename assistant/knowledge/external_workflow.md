@@ -5,10 +5,10 @@ Model Archive (AMA): the data itself is hosted externally, and ELSA produces the
 PDS4 metadata bundle describing it.
 
 To make an External bundle ready to submit, three components are REQUIRED:
-1. Modification History — at least one dated version entry.
-2. Citation Information — authors, publication year, description (editors are
+1. Modification History, at least one dated version entry.
+2. Citation Information, authors, publication year, description (editors are
    added automatically by Atmospheres node staff).
-3. Targets — at least one target (e.g. Mars) selected from the context list.
+3. Targets, at least one target (e.g. Mars) selected from the context list.
 
 Alias is optional (yellow "Optional" badge) and never blocks submission.
 
@@ -19,7 +19,7 @@ components, optional items, and content (uploaded NetCDF files and documents).
 Submission is enabled once the three required components are complete.
 
 After submission: Atmospheres node staff are notified by email and review the
-bundle. The user can continue editing and resubmit at any time — the bundle page
+bundle. The user can continue editing and resubmit at any time, the bundle page
 shows the last-submitted timestamp. Bundle status appears in the Bundle Hub as
 In Progress (yellow), Ready (green), or Submitted (blue).
 

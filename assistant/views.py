@@ -159,6 +159,11 @@ def _sse_event(data):
     return f'data: {json.dumps(data)}\n\n'
 
 
+def _clean_text(text):
+    """House style: no em dashes in anything shown to the user."""
+    return text.replace(' — ', ', ').replace('—', '-')
+
+
 def _sse_stream(client, user, conversation, system_prompt, contents, started):
     """Connect to a model and relay its stream as delta events.
 
@@ -181,12 +186,12 @@ def _sse_stream(client, user, conversation, system_prompt, contents, started):
                 attempts += 1
                 if attempts == 2:
                     yield _sse_event({'type': 'status',
-                                      'text': 'Taking a little longer than usual — trying a backup model...'})
+                                      'text': 'Still thinking, thanks for your patience...'})
             elif kind == 'connected':
                 model, upstream = m, resp
                 break
     except QuotaExhausted:
-        yield _sse_event({'type': 'error', 'error': "The assistant has reached its free daily usage limit across all backup models. The limit resets overnight — please try again tomorrow, or use the Contact page for urgent questions."})
+        yield _sse_event({'type': 'error', 'error': "The assistant has reached its daily usage limit. It resets overnight, so please try again tomorrow. For urgent questions, use the Contact page."})
         _save_reply(conversation, '', '', started, False, 'QuotaExhausted')
         return
     except LLMUnavailable:
@@ -198,8 +203,9 @@ def _sse_stream(client, user, conversation, system_prompt, contents, started):
         function_call = None
         for event in client.iter_events(upstream):
             if 'text' in event:
-                accumulated += event['text']
-                yield _sse_event({'type': 'delta', 'text': event['text']})
+                delta = _clean_text(event['text'])
+                accumulated += delta
+                yield _sse_event({'type': 'delta', 'text': delta})
             elif 'function_call' in event:
                 function_call = event['function_call']
 
@@ -222,8 +228,9 @@ def _sse_stream(client, user, conversation, system_prompt, contents, started):
                                                   tools=[SUBMIT_FEEDBACK_TOOL])
             for event in client.iter_events(upstream2):
                 if 'text' in event:
-                    accumulated += event['text']
-                    yield _sse_event({'type': 'delta', 'text': event['text']})
+                    delta = _clean_text(event['text'])
+                    accumulated += delta
+                    yield _sse_event({'type': 'delta', 'text': delta})
     except (requests.RequestException, QuotaExhausted, LLMUnavailable) as exc:
         error_note = type(exc).__name__
         if not accumulated:
@@ -282,7 +289,7 @@ def _rate_limited(user):
         return False, ''
 
     if day_count > RATE_LIMIT_PER_DAY:
-        return True, "You've reached the daily limit for the assistant. It resets tomorrow — for urgent questions, please use the Contact page."
+        return True, "You've reached the daily limit for the assistant. It resets tomorrow. For urgent questions, please use the Contact page."
     if minute_count > RATE_LIMIT_PER_MINUTE:
         return True, "You're sending messages a little too fast. Please wait a minute and try again."
     return False, ''
@@ -299,7 +306,7 @@ def _send_feedback_email(user, category, context, description):
         context = 'General'
 
     submitted_at = localtime(timezone.now()).strftime('%B %d, %Y at %I:%M %p %Z')
-    subject = f'[ELSA Beta Feedback] {category} — {user.username} (via Assistant)'
+    subject = f'[ELSA Beta Feedback] {category} - {user.username} (via Assistant)'
     email_body = f"""
 <!DOCTYPE html>
 <html>

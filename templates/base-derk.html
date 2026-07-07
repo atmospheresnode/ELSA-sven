@@ -163,7 +163,7 @@
     </div>
 
     {% if user.is_authenticated %}
-    <!-- ELSA Assistant Chat Widget (LLM pilot — replaces the Beta Feedback button) -->
+    <!-- ELSA Assistant Chat Widget (LLM pilot, replaces the Beta Feedback button) -->
     {% assistant_enabled as assistant_on %}
     {% if assistant_on %}
     <style>
@@ -328,7 +328,7 @@
                            placeholder="Ask about ELSA or PDS4..." autocomplete="off" maxlength="2000">
                     <button type="submit" id="elsaAssistantSend" aria-label="Send"><i class="bi bi-send-fill"></i></button>
                 </form>
-                <p class="elsa-disclaimer">AI-generated — verify important details. I can also pass feedback to the ELSA team.</p>
+                <p class="elsa-disclaimer">AI-generated, so verify important details. I can also pass feedback to the ELSA team.</p>
             </div>
         </div>
     </div>
@@ -566,7 +566,7 @@
                 await readSseStream(r, reply);
             })
             .catch((err) => {
-                reply.bubble.innerHTML = renderText(err.message || 'Network error — please try again.');
+                reply.bubble.innerHTML = renderText(err.message || 'Network error. Please try again.');
             })
             .finally(() => {
                 sendBtn.disabled = false;
