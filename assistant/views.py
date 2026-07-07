@@ -106,22 +106,11 @@ def chat(request):
 
     client = GeminiClient(api_key)
     started = time.monotonic()
-    try:
-        model, upstream = client.open_stream(system_prompt, contents, tools=[SUBMIT_FEEDBACK_TOOL])
-    except QuotaExhausted:
-        return JsonResponse(
-            {'success': False, 'error': "The assistant has reached its free daily usage limit across all backup models. The limit resets overnight — please try again tomorrow, or use the Contact page for urgent questions."},
-            status=429,
-        )
-    except LLMUnavailable:
-        return JsonResponse(
-            {'success': False, 'error': 'Could not reach the assistant service. Please try again.'},
-            status=502,
-        )
 
+    # Return the SSE response immediately — the model connection happens inside
+    # the stream so the widget can show progress (and fallback status) live.
     response = StreamingHttpResponse(
-        _sse_stream(client, model, upstream, request.user, conversation,
-                    system_prompt, contents, started),
+        _sse_stream(client, request.user, conversation, system_prompt, contents, started),
         content_type='text/event-stream',
     )
     response['Cache-Control'] = 'no-cache'
@@ -169,16 +158,40 @@ def _sse_event(data):
     return f'data: {json.dumps(data)}\n\n'
 
 
-def _sse_stream(client, model, upstream, user, conversation, system_prompt, contents, started):
-    """Relay the model's stream as delta events, handling feedback tool calls.
+def _sse_stream(client, user, conversation, system_prompt, contents, started):
+    """Connect to a model and relay its stream as delta events.
 
-    A submit_feedback call pauses text delivery, emails the feedback, then runs
-    a second model turn (with the tool result) so the model can confirm to the
-    user in its own words.
+    Emits status events while falling back between models so the widget never
+    sits silent. A submit_feedback call pauses text delivery, emails the
+    feedback, then runs a second model turn (with the tool result) so the model
+    can confirm to the user in its own words.
     """
     accumulated = ''
     feedback_sent = False
     error_note = ''
+    model = ''
+    upstream = None
+
+    try:
+        attempts = 0
+        for kind, m, resp in client.open_stream_events(system_prompt, contents,
+                                                       tools=[SUBMIT_FEEDBACK_TOOL]):
+            if kind == 'trying':
+                attempts += 1
+                if attempts == 2:
+                    yield _sse_event({'type': 'status',
+                                      'text': 'Taking a little longer than usual — trying a backup model...'})
+            elif kind == 'connected':
+                model, upstream = m, resp
+                break
+    except QuotaExhausted:
+        yield _sse_event({'type': 'error', 'error': "The assistant has reached its free daily usage limit across all backup models. The limit resets overnight — please try again tomorrow, or use the Contact page for urgent questions."})
+        _save_reply(conversation, '', '', started, False, 'QuotaExhausted')
+        return
+    except LLMUnavailable:
+        yield _sse_event({'type': 'error', 'error': 'Could not reach the assistant service. Please try again.'})
+        _save_reply(conversation, '', '', started, False, 'LLMUnavailable')
+        return
 
     try:
         function_call = None

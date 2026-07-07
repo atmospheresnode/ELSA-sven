@@ -146,21 +146,28 @@ class ChatEndpointTests(TestCase):
         self.assertEqual(followup[-1]['parts'][0]['functionResponse']['name'], 'submit_feedback')
 
     @patch('assistant.llm.requests.post')
-    def test_all_models_exhausted_maps_to_429(self, mock_post):
+    def test_all_models_exhausted_streams_error(self, mock_post):
+        # The SSE response starts before the model connects, so quota exhaustion
+        # arrives as an error event rather than an HTTP status.
         mock_post.return_value = FakeUpstream([], status_code=429)
         resp = self.post_chat({'message': 'hi'})
-        self.assertEqual(resp.status_code, 429)
-        self.assertIn('daily usage limit', resp.json()['error'])
+        self.assertEqual(resp.status_code, 200)
+        errors = [e for e in sse_events(resp) if e['type'] == 'error']
+        self.assertIn('daily usage limit', errors[0]['error'])
 
     @patch('assistant.llm.requests.post')
-    def test_fallback_to_next_model(self, mock_post):
+    def test_fallback_to_next_model_with_status_event(self, mock_post):
         mock_post.side_effect = [
             FakeUpstream([], status_code=429),
             FakeUpstream(['Fallback OK']),
         ]
         resp = self.post_chat({'message': 'hi'})
-        done = [e for e in sse_events(resp) if e['type'] == 'done'][0]
+        events = sse_events(resp)
+        done = [e for e in events if e['type'] == 'done'][0]
         self.assertEqual(done['reply'], 'Fallback OK')
+        # The user was told a backup model is being tried
+        statuses = [e for e in events if e['type'] == 'status']
+        self.assertTrue(statuses and 'backup' in statuses[0]['text'])
 
     @patch('assistant.views.RATE_LIMIT_PER_MINUTE', 2)
     @patch('assistant.llm.requests.post')
