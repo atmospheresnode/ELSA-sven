@@ -7,9 +7,9 @@ entries. The first, required entry documents the date the product was first
 registered.
 
 Attributes of Modification_Detail (all required):
-- modification_date [1..1] — the date of that round of modification.
-- version_id [1..1] — the product version this modification produced (e.g. 1.0).
-- description [1..1] — what changed in this round.
+- modification_date [1..1], the date of that round of modification.
+- version_id [1..1], the product version this modification produced (e.g. 1.0).
+- description [1..1], what changed in this round.
 
 In ELSA: Modification History is one of the three required components before an
 External bundle can be submitted. For a new bundle, the first entry typically has

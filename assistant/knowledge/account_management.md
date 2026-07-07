@@ -12,14 +12,14 @@ in ELSA, follow these steps:
    - **First name** and **Last name**
    - **Email address**
    - **Agency** (NASA, ESA, or JAXA)
-   - **Password** — enter your current password plus the new password twice.
+   - **Password**, enter your current password plus the new password twice.
      If the current password is wrong or the new passwords don't match, ELSA
      shows an error page and nothing is changed.
 5. Save the form. ELSA emails you a confirmation that your profile was updated
    (if you didn't make the change, report it via the Contact page).
 
-Forgot your password? Use the **password reset** link on the login page — ELSA
+Forgot your password? Use the **password reset** link on the login page, ELSA
 emails you a reset link to set a new password without logging in.
 
-The username itself (login name) cannot be changed from the Settings page —
+The username itself (login name) cannot be changed from the Settings page -
 contact the ELSA team via the Contact page if you need that changed.

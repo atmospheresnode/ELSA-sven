@@ -2,7 +2,7 @@
 
 PDS4 Information Model (v1.24 / 1O00): the Target_Identification class provides
 detailed target identification information in a product's Context_Area.
-Attributes: name [1..1] (required), type [1..*] (required — e.g. Planet,
+Attributes: name [1..1] (required), type [1..*] (required, e.g. Planet,
 Satellite, Comet), alternate_designation [0..*], description [0..1], and an
 optional Internal_Reference pointing at the target's context product
 (lid_reference + reference_type required).

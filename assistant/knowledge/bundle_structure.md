@@ -3,7 +3,7 @@
 PDS4 Information Model (v1.24 / 1O00): a Product_Bundle is an aggregate product
 holding a table of references to one or more collections. Its label contains a
 required Identification_Area, an optional Context_Area, a Bundle class
-(bundle_type [1..1] — "Archive" for delivery to the PDS, "Supplemental"
+(bundle_type [1..1], "Archive" for delivery to the PDS, "Supplemental"
 otherwise; plus optional description), and one or more Bundle_Member_Entry
 records (lid_reference, member_status, and reference_type all required).
 
