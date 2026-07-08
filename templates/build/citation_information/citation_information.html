@@ -37,6 +37,24 @@
                         </div>
 
                         <p class="text-muted small">* Organizations should be set to 0 unless used.</p>
+                        <hr>
+
+                        <!-- Editors -->
+                        <h5 class="fw-semibold mt-3 mb-2">Editors</h5>
+                        <p class="text-muted small mb-2">
+                            Lynn Neakrase and Lyle Huber (PDS Atmospheres node staff) are always included
+                            as editors automatically. If you want additional editors, enter how many below;
+                            you will type their names on the next page.
+                        </p>
+                        <div class="mb-3">
+                            <label class="form-label">Additional Editors: Number of Persons</label>
+                            {{ form_citation_information.number_of_editors_people }}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Additional Editors: Number of Organizations</label>
+                            {{ form_citation_information.number_of_editors_organization }}
+                        </div>
+
 
                         <hr>
 
