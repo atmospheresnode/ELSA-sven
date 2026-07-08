@@ -104,21 +104,54 @@ def build_system_prompt(user, page_path=None, query=''):
         from build.models import Bundle
         bundles = Bundle.objects.filter(user=user).order_by('-updated_at')[:20]
         if bundles:
-            lines.append("\nTHE USER'S BUNDLES:")
+            lines.append("\nTHE USER'S BUNDLES (with completion details):")
             for b in bundles:
-                try:
-                    status = b.get_status().replace('_', ' ')
-                except Exception:
-                    status = 'unknown'
-                submitted = ''
-                if b.submitted_at:
-                    submitted = f", last submitted {b.submitted_at.strftime('%Y-%m-%d')}"
-                lines.append(
-                    f"- {_user_data(b.name)} ({b.bundle_type} bundle, status: {status}{submitted})"
-                )
+                lines.append(_bundle_summary(b))
         else:
             lines.append("\nTHE USER'S BUNDLES: none yet. They may need help creating their first bundle.")
     except Exception:
         lines.append("\n(The user's bundle list is unavailable right now.)")
 
     return '\n'.join(lines)
+
+
+def _bundle_summary(b):
+    """One prompt line per bundle: status plus which required components are missing."""
+    try:
+        status = b.get_status().replace('_', ' ')
+    except Exception:
+        status = 'unknown'
+    submitted = ''
+    if b.submitted_at:
+        submitted = f", last submitted {b.submitted_at.strftime('%Y-%m-%d')}"
+
+    detail = ''
+    try:
+        done, missing = [], []
+        for label, exists in [
+            ('Modification History', b.modification_history_set.exists()),
+            ('Citation Information', b.citation_information_set.exists()),
+            ('Targets', b.targets.exists()),
+        ]:
+            (done if exists else missing).append(label)
+        if missing:
+            detail = f"; missing required: {', '.join(missing)}"
+            if done:
+                detail += f"; already has: {', '.join(done)}"
+        else:
+            detail = '; all required components complete'
+        try:
+            from build.models import Alias
+            if not Alias.objects.filter(bundle=b).exists():
+                detail += '; Alias not set (optional)'
+        except Exception:
+            pass
+        try:
+            netcdf_count = b.netcdffile_set.count()
+            detail += f'; {netcdf_count} NetCDF file{"s" if netcdf_count != 1 else ""} uploaded'
+        except Exception:
+            pass
+    except Exception:
+        pass
+
+    return f"- {_user_data(b.name)} ({b.bundle_type} bundle, status: {status}{submitted}{detail})"
