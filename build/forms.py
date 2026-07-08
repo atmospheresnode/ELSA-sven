@@ -201,14 +201,14 @@ class CitationInformationForm(forms.ModelForm):
     #     'class': 'form-control form-outline',
     #     'id': 'author_list'
     # }))
-    number_of_authors_people = forms.IntegerField(required=True, min_value=0, widget= forms.NumberInput(attrs={
+    number_of_authors_people = forms.IntegerField(required=True, min_value=0, initial=0, widget= forms.NumberInput(attrs={
         'class': 'form-control form-outline',
-        'id': 'number of authors (people) for List_Author'
+        'id': 'id_number_of_authors_people'
     }))
 
-    number_of_authors_organization = forms.IntegerField(required=True, min_value=0, widget= forms.NumberInput(attrs={
+    number_of_authors_organization = forms.IntegerField(required=True, min_value=0, initial=0, widget= forms.NumberInput(attrs={
         'class': 'form-control form-outline',
-        'id': 'number of authors (organization) for List_Author'
+        'id': 'id_number_of_authors_organization'
     }))
 
     ##

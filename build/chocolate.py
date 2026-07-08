@@ -53,16 +53,12 @@ def is_netcdf_file(file_obj):
     return False
 
 
-# make_directory makes a directory at the given path.  If the path already exists, it does nothing.  Without having the second condition, our page would throw an error if the path already exists.  
+# make_directory makes a directory at the given path (including any missing parent
+# directories). If the path already exists, it does nothing. Real failures (disk full,
+# permissions) must raise: swallowing them used to let bundle creation continue without
+# a directory, which produced half-created bundles that 500 on every later page load.
 def make_directory(path):
-    try:
-        os.mkdir(path)
-    except OSError as e: 
-        print(e)  
-        if e.errno ==17:
-            # Dir already exists.
-            # Elsa will use the existing directory
-            pass
+    os.makedirs(path, exist_ok=True)
 
 # make_tarfile creates a tarfile with name output_filename, and of a given directory, source_directory.
 # We want to make a tarfile when a user downloads a bundle.  The user selects to download, ELSA turns the 

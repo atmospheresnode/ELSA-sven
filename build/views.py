@@ -395,7 +395,18 @@ def build(request):
             print('Bundle model object: {}'.format(bundle))
 
             # Build PDS4 Compliant Bundle directory in User Directory.
-            bundle.build_directory()
+            # If the filesystem refuses (disk full, missing user directory,
+            # permissions), remove the just-saved Bundle record: leaving it
+            # behind produces a bundle that 500s on every page load.
+            try:
+                bundle.build_directory()
+            except OSError as e:
+                print('Bundle directory creation failed: {}'.format(e))
+                bundle.delete()
+                form_bundle.add_error(None,
+                    'ELSA could not create the bundle because of a server storage problem. '
+                    'Please try again later or contact the ELSA team via the Contact page.')
+                return render(request, 'build/build.html', context_dict)
             print('Bundle directory: {}'.format(bundle.directory()))
 
             # Create Product_Bundle model.
@@ -787,7 +798,13 @@ def bundle(request, pk_bundle):
         # Following code is to get xml content of bundle xml files
         # Temporary testing, will be better to add this to chocoloate.py as it's likely we want to do this multiple times
         # Said Ajo :/
-        prod_bundle = Product_Bundle.objects.get(bundle=bundle)
+        # A bundle whose creation crashed partway (e.g. disk full) has no
+        # Product_Bundle; send the user back to the hub instead of a 500.
+        try:
+            prod_bundle = Product_Bundle.objects.get(bundle=bundle)
+        except Product_Bundle.DoesNotExist:
+            print('Bundle {} has no Product_Bundle (creation likely failed); redirecting.'.format(bundle.pk))
+            return HttpResponseRedirect(reverse('friends:bundle_hub'))
         prod_col_list = Product_Collection.objects.filter(bundle=bundle)
         labels = []
         labels.append(prod_bundle)
@@ -795,8 +812,16 @@ def bundle(request, pk_bundle):
         xml_content_set = []
         for label in labels:
         # parser = etree.XMLParser(remove_blank_text=False, remove_comments=False)
-            tree = etree.parse(label.label())
-            xml_content = etree.tostring(tree, pretty_print=True, encoding='unicode')
+            # A missing or corrupt label (interrupted write, full disk) must not
+            # make the whole bundle page unreachable.
+            try:
+                tree = etree.parse(label.label())
+                xml_content = etree.tostring(tree, pretty_print=True, encoding='unicode')
+            except (OSError, etree.XMLSyntaxError) as e:
+                print('Could not read label {}: {}'.format(label.label(), e))
+                xml_content = ('<!-- This label file could not be read ({}). '
+                               'Please contact the ELSA team via the Contact page. -->'
+                               .format(type(e).__name__))
             xml_content_set.append(xml_content)
 
 
@@ -912,27 +937,50 @@ def bundle(request, pk_bundle):
             if form_netcdf.is_valid():
                 files = form_netcdf.cleaned_data['netcdf_files']
 
-                created_objs = []
-                for f in files:
-                    if not is_netcdf_file(f):
-                        return JsonResponse(
-                            {'error': '"{}" is not a valid NetCDF file. Only NetCDF classic, 64-bit, or HDF5-based files are accepted.'.format(f.name)},
-                            status=400
-                        )
-
-                    file_title = f.name
-                    if len(file_title) > 100:
-                        file_title = file_title[:100]
-
-                    # Create the NetCDFFile object using your model's fields
-                    netcdf_obj = NetCDFFile(
-                        bundle=bundle,
-                        file=f,
-                        title=file_title
+                # Refuse the upload up front if the disk can't hold it (plus a
+                # safety margin) - running out of space mid-write corrupts labels
+                # and used to leave the whole bundle 500ing.
+                import shutil as _shutil
+                total_upload = sum(getattr(f, 'size', 0) for f in files)
+                free_bytes = _shutil.disk_usage(settings.ARCHIVE_DIR).free
+                margin = 2 * 1024 ** 3  # keep 2 GB headroom for labels and other users
+                if total_upload + margin > free_bytes:
+                    print('Upload rejected: needs {} bytes, only {} free'.format(total_upload, free_bytes))
+                    return JsonResponse(
+                        {'error': 'The server does not have enough storage space for this upload right now. '
+                                  'The ELSA team has been made aware of storage issues; please try again later or contact us via the Contact page.'},
+                        status=507
                     )
 
-                    netcdf_obj.save()
-                    created_objs.append(netcdf_obj)
+                created_objs = []
+                try:
+                    for f in files:
+                        if not is_netcdf_file(f):
+                            return JsonResponse(
+                                {'error': '"{}" is not a valid NetCDF file. Only NetCDF classic, 64-bit, or HDF5-based files are accepted.'.format(f.name)},
+                                status=400
+                            )
+
+                        file_title = f.name
+                        if len(file_title) > 100:
+                            file_title = file_title[:100]
+
+                        # Create the NetCDFFile object using your model's fields
+                        netcdf_obj = NetCDFFile(
+                            bundle=bundle,
+                            file=f,
+                            title=file_title
+                        )
+
+                        netcdf_obj.save()
+                        created_objs.append(netcdf_obj)
+                except OSError as e:
+                    print('NetCDF upload failed writing to disk: {}'.format(e))
+                    return JsonResponse(
+                        {'error': 'The server could not store the uploaded file (storage problem). '
+                                  'Please try again later or contact the ELSA team via the Contact page.'},
+                        status=507
+                    )
 
 
                 if created_objs:
@@ -3789,23 +3837,39 @@ def index(request, path):
         return _index(eventual_path)
    
     def retrieve_content(inpath):
+        # A bundle whose directory is missing (failed creation, manual cleanup)
+        # should show an empty file list, not a 500.
+        if not os.path.isdir(inpath):
+            print('retrieve_content: directory missing, skipping: {}'.format(inpath))
+            return []
         contents = os.listdir(inpath)
         results = []
         for mfile in contents:
             t = os.path.join(inpath, mfile)
             if os.path.isfile(t):
+                # Only XML labels are previewable. Uploaded data files (e.g.
+                # NetCDF binaries) live in the same directory since the June
+                # uploader changes; parsing them as XML crashed every bundle
+                # page load after the first upload.
+                if not mfile.lower().endswith('.xml'):
+                    continue
                 link_target = os.path.relpath(t, start=os.path.join(
                     _get_abs_virtual_root(), 'archive/'))
-                
-                tree = etree.parse(os.path.join(settings.ARCHIVE_DIR, link_target))
-                xml_content = etree.tostring(tree, pretty_print=True, encoding='unicode')
+
+                try:
+                    tree = etree.parse(os.path.join(settings.ARCHIVE_DIR, link_target))
+                    xml_content = etree.tostring(tree, pretty_print=True, encoding='unicode')
+                except (OSError, etree.XMLSyntaxError) as e:
+                    print('retrieve_content: unreadable label {}: {}'.format(t, e))
+                    xml_content = ('<!-- This label file could not be read. '
+                                   'Please contact the ELSA team via the Contact page. -->')
 
                 results.append([mfile, xml_content])
             if os.path.isdir(t):
                 link_target = os.path.relpath(t, start=os.path.join(
                     _get_abs_virtual_root(), 'archive/'))
                 results.extend(retrieve_content(os.path.join(inpath, t)))
- 
+
         return results
  
  
