@@ -6,7 +6,7 @@ from django.core.cache import cache
 from django.test import SimpleTestCase, TestCase, override_settings
 
 from .models import Conversation, Message
-from .prompts import _page_context, _user_data, build_system_prompt
+from .prompts import _bundle_summary, _page_context, _user_data, build_system_prompt
 from .retriever import retrieve
 from .views import _send_feedback_email
 
@@ -255,6 +255,31 @@ class RetrieverTests(SimpleTestCase):
 
     def test_gibberish_returns_nothing_relevant(self):
         self.assertEqual(retrieve('xyzzy plugh'), [])
+
+
+class BundleSummaryTests(SimpleTestCase):
+
+    def make_bundle(self, mod=True, cit=False, targets=False, netcdf=2):
+        b = MagicMock()
+        b.name = 'Now'
+        b.bundle_type = 'External'
+        b.get_status.return_value = 'in_progress'
+        b.submitted_at = None
+        b.modification_history_set.exists.return_value = mod
+        b.citation_information_set.exists.return_value = cit
+        b.targets.exists.return_value = targets
+        b.netcdffile_set.count.return_value = netcdf
+        return b
+
+    def test_missing_components_are_listed(self):
+        line = _bundle_summary(self.make_bundle())
+        self.assertIn('missing required: Citation Information, Targets', line)
+        self.assertIn('already has: Modification History', line)
+        self.assertIn('2 NetCDF files', line)
+
+    def test_complete_bundle(self):
+        line = _bundle_summary(self.make_bundle(mod=True, cit=True, targets=True))
+        self.assertIn('all required components complete', line)
 
 
 class PromptTests(TestCase):
