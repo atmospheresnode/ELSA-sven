@@ -1316,11 +1316,15 @@ def bulk_delete_netcdf(request, pk_bundle):
                 try:
                     netcdf_file = NetCDFFile.objects.get(pk=netcdf_id, bundle=bundle)
 
-                    # Delete the corresponding XML label from the archive
+                    # Delete the corresponding XML label from the archive.
+                    # Label naming must mirror _process_single_netcdf: uploads may be
+                    # extensionless, so strip a trailing .nc only if present and always
+                    # append .xml (a bare .replace('.nc', '.xml') misses extensionless
+                    # files and mangles names with '.nc' in the middle).
+                    nc_filename = os.path.basename(netcdf_file.file.name)
                     try:
-                        nc_filename = os.path.basename(netcdf_file.file.name)
-                        xml_filename = nc_filename.replace('.nc', '.xml')
-                        xml_path = os.path.join(bundle.directory(), xml_filename)
+                        nc_name = nc_filename[:-3] if nc_filename.endswith('.nc') else nc_filename
+                        xml_path = os.path.join(bundle.directory(), nc_name + '.xml')
                         if os.path.exists(xml_path):
                             os.remove(xml_path)
                             print('Deleted XML file: {}'.format(xml_path))
@@ -1329,10 +1333,22 @@ def bulk_delete_netcdf(request, pk_bundle):
                     except Exception as e:
                         print('Could not delete XML for {}: {}'.format(netcdf_id, e))
 
-                    # Delete NetCDF file from disk
-                    if netcdf_file.file and os.path.exists(netcdf_file.file.path):
-                        os.remove(netcdf_file.file.path)
-                        print('Deleted file: {}'.format(netcdf_file.file.path))
+                    # Delete NetCDF file from disk. Processing moves the file from the
+                    # upload location into the bundle directory, so check there first;
+                    # fall back to the original upload path for unprocessed files.
+                    candidates = [os.path.join(bundle.directory(), nc_filename)]
+                    try:
+                        if netcdf_file.file:
+                            candidates.append(netcdf_file.file.path)
+                    except Exception:
+                        pass
+                    for nc_path in candidates:
+                        if os.path.exists(nc_path):
+                            os.remove(nc_path)
+                            print('Deleted file: {}'.format(nc_path))
+                            break
+                    else:
+                        print('NetCDF file not found on disk (already removed?): {}'.format(nc_filename))
 
                     # Delete DB record
                     netcdf_file.delete()
