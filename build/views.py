@@ -727,7 +727,72 @@ def bundle(request, pk_bundle):
         additional_collections_set = AdditionalCollections.objects.filter(bundle=bundle)
 
         # get citation information associated with bundle
+        # citation_information_set = Citation_Information.objects.filter(bundle=bundle)
+
         citation_information_set = Citation_Information.objects.filter(bundle=bundle)
+
+        product_bundle = Product_Bundle.objects.get(bundle=bundle)
+        label_list = open_label_with_tree(product_bundle.label())
+        label_root = label_list[1]
+
+        identification_area = label_root.find('{}Identification_Area'.format(NAMESPACE))
+        citation_xml = identification_area.find('{}Citation_Information'.format(NAMESPACE))
+
+        for citation_information in citation_information_set:
+            citation_information.display_authors = []
+            citation_information.display_editors = []
+
+            if citation_xml is not None:
+                list_author = citation_xml.find('{}List_Author'.format(NAMESPACE))
+
+                if list_author is not None:
+                    for person in list_author.findall('{}Person'.format(NAMESPACE)):
+                        given = person.findtext('{}given_name'.format(NAMESPACE), default='')
+                        family = person.findtext('{}family_name'.format(NAMESPACE), default='')
+                        affiliation = person.find('{}Affiliation'.format(NAMESPACE))
+
+                        organization = ''
+                        if affiliation is not None:
+                            organization = affiliation.findtext('{}organization_name'.format(NAMESPACE), default='')
+
+                        citation_information.display_authors.append({
+                            'type': 'Person',
+                            'name': f'{given} {family}'.strip(),
+                            'organization': organization,
+                        })
+
+                    for org in list_author.findall('{}Organization'.format(NAMESPACE)):
+                        org_name = org.findtext('{}organization_name'.format(NAMESPACE), default='')
+                        parent_org = org.find('{}Parent_Organization'.format(NAMESPACE))
+
+                        parent_name = ''
+                        if parent_org is not None:
+                            parent_name = parent_org.findtext('{}parent_organization_name'.format(NAMESPACE), default='')
+
+                        citation_information.display_authors.append({
+                            'type': 'Organization',
+                            'name': org_name,
+                            'organization': parent_name,
+                        })
+
+                list_editor = citation_xml.find('{}List_Editor'.format(NAMESPACE))
+
+                if list_editor is not None:
+                    for person in list_editor.findall('{}Person'.format(NAMESPACE)):
+                        given = person.findtext('{}given_name'.format(NAMESPACE), default='')
+                        family = person.findtext('{}family_name'.format(NAMESPACE), default='')
+                        affiliation = person.find('{}Affiliation'.format(NAMESPACE))
+
+                        organization = ''
+                        if affiliation is not None:
+                            organization = affiliation.findtext('{}organization_name'.format(NAMESPACE), default='')
+
+                        citation_information.display_editors.append({
+                            'type': 'Person',
+                            'name': f'{given} {family}'.strip(),
+                            'organization': organization,
+                        })
+
         modification_history_set = Modification_History.objects.filter(bundle=bundle)
         # get set of data collections currently associated with the bundle
         data_set = Data.objects.filter(bundle=bundle)
@@ -982,7 +1047,12 @@ def bundle(request, pk_bundle):
             # Create Citation_Information model object
             citation_information = form_citation_information.save(commit=False)
             citation_information.bundle = bundle
+            citation_information.number_of_editors_people = 2
+            citation_information.number_of_editors_organization = 0
+            print("EDITOR PEOPLE:", getattr(citation_information, "number_of_editors_people", "MISSING"))
+            print("EDITOR ORGS:", getattr(citation_information, "number_of_editors_organization", "MISSING"))
             citation_information.save()
+            print("CITATION SAVE SUCCESSFUL")
             print('Citation Information model object: {}'.format(citation_information))
 
             product_bundle = Product_Bundle.objects.get(bundle=bundle)
@@ -1581,6 +1651,10 @@ def citation_information(request, pk_bundle):
             # Create Citation_Information model object
             citation_information = form_citation_information.save(commit=False)
             citation_information.bundle = bundle
+
+            # Default editors (Lynn Neakrase and Lyle Huber)
+            citation_information.number_of_editors_people = 2
+            citation_information.number_of_editors_organization = 0
             citation_information.save()
             print('Citation Information model object: {}'.format(citation_information))
             
