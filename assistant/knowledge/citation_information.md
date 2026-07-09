@@ -24,10 +24,13 @@ Attributes (per the PDS4 IM):
   person_orcid optional, plus optional Affiliation with organization_name) and/or
   Organization entries (organization_name required, organization_rorid optional).
 
-In ELSA: the Citation Information form collects the author list, publication year,
-description, and optional keywords for a bundle. The editors are added
-automatically by ELSA, PDS Atmospheres node staff (Lynn Neakrase and Lyle Huber,
-NASA PDS Atmospheres Node, New Mexico State University) are recorded as editors
-with their ORCIDs, so users do not enter editors themselves. Citation Information
-is one of the three required components before an External bundle can be
+In ELSA: the Citation Information form collects the author count, publication
+year, description, and optional keywords for a bundle; author names are entered
+on the next page. Two editors are always included automatically: PDS Atmospheres
+node staff Lynn Neakrase and Lyle Huber (NASA PDS Atmospheres Node, New Mexico
+State University), recorded with their ORCIDs; these two are fixed and cannot be
+changed. Users can optionally add MORE editors of their own: enter how many
+additional editor persons/organizations on the citation form, then fill in
+their names on the citation details page (Editors tab). Citation Information is
+one of the three required components before an External bundle can be
 submitted.

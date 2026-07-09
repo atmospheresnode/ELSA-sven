@@ -7,8 +7,9 @@ PDS4 metadata bundle describing it.
 
 To make an External bundle ready to submit, three components are REQUIRED:
 1. Modification History, at least one dated version entry.
-2. Citation Information, authors, publication year, description (editors are
-   added automatically by Atmospheres node staff).
+2. Citation Information, authors, publication year, description. Two ATM
+   node editors (Lynn Neakrase, Lyle Huber) are included automatically, and
+   users may add extra editors of their own if they wish.
 3. Targets, at least one target (e.g. Mars) selected from the context list.
 
 Alias is optional (yellow "Optional" badge) and never blocks submission.
