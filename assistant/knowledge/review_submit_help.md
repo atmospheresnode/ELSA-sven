@@ -9,9 +9,12 @@ Submitting notifies the Atmospheres node staff by email; they review the bundle
 for PDS4 compliance and archive readiness. You can keep editing after
 submission and resubmit, the bundle page shows when it was last submitted.
 
-There is also a review area in ELSA where bundle reviews are drafted, and a
-submit section for uploading archive or external bundle files directly to the
-node.
+There is also a Review area in ELSA with a bundle review form: reviewers fill
+it out, can save a draft and resume later (the draft is remembered in the
+browser), and the completed review can be generated as a DOCX or PDF document.
+A separate Submit section lets users upload archive or external bundle files
+directly to the node with a description; uploads appear in a submission
+history and the team is emailed automatically.
 
 Getting help:
 - **Tutorial** pages: step-by-step guides on building a bundle, bundles and
