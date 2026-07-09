@@ -166,6 +166,21 @@ def _bundle_summary(b):
             detail += f'; {netcdf_count} NetCDF file{"s" if netcdf_count != 1 else ""} uploaded'
         except Exception:
             pass
+        # What the bundle is about: citation description, keywords, and targets
+        try:
+            citation = b.citation_information_set.first()
+            if citation is not None and citation.description:
+                detail += f'; about: {_user_data(citation.description[:180])}'
+            if citation is not None and citation.keyword:
+                detail += f'; keywords: {_user_data(citation.keyword[:80])}'
+        except Exception:
+            pass
+        try:
+            target_names = [t for t in b.targets.values_list('name', flat=True)[:4] if t]
+            if target_names:
+                detail += f'; targets: {", ".join(target_names)}'
+        except Exception:
+            pass
     except Exception:
         pass
 
