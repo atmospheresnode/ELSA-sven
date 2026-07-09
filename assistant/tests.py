@@ -188,6 +188,23 @@ class ChatEndpointTests(TestCase):
         errors = [e for e in sse_events(resp) if e['type'] == 'error']
         self.assertIn('could not answer', errors[0]['error'])
 
+    @patch('assistant.llm.requests.post')
+    def test_failed_model_goes_on_cooldown(self, mock_post):
+        # First request: model A 429s, model B serves. Second request: model A
+        # is skipped entirely (no new probe), so only one more HTTP call happens.
+        mock_post.side_effect = [
+            FakeUpstream([], status_code=429),
+            FakeUpstream(['One']),
+            FakeUpstream(['Two']),
+        ]
+        # The response is a lazy stream: consume it so the generator runs.
+        done1 = [e for e in sse_events(self.post_chat({'message': 'hi'})) if e['type'] == 'done'][0]
+        self.assertEqual(done1['reply'], 'One')
+        self.assertEqual(mock_post.call_count, 2)
+        done2 = [e for e in sse_events(self.post_chat({'message': 'again'})) if e['type'] == 'done'][0]
+        self.assertEqual(done2['reply'], 'Two')
+        self.assertEqual(mock_post.call_count, 3)  # cooled model skipped
+
     @patch('assistant.views.RATE_LIMIT_PER_MINUTE', 2)
     @patch('assistant.llm.requests.post')
     def test_per_user_rate_limit(self, mock_post, *_):
