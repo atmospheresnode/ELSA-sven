@@ -69,6 +69,20 @@ deployment after checking out this branch:
 
 4. **Migrate** — `python3 manage.py migrate assistant`
 
+5. **Cache table** — the rate limiter needs a cross-process cache. Add to
+   `elsa/settings.py`:
+
+   ```python
+   CACHES = {
+       'default': {
+           'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
+           'LOCATION': 'elsa_cache_table',
+       }
+   }
+   ```
+
+   then run `python3 manage.py createcachetable`.
+
 ## Quota / billing note
 
 The free tier is ~20 requests/day/model (the chain gives ~100/day total). For a

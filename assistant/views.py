@@ -199,6 +199,7 @@ def _sse_stream(client, user, conversation, system_prompt, contents, started):
         _save_reply(conversation, '', '', started, False, 'LLMUnavailable')
         return
 
+    finish_reason = ''
     try:
         function_call = None
         for event in client.iter_events(upstream):
@@ -208,6 +209,8 @@ def _sse_stream(client, user, conversation, system_prompt, contents, started):
                 yield _sse_event({'type': 'delta', 'text': delta})
             elif 'function_call' in event:
                 function_call = event['function_call']
+            elif 'finish_reason' in event:
+                finish_reason = event['finish_reason']
 
         if function_call and function_call.get('name') == 'submit_feedback':
             args = function_call.get('args', {})
@@ -239,9 +242,22 @@ def _sse_stream(client, user, conversation, system_prompt, contents, started):
             return
 
     if not accumulated.strip():
-        yield _sse_event({'type': 'error', 'error': 'The assistant returned an empty response. Please try again.'})
-        _save_reply(conversation, '', model, started, feedback_sent, error_note or 'empty')
+        if finish_reason and finish_reason != 'MAX_TOKENS':
+            # Blocked by the provider (SAFETY, RECITATION, ...): be honest about it.
+            yield _sse_event({'type': 'error', 'error': 'The assistant could not answer that request. Please rephrase and try again, or use the Contact page.'})
+            _save_reply(conversation, '', model, started, feedback_sent, f'blocked:{finish_reason}')
+        else:
+            yield _sse_event({'type': 'error', 'error': 'The assistant returned an empty response. Please try again.'})
+            _save_reply(conversation, '', model, started, feedback_sent, error_note or 'empty')
         return
+
+    if finish_reason == 'MAX_TOKENS':
+        # The reply was cut off at the output limit; tell the user rather than
+        # ending mid-sentence as if nothing happened.
+        note = '\n\n*(This reply hit the length limit and was cut short. Ask me to continue for the rest.)*'
+        accumulated += note
+        yield _sse_event({'type': 'delta', 'text': note})
+        error_note = error_note or 'truncated:MAX_TOKENS'
 
     # The model occasionally echoes the internal <user_data> markup — scrub it.
     final_text = re.sub(r'</?user_data>', '', accumulated).strip()

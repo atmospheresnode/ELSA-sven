@@ -25,8 +25,12 @@ class FakeUpstream:
 
     def iter_lines(self, decode_unicode=True):
         for chunk in self._chunks:
-            part = {'text': chunk} if isinstance(chunk, str) else chunk
-            payload = json.dumps({'candidates': [{'content': {'parts': [part]}}]})
+            if isinstance(chunk, dict) and '__finish__' in chunk:
+                payload = json.dumps({'candidates': [{'content': {'parts': []},
+                                                      'finishReason': chunk['__finish__']}]})
+            else:
+                part = {'text': chunk} if isinstance(chunk, str) else chunk
+                payload = json.dumps({'candidates': [{'content': {'parts': [part]}}]})
             yield f'data: {payload}'
             yield ''
 
@@ -170,6 +174,20 @@ class ChatEndpointTests(TestCase):
         self.assertTrue(statuses)
         self.assertNotIn('model', statuses[0]['text'].lower())
 
+    @patch('assistant.llm.requests.post')
+    def test_truncated_reply_gets_a_note(self, mock_post):
+        mock_post.return_value = FakeUpstream(['Partial answer', {'__finish__': 'MAX_TOKENS'}])
+        resp = self.post_chat({'message': 'hi'})
+        done = [e for e in sse_events(resp) if e['type'] == 'done'][0]
+        self.assertIn('cut short', done['reply'])
+
+    @patch('assistant.llm.requests.post')
+    def test_safety_block_gives_clear_error(self, mock_post):
+        mock_post.return_value = FakeUpstream([{'__finish__': 'SAFETY'}])
+        resp = self.post_chat({'message': 'hi'})
+        errors = [e for e in sse_events(resp) if e['type'] == 'error']
+        self.assertIn('could not answer', errors[0]['error'])
+
     @patch('assistant.views.RATE_LIMIT_PER_MINUTE', 2)
     @patch('assistant.llm.requests.post')
     def test_per_user_rate_limit(self, mock_post, *_):
@@ -301,6 +319,11 @@ class PromptTests(TestCase):
         self.assertEqual(wrapped, '<user_data>evilinjection</user_data>')
 
     def test_page_context_static_pages(self):
-        self.assertIn('Bundle Hub', _page_context(self.user, '/elsa/accounts/profile/'))
+        # Real ELSA paths: hub lives at /accounts/bundles/, account at
+        # /accounts/useraccount/, settings at /accounts/<pk>/settings/
+        self.assertIn('Bundle Hub', _page_context(self.user, '/elsa/accounts/bundles/'))
+        self.assertIn('Account page', _page_context(self.user, '/elsa/accounts/useraccount/'))
+        self.assertIn('Settings page', _page_context(self.user, '/elsa/accounts/17/settings/'))
+        self.assertIn('profile page', _page_context(self.user, '/elsa/accounts/17/'))
         self.assertIsNone(_page_context(self.user, '/elsa/build/999999/'))
         self.assertIsNone(_page_context(self.user, ''))
