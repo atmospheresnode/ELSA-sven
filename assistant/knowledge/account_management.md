@@ -1,3 +1,4 @@
+<!-- watches: friends/views.py, friends/urls.py, friends/forms.py -->
 # Account Settings: Update Your Name, Email, Agency, or Password
 
 To update your name (first or last name), email address, agency, or password

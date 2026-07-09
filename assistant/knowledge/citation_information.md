@@ -1,3 +1,4 @@
+<!-- watches: build/forms.py, build/models.py, templates/build/citation_information -->
 # Citation Information
 
 PDS4 Information Model (v1.24 / 1O00): the Citation_Information class provides the

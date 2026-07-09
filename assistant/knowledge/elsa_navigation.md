@@ -1,3 +1,4 @@
+<!-- watches: templates/base-derk.html, templates/friends/bundle_hub.html, build/urls.py -->
 # Navigating ELSA
 
 Key pages:
