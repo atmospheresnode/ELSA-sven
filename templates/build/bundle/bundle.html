@@ -1225,98 +1225,176 @@
                         
                         {% else %}
 
-                        <div class="row px-2">
-                           <!--This logic needs to be changed: When exists, it displays list author and list editor as carousel-->
-                           <!--For now, it is displaying the same thing as when nothing exists; which is the main form to add citation information-->
-                           <form action="{% url 'build:bundle' bundle.pk %}?next=bundle" method="post" id="form_citation_information"> 
-                              {% csrf_token %}
-                              
-                              <!-- Author List -->
-                              <h6 class="mt-4 mb-1 fw-semibold">Authors <span class="fw-normal fst-italic text-muted">(data providers)</span></h6>
-                              <div class="mt-3">
-                                 <label for="author_list">Number of Persons</label>
-                                 {{ form_citation_information.number_of_authors_people }}
-                              </div>
-
-                              <div class="mt-3">
-                                 <label for="author_list">Number of Organizations*</label>
-                                 {{ form_citation_information.number_of_authors_organization }}
-                              </div>
-
-                              <p class="text-muted small mt-2">* Organizations should be set to 0 unless used.</p>
-
-                              <!-- Keyword -->
-                              <div class="mt-3">
-                                 <label for="keyword">Keyword</label>
-                                 {{ form_citation_information.keyword }}
-                              </div>
-
-                              <!-- Publication Year -->
-                              <div class="mt-3">
-                                 <label for="publication_year">Publication Year<span class="text-danger" title="This field is required">*</span></label>
-                                 {{ form_citation_information.publication_year }}
-                              </div>
-
-                              <!-- Description -->
-                              <div class="mt-3">
-                                 <label for="mod_desc">Description<span class="text-danger" title="This field is required">*</span></label>
-                                 {{ form_citation_information.description }}
-                              </div>
-
-                              {{ form_citation_information.errors }}
-
-                              <!-- Create Citation Information -->
-                              <button type="submit" class="btn btn-light text-light my-4">Create Citaiton Information</button>
-                           </form>
-                        </div>
+                            <div class="alert alert-info mt-4">
+                              Citation Information already exists for this bundle.
+                              PDS4 allows one Citation Information section per bundle.
+                              Edit or delete the existing citation information below.
+                           </div>
 
 
                         {% endif %}
                         
 
                         <!-- List of Citation Information Snippets -->
-                        <div class="modal-footer justify-content-start">
-                           <!-- No Citation Information Snippets Exist -->
-                           {% if citation_information_set_count == 0 %}
-                              <p>No Citation Information Found</p>
-                           
-                           <!-- Display Citation Information Snippets -->
-                           {% else %}
-                              {% for citation_information in citation_information_set %}
-                              <div class="card snippet-card ms-0 me-3">
-                                 <div class="card-body">
-                                    <p class="card-text">Author List: {{ citation_information.author_list }}</p>
-                                    <p class="card-text">Editor List: {{ citation_information.editor_list }}</p>
-                                    <p class="card-text">Keyword(s): {{ citation_information.editor_list }}</p>
-                                    <p class="card-text">Publication Year: {{ citation_information.publication_year }}</p>
-                                    <p class="card-text">Description: {{ citation_information.description }}</p>
-
-                                    <!-- The edit does not work yet. Prompting the user to delete the citaion info to make changes. -->
-                                    {% comment %} <form action="" method="post" style="display:inline;">
-                                       {% csrf_token %}
-                                       <button type="submit" class="btn btn-light btn-sm">Edit</button>
-                                    </form> {% endcomment %}
-
-                                    <!--COMMENTED OUT FOR TESTING PURPOSES-->
-                                    <!-- <button type="button" class="btn btn-light btn-sm"
-                                          onclick="alert('Edit functionality is currently under development.\nPlease delete and create a new citation to make any changes.\nWe apologize for the inconvenience!')">
-                                       Edit
-                                    </button> -->
-                                    <a href="{% url 'build:edit_citation_information' bundle.pk citation_information.pk %}?next=bundle"
-                                       class="btn btn-light btn-sm">
-                                       Edit
-                                    </a>
-                                 
-                                    <!--implementing citation delete-->
-                                    <form action="{% url 'build:citation_information_delete' bundle.pk citation_information.pk %}" method="post" style="display:inline;">
-                                       {% csrf_token %}
-                                       <button type="submit" class="btn btn-danger btn-sm">Delete</button>
-                                    </form>
-                                 </div>
+                        <div class="mt-4">
+                           <!--Display Current Citation Information-->
+                           {% for citation_information in citation_information_set %}
+                           <div class="card shadow-sm mt-3">
+                              <div class="card-header bg-light">
+                                 <h5 class="mb-0">
+                                    <i class="bi bi-journal-text me-2"></i>
+                                    Current Citation Information
+                                 </h5>
                               </div>
-                              {% endfor %}
 
-                           {% endif %}
+                              <div class="card-body">
+                                 <table class="table table-bordered table-hover mb-0">
+                                    <!-- <tr>
+                                       <th style="width:30%;">Author List</th>
+                                       <td>{{ citation_information.author_list|default:"-" }}</td>
+                                    </tr> -->
+                                    <!-- <tr>
+                                       <th style="width:30%;">Authors</th>
+                                       <td>
+                                          {{ citation_information.number_of_authors_people|default:"0" }} Person(s),
+                                          {{ citation_information.number_of_authors_organization|default:"0" }} Organization(s)
+                                       </td>
+                                    </tr>
+
+                                    <tr>
+                                       <th>Editors</th>
+                                       <td>
+                                          {{ citation_information.number_of_editors_people|default:"0" }} Person(s),
+                                          {{ citation_information.number_of_editors_organization|default:"0" }} Organization(s)
+                                       </td>
+                                    </tr> -->
+                                    <tr>
+                                       <th style="width:30%;">Authors</th>
+                                       <td>
+                                          <button class="btn btn-sm btn-outline-secondary"
+                                                type="button"
+                                                data-bs-toggle="collapse"
+                                                data-bs-target="#authorsCollapse{{ citation_information.pk }}"
+                                                aria-expanded="false">
+
+                                             {{ citation_information.number_of_authors_people|default:"0" }} Person(s),
+                                             {{ citation_information.number_of_authors_organization|default:"0" }} Organization(s)
+
+                                          </button>
+
+                                          <div class="collapse mt-2" id="authorsCollapse{{ citation_information.pk }}">
+                                             <div class="border rounded p-3 bg-light">
+
+                                                {% if citation_information.display_authors %}
+
+                                                   {% for author in citation_information.display_authors %}
+
+                                                      <div class="mb-3">
+
+                                                         <strong>{{ author.type }}</strong><br>
+
+                                                         {{ author.name }}<br>
+
+                                                         {% if author.organization %}
+                                                            <small class="text-muted">
+                                                               {{ author.organization }}
+                                                            </small>
+                                                         {% endif %}
+
+                                                      </div>
+
+                                                   {% endfor %}
+
+                                                {% else %}
+
+                                                   <em>No author information found.</em>
+
+                                                {% endif %}
+
+                                             </div>
+                                          </div>
+                                       </td>
+                                    </tr>
+
+                                    <tr>
+                                       <th>Editors</th>
+                                       <td>
+                                          <button class="btn btn-sm btn-outline-secondary"
+                                                type="button"
+                                                data-bs-toggle="collapse"
+                                                data-bs-target="#editorsCollapse{{ citation_information.pk }}"
+                                                aria-expanded="false">
+
+                                             {{ citation_information.display_editors|length }} Editor(s)
+
+                                          </button>
+
+                                          <div class="collapse mt-2" id="editorsCollapse{{ citation_information.pk }}">
+                                             <div class="border rounded p-3 bg-light">
+
+                                                {% if citation_information.display_editors %}
+
+                                                   {% for editor in citation_information.display_editors %}
+
+                                                      <div class="mb-3">
+
+                                                         <strong>{{ editor.name }}</strong><br>
+
+                                                         {% if editor.organization %}
+                                                            <small class="text-muted">
+                                                               {{ editor.organization }}
+                                                            </small>
+                                                         {% endif %}
+
+                                                      </div>
+
+                                                   {% endfor %}
+
+                                                {% else %}
+
+                                                   <em>No editor information found.</em>
+
+                                                {% endif %}
+
+                                             </div>
+                                          </div>
+                                       </td>
+                                    </tr>
+                                    <tr>
+                                       <th>Keyword(s)</th>
+                                       <td>{{ citation_information.keyword|default:"-" }}</td>
+                                    </tr>
+
+                                    <tr>
+                                       <th>Publication Year</th>
+                                       <td>{{ citation_information.publication_year|default:"-" }}</td>
+                                    </tr>
+
+                                    <tr>
+                                       <th>Description</th>
+                                       <td>{{ citation_information.description|default:"-" }}</td>
+                                    </tr>
+                                 </table>
+                              </div>
+                           </div>
+                           <br>
+                           <div class="card-footer d-flex justify-content-end gap-2">
+                              <a href="{% url 'build:edit_citation_information' bundle.pk citation_information.pk %}?next=bundle"
+                              class="btn btn-light" style="color:white;">
+                                 <i class="bi bi-pencil-fill"></i>
+                                 Edit
+                              </a>
+                        
+                              <!--implementing citation delete-->
+                              <form action="{% url 'build:citation_information_delete' bundle.pk citation_information.pk %}" method="post" style="display:inline;">
+                                 {% csrf_token %}
+                                 <button type="submit" class="btn btn-danger">
+                                    <i class="bi bi-trash-fill"></i>   
+                                    Delete
+                                 </button>
+                              </form> 
+                           </div>
+                           {% endfor %}
                         </div>
                      </div>
                   </div>
