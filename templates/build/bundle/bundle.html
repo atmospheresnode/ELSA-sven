@@ -1,6 +1,12 @@
 {% extends 'base-derk.html' %}
 {% load static %}
 
+{% block extra_css %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600&display=swap" rel="stylesheet">
+{% endblock %}
+
 {% block title_block %} Bundle {% endblock %}
 
 {% block main_header_block %}
@@ -151,12 +157,9 @@
          <div class="row justify-content-center align-items-center">
             <div class="col-md-12">
                <div class="card d-flex p-2">
-                  <h2 class="card-title text-center mt-3"> <strong>{{ bundle.name }} </strong> </h2>
+                  <h2 class="card-title text-center mt-3" style="font-family: 'Outfit', sans-serif; font-size: 2rem; font-weight: 600;">{{ bundle.name }}</h2>
+                  <p class="text-center text-muted small font-monospace mb-0">{{ bundle.lid }}</p>
                   <p class="card-body text-left z-depth-2">
-                     <!-- LID -->
-                     <strong>LID:</strong> {{ bundle.lid }}
-                     
-                     <br>
                      Welcome to your Bundle View. Here you have the ability to edit and adjust parts of your bundle. 
                      In this section you have the ability to Delete your bundle should you need to and Download the entire bundle template set as a zip file. 
                      Global settings in your bundle handled in the Investigation Area OR Context Product references can be edited here.
@@ -1187,7 +1190,8 @@
                               <!-- Author List -->
                               <h6 class="mt-4 mb-1 fw-semibold">Authors <span class="fw-normal fst-italic text-muted">(data providers)</span></h6>
                               <div class="mt-3">
-                                 <label for="author_list">Number of Persons</label>
+                                 <label for="id_number_of_authors_people">Number of Persons</label>
+                                 <small class="d-block text-muted">This is a count, not a name. You will enter each author's name on the next screen.</small>
                                  {{ form_citation_information.number_of_authors_people }}
                               </div>
 
@@ -1197,6 +1201,18 @@
                               </div>
 
                               <p class="text-muted small mt-2">* Organizations should be set to 0 unless used.</p>
+                              <!-- Editors -->
+                              <h6 class="mt-4 mb-1 fw-semibold">Editors</h6>
+                              <p class="text-muted small mt-1">Lynn Neakrase and Lyle Huber (ATM node staff) are always included automatically. Add extra editors below if needed; names are entered on the citation details page.</p>
+                              <div class="mt-3">
+                                 <label for="id_number_of_editors_people">Additional Editors: Number of Persons</label>
+                                 {{ form_citation_information.number_of_editors_people }}
+                              </div>
+                              <div class="mt-3">
+                                 <label for="id_number_of_editors_organization">Additional Editors: Number of Organizations</label>
+                                 {{ form_citation_information.number_of_editors_organization }}
+                              </div>
+
 
                               <!-- Keyword -->
                               <div class="mt-3">
@@ -1230,6 +1246,63 @@
                               PDS4 allows one Citation Information section per bundle.
                               Edit or delete the existing citation information below.
                            </div>
+                        <div class="row px-2">
+                           <!--This logic needs to be changed: When exists, it displays list author and list editor as carousel-->
+                           <!--For now, it is displaying the same thing as when nothing exists; which is the main form to add citation information-->
+                           <form action="{% url 'build:bundle' bundle.pk %}" method="post" id="form_citation_information"> 
+                              {% csrf_token %}
+                              
+                              <!-- Author List -->
+                              <h6 class="mt-4 mb-1 fw-semibold">Authors <span class="fw-normal fst-italic text-muted">(data providers)</span></h6>
+                              <div class="mt-3">
+                                 <label for="id_number_of_authors_people">Number of Persons</label>
+                                 <small class="d-block text-muted">This is a count, not a name. You will enter each author's name on the next screen.</small>
+                                 {{ form_citation_information.number_of_authors_people }}
+                              </div>
+
+                              <div class="mt-3">
+                                 <label for="author_list">Number of Organizations*</label>
+                                 {{ form_citation_information.number_of_authors_organization }}
+                              </div>
+
+                              <p class="text-muted small mt-2">* Organizations should be set to 0 unless used.</p>
+                              <!-- Editors -->
+                              <h6 class="mt-4 mb-1 fw-semibold">Editors</h6>
+                              <p class="text-muted small mt-1">Lynn Neakrase and Lyle Huber (ATM node staff) are always included automatically. Add extra editors below if needed; names are entered on the citation details page.</p>
+                              <div class="mt-3">
+                                 <label for="id_number_of_editors_people">Additional Editors: Number of Persons</label>
+                                 {{ form_citation_information.number_of_editors_people }}
+                              </div>
+                              <div class="mt-3">
+                                 <label for="id_number_of_editors_organization">Additional Editors: Number of Organizations</label>
+                                 {{ form_citation_information.number_of_editors_organization }}
+                              </div>
+
+
+                              <!-- Keyword -->
+                              <div class="mt-3">
+                                 <label for="keyword">Keyword</label>
+                                 {{ form_citation_information.keyword }}
+                              </div>
+
+                              <!-- Publication Year -->
+                              <div class="mt-3">
+                                 <label for="publication_year">Publication Year<span class="text-danger" title="This field is required">*</span></label>
+                                 {{ form_citation_information.publication_year }}
+                              </div>
+
+                              <!-- Description -->
+                              <div class="mt-3">
+                                 <label for="mod_desc">Description<span class="text-danger" title="This field is required">*</span></label>
+                                 {{ form_citation_information.description }}
+                              </div>
+
+                              {{ form_citation_information.errors }}
+
+                              <!-- Create Citation Information -->
+                              <button type="submit" class="btn btn-light text-light my-4">Create Citaiton Information</button>
+                           </form>
+                        </div>
 
 
                         {% endif %}
@@ -1646,35 +1719,101 @@
 
 
       <div class="container-fluid pt-3">
-         <!-- Info Card -->
-         <div class="row justify-content-center align-items-center">
-            <div class="col-md-12">
-               <div class="card d-flex p-2">
-                  <h2 class="card-title text-center mt-3"> <strong>{{ bundle.name }} </strong> </h2>
+         <!-- Info Card + Bundle Components -->
+         <div class="row align-items-stretch">
+            <div class="col-md-6">
+               <div class="card d-flex p-2 h-100">
+                  <h2 class="card-title text-center mt-3" style="font-family: 'Outfit', sans-serif; font-size: 2rem; font-weight: 600;">{{ bundle.name }}</h2>
+                  <p class="text-center text-muted small font-monospace mb-0">{{ bundle.lid }}</p>
                   <p class="card-body text-left z-depth-2">
-                     <!-- LID -->
-                     <strong>LID:</strong> {{ bundle.lid }}
-                     
-                     <br>
-                     Welcome to your Bundle View. Here you have the ability to edit and adjust parts of your bundle. 
-                     In this section you have the ability to Delete your bundle should you need to and Download the entire bundle template set as a zip file. 
+                     Welcome to your Bundle View. Here you have the ability to edit and adjust parts of your bundle.
+                     In this section you have the ability to Delete your bundle should you need to and Download the entire bundle template set as a zip file.
                      Global settings in your bundle handled in the Investigation Area OR Context Product references can be edited here.
-         
-                     <div class="col p-1 m-3 mt-0 text-center">
 
+                     <div class="col p-1 m-3 mt-0 text-center">
                            <a class="btn btn-danger text-light btn-keep-bg" data-bs-toggle="modal" data-bs-target="#delete_modal" aria-expanded="false" style="box-shadow: none;">Delete Bundle</a>
                            <a class="btn btn-success text-light btn-keep-bg" href="{% url 'build:bundle_download' bundle.pk %}" aria-expanded="false" style="box-shadow: none;">Download Bundle</a>
-                           
-                           <a type="button" class="btn btn-light text-light dropdown-toggle" id="investigation_dropdown" data-bs-toggle="dropdown" aria-expanded="false" style="box-shadow: none;">Edit Investigation Area</a>
-                              <ul class="dropdown-menu" aria-labelledby="investigation_dropdown">
-                                 <li><a class="dropdown-item" data-bs-toggle="modal" data-bs-target="#alias_modal">Alias</a></li>
-                                 <li><a class="dropdown-item" data-bs-toggle="modal" data-bs-target="#mod_history_modal">Modification History</a></li>
-                                 <li><a class="dropdown-item" data-bs-toggle="modal" data-bs-target="#citation_information_modal">Citation Information</a></li>
-                              </ul>
-                           
-                           <a type="button" class="btn btn-light text-light" data-bs-toggle="modal" data-bs-target="#context_modal" aria-expanded="false" style="box-shadow: none;">Edit Context Products</a>
                      </div>
                   </p>
+               </div>
+            </div>
+
+            <!-- Bundle Components Card -->
+            <div class="col-md-6">
+               <div class="card h-100">
+                  <h5 class="card-header bg-secondary text-white text-center position-relative">
+                     Bundle Components
+                     <span class="ms-1 d-inline-flex align-items-center">
+                        <i class="bi bi-info-circle text-light opacity-75" style="cursor: help;" role="button" tabindex="0"
+                           data-bs-toggle="tooltip" data-bs-placement="left"
+                           title="Click any component to edit it. All required components must be completed before submitting."></i>
+                     </span>
+                  </h5>
+                  <div class="p-3">
+
+                     <!-- Investigation Area -->
+                     <div class="d-flex align-items-center gap-2 mb-2">
+                        <span class="text-muted fw-semibold text-nowrap" style="font-size:0.7rem; letter-spacing:0.07em; text-transform:uppercase;">Investigation Area</span>
+                        <hr class="flex-grow-1 my-0 opacity-50">
+                     </div>
+                     <div class="list-group rounded overflow-hidden mb-3">
+                        <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2" data-bs-toggle="modal" data-bs-target="#alias_modal">
+                           <span class="small">Alias</span>
+                           {% if status_dict.Alias %}
+                              <span class="badge rounded-pill bg-success">Added</span>
+                           {% else %}
+                              <span class="badge rounded-pill bg-warning text-dark">Optional</span>
+                           {% endif %}
+                        </a>
+                        <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2" data-bs-toggle="modal" data-bs-target="#mod_history_modal">
+                           <span class="small">Modification History</span>
+                           <span class="badge rounded-pill {% if status_dict.Modification_History %}bg-success{% else %}bg-danger{% endif %}">
+                              {% if status_dict.Modification_History %}Added{% else %}Missing{% endif %}
+                           </span>
+                        </a>
+                        <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2" data-bs-toggle="modal" data-bs-target="#citation_information_modal">
+                           <span class="small">Citation Information</span>
+                           <span class="badge rounded-pill {% if status_dict.Citation_Information %}bg-success{% else %}bg-danger{% endif %}">
+                              {% if status_dict.Citation_Information %}Added{% else %}Missing{% endif %}
+                           </span>
+                        </a>
+                     </div>
+
+                     <!-- Context Products -->
+                     <div class="d-flex align-items-center gap-2 mb-2">
+                        <span class="text-muted fw-semibold text-nowrap" style="font-size:0.7rem; letter-spacing:0.07em; text-transform:uppercase;">Context Products</span>
+                        <hr class="flex-grow-1 my-0 opacity-50">
+                     </div>
+                     <div class="list-group rounded overflow-hidden mb-3">
+                        <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2" data-bs-toggle="modal" data-bs-target="#context_modal" data-tab="con_tar">
+                           <span class="small">Targets</span>
+                           <span class="badge rounded-pill {% if status_dict.Targets %}bg-success{% else %}bg-danger{% endif %}">
+                              {% if status_dict.Targets %}
+                                 {% with tc=targets|length %}{{ tc }} selected{% endwith %}
+                              {% else %}
+                                 Missing
+                              {% endif %}
+                           </span>
+                        </a>
+                     </div>
+
+                     <!-- Submit -->
+                     <button type="button" id="externalSubmitBtn"
+                        class="btn {% if status_dict.Modification_History and status_dict.Citation_Information and status_dict.Targets %}btn-success{% else %}btn-outline-secondary{% endif %} w-100"
+                        data-bs-toggle="modal" data-bs-target="#reviewBundleModal"
+                        title="Complete all required sections to submit your bundle."
+                        data-bs-placement="top">
+                        <i class="bi bi-clipboard-check me-2"></i>Review &amp; Submit
+                     </button>
+                     {% if bundle.submitted_at %}
+                        <p class="text-muted small text-center mt-2 mb-0">
+                           <i class="bi bi-clock me-1"></i>
+                           Last submitted: {{ bundle.submitted_at|date:"M d, Y \a\t g:i A" }}
+                           <br>You can still edit your bundle and resubmit.
+                        </p>
+                     {% endif %}
+
+                  </div>
                </div>
             </div>
          </div>
@@ -2089,105 +2228,6 @@
          </div>
 
 
-         <div class="card progress-sidebar">
-         <h5 class="card-header bg-secondary text-white text-center position-relative">
-            Bundle Progress
-            <span class="ms-1 d-inline-flex align-items-center">
-               <i class="bi bi-info-circle text-light opacity-75" style="cursor: help;" role="button" tabindex="0"
-                  data-bs-toggle="tooltip" data-bs-placement="left"
-                  title="This section shows a qualitative depiction of the overall completion progress of this bundle."></i>
-            </span>
-         </h5>
-         <div class="list-group list-group-flush">
-            <!-- Alias (Optional for External) -->
-            <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" data-bs-toggle="modal" data-bs-target="#alias_modal">
-               Alias
-               <span>
-                  {% if status_dict.Alias %}
-                     <span class="badge bg-success"><i class="bi bi-check-circle-fill"></i></span>
-                  {% else %}
-                     <span class="badge bg-warning text-dark" data-bs-toggle="tooltip" data-bs-placement="left" title="Alias is optional for external bundles.">
-                        <i class="bi bi-exclamation-triangle-fill"></i>
-                     </span>
-                  {% endif %}
-               </span>
-            </a>
-            <!-- Modification History -->
-            <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" data-bs-toggle="modal" data-bs-target="#mod_history_modal">
-               Modification History
-               <span class="badge {% if status_dict.Modification_History %}bg-success{% else %}bg-danger{% endif %}">
-                  {% if status_dict.Modification_History %}<i class="bi bi-check-circle-fill"></i>{% else %}<i class="bi bi-x-circle-fill"></i>{% endif %}
-               </span>
-            </a>
-            <!-- Citation Information -->
-            <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" data-bs-toggle="modal" data-bs-target="#citation_information_modal">
-               Citation Information
-               <span class="badge {% if status_dict.Citation_Information %}bg-success{% else %}bg-danger{% endif %}">
-                  {% if status_dict.Citation_Information %}<i class="bi bi-check-circle-fill"></i>{% else %}<i class="bi bi-x-circle-fill"></i>{% endif %}
-               </span>
-            </a>
-            {% comment %} <!-- Investigations -->
-            <div class="list-group-item d-flex justify-content-between align-items-center">
-               Investigations
-               <span class="badge {% if status_dict.Investigations %}bg-success{% else %}bg-danger{% endif %}">
-                  {% if status_dict.Investigations %}
-                     <i class="bi bi-check-circle-fill"></i>
-                  {% else %}
-                     <i class="bi bi-x-circle-fill"></i>
-                  {% endif %}
-               </span>
-            </div> {% endcomment %}
-            {% comment %} <!-- Hosts -->
-            <div class="list-group-item d-flex justify-content-between align-items-center">
-               Hosts
-               <span class="badge {% if status_dict.Hosts %}bg-success{% else %}bg-danger{% endif %}">
-                  {% if status_dict.Hosts %}
-                     <i class="bi bi-check-circle-fill"></i>
-                  {% else %}
-                     <i class="bi bi-x-circle-fill"></i>
-                  {% endif %}
-               </span>
-            </div>
-
-            <!-- Instruments -->
-            <div class="list-group-item d-flex justify-content-between align-items-center">
-               Instruments
-               <span class="badge {% if status_dict.Instruments %}bg-success{% else %}bg-danger{% endif %}">
-                  {% if status_dict.Instruments %}
-                     <i class="bi bi-check-circle-fill"></i>
-                  {% else %}
-                     <i class="bi bi-x-circle-fill"></i>
-                  {% endif %}
-               </span>
-            </div> {% endcomment %}
-
-            <!-- Targets -->
-            <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" data-bs-toggle="modal" data-bs-target="#context_modal" data-tab="con_tar">
-               Targets
-               <span class="badge {% if status_dict.Targets %}bg-success{% else %}bg-danger{% endif %}">
-                  {% if status_dict.Targets %}<i class="bi bi-check-circle-fill"></i>{% else %}<i class="bi bi-x-circle-fill"></i>{% endif %}
-               </span>
-            </a>
-
-            <!-- Submit Button -->
-            <div class="list-group-item p-3">
-               <button type="button" id="externalSubmitBtn"
-                  class="btn {% if status_dict.Modification_History and status_dict.Citation_Information and status_dict.Targets %}btn-success{% else %}btn-outline-secondary{% endif %} w-100"
-                  data-bs-toggle="modal" data-bs-target="#reviewBundleModal"
-                  title="Complete all required sections to submit your bundle."
-                  data-bs-placement="top">
-                  <i class="bi bi-clipboard-check me-2"></i>Review &amp; Submit
-               </button>
-               {% if bundle.submitted_at %}
-                  <p class="text-muted small text-center mt-2 mb-0">
-                     <i class="bi bi-clock me-1"></i>
-                     Last submitted: {{ bundle.submitted_at|date:"M d, Y \a\t g:i A" }}
-                     <br>You can still edit your bundle and resubmit.
-                  </p>
-               {% endif %}
-            </div>
-         </div>
-      </div>
       </div>
 
          <!-- Submit Bundle for Review Modal -->
@@ -3330,7 +3370,8 @@
                               <!-- Author List -->
                               <h6 class="mt-4 mb-1 fw-semibold">Authors <span class="fw-normal fst-italic text-muted">(data providers)</span></h6>
                               <div class="mt-3">
-                                 <label for="author_list">Number of Persons</label>
+                                 <label for="id_number_of_authors_people">Number of Persons</label>
+                                 <small class="d-block text-muted">This is a count, not a name. You will enter each author's name on the next screen.</small>
                                  {{ form_citation_information.number_of_authors_people }}
                               </div>
 
@@ -3340,6 +3381,18 @@
                               </div>
 
                               <p class="text-muted small mt-2">* Organizations should be set to 0 unless used.</p>
+                              <!-- Editors -->
+                              <h6 class="mt-4 mb-1 fw-semibold">Editors</h6>
+                              <p class="text-muted small mt-1">Lynn Neakrase and Lyle Huber (ATM node staff) are always included automatically. Add extra editors below if needed; names are entered on the citation details page.</p>
+                              <div class="mt-3">
+                                 <label for="id_number_of_editors_people">Additional Editors: Number of Persons</label>
+                                 {{ form_citation_information.number_of_editors_people }}
+                              </div>
+                              <div class="mt-3">
+                                 <label for="id_number_of_editors_organization">Additional Editors: Number of Organizations</label>
+                                 {{ form_citation_information.number_of_editors_organization }}
+                              </div>
+
 
                               <!-- Keyword -->
                               <div class="mt-3">
@@ -3377,7 +3430,8 @@
                               <!-- Author List -->
                               <h6 class="mt-4 mb-1 fw-semibold">Authors <span class="fw-normal fst-italic text-muted">(data providers)</span></h6>
                               <div class="mt-3">
-                                 <label for="author_list">Number of Persons</label>
+                                 <label for="id_number_of_authors_people">Number of Persons</label>
+                                 <small class="d-block text-muted">This is a count, not a name. You will enter each author's name on the next screen.</small>
                                  {{ form_citation_information.number_of_authors_people }}
                               </div>
 
@@ -3387,6 +3441,18 @@
                               </div>
 
                               <p class="text-muted small mt-2">* Organizations should be set to 0 unless used.</p>
+                              <!-- Editors -->
+                              <h6 class="mt-4 mb-1 fw-semibold">Editors</h6>
+                              <p class="text-muted small mt-1">Lynn Neakrase and Lyle Huber (ATM node staff) are always included automatically. Add extra editors below if needed; names are entered on the citation details page.</p>
+                              <div class="mt-3">
+                                 <label for="id_number_of_editors_people">Additional Editors: Number of Persons</label>
+                                 {{ form_citation_information.number_of_editors_people }}
+                              </div>
+                              <div class="mt-3">
+                                 <label for="id_number_of_editors_organization">Additional Editors: Number of Organizations</label>
+                                 {{ form_citation_information.number_of_editors_organization }}
+                              </div>
+
 
                               <!-- Keyword -->
                               <div class="mt-3">

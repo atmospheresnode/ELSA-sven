@@ -4581,6 +4581,10 @@ class Citation_Information(models.Model):
     # author_list = models.CharField(max_length=MAX_CHAR_FIELD, blank=True)
     number_of_authors_people = models.PositiveIntegerField(default=0)
     number_of_authors_organization = models.PositiveIntegerField(default=0)
+    # User-added editors, in ADDITION to the two fixed ATM editors (Lynn Neakrase
+    # and Lyle Huber) that ELSA always writes into the label.
+    number_of_editors_people = models.PositiveIntegerField(default=0)
+    number_of_editors_organization = models.PositiveIntegerField(default=0)
     publication_year = models.CharField(max_length=MAX_CHAR_FIELD)
     description = models.CharField(max_length=MAX_TEXT_FIELD)
     keyword = models.CharField(max_length=MAX_CHAR_FIELD, blank=True)
@@ -4659,6 +4663,25 @@ class Citation_Information(models.Model):
             org_name_el = etree.SubElement(affiliation, 'organization_name')
             org_name_el.text = 'NASA Planetary Data System Atmospheres Node; New Mexico State University, Las Cruces, NM'
 
+        # User-added editors follow the two fixed ATM editors. Like authors,
+        # empty skeletons are created here and filled in on the edit page
+        # (fill_label_values).
+        for _ in range(self.number_of_editors_people):
+            editor = etree.SubElement(list_editor, 'Person')
+            etree.SubElement(editor, 'given_name')
+            etree.SubElement(editor, 'family_name')
+            etree.SubElement(editor, 'person_orcid')
+            affiliation = etree.SubElement(editor, 'Affiliation')
+            etree.SubElement(affiliation, 'organization_name')
+
+        for _ in range(self.number_of_editors_organization):
+            organization = etree.SubElement(list_editor, 'Organization')
+            etree.SubElement(organization, 'organization_name')
+            etree.SubElement(organization, 'organization_rorid')
+            etree.SubElement(organization, 'sequence_number')
+            parent_organization = etree.SubElement(organization, 'Parent_Organization')
+            etree.SubElement(parent_organization, 'parent_organization_name')
+
         return label_root
 
     def fill_label_values(self, label_root, cleaned_form):
@@ -4734,18 +4757,46 @@ class Citation_Information(models.Model):
             ]
             affiliation_text = 'NASA Planetary Data System Atmospheres Node; New Mexico State University, Las Cruces, NM'
             for i, editor in enumerate(list_editor.findall('{}Person'.format(NAMESPACE))):
-                if i >= len(default_editors):
-                    break
-                editor.find('{}given_name'.format(NAMESPACE)).text = default_editors[i]['given_name']
-                editor.find('{}family_name'.format(NAMESPACE)).text = default_editors[i]['family_name']
-                orcid_el = editor.find('{}person_orcid'.format(NAMESPACE))
-                if orcid_el is not None:
-                    orcid_el.text = default_editors[i]['orcid']
-                affiliation = editor.find('{}Affiliation'.format(NAMESPACE))
-                if affiliation is not None:
-                    org = affiliation.find('{}organization_name'.format(NAMESPACE))
-                    if org is not None:
-                        org.text = affiliation_text
+                if i < len(default_editors):
+                    # The first two Persons are the fixed ATM editors; refresh them.
+                    editor.find('{}given_name'.format(NAMESPACE)).text = default_editors[i]['given_name']
+                    editor.find('{}family_name'.format(NAMESPACE)).text = default_editors[i]['family_name']
+                    orcid_el = editor.find('{}person_orcid'.format(NAMESPACE))
+                    if orcid_el is not None:
+                        orcid_el.text = default_editors[i]['orcid']
+                    affiliation = editor.find('{}Affiliation'.format(NAMESPACE))
+                    if affiliation is not None:
+                        org = affiliation.find('{}organization_name'.format(NAMESPACE))
+                        if org is not None:
+                            org.text = affiliation_text
+                else:
+                    # Persons after the fixed pair are user-added editors, filled
+                    # from the edit form just like authors.
+                    u = i - len(default_editors)
+                    editor.find('{}given_name'.format(NAMESPACE)).text = cleaned_form.get(f'editor_person_{u}_given_name')
+                    editor.find('{}family_name'.format(NAMESPACE)).text = cleaned_form.get(f'editor_person_{u}_family_name')
+                    orcid_el = editor.find('{}person_orcid'.format(NAMESPACE))
+                    if orcid_el is not None:
+                        orcid_el.text = cleaned_form.get(f'editor_person_{u}_orcid')
+                    affiliation = editor.find('{}Affiliation'.format(NAMESPACE))
+                    if affiliation is not None:
+                        org = affiliation.find('{}organization_name'.format(NAMESPACE))
+                        if org is not None:
+                            org.text = cleaned_form.get(f'editor_person_{u}_affiliation')
+
+            for j, organization in enumerate(list_editor.findall('{}Organization'.format(NAMESPACE))):
+                organization.find('{}organization_name'.format(NAMESPACE)).text = cleaned_form.get(f'editor_org_{j}_name')
+                rorid_el = organization.find('{}organization_rorid'.format(NAMESPACE))
+                if rorid_el is not None:
+                    rorid_el.text = cleaned_form.get(f'editor_org_{j}_rorid')
+                seq_el = organization.find('{}sequence_number'.format(NAMESPACE))
+                if seq_el is not None:
+                    seq_el.text = str(cleaned_form.get(f'editor_org_{j}_sequence_number'))
+                parent = organization.find('{}Parent_Organization'.format(NAMESPACE))
+                if parent is not None:
+                    parent_name = parent.find('{}parent_organization_name'.format(NAMESPACE))
+                    if parent_name is not None:
+                        parent_name.text = cleaned_form.get(f'editor_org_{j}_parent_org_name')
 
         return label_root
     
