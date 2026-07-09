@@ -1,3 +1,4 @@
+<!-- watches: build/models.py, templates/build/bundle/bundle.html -->
 # Modification History
 
 PDS4 Information Model (v1.24 / 1O00): the Modification_History class tracks the

@@ -1,3 +1,4 @@
+<!-- watches: build/views.py, templates/build/collections, templates/build/context_search -->
 # Archive Bundle Workflow
 
 Archive bundles are ELSA's full PDS4 archive bundles, the data itself is

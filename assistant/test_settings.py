@@ -14,3 +14,8 @@ DATABASES = {
 # Keep tests hermetic
 GEMINI_API_KEY = ''
 EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
+
+# In-memory cache for tests (the real config uses the DB-backed cache)
+CACHES = {
+    'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}
+}

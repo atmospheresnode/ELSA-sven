@@ -1,3 +1,4 @@
+<!-- watches: build/views.py, review/views.py, submit/views.py, tutorial/urls.py -->
 # Review, Submission, and Getting Help
 
 Submitting a bundle: on the bundle page, the **Review & Submit** button opens a

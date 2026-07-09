@@ -1,3 +1,4 @@
+<!-- watches: build/models.py, build/forms.py -->
 # Bundle and Collection Structure
 
 PDS4 Information Model (v1.24 / 1O00): a Product_Bundle is an aggregate product

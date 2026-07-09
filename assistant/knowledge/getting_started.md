@@ -1,3 +1,4 @@
+<!-- watches: friends/views.py, build/forms.py, templates/friends -->
 # Getting Started: Registration, Login, and Your First Bundle
 
 Registering: create an account from the ELSA registration page with your name,

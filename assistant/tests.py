@@ -263,6 +263,33 @@ class FeedbackEmailTests(SimpleTestCase):
 
 class RetrieverTests(SimpleTestCase):
 
+    def test_watches_comments_never_reach_prompt_text(self):
+        from .retriever import _CHUNKS
+        for chunk in _CHUNKS:
+            self.assertNotIn('watches:', chunk['text'])
+            self.assertNotIn('watches', chunk['title'].lower())
+            self.assertTrue(chunk['title'], chunk['name'])
+
+    def test_release_notes_live_chunk_from_cache(self):
+        from django.core.cache import cache
+        cache.set('elsa_release_notes', [
+            {'version': '1.38.0', 'date': 'July 2026',
+             'bullets': ['<strong>Assistant:</strong> chatbot pilot added']},
+        ], 60)
+        try:
+            names = [c['name'] for c in retrieve("what's new in the latest ELSA version?")]
+            self.assertIn('release_notes_live', names)
+        finally:
+            cache.delete('elsa_release_notes')
+
+    def test_release_notes_failure_is_silent(self):
+        from django.core.cache import cache
+        cache.delete('elsa_release_notes')
+        with patch('requests.get', side_effect=Exception('offline')):
+            # Static retrieval keeps working even when the live chunk fails
+            names = [c['name'] for c in retrieve('citation information')]
+            self.assertIn('citation_information', names)
+
     def test_citation_query_finds_citation_chunk(self):
         names = [c['name'] for c in retrieve('What goes in citation information?')]
         self.assertIn('citation_information', names)
@@ -327,3 +354,12 @@ class PromptTests(TestCase):
         self.assertIn('profile page', _page_context(self.user, '/elsa/accounts/17/'))
         self.assertIsNone(_page_context(self.user, '/elsa/build/999999/'))
         self.assertIsNone(_page_context(self.user, ''))
+
+
+class KnowledgeCheckTests(SimpleTestCase):
+
+    def test_parse_watches(self):
+        from .management.commands.assistant_knowledge_check import parse_watches
+        text = '<!-- watches: build/views.py, templates/build -->\n# Title\nBody'
+        self.assertEqual(parse_watches(text), ['build/views.py', 'templates/build'])
+        self.assertEqual(parse_watches('# No declaration'), [])

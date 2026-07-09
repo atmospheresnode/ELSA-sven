@@ -91,6 +91,20 @@ costs ~$0.30 per million input tokens, i.e. cents/month at ELSA's scale. The
 paid tier also excludes prompts from Google's product-improvement (training)
 data use, which matters once real scientists use it.
 
+## Keeping knowledge up to date
+
+The assistant's live data (user bundles, completion status, current page, and
+the "What's New" release notes chunk fetched from the GitHub README) updates
+itself. The conceptual knowledge in `knowledge/*.md` is maintained by hand,
+with two guards:
+
+1. Each chunk declares the source files it describes:
+   `<!-- watches: build/views.py, templates/build/citation_information -->`.
+   Run `python3 manage.py assistant_knowledge_check` before releases (exits
+   non-zero when watched code changed after the chunk did).
+2. Release checklist rule: any PR changing user-facing behavior also updates
+   the matching knowledge chunk, then run the evals below.
+
 ## Tests and evals
 
 ```
