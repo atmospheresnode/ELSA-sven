@@ -321,7 +321,8 @@ class RetrieverTests(SimpleTestCase):
 
 class BundleSummaryTests(SimpleTestCase):
 
-    def make_bundle(self, mod=True, cit=False, targets=False, netcdf=2):
+    def make_bundle(self, mod=True, cit=False, targets=False, netcdf=2,
+                    description='', keyword='', target_names=()):
         b = MagicMock()
         b.name = 'Now'
         b.bundle_type = 'External'
@@ -329,7 +330,13 @@ class BundleSummaryTests(SimpleTestCase):
         b.submitted_at = None
         b.modification_history_set.exists.return_value = mod
         b.citation_information_set.exists.return_value = cit
+        if description or keyword:
+            citation = MagicMock(description=description, keyword=keyword)
+        else:
+            citation = None
+        b.citation_information_set.first.return_value = citation
         b.targets.exists.return_value = targets
+        b.targets.values_list.return_value = list(target_names)
         b.netcdffile_set.count.return_value = netcdf
         return b
 
@@ -338,6 +345,15 @@ class BundleSummaryTests(SimpleTestCase):
         self.assertIn('missing required: Citation Information, Targets', line)
         self.assertIn('already has: Modification History', line)
         self.assertIn('2 NetCDF files', line)
+
+    def test_description_and_targets_included(self):
+        line = _bundle_summary(self.make_bundle(
+            cit=True, targets=True,
+            description='Mars GCM dust storm simulations',
+            keyword='mars; dust', target_names=['Mars']))
+        self.assertIn('about: <user_data>Mars GCM dust storm simulations</user_data>', line)
+        self.assertIn('keywords: <user_data>mars; dust</user_data>', line)
+        self.assertIn('targets: Mars', line)
 
     def test_complete_bundle(self):
         line = _bundle_summary(self.make_bundle(mod=True, cit=True, targets=True))
