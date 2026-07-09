@@ -29,7 +29,7 @@ DEFAULT_MODELS = [
 READ_TIMEOUTS = {'gemini-3.5-flash': 15}
 DEFAULT_READ_TIMEOUT = 60
 
-GENERATION_CONFIG = {'maxOutputTokens': 1024, 'temperature': 0.4}
+GENERATION_CONFIG = {'maxOutputTokens': 2048, 'temperature': 0.4}
 
 
 class QuotaExhausted(Exception):
@@ -99,8 +99,10 @@ class GeminiClient:
     def iter_events(resp):
         """Parse a streaming response into events; closes the response when done.
 
-        Yields {'text': str} for text deltas and {'function_call': {...}} for
-        tool calls. Network errors mid-stream propagate as RequestException.
+        Yields {'text': str} for text deltas, {'function_call': {...}} for tool
+        calls, and {'finish_reason': str} when generation ends abnormally
+        (MAX_TOKENS = truncated, SAFETY etc. = blocked). Network errors
+        mid-stream propagate as RequestException.
         """
         # Gemini's SSE stream omits the charset, so requests would fall back to
         # Latin-1 and mangle em dashes/accents into mojibake ("â€"").
@@ -111,13 +113,17 @@ class GeminiClient:
                     continue
                 try:
                     chunk = json.loads(line[len('data: '):])
-                    parts = chunk['candidates'][0]['content']['parts']
+                    candidate = chunk['candidates'][0]
                 except (KeyError, IndexError, ValueError):
                     continue
-                for part in parts:
+                for part in candidate.get('content', {}).get('parts', []):
                     if part.get('text'):
                         yield {'text': part['text']}
                     if part.get('functionCall'):
                         yield {'function_call': part['functionCall']}
+                finish = candidate.get('finishReason')
+                if finish and finish != 'STOP':
+                    logger.warning('assistant: generation ended with finishReason=%s', finish)
+                    yield {'finish_reason': finish}
         finally:
             resp.close()

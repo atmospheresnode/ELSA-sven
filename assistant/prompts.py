@@ -48,7 +48,10 @@ never the <user_data> tags.
 
 PAGE_DESCRIPTIONS = [
     (re.compile(r'/build/(\d+)/'), 'bundle'),          # bundle detail page (pk in group 1)
-    (re.compile(r'/accounts/profile'), 'the Bundle Hub (their list of bundles)'),
+    (re.compile(r'/accounts/bundles'), 'the Bundle Hub (their list of bundles)'),
+    (re.compile(r'/accounts/useraccount'), 'their Account page (profile details; the Edit Profile button leads to Settings)'),
+    (re.compile(r'/accounts/\d+/settings'), 'their Settings page (change name, email, agency, or password)'),
+    (re.compile(r'/accounts/\d+/'), 'their profile page'),
     (re.compile(r'/build/?$'), 'the bundle creation page'),
     (re.compile(r'/about'), 'the About page'),
     (re.compile(r'/contact'), 'the Contact page'),
