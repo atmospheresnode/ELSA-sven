@@ -31,6 +31,11 @@ DEFAULT_READ_TIMEOUT = 60
 
 GENERATION_CONFIG = {'maxOutputTokens': 2048, 'temperature': 0.4}
 
+# How long a failed model is skipped before being probed again. Daily quota
+# (429) won't come back soon; congestion/timeouts may clear quickly.
+COOLDOWN_QUOTA = 15 * 60
+COOLDOWN_UNREACHABLE = 3 * 60
+
 
 class QuotaExhausted(Exception):
     """Every model in the chain returned 429 — free daily buckets are empty."""
@@ -54,7 +59,13 @@ class GeminiClient:
         free-tier bucket is exhausted; 5xx or a network error means it's
         overloaded — either way the next model may still work. Raises
         QuotaExhausted / LLMUnavailable when the chain ends without a connection.
+
+        Failed models go on a cooldown (shared cache): a 429'd quota bucket or
+        a hanging model would otherwise be re-probed on EVERY message, making
+        each user wait out the same timeout again and again.
         """
+        from django.core.cache import cache
+
         body = {
             'system_instruction': {'parts': [{'text': system_prompt}]},
             'contents': contents,
@@ -65,6 +76,12 @@ class GeminiClient:
 
         saw_429 = False
         for model in self.models:
+            cooldown = cache.get(f'assistant-model-cooldown-{model}')
+            if cooldown:
+                logger.info('assistant: skipping %s (cooldown: %s)', model, cooldown)
+                saw_429 = saw_429 or cooldown == 'quota'
+                continue
+
             yield ('trying', model, None)
             try:
                 resp = requests.post(
@@ -76,11 +93,17 @@ class GeminiClient:
                 )
             except requests.RequestException as exc:
                 logger.warning('assistant: %s unreachable (%s)', model, type(exc).__name__)
+                cache.set(f'assistant-model-cooldown-{model}', 'unreachable', COOLDOWN_UNREACHABLE)
                 continue
             if resp.status_code == 200:
-                yield ('connected', model, resp)
+                return_value = ('connected', model, resp)
+                yield return_value
                 return
-            saw_429 = saw_429 or resp.status_code == 429
+            if resp.status_code == 429:
+                saw_429 = True
+                cache.set(f'assistant-model-cooldown-{model}', 'quota', COOLDOWN_QUOTA)
+            else:
+                cache.set(f'assistant-model-cooldown-{model}', f'http{resp.status_code}', COOLDOWN_UNREACHABLE)
             logger.warning('assistant: %s returned HTTP %s', model, resp.status_code)
             resp.close()
 
