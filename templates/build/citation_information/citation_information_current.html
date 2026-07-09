@@ -101,22 +101,67 @@
                             <div class="tab-pane fade" id="editors" role="tabpanel" aria-labelledby="editors-tab">
                                 <div class="alert alert-info mb-4 py-2">
                                     <i class="bi bi-info-circle me-1"></i>
-                                    Editors are fixed and managed by ATM. Contact ATM staff to request changes.
+                                    The two ATM node editors below are fixed and always included; contact ATM staff to request changes to them.
+                                    Any additional editors you requested appear underneath and can be filled in here.
                                 </div>
-                                <div class="row g-3">
+                                <div class="row g-3 mb-4">
                                     <div class="col-12 col-md-6">
                                         <div class="p-3 border rounded bg-white">
-                                            <p class="fw-semibold mb-1"><i class="bi bi-person-fill text-primary me-1"></i> Editor 1</p>
+                                            <p class="fw-semibold mb-1"><i class="bi bi-person-fill text-primary me-1"></i> Editor 1 <span class="badge bg-secondary">Fixed</span></p>
                                             <p class="mb-0">Lynn Neakrase</p>
                                         </div>
                                     </div>
                                     <div class="col-12 col-md-6">
                                         <div class="p-3 border rounded bg-white">
-                                            <p class="fw-semibold mb-1"><i class="bi bi-person-fill text-primary me-1"></i> Editor 2</p>
+                                            <p class="fw-semibold mb-1"><i class="bi bi-person-fill text-primary me-1"></i> Editor 2 <span class="badge bg-secondary">Fixed</span></p>
                                             <p class="mb-0">Lyle Huber</p>
                                         </div>
                                     </div>
                                 </div>
+
+                                <!-- User-added editors (people) -->
+                                {% if citation_information.number_of_editors_people > 0 %}
+                                <div class="mb-4">
+                                    <h5 class="border-bottom pb-2 mb-3">
+                                        <i class="bi bi-person-plus-fill text-primary me-1"></i> Your Additional Editors
+                                    </h5>
+                                    <div class="row g-3">
+                                        {% for field in form_edit_citation_information %}
+                                            {% if 'editor' in field.name and 'person' in field.name %}
+                                                <div class="col-12 col-md-6 mb-3">
+                                                    <label for="{{ field.id_for_label }}" class="form-label fw-semibold">{{ field.label }}</label>
+                                                    <div class="form-control-wrapper">{{ field }}</div>
+                                                    {% for error in field.errors %}
+                                                        <div class="invalid-feedback d-block">{{ error }}</div>
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                {% endif %}
+
+                                <!-- User-added editors (organizations) -->
+                                {% if citation_information.number_of_editors_organization > 0 %}
+                                <div>
+                                    <h5 class="border-bottom pb-2 mb-3">
+                                        <i class="bi bi-building text-success me-1"></i> Your Editor Organizations
+                                    </h5>
+                                    <div class="row g-3">
+                                        {% for field in form_edit_citation_information %}
+                                            {% if 'editor' in field.name and 'org' in field.name %}
+                                                <div class="col-12 col-md-6 mb-3">
+                                                    <label for="{{ field.id_for_label }}" class="form-label fw-semibold">{{ field.label }}</label>
+                                                    <div class="form-control-wrapper">{{ field }}</div>
+                                                    {% for error in field.errors %}
+                                                        <div class="invalid-feedback d-block">{{ error }}</div>
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                {% endif %}
                             </div>
                         </div>
 
