@@ -1,0 +1,28 @@
+name: Assistant knowledge freshness
+
+# Fails when ELSA source files changed after the assistant knowledge chunk
+# that describes them, so a release can't ship with stale assistant answers.
+# See assistant/knowledge_check.py.
+
+on:
+  pull_request:
+  push:
+    branches: [main, LLM-pilot]
+
+jobs:
+  knowledge-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history: the check compares commit timestamps of knowledge
+          # files against the source files they describe.
+          fetch-depth: 0
+
+      - name: Check assistant knowledge freshness
+        run: |
+          if [ -f assistant/knowledge_check.py ]; then
+            python3 assistant/knowledge_check.py
+          else
+            echo "Assistant app not on this branch; skipping."
+          fi
