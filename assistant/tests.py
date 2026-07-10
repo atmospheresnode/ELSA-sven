@@ -1,4 +1,6 @@
 import json
+import os
+import tempfile
 from unittest.mock import MagicMock, patch
 
 from django.contrib.auth.models import User
@@ -381,6 +383,73 @@ class BundleSummaryTests(SimpleTestCase):
     def test_complete_bundle(self):
         line = _bundle_summary(self.make_bundle(mod=True, cit=True, targets=True))
         self.assertIn('all required components complete', line)
+
+
+class NetCDFContentsTests(TestCase):
+    """The assistant can describe what an uploaded NetCDF file contains."""
+
+    def _write_nc(self, tmpdir, name='tiny.nc'):
+        import numpy as np
+        import xarray as xr
+        path = os.path.join(tmpdir, name)
+        ds = xr.Dataset(
+            {'temp': (('time', 'lat'), np.zeros((2, 3)),
+                      {'long_name': 'air temperature', 'units': 'K'})},
+            coords={'time': [0, 1], 'lat': [0.0, 1.0, 2.0]},
+            attrs={'title': 'Tiny test model output'},
+        )
+        ds.to_netcdf(path)
+        return path
+
+    def test_contents_summary_reads_header(self):
+        from .prompts import _netcdf_contents
+        cache.clear()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = self._write_nc(tmpdir)
+            nc = MagicMock(pk=99991)
+            nc.file.path = path
+            summary = _netcdf_contents(nc)
+        self.assertIn('title: Tiny test model output', summary)
+        self.assertIn('time=2', summary)
+        self.assertIn('lat=3', summary)
+        self.assertIn('temp (air temperature, K)', summary)
+        self.assertTrue(summary.startswith('<user_data>'))
+
+    def test_unreadable_file_yields_empty(self):
+        from .prompts import _netcdf_contents
+        cache.clear()
+        nc = MagicMock(pk=99992)
+        nc.file.path = '/nonexistent/nope.nc'
+        self.assertEqual(_netcdf_contents(nc), '')
+
+    def test_moved_file_is_found_in_bundle_directory(self):
+        # Processing moves the .nc from uploads/ into the bundle directory
+        # without updating the FileField; the summary must follow it.
+        from .prompts import _netcdf_contents
+        from build.models import Bundle, NetCDFFile
+        cache.clear()
+        user = User.objects.create_user(username='mvuser', password='pw')
+        with tempfile.TemporaryDirectory() as media, tempfile.TemporaryDirectory() as archive:
+            with override_settings(MEDIA_ROOT=media, ARCHIVE_DIR=archive):
+                b = Bundle.objects.create(user=user, name='mvbundle', bundle_type='External', version='1800')
+                os.makedirs(b.directory(), exist_ok=True)
+                self._write_nc(b.directory(), 'moved.nc')
+                nc = NetCDFFile.objects.create(bundle=b, title='moved.nc', file='moved.nc', processed=True)
+                summary = _netcdf_contents(nc)
+        self.assertIn('temp (air temperature, K)', summary)
+
+    def test_bundle_page_context_includes_file_contents(self):
+        from build.models import Bundle, NetCDFFile
+        cache.clear()
+        user = User.objects.create_user(username='ncuser', password='pw')
+        with tempfile.TemporaryDirectory() as tmpdir:
+            self._write_nc(tmpdir, 'sim.nc')
+            with override_settings(MEDIA_ROOT=tmpdir):
+                b = Bundle.objects.create(user=user, name='ncbundle', bundle_type='External', version='1800')
+                NetCDFFile.objects.create(bundle=b, title='sim.nc', file='sim.nc', processed=True)
+                context = _page_context(user, f'/build/{b.pk}/')
+        self.assertIn('Contents of their uploaded NetCDF file', context)
+        self.assertIn('temp (air temperature, K)', context)
 
 
 class BundleSummaryRealModelTests(TestCase):

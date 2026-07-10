@@ -76,6 +76,67 @@ def _user_data(value):
     return f'<user_data>{value}</user_data>'
 
 
+def _netcdf_contents(nc_file):
+    """Compact, cached description of what is inside an uploaded NetCDF file.
+
+    Reads only the file header (lazy open), so this is cheap; results are
+    cached because chat requests recur far more often than files change.
+    Returns '' when the file cannot be read.
+    """
+    from django.core.cache import cache
+    key = f'assistant-nc-contents-{nc_file.pk}'
+    cached = cache.get(key)
+    if cached is not None:
+        return cached
+
+    summary = ''
+    try:
+        import os
+
+        import xarray as xr
+
+        # Processing moves the file from uploads/ into the bundle directory
+        # without updating the FileField, so resolve the real location.
+        path = nc_file.file.path
+        if not os.path.exists(path) and nc_file.bundle_id:
+            moved = os.path.join(nc_file.bundle.directory(), os.path.basename(path))
+            if os.path.exists(moved):
+                path = moved
+        ds = xr.open_dataset(path, decode_times=False)
+        try:
+            parts = []
+            title = str(ds.attrs.get('title', '')).strip()
+            if title:
+                parts.append(f'title: {title[:120]}')
+            dims = ', '.join(f'{k}={v}' for k, v in ds.sizes.items())
+            if dims:
+                parts.append(f'dimensions: {dims}')
+            names = list(ds.data_vars)
+            var_bits = []
+            for name in names[:15]:
+                attrs = ds[name].attrs
+                long_name = str(attrs.get('long_name', '')).strip()
+                units = str(attrs.get('units', '')).strip()
+                label = name
+                if long_name and units:
+                    label += f' ({long_name}, {units})'
+                elif long_name or units:
+                    label += f' ({long_name or units})'
+                var_bits.append(label)
+            if var_bits:
+                more = f' (and {len(names) - 15} more)' if len(names) > 15 else ''
+                parts.append(f'variables: {", ".join(var_bits)}{more}')
+            summary = '; '.join(parts)
+        finally:
+            ds.close()
+    except Exception:
+        summary = ''
+
+    summary = _user_data(summary) if summary else ''
+    cache.set(key, summary, 3600)
+    return summary
+
+
 def _page_context(user, page_path):
     """Describe the page the user is currently viewing; resolve bundle pages to the bundle."""
     if not page_path:
@@ -88,11 +149,24 @@ def _page_context(user, page_path):
             try:
                 from build.models import Bundle
                 bundle = Bundle.objects.get(pk=match.group(1), user=user)
-                return (
+                context = (
                     f'the detail page of their {_user_data(bundle.name)} bundle '
                     f'({bundle.bundle_type} bundle, status: {bundle.get_status().replace("_", " ")}). '
                     'Questions like "this bundle" or "why can\'t I submit?" refer to this bundle.'
                 )
+                # Since the user is looking at this bundle, include what their
+                # uploaded data files actually contain.
+                try:
+                    for nc in bundle.netcdf_files.all()[:3]:
+                        contents = _netcdf_contents(nc)
+                        if contents:
+                            context += (
+                                f'\nContents of their uploaded NetCDF file '
+                                f'{_user_data(nc.title)}: {contents}'
+                            )
+                except Exception:
+                    pass
+                return context
             except Exception:
                 return None
         return description
