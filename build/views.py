@@ -761,6 +761,7 @@ def bundle(request, pk_bundle):
                         given = person.findtext('{}given_name'.format(NAMESPACE), default='')
                         family = person.findtext('{}family_name'.format(NAMESPACE), default='')
                         affiliation = person.find('{}Affiliation'.format(NAMESPACE))
+                        orcid = person.findtext('{}person_orcid'.format(NAMESPACE), default='')
 
                         organization = ''
                         if affiliation is not None:
@@ -770,6 +771,7 @@ def bundle(request, pk_bundle):
                             'type': 'Person',
                             'name': f'{given} {family}'.strip(),
                             'organization': organization,
+                            'orcid': orcid,
                         })
 
                     for org in list_author.findall('{}Organization'.format(NAMESPACE)):
@@ -786,23 +788,101 @@ def bundle(request, pk_bundle):
                             'organization': parent_name,
                         })
 
-                list_editor = citation_xml.find('{}List_Editor'.format(NAMESPACE))
+                    list_editor = citation_xml.find('{}List_Editor'.format(NAMESPACE))
 
-                if list_editor is not None:
-                    for person in list_editor.findall('{}Person'.format(NAMESPACE)):
-                        given = person.findtext('{}given_name'.format(NAMESPACE), default='')
-                        family = person.findtext('{}family_name'.format(NAMESPACE), default='')
-                        affiliation = person.find('{}Affiliation'.format(NAMESPACE))
+                    if list_editor is not None:
 
-                        organization = ''
-                        if affiliation is not None:
-                            organization = affiliation.findtext('{}organization_name'.format(NAMESPACE), default='')
+                        # Editor people
+                        for person in list_editor.findall('{}Person'.format(NAMESPACE)):
+                            given = person.findtext(
+                                '{}given_name'.format(NAMESPACE),
+                                default=''
+                            )
 
-                        citation_information.display_editors.append({
-                            'type': 'Person',
-                            'name': f'{given} {family}'.strip(),
-                            'organization': organization,
-                        })
+                            family = person.findtext(
+                                '{}family_name'.format(NAMESPACE),
+                                default=''
+                            )
+
+                            orcid = person.findtext(
+                                '{}person_orcid'.format(NAMESPACE),
+                                default=''
+                            )
+
+                            affiliation = person.find(
+                                '{}Affiliation'.format(NAMESPACE)
+                            )
+
+                            organization = ''
+
+                            if affiliation is not None:
+                                organization = affiliation.findtext(
+                                    '{}organization_name'.format(NAMESPACE),
+                                    default=''
+                                )
+
+                            citation_information.display_editors.append({
+                                'type': 'Person',
+                                'name': f'{given} {family}'.strip(),
+                                'organization': organization,
+                                'orcid': orcid,
+                            })
+
+                        # Editor organizations
+                        for organization_element in list_editor.findall(
+                            '{}Organization'.format(NAMESPACE)
+                        ):
+                            organization_name = organization_element.findtext(
+                                '{}organization_name'.format(NAMESPACE),
+                                default=''
+                            )
+
+                            organization_rorid = organization_element.findtext(
+                                '{}organization_rorid'.format(NAMESPACE),
+                                default=''
+                            )
+
+                            sequence_number = organization_element.findtext(
+                                '{}sequence_number'.format(NAMESPACE),
+                                default=''
+                            )
+
+                            parent_organization = organization_element.find(
+                                '{}Parent_Organization'.format(NAMESPACE)
+                            )
+
+                            parent_organization_name = ''
+
+                            if parent_organization is not None:
+                                parent_organization_name = parent_organization.findtext(
+                                    '{}parent_organization_name'.format(NAMESPACE),
+                                    default=''
+                                )
+
+                            # Do not display completely empty organization elements
+                            if (
+                                organization_name
+                                or organization_rorid
+                                or sequence_number
+                                or parent_organization_name
+                            ):
+                                citation_information.display_editors.append({
+                                    'type': 'Organization',
+                                    'name': organization_name,
+                                    'rorid': organization_rorid,
+                                    'sequence_number': sequence_number,
+                                    'parent_organization': parent_organization_name,
+                                })
+
+                    citation_information.display_editor_people_count = sum(
+                        1 for editor in citation_information.display_editors
+                        if editor.get('type') == 'Person'
+                    )
+
+                    citation_information.display_editor_organization_count = sum(
+                        1 for editor in citation_information.display_editors
+                        if editor.get('type') == 'Organization'
+                    )
 
         modification_history_set = Modification_History.objects.filter(bundle=bundle)
         # get set of data collections currently associated with the bundle
@@ -1095,10 +1175,6 @@ def bundle(request, pk_bundle):
             # Create Citation_Information model object
             citation_information = form_citation_information.save(commit=False)
             citation_information.bundle = bundle
-            citation_information.number_of_editors_people = 2
-            citation_information.number_of_editors_organization = 0
-            print("EDITOR PEOPLE:", getattr(citation_information, "number_of_editors_people", "MISSING"))
-            print("EDITOR ORGS:", getattr(citation_information, "number_of_editors_organization", "MISSING"))
             citation_information.save()
             print("CITATION SAVE SUCCESSFUL")
             print('Citation Information model object: {}'.format(citation_information))
@@ -1715,10 +1791,6 @@ def citation_information(request, pk_bundle):
             # Create Citation_Information model object
             citation_information = form_citation_information.save(commit=False)
             citation_information.bundle = bundle
-
-            # Default editors (Lynn Neakrase and Lyle Huber)
-            citation_information.number_of_editors_people = 2
-            citation_information.number_of_editors_organization = 0
             citation_information.save()
             print('Citation Information model object: {}'.format(citation_information))
             

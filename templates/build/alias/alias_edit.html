@@ -63,28 +63,29 @@ Delete the alias if you no longer want it associated with your bundle.
 </style>
 
 <div class="page-background">    
-<div class="d-flex justify-content-center align-items-center mt-4">
-   <div class="col-md-6">
+   <div class="d-flex justify-content-center align-items-center mt-4">
+      <div class="col-md-6">
 
-      <!--Alias Form-->
-      <div id="displayAliasForm" class="card shadow-sm">
-         <div class="card">
-            <h4 class="card-header bg-secondary text-light text-center position-relative">
-                Edit Alias
-            </h4>
-         
-        
-            <div class="card-body m-4">
-               <form id="form_data" method="post" action="{% url 'build:alias_edit' bundle.pk alias.pk %}">
-                  {% csrf_token %}
-                  <div class="mb-3">
-                     {{ form_alias.as_p }}
-                  </div>
-               </form>
+         <!--Alias Form-->
+         <div id="displayAliasForm" class="card shadow-sm">
+            <div class="card">
+               <h4 class="card-header bg-secondary text-light text-center position-relative">
+                  Edit Alias
+               </h4>
             
-               <div class="d-flex justify-content-start gap-2 mt-3">
-                  <button form="form_data" class="btn btn-success btn-sm" type="submit">Update</button>
-                  <button class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#delete_modal" style="box-shadow: none;">Delete Alias</button>
+         
+               <div class="card-body m-4">
+                  <form id="form_data" method="post" action="{% url 'build:alias_edit' bundle.pk alias.pk %}">
+                     {% csrf_token %}
+                     <div class="mb-3">
+                        {{ form_alias.as_p }}
+                     </div>
+                  </form>
+               
+                  <div class="d-flex justify-content-start gap-2 mt-3">
+                     <button form="form_data" class="btn btn-success btn-sm" type="submit">Update</button>
+                     <button class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#delete_modal" style="box-shadow: none;">Delete Alias</button>
+                  </div>
                </div>
             </div>
          </div>
@@ -97,10 +98,10 @@ Delete the alias if you no longer want it associated with your bundle.
    <div class="modal-dialog modal-dialog-centered">
      <div class="modal-content">
        <!-- Title -->
-       <div class="modal-header">
+      <div class="modal-header">
          <h3 class="modal-title w-100 text-center" id="delete_modalLabel">Delete Alias</h3>
          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-       </div>
+      </div>
  
        <!-- Modal Body -->
        <div class="modal-body">
