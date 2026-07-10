@@ -162,8 +162,37 @@ def _bundle_summary(b):
         except Exception:
             pass
         try:
-            netcdf_count = b.netcdffile_set.count()
-            detail += f'; {netcdf_count} NetCDF file{"s" if netcdf_count != 1 else ""} uploaded'
+            nc = list(b.netcdf_files.values_list('title', 'processed'))
+            if nc:
+                shown = ', '.join(_user_data(t) for t, _ in nc[:4] if t)
+                more = f' (and {len(nc) - 4} more)' if len(nc) > 4 else ''
+                detail += f'; {len(nc)} NetCDF file{"s" if len(nc) != 1 else ""} uploaded: {shown}{more}'
+                unprocessed = sum(1 for _, p in nc if not p)
+                if unprocessed:
+                    detail += f' ({unprocessed} not processed)'
+            else:
+                detail += '; no NetCDF files uploaded yet'
+        except Exception:
+            pass
+        try:
+            docs = [d for d in b.product_document_set.values_list('document_name', flat=True) if d]
+            if docs:
+                shown = ', '.join(_user_data(d) for d in docs[:4])
+                more = f' (and {len(docs) - 4} more)' if len(docs) > 4 else ''
+                detail += f'; {len(docs)} document{"s" if len(docs) != 1 else ""}: {shown}{more}'
+            else:
+                detail += '; no documents yet'
+        except Exception:
+            pass
+        try:
+            cols = [
+                f'{_user_data(name)} ({ctype})'
+                for name, ctype in b.additionalcollections_set.values_list('collection_name', 'collection_type')[:4]
+            ]
+            if cols:
+                detail += f'; data collections: {", ".join(cols)}'
+            elif b.bundle_type == 'External':
+                detail += '; no data collection created yet (needed before uploading files)'
         except Exception:
             pass
         # What the bundle is about: citation description, keywords, and targets
