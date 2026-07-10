@@ -62,8 +62,13 @@ class Command(BaseCommand):
             except (QuotaExhausted, LLMUnavailable) as exc:
                 raise CommandError(f'Model unavailable at question {i}: {type(exc).__name__}')
 
-            missing = [phrase for phrase in case['must_include']
-                       if phrase.lower() not in answer.lower()]
+            # A must_include entry is a required substring, or a list of
+            # alternatives of which at least one must appear.
+            missing = []
+            for phrase in case['must_include']:
+                options = phrase if isinstance(phrase, list) else [phrase]
+                if not any(o.lower() in answer.lower() for o in options):
+                    missing.append(phrase)
             if missing:
                 self.stdout.write(self.style.ERROR(f'FAIL [{i}] {question}'))
                 self.stdout.write(f'     missing: {missing}')
