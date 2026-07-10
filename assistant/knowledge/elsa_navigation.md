@@ -16,6 +16,9 @@ Key pages:
   button), and the file/collection sections below.
 - About page, release notes for current and recent ELSA versions.
 - Contact page, reach the ELSA / Atmospheres node team directly.
+- ELSA Assistant, the chat widget at the bottom right of every page (this
+  assistant); it answers questions about using ELSA and can pass feedback to
+  the team.
 
 Common actions:
 - Create a bundle: Bundle Hub -> create, choose Archive or External and a name
