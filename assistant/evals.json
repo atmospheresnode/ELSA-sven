@@ -1,0 +1,126 @@
+[
+  {
+    "question": "What does an External bundle need before I can submit it?",
+    "must_include": [
+      "Modification History",
+      "Citation Information",
+      "Target"
+    ]
+  },
+  {
+    "question": "Is the Alias required?",
+    "must_include": [
+      "optional"
+    ]
+  },
+  {
+    "question": "What is the difference between the Bundle ID and an Alias?",
+    "must_include": [
+      "LID"
+    ]
+  },
+  {
+    "question": "What is a LID?",
+    "must_include": [
+      "logical",
+      "identifier"
+    ]
+  },
+  {
+    "question": "What goes in Citation Information?",
+    "must_include": [
+      "author",
+      "publication year"
+    ]
+  },
+  {
+    "question": "Do I need to enter the editors in Citation Information?",
+    "must_include": [
+      "automatic"
+    ]
+  },
+  {
+    "question": "What is Modification History?",
+    "must_include": [
+      "version",
+      "date"
+    ]
+  },
+  {
+    "question": "What file type do I upload to an External bundle?",
+    "must_include": [
+      "NetCDF"
+    ]
+  },
+  {
+    "question": "What is a PDS4 collection?",
+    "must_include": [
+      "products"
+    ]
+  },
+  {
+    "question": "Where can I see all my bundles?",
+    "must_include": [
+      "Bundle Hub"
+    ]
+  },
+  {
+    "question": "What happens after I submit my bundle?",
+    "must_include": [
+      "staff",
+      "review"
+    ]
+  },
+  {
+    "question": "What is a target in PDS4?",
+    "must_include": [
+      "Mars"
+    ]
+  },
+  {
+    "question": "How do I update my name?",
+    "must_include": [
+      "Account",
+      "Edit Profile"
+    ]
+  },
+  {
+    "question": "I forgot my password, what do I do?",
+    "must_include": [
+      "reset",
+      "login"
+    ]
+  },
+  {
+    "question": "How do I create a new bundle?",
+    "must_include": [
+      "Bundle Hub"
+    ]
+  },
+  {
+    "question": "Can I delete several bundles at once?",
+    "must_include": [
+      "Bundle Hub",
+      "checkbox"
+    ]
+  },
+  {
+    "question": "How do I delete a single bundle?",
+    "must_include": [
+      "Delete Bundle",
+      "permanent"
+    ]
+  },
+  {
+    "question": "Where can I upload a finished archive file directly to the node?",
+    "must_include": [
+      "Submit"
+    ]
+  },
+  {
+    "question": "Is there some feature to export my bundle as a spreadsheet?",
+    "must_include": [
+      "not"
+    ]
+  }
+]

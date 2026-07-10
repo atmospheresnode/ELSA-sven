@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 {% load static %}
+{% load assistant_tags %}
 <html lang="en">
 
 <style>
@@ -162,137 +163,428 @@
     </div>
 
     {% if user.is_authenticated %}
-    <!-- Beta Feedback Button -->
-    <button type="button"
-            class="btn text-white position-fixed"
-            style="bottom: 1.5rem; right: 1.5rem; background-color: teal; z-index: 1050; box-shadow: 0 2px 8px rgba(0,0,0,0.25);"
-            data-bs-toggle="modal" data-bs-target="#betaFeedbackModal">
-        <i class="bi bi-chat-dots-fill me-1"></i> Beta Feedback
+    <!-- ELSA Assistant Chat Widget (LLM pilot, replaces the Beta Feedback button) -->
+    {% assistant_enabled as assistant_on %}
+    {% if assistant_on %}
+    <style>
+    /* ===== ELSA Assistant widget ===== */
+    #elsaAssistantToggle {
+        position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 1050;
+        display: flex; align-items: center; gap: 8px;
+        padding: 10px 18px; border: none; border-radius: 999px;
+        background: linear-gradient(135deg, #0f766e, #14b8a6); color: #fff;
+        font-weight: 600; font-size: 0.9rem;
+        box-shadow: 0 8px 24px rgba(15, 118, 110, 0.4);
+        transition: transform .15s ease, box-shadow .15s ease;
+    }
+    #elsaAssistantToggle:hover { transform: translateY(-2px) scale(1.02); box-shadow: 0 12px 28px rgba(15, 118, 110, 0.5); color: #fff; }
+
+    #elsaAssistantPanel {
+        position: fixed; bottom: 5.25rem; right: 1.5rem; z-index: 1050;
+        width: 390px; max-width: calc(100vw - 2rem);
+        transition: width .2s ease;
+    }
+    #elsaAssistantPanel .elsa-card {
+        border: none; border-radius: 18px; overflow: hidden;
+        box-shadow: 0 24px 64px rgba(15, 23, 42, 0.28);
+        animation: elsaSlideUp .22s ease;
+        background: #fff;
+    }
+    @keyframes elsaSlideUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+
+    .elsa-header {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 12px 16px;
+        background: linear-gradient(135deg, #1e3a3a, #0f766e);
+        color: #fff;
+    }
+    .elsa-header-id { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .elsa-avatar {
+        flex: none; width: 34px; height: 34px; border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        background: linear-gradient(135deg, #14b8a6, #2dd4bf); color: #fff; font-size: 1rem;
+    }
+    .elsa-avatar-sm { width: 26px; height: 26px; font-size: 0.8rem; margin-top: 2px; }
+    .elsa-header-name { line-height: 1.15; }
+    .elsa-header-name strong { font-size: 0.92rem; display: block; }
+    .elsa-header-sub { font-size: 0.68rem; opacity: 0.85; display: flex; align-items: center; gap: 5px; }
+    .elsa-online-dot { width: 7px; height: 7px; border-radius: 50%; background: #4ade80; display: inline-block; }
+    .elsa-header-actions { display: flex; align-items: center; gap: 4px; }
+    .elsa-icon-btn {
+        border: none; background: transparent; color: rgba(255,255,255,0.85);
+        width: 30px; height: 30px; border-radius: 8px; font-size: 0.9rem;
+        display: flex; align-items: center; justify-content: center;
+        transition: background .12s ease, color .12s ease;
+    }
+    .elsa-icon-btn:hover { background: rgba(255,255,255,0.15); color: #fff; }
+
+    #elsaAssistantMessages {
+        height: 400px; overflow-y: auto; background: #f4f6f8;
+        padding: 16px 14px; transition: height .2s ease;
+        scroll-behavior: smooth;
+    }
+    #elsaAssistantMessages::-webkit-scrollbar { width: 6px; }
+    #elsaAssistantMessages::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+    #elsaAssistantMessages::-webkit-scrollbar-track { background: transparent; }
+
+    .elsa-row { display: flex; gap: 8px; margin-bottom: 12px; animation: elsaFadeIn .18s ease; }
+    .elsa-row.user { justify-content: flex-end; }
+    @keyframes elsaFadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+    .elsa-col { display: flex; flex-direction: column; max-width: 82%; }
+    .elsa-row.user .elsa-col { align-items: flex-end; }
+    .elsa-bubble {
+        padding: 9px 13px; border-radius: 16px; font-size: 0.845rem; line-height: 1.5;
+        word-wrap: break-word; overflow-wrap: break-word;
+    }
+    .elsa-row.model .elsa-bubble {
+        background: #fff; color: #1f2937; border-bottom-left-radius: 5px;
+        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+    }
+    .elsa-row.user .elsa-bubble {
+        background: linear-gradient(135deg, #0f766e, #14b8a6); color: #fff;
+        border-bottom-right-radius: 5px;
+    }
+    .elsa-bubble p { margin-bottom: 0.45rem; }
+    .elsa-bubble p:last-child { margin-bottom: 0; }
+    .elsa-bubble ul, .elsa-bubble ol { margin-bottom: 0.45rem; padding-left: 1.15rem; }
+    .elsa-bubble pre { background: #f1f5f9; padding: 0.5rem; border-radius: 8px; font-size: 0.75rem; margin-bottom: 0.45rem; overflow-x: auto; }
+    .elsa-bubble code { font-size: 0.82em; }
+    .elsa-row.user .elsa-bubble code { color: #ccfbf1; }
+
+    .elsa-typing { display: inline-flex; align-items: center; gap: 8px; color: #64748b; font-size: 0.78rem; }
+    .elsa-typing-dots { display: inline-flex; gap: 3px; }
+    .elsa-typing-dots span {
+        width: 6px; height: 6px; border-radius: 50%; background: #14b8a6;
+        animation: elsaBounce 1.2s infinite ease-in-out;
+    }
+    .elsa-typing-dots span:nth-child(2) { animation-delay: .15s; }
+    .elsa-typing-dots span:nth-child(3) { animation-delay: .3s; }
+    @keyframes elsaBounce { 0%, 60%, 100% { transform: none; opacity: .45; } 30% { transform: translateY(-4px); opacity: 1; } }
+
+    .elsa-rate-bar { margin-top: 4px; display: flex; gap: 2px; }
+    .elsa-rate-btn {
+        border: none; background: none; padding: 2px 4px; border-radius: 6px;
+        color: #94a3b8; font-size: 0.78rem; cursor: pointer;
+        transition: color .12s ease, background .12s ease;
+    }
+    .elsa-rate-btn:hover { background: #e2e8f0; color: #0f766e; }
+    .elsa-rate-btn.active { color: #0f766e; }
+
+    .elsa-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 12px 34px; animation: elsaFadeIn .25s ease; }
+    .elsa-chip {
+        border: 1px solid #99f6e4; background: #f0fdfa; color: #0f766e;
+        border-radius: 999px; padding: 5px 12px; font-size: 0.75rem; cursor: pointer;
+        transition: background .12s ease, transform .12s ease;
+    }
+    .elsa-chip:hover { background: #ccfbf1; transform: translateY(-1px); }
+
+    .elsa-note { text-align: center; color: #94a3b8; font-size: 0.7rem; margin: 8px 0; }
+
+    .elsa-inputbar { padding: 10px 12px; background: #fff; border-top: 1px solid #eef2f6; }
+    .elsa-inputbar form { display: flex; gap: 8px; align-items: center; }
+    #elsaAssistantInput {
+        flex: 1; border: 1.5px solid #e2e8f0; border-radius: 999px;
+        padding: 8px 16px; font-size: 0.85rem; outline: none;
+        transition: border-color .12s ease, box-shadow .12s ease;
+    }
+    #elsaAssistantInput:focus { border-color: #14b8a6; box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.15); }
+    #elsaAssistantSend {
+        flex: none; width: 38px; height: 38px; border: none; border-radius: 50%;
+        background: linear-gradient(135deg, #0f766e, #14b8a6); color: #fff; font-size: 0.9rem;
+        display: flex; align-items: center; justify-content: center;
+        transition: transform .12s ease, opacity .12s ease;
+    }
+    #elsaAssistantSend:hover:not(:disabled) { transform: scale(1.06); }
+    #elsaAssistantSend:disabled { opacity: 0.5; }
+    .elsa-disclaimer { text-align: center; color: #94a3b8; font-size: 0.64rem; margin: 6px 0 0; }
+    </style>
+
+    <button type="button" id="elsaAssistantToggle" aria-label="Open the ELSA Assistant">
+        <i class="bi bi-stars"></i> ELSA Assistant
     </button>
 
-    <!-- Beta Feedback Modal -->
-    <div class="modal fade" id="betaFeedbackModal" tabindex="-1" aria-labelledby="betaFeedbackModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header text-white" style="background-color: #2F4F4F;">
-                    <h5 class="modal-title" id="betaFeedbackModalLabel">
-                        <i class="bi bi-chat-dots-fill me-2"></i> Beta Feedback
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+    <div id="elsaAssistantPanel" class="d-none">
+        <div class="elsa-card">
+            <div class="elsa-header">
+                <div class="elsa-header-id">
+                    <div class="elsa-avatar"><i class="bi bi-stars"></i></div>
+                    <div class="elsa-header-name">
+                        <strong>ELSA Assistant</strong>
+                        <span class="elsa-header-sub"><span class="elsa-online-dot"></span> PDS4 &amp; bundle helper · Beta</span>
+                    </div>
                 </div>
-                <div class="modal-body">
-                    <p class="text-muted small mb-3">Help us improve ELSA. Your feedback goes directly to the development team.</p>
-                    <form id="betaFeedbackForm">
-                        {% csrf_token %}
-                        <div class="mb-3">
-                            <label for="feedbackCategory" class="form-label fw-semibold">Category <span class="text-danger">*</span></label>
-                            <select class="form-select" id="feedbackCategory" name="category" required>
-                                <option value="" disabled selected>Select a category...</option>
-                                <option value="Bug Report">Bug Report</option>
-                                <option value="Suggestion">Suggestion</option>
-                                <option value="Question">Question</option>
-                                <option value="Other">Other</option>
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold">Context</label>
-                            <div class="d-flex gap-3">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="bundle_type" id="bundleTypeGeneral" value="General" checked>
-                                    <label class="form-check-label" for="bundleTypeGeneral">General</label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="bundle_type" id="bundleTypeExternal" value="External bundle">
-                                    <label class="form-check-label" for="bundleTypeExternal">External bundle</label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="bundle_type" id="bundleTypeArchive" value="Archive bundle">
-                                    <label class="form-check-label" for="bundleTypeArchive">Archive bundle</label>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label for="feedbackDescription" class="form-label fw-semibold">Description <span class="text-danger">*</span></label>
-                            <textarea class="form-control" id="feedbackDescription" name="description" rows="4"
-                                      placeholder="Describe the issue, idea, or question..." required></textarea>
-                        </div>
-                        <div class="mb-3">
-                            <label for="feedbackEmail" class="form-label fw-semibold">Your email <span class="text-muted fw-normal">(optional, for follow-up)</span></label>
-                            <input type="email" class="form-control" id="feedbackEmail" name="user_email" placeholder="you@example.com">
-                        </div>
-                        <div id="feedbackAlert" class="d-none"></div>
-                    </form>
+                <div class="elsa-header-actions">
+                    <button type="button" class="elsa-icon-btn" id="elsaAssistantNew" aria-label="New chat" title="New chat"><i class="bi bi-plus-lg"></i></button>
+                    <button type="button" class="elsa-icon-btn" id="elsaAssistantExpand" aria-label="Expand" title="Expand"><i class="bi bi-arrows-angle-expand"></i></button>
+                    <button type="button" class="elsa-icon-btn" id="elsaAssistantClose" aria-label="Close" title="Close"><i class="bi bi-x-lg"></i></button>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn text-white" style="background-color: teal;" id="feedbackSubmitBtn">
-                        Submit Feedback
-                    </button>
-                </div>
+            </div>
+            <div id="elsaAssistantMessages"></div>
+            <div class="elsa-inputbar">
+                <form id="elsaAssistantForm">
+                    {% csrf_token %}
+                    <input type="text" id="elsaAssistantInput"
+                           placeholder="Ask about ELSA or PDS4..." autocomplete="off" maxlength="2000">
+                    <button type="submit" id="elsaAssistantSend" aria-label="Send"><i class="bi bi-send-fill"></i></button>
+                </form>
+                <p class="elsa-disclaimer">AI-generated, so verify important details. I can also pass feedback to the ELSA team.</p>
             </div>
         </div>
     </div>
 
-    <!-- Toast container (toasts injected here dynamically) -->
-    <div id="feedbackToastContainer" class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1100;"></div>
-
+    <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
     <script>
-    document.getElementById('feedbackSubmitBtn').addEventListener('click', function () {
-        const form = document.getElementById('betaFeedbackForm');
-        const alertEl = document.getElementById('feedbackAlert');
-        const btn = this;
+    (function () {
+        const toggle = document.getElementById('elsaAssistantToggle');
+        const panel = document.getElementById('elsaAssistantPanel');
+        const closeBtn = document.getElementById('elsaAssistantClose');
+        const newBtn = document.getElementById('elsaAssistantNew');
+        const messagesEl = document.getElementById('elsaAssistantMessages');
+        const form = document.getElementById('elsaAssistantForm');
+        const input = document.getElementById('elsaAssistantInput');
+        const sendBtn = document.getElementById('elsaAssistantSend');
+        const csrfToken = form.querySelector('[name=csrfmiddlewaretoken]').value;
 
-        if (!form.checkValidity()) {
-            form.reportValidity();
-            return;
+        const SUGGESTIONS = [
+            "What does my bundle still need?",
+            "Bundle ID vs Alias?",
+            "What goes in Citation Information?",
+            "I found a bug",
+        ];
+        const TYPING_HTML = '<span class="elsa-typing"><span class="elsa-typing-dots"><span></span><span></span><span></span></span><span class="elsa-typing-label"></span></span>';
+
+        let conversationId = null;
+        let historyLoaded = false;
+
+        function renderText(text) {
+            if (window.marked && window.DOMPurify) {
+                return DOMPurify.sanitize(marked.parse(text, {breaks: true, gfm: true}));
+            }
+            // Fallback if the CDN scripts failed to load
+            let html = text
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+            html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+            return html.replace(/\n/g, '<br>');
         }
 
-        btn.disabled = true;
-        btn.textContent = 'Sending...';
+        function scrollDown() { messagesEl.scrollTop = messagesEl.scrollHeight; }
 
-        const data = new FormData(form);
-
-        fetch("{% url 'build:submit_feedback' %}", {
-            method: 'POST',
-            headers: {'X-CSRFToken': data.get('csrfmiddlewaretoken')},
-            body: data,
-        })
-        .then(r => r.json())
-        .then(json => {
-            if (json.success) {
-                form.reset();
-                bootstrap.Modal.getInstance(document.getElementById('betaFeedbackModal')).hide();
-                const toastEl = document.createElement('div');
-                toastEl.className = 'toast align-items-center text-white border-0';
-                toastEl.style.backgroundColor = '#2F4F4F';
-                toastEl.setAttribute('role', 'alert');
-                toastEl.innerHTML = `
-                    <div class="d-flex">
-                        <div class="toast-body">
-                            <i class="bi bi-check-circle-fill me-2"></i>
-                            <strong>Thank you for your feedback!</strong> We will review it and reach out if needed.
-                        </div>
-                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-                    </div>`;
-                document.getElementById('feedbackToastContainer').appendChild(toastEl);
-                const toast = new bootstrap.Toast(toastEl, {delay: 5000});
-                toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
-                toast.show();
-            } else {
-                alertEl.className = 'alert alert-danger mt-2';
-                alertEl.textContent = json.error || 'Something went wrong. Please try again.';
+        function addBubble(role, html) {
+            const row = document.createElement('div');
+            row.className = 'elsa-row ' + role;
+            if (role === 'model') {
+                const avatar = document.createElement('div');
+                avatar.className = 'elsa-avatar elsa-avatar-sm';
+                avatar.innerHTML = '<i class="bi bi-stars"></i>';
+                row.appendChild(avatar);
             }
-        })
-        .catch(() => {
-            alertEl.className = 'alert alert-danger mt-2';
-            alertEl.textContent = 'Network error. Please try again.';
-        })
-        .finally(() => {
-            btn.disabled = false;
-            btn.textContent = 'Submit Feedback';
+            const col = document.createElement('div');
+            col.className = 'elsa-col';
+            const bubble = document.createElement('div');
+            bubble.className = 'elsa-bubble';
+            bubble.innerHTML = html;
+            col.appendChild(bubble);
+            row.appendChild(col);
+            messagesEl.appendChild(row);
+            scrollDown();
+            return {row: row, col: col, bubble: bubble};
+        }
+
+        function addRating(col, messageId, current) {
+            if (!messageId) return;
+            const bar = document.createElement('div');
+            bar.className = 'elsa-rate-bar';
+            [[1, 'bi-hand-thumbs-up'], [-1, 'bi-hand-thumbs-down']].forEach(function ([value, icon]) {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'elsa-rate-btn' + (current === value ? ' active' : '');
+                btn.setAttribute('aria-label', value === 1 ? 'Good answer' : 'Bad answer');
+                btn.innerHTML = '<i class="bi ' + icon + '"></i>';
+                btn.addEventListener('click', function () {
+                    const newValue = btn.classList.contains('active') ? 0 : value;
+                    fetch("{% url 'assistant:rate' %}", {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken},
+                        body: JSON.stringify({message_id: messageId, rating: newValue}),
+                    }).catch(function () {});
+                    bar.querySelectorAll('.elsa-rate-btn').forEach(b => b.classList.remove('active'));
+                    if (newValue !== 0) btn.classList.add('active');
+                });
+                bar.appendChild(btn);
+            });
+            col.appendChild(bar);
+        }
+
+        function addSystemNote(text) {
+            const note = document.createElement('p');
+            note.className = 'elsa-note';
+            note.textContent = text;
+            messagesEl.appendChild(note);
+            scrollDown();
+        }
+
+        function addChips() {
+            const chips = document.createElement('div');
+            chips.className = 'elsa-chips';
+            SUGGESTIONS.forEach(function (q) {
+                const chip = document.createElement('button');
+                chip.type = 'button';
+                chip.className = 'elsa-chip';
+                chip.textContent = q;
+                chip.addEventListener('click', function () {
+                    chips.remove();
+                    sendMessage(q);
+                });
+                chips.appendChild(chip);
+            });
+            messagesEl.appendChild(chips);
+            scrollDown();
+        }
+
+        function greet() {
+            addBubble('model', renderText(
+                "Hi {{ user }}! I'm the ELSA Assistant. I can help you build and submit " +
+                "bundles, explain PDS4 concepts, and pass feedback to the ELSA team."
+            ));
+            addChips();
+        }
+
+        function openPanel() {
+            panel.classList.remove('d-none');
+            if (!historyLoaded) {
+                historyLoaded = true;
+                fetch("{% url 'assistant:history' %}")
+                    .then(r => r.json())
+                    .then(function (data) {
+                        conversationId = data.conversation_id;
+                        if (data.messages && data.messages.length) {
+                            data.messages.forEach(function (m) {
+                                const {col} = addBubble(m.role, renderText(m.text));
+                                if (m.role === 'model') addRating(col, m.id, m.rating);
+                            });
+                        } else {
+                            greet();
+                        }
+                    })
+                    .catch(greet);
+            }
+            input.focus();
+        }
+
+        toggle.addEventListener('click', function () {
+            panel.classList.contains('d-none') ? openPanel() : panel.classList.add('d-none');
         });
-    });
+        closeBtn.addEventListener('click', function () { panel.classList.add('d-none'); });
+
+        newBtn.addEventListener('click', function () {
+            conversationId = null;
+            messagesEl.innerHTML = '';
+            greet();
+            input.focus();
+        });
+
+        const expandBtn = document.getElementById('elsaAssistantExpand');
+        let expanded = false;
+        expandBtn.addEventListener('click', function () {
+            expanded = !expanded;
+            panel.style.width = expanded ? 'min(760px, calc(100vw - 2rem))' : '390px';
+            messagesEl.style.height = expanded ? 'min(65vh, 640px)' : '400px';
+            expandBtn.querySelector('i').className = expanded ? 'bi bi-arrows-angle-contract' : 'bi bi-arrows-angle-expand';
+            expandBtn.title = expanded ? 'Shrink' : 'Expand';
+            scrollDown();
+            input.focus();
+        });
+
+        async function readSseStream(response, reply) {
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buf = '';
+            let acc = '';
+            let gotDone = false;
+
+            while (true) {
+                const {done, value} = await reader.read();
+                if (done) break;
+                buf += decoder.decode(value, {stream: true});
+                const events = buf.split('\n\n');
+                buf = events.pop();
+                for (const raw of events) {
+                    const line = raw.split('\n').find(l => l.startsWith('data: '));
+                    if (!line) continue;
+                    let ev;
+                    try { ev = JSON.parse(line.slice(6)); } catch (err) { continue; }
+
+                    if (ev.type === 'delta') {
+                        acc += ev.text;
+                        reply.bubble.innerHTML = renderText(acc);
+                        scrollDown();
+                    } else if (ev.type === 'status') {
+                        const label = reply.bubble.querySelector('.elsa-typing-label');
+                        if (label) label.textContent = ev.text;
+                    } else if (ev.type === 'done') {
+                        gotDone = true;
+                        conversationId = ev.conversation_id;
+                        reply.bubble.innerHTML = renderText(ev.reply);
+                        addRating(reply.col, ev.message_id, 0);
+                        if (ev.feedback_sent) addSystemNote('✓ Feedback sent to the ELSA team');
+                    } else if (ev.type === 'error') {
+                        reader.cancel();
+                        throw new Error(ev.error);
+                    }
+                }
+            }
+            if (!gotDone && !acc) {
+                throw new Error('The assistant returned an empty response. Please try again.');
+            }
+        }
+
+        function sendMessage(text) {
+            addBubble('user', renderText(text));
+            sendBtn.disabled = true;
+            input.disabled = true;
+
+            const reply = addBubble('model', TYPING_HTML);
+
+            fetch("{% url 'assistant:chat' %}", {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken},
+                body: JSON.stringify({
+                    conversation_id: conversationId,
+                    message: text,
+                    page: window.location.pathname,
+                }),
+            })
+            .then(async (r) => {
+                const type = r.headers.get('content-type') || '';
+                if (!type.includes('text/event-stream')) {
+                    const json = await r.json().catch(() => ({}));
+                    throw new Error(json.error || 'Something went wrong. Please try again.');
+                }
+                await readSseStream(r, reply);
+            })
+            .catch((err) => {
+                reply.bubble.innerHTML = renderText(err.message || 'Network error. Please try again.');
+            })
+            .finally(() => {
+                sendBtn.disabled = false;
+                input.disabled = false;
+                input.focus();
+            });
+        }
+
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            const text = input.value.trim();
+            if (!text || sendBtn.disabled) return;
+            input.value = '';
+            sendMessage(text);
+        });
+    })();
     </script>
+    {% endif %}
     {% endif %}
 
     {% block extra_js %}{% endblock %}
