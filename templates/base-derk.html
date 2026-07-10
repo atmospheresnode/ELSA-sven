@@ -227,6 +227,9 @@
     #elsaAssistantMessages::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
     #elsaAssistantMessages::-webkit-scrollbar-track { background: transparent; }
 
+    .elsa-assistant-link { color: #0f766e; font-weight: 600; text-decoration: underline; }
+    .elsa-assistant-link:hover { color: #008080; }
+
     .elsa-row { display: flex; gap: 8px; margin-bottom: 12px; animation: elsaFadeIn .18s ease; }
     .elsa-row.user { justify-content: flex-end; }
     @keyframes elsaFadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
@@ -360,6 +363,22 @@
 
         function renderText(text) {
             if (window.marked && window.DOMPurify) {
+                // Same-origin links only: the model is told to emit relative
+                // ELSA paths; anything else (external URLs, or links smuggled
+                // in via prompt injection) is demoted to plain text.
+                if (!window.__elsaAssistantLinkHook) {
+                    DOMPurify.addHook('afterSanitizeAttributes', function (node) {
+                        if (node.tagName === 'A') {
+                            var href = node.getAttribute('href') || '';
+                            if (href.charAt(0) === '/' && href.charAt(1) !== '/') {
+                                node.setAttribute('class', 'elsa-assistant-link');
+                            } else {
+                                node.removeAttribute('href');
+                            }
+                        }
+                    });
+                    window.__elsaAssistantLinkHook = true;
+                }
                 return DOMPurify.sanitize(marked.parse(text, {breaks: true, gfm: true}));
             }
             // Fallback if the CDN scripts failed to load
