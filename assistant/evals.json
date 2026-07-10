@@ -120,7 +120,15 @@
   {
     "question": "Is there some feature to export my bundle as a spreadsheet?",
     "must_include": [
-      "not"
+      [
+        "not",
+        "can't",
+        "cannot",
+        "doesn't",
+        "isn't",
+        "unable",
+        "no such"
+      ]
     ]
   }
 ]
