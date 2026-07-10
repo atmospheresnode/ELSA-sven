@@ -322,7 +322,8 @@ class RetrieverTests(SimpleTestCase):
 class BundleSummaryTests(SimpleTestCase):
 
     def make_bundle(self, mod=True, cit=False, targets=False, netcdf=2,
-                    description='', keyword='', target_names=()):
+                    description='', keyword='', target_names=(),
+                    docs=(), collections=(('data', 'External'),)):
         b = MagicMock()
         b.name = 'Now'
         b.bundle_type = 'External'
@@ -337,7 +338,10 @@ class BundleSummaryTests(SimpleTestCase):
         b.citation_information_set.first.return_value = citation
         b.targets.exists.return_value = targets
         b.targets.values_list.return_value = list(target_names)
-        b.netcdffile_set.count.return_value = netcdf
+        b.netcdf_files.values_list.return_value = [
+            (f'file{i}.nc', True) for i in range(netcdf)]
+        b.product_document_set.values_list.return_value = list(docs)
+        b.additionalcollections_set.values_list.return_value = list(collections)
         return b
 
     def test_missing_components_are_listed(self):
@@ -345,6 +349,25 @@ class BundleSummaryTests(SimpleTestCase):
         self.assertIn('missing required: Citation Information, Targets', line)
         self.assertIn('already has: Modification History', line)
         self.assertIn('2 NetCDF files', line)
+
+    def test_contents_are_listed(self):
+        line = _bundle_summary(self.make_bundle(
+            netcdf=2, docs=['User Guide'], collections=[('mydata', 'External')]))
+        self.assertIn('2 NetCDF files uploaded: <user_data>file0.nc</user_data>, <user_data>file1.nc</user_data>', line)
+        self.assertIn('1 document: <user_data>User Guide</user_data>', line)
+        self.assertIn('data collections: <user_data>mydata</user_data> (External)', line)
+
+    def test_empty_contents_are_stated_not_omitted(self):
+        line = _bundle_summary(self.make_bundle(netcdf=0, docs=(), collections=()))
+        self.assertIn('no NetCDF files uploaded yet', line)
+        self.assertIn('no documents yet', line)
+        self.assertIn('no data collection created yet', line)
+
+    def test_unprocessed_files_are_flagged(self):
+        b = self.make_bundle()
+        b.netcdf_files.values_list.return_value = [('good.nc', True), ('bad.nc', False)]
+        line = _bundle_summary(b)
+        self.assertIn('(1 not processed)', line)
 
     def test_description_and_targets_included(self):
         line = _bundle_summary(self.make_bundle(
@@ -358,6 +381,35 @@ class BundleSummaryTests(SimpleTestCase):
     def test_complete_bundle(self):
         line = _bundle_summary(self.make_bundle(mod=True, cit=True, targets=True))
         self.assertIn('all required components complete', line)
+
+
+class BundleSummaryRealModelTests(TestCase):
+    """Guards the reverse-accessor names against the real models.
+
+    The MagicMock-based tests above cannot catch a wrong accessor (mocks
+    auto-create any attribute); a typo like `netcdffile_set` silently dropped
+    the NetCDF info from every summary until this test existed.
+    """
+
+    def test_summary_reads_real_relations(self):
+        from build.models import AdditionalCollections, Bundle, NetCDFFile, Product_Document
+        user = User.objects.create_user(username='summaryuser', password='pw')
+        b = Bundle.objects.create(user=user, name='realsum', bundle_type='External', version='1800')
+        NetCDFFile.objects.create(bundle=b, title='sim.nc', file='sim.nc', processed=True)
+        NetCDFFile.objects.create(bundle=b, title='raw.nc', file='raw.nc', processed=False)
+        AdditionalCollections.objects.create(bundle=b, collection_name='mydata', collection_type='External')
+        Product_Document.objects.create(
+            bundle=b, document_name='User Guide', author_list='', copyright='',
+            description='', document_editions='', publication_date='', revision_id='')
+
+        line = _bundle_summary(b)
+
+        self.assertIn('2 NetCDF files uploaded', line)
+        self.assertIn('sim.nc', line)
+        self.assertIn('(1 not processed)', line)
+        self.assertIn('1 document: <user_data>User Guide</user_data>', line)
+        self.assertIn('data collections: <user_data>mydata</user_data> (External)', line)
+        self.assertIn('missing required', line)
 
 
 class PromptTests(TestCase):
