@@ -136,5 +136,32 @@
     "must_include": [
       "/review/"
     ]
+  },
+  {
+    "question": "How do I add one to my bundle?",
+    "history": [
+      "What are targets in ELSA?",
+      "Targets are context products describing the planetary bodies your data covers, such as Mars. They are one of the three required components for an External bundle."
+    ],
+    "must_include": [
+      [
+        "target",
+        "Targets"
+      ]
+    ]
+  },
+  {
+    "question": "Can the assistant delete my bundle for me?",
+    "must_not_include": [
+      "I have deleted",
+      "I've deleted",
+      "I will delete"
+    ],
+    "must_include": [
+      [
+        "delete",
+        "Delete"
+      ]
+    ]
   }
 ]

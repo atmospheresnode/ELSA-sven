@@ -54,24 +54,40 @@ class Command(BaseCommand):
         passed = 0
         for i, case in enumerate(evals, 1):
             question = case['question']
-            prompt = build_system_prompt(user, query=question)
-            contents = [{'role': 'user', 'parts': [{'text': question}]}]
+            # A case may carry prior turns ("history": [user, model, ...]) so
+            # follow-up behavior is testable; retrieval sees the previous user
+            # turn, mirroring the chat view.
+            history = case.get('history', [])
+            contents = []
+            for turn_i, turn in enumerate(history):
+                contents.append({'role': 'user' if turn_i % 2 == 0 else 'model',
+                                 'parts': [{'text': turn}]})
+            contents.append({'role': 'user', 'parts': [{'text': question}]})
+            prev_user = history[-2] if len(history) >= 2 else (history[0] if history else '')
+            retrieval_query = f'{prev_user[:300]} {question}' if prev_user else question
+            prompt = build_system_prompt(user, query=retrieval_query)
             try:
                 model, upstream = client.open_stream(prompt, contents)
                 answer = ''.join(e.get('text', '') for e in client.iter_events(upstream))
             except (QuotaExhausted, LLMUnavailable) as exc:
                 raise CommandError(f'Model unavailable at question {i}: {type(exc).__name__}')
 
-            # A must_include entry is a required substring, or a list of
-            # alternatives of which at least one must appear.
+            # must_include: required substring, or a list of alternatives of
+            # which at least one must appear. must_not_include: forbidden
+            # substrings (regression guard against invented features/claims).
             missing = []
-            for phrase in case['must_include']:
+            for phrase in case.get('must_include', []):
                 options = phrase if isinstance(phrase, list) else [phrase]
                 if not any(o.lower() in answer.lower() for o in options):
                     missing.append(phrase)
-            if missing:
+            forbidden = [phrase for phrase in case.get('must_not_include', [])
+                         if phrase.lower() in answer.lower()]
+            if missing or forbidden:
                 self.stdout.write(self.style.ERROR(f'FAIL [{i}] {question}'))
-                self.stdout.write(f'     missing: {missing}')
+                if missing:
+                    self.stdout.write(f'     missing: {missing}')
+                if forbidden:
+                    self.stdout.write(f'     forbidden: {forbidden}')
                 self.stdout.write(f'     answer:  {answer[:200]}...')
             else:
                 passed += 1

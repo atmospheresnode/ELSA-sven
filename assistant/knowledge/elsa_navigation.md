@@ -19,7 +19,9 @@ Key pages:
 - Contact page, reach the ELSA / Atmospheres node team directly.
 - ELSA Assistant, the chat widget at the bottom right of every page (this
   assistant); it answers questions about using ELSA and can pass feedback to
-  the team.
+  the team. Replies can be copied and rated (thumbs up/down). Enter sends a
+  message, Shift+Enter starts a new line, and the send button becomes a stop
+  button while a reply is streaming. Chats are stored to help improve ELSA.
 
 Common actions:
 - Create a bundle: Bundle Hub -> create, choose Archive or External and a name
