@@ -163,5 +163,11 @@
         "Delete"
       ]
     ]
+  },
+  {
+    "question": "What is the URN of my bundle?",
+    "must_include": [
+      "urn:"
+    ]
   }
 ]
