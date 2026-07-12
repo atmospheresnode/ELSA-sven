@@ -23,6 +23,7 @@ KNOWLEDGE_DIR = Path(__file__).resolve().parent / 'knowledge'
 REPO_ROOT = KNOWLEDGE_DIR.parents[1]
 
 WATCHES_RE = re.compile(r'<!--\s*watches:\s*(.*?)\s*-->', re.DOTALL)
+REVIEWED_RE = re.compile(r'<!--\s*reviewed:\s*(\d{4}-\d{2}-\d{2})\s*-->')
 
 
 def parse_watches(text):
@@ -31,6 +32,22 @@ def parse_watches(text):
     if not match:
         return []
     return [p.strip() for p in match.group(1).split(',') if p.strip()]
+
+
+def parse_reviewed_ts(text):
+    """Unix timestamp of an explicit review marker, or None.
+
+    A chunk may declare `<!-- reviewed: YYYY-MM-DD -->` to record that it was
+    checked against the watched files on that date and needed no update. This
+    is how merges (which bulk-update watched files' commit times) are cleared
+    without artificial edits. Counts as end of that day, local time.
+    """
+    match = REVIEWED_RE.search(text)
+    if not match:
+        return None
+    import datetime
+    day = datetime.date.fromisoformat(match.group(1))
+    return int(datetime.datetime.combine(day, datetime.time(23, 59, 59)).timestamp())
 
 
 def _last_commit_ts(path):
@@ -65,13 +82,15 @@ def run_check(out=print):
             continue
 
         chunk_ts = _last_commit_ts(rel_chunk)
+        reviewed_ts = parse_reviewed_ts(chunk_path.read_text())
+        effective_ts = max(chunk_ts or 0, reviewed_ts or 0) or None
         reasons = []
         for path in watched:
             if any(d.startswith(path.rstrip('/')) for d in dirty):
                 reasons.append(f'{path} has uncommitted changes')
                 continue
             watched_ts = _last_commit_ts(path)
-            if chunk_ts and watched_ts and watched_ts > chunk_ts:
+            if effective_ts and watched_ts and watched_ts > effective_ts:
                 reasons.append(f'{path} committed after the knowledge file')
 
         if reasons:
@@ -86,8 +105,9 @@ def run_check(out=print):
             for reason in reasons:
                 out(f'       - {reason}')
         out('')
-        out('Review the chunks above, update them if the behavior they describe changed,')
-        out('then commit (a no-change commit also clears the flag).')
+        out('Review the chunks above and update them if the behavior they describe')
+        out('changed. If a chunk needed no update, record the review instead by adding')
+        out('or refreshing "<!-- reviewed: YYYY-MM-DD -->" in the chunk and committing.')
     else:
         out(f'OK: no stale knowledge ({len(list(KNOWLEDGE_DIR.glob("*.md")))} chunks checked).')
 

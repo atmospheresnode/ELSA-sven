@@ -34,3 +34,7 @@ additional editor persons/organizations on the citation form, then fill in
 their names on the citation details page (Editors tab). Citation Information is
 one of the three required components before an External bundle can be
 submitted.
+
+A bundle holds one Citation Information section (PDS4 allows exactly one per
+bundle). Once it exists, the modal shows the current citation with edit and
+delete actions instead of the create form.

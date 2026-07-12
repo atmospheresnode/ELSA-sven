@@ -1,4 +1,5 @@
 <!-- watches: build/views.py, build/forms.py, submit/views.py, templates/submit -->
+<!-- reviewed: 2026-07-10 -->
 # Uploading Documents and the Submit Uploads Area
 
 Documents in a bundle: bundles have a document collection for user guides and

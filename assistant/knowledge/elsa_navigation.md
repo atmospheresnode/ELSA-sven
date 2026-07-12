@@ -1,4 +1,5 @@
 <!-- watches: templates/base-derk.html, templates/friends/bundle_hub.html, build/urls.py -->
+<!-- reviewed: 2026-07-10 -->
 # Navigating ELSA
 
 Key pages:

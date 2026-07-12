@@ -529,3 +529,13 @@ class KnowledgeCheckTests(SimpleTestCase):
         text = '<!-- watches: build/views.py, templates/build -->\n# Title\nBody'
         self.assertEqual(parse_watches(text), ['build/views.py', 'templates/build'])
         self.assertEqual(parse_watches('# No declaration'), [])
+
+    def test_parse_reviewed_marker(self):
+        import datetime
+        from assistant.knowledge_check import parse_reviewed_ts
+        ts = parse_reviewed_ts('<!-- watches: a -->\n<!-- reviewed: 2026-07-10 -->\n# T')
+        self.assertIsNotNone(ts)
+        # counts as end of that day, so it clears same-day commits to watched files
+        eod = datetime.datetime.combine(datetime.date(2026, 7, 10), datetime.time(23, 59, 59))
+        self.assertEqual(ts, int(eod.timestamp()))
+        self.assertIsNone(parse_reviewed_ts('<!-- watches: a -->\n# no marker'))
