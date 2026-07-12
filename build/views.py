@@ -743,11 +743,17 @@ def bundle(request, pk_bundle):
         citation_information_set = Citation_Information.objects.filter(bundle=bundle)
 
         product_bundle = Product_Bundle.objects.get(bundle=bundle)
-        label_list = open_label_with_tree(product_bundle.label())
-        label_root = label_list[1]
-
-        identification_area = label_root.find('{}Identification_Area'.format(NAMESPACE))
-        citation_xml = identification_area.find('{}Citation_Information'.format(NAMESPACE))
+        # A missing or unreadable bundle label must not 500 the whole page;
+        # citation author/editor display just falls back to the DB values.
+        citation_xml = None
+        try:
+            label_list = open_label_with_tree(product_bundle.label())
+            label_root = label_list[1]
+            identification_area = label_root.find('{}Identification_Area'.format(NAMESPACE))
+            if identification_area is not None:
+                citation_xml = identification_area.find('{}Citation_Information'.format(NAMESPACE))
+        except Exception as e:
+            print('bundle view: could not read bundle label for citation display: {}'.format(e))
 
         for citation_information in citation_information_set:
             citation_information.display_authors = []
