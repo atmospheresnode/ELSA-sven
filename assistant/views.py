@@ -27,6 +27,9 @@ MAX_MESSAGE_CHARS = 4000
 # Per-user rate limits (shared free-tier quota protection)
 RATE_LIMIT_PER_MINUTE = 20
 RATE_LIMIT_PER_DAY = 200
+# Global cap across ALL users: per-user limits don't compose, and this is the
+# actual spend/quota guard. Override with ASSISTANT_GLOBAL_DAILY_CAP.
+GLOBAL_LIMIT_PER_DAY = 2000
 
 FEEDBACK_CATEGORIES = ['Bug Report', 'Suggestion', 'Question', 'Other']
 FEEDBACK_CONTEXTS = ['General', 'External bundle', 'Archive bundle']
@@ -52,7 +55,19 @@ SUBMIT_FEEDBACK_TOOL = {
 
 
 def _assistant_enabled():
-    return getattr(settings, 'ASSISTANT_ENABLED', True)
+    """Kill switch: settings flag (needs a restart) or cache flag (instant).
+
+    The cache flag is set/cleared with `manage.py assistant_toggle off|on`, so
+    the assistant can be disabled in seconds without touching prod config.
+    """
+    if not getattr(settings, 'ASSISTANT_ENABLED', True):
+        return False
+    try:
+        if cache.get('assistant-disabled'):
+            return False
+    except Exception:
+        pass
+    return True
 
 
 @login_required
@@ -99,7 +114,13 @@ def chat(request):
     ]
 
     page_path = str(payload.get('page', ''))[:300]
-    system_prompt = build_system_prompt(request.user, page_path=page_path, query=message_text)
+    # Retrieval sees the previous user turn too, so follow-ups like "how do I
+    # add one?" still pull the knowledge chunk of the topic being discussed.
+    prev_turn = list(conversation.messages.filter(role='user')
+                     .order_by('-created_at')
+                     .values_list('text', flat=True)[1:2])
+    retrieval_query = f'{prev_turn[0][:300]} {message_text}' if prev_turn else message_text
+    system_prompt = build_system_prompt(request.user, page_path=page_path, query=retrieval_query)
 
     # All DB work is done (auth + history + prompt). Release the connection now
     # so a slow upstream call or long stream never holds a MariaDB slot hostage.
@@ -164,6 +185,62 @@ def _clean_text(text):
     return text.replace(' — ', ', ').replace('—', '-')
 
 
+def _final_text(accumulated):
+    """Scrub for persistence: internal markup out, house style enforced once
+    more (an em dash split across two stream deltas escapes the per-delta
+    pass)."""
+    return re.sub(r'</?user_data>', '', _clean_text(accumulated)).strip()
+
+
+# Heartbeat cadence and total silence budget for a connected-but-stalled model.
+STREAM_HEARTBEAT_SECONDS = 8
+STREAM_SILENCE_BUDGET_SECONDS = 60
+
+
+def _pumped_events(client, upstream):
+    """Relay client.iter_events through a reader thread.
+
+    The socket read happens off-thread so this generator regains control every
+    STREAM_HEARTBEAT_SECONDS even when the model sends nothing, letting the
+    view emit "still working" updates instead of freezing the chat. Yields
+    ('event', ev), ('heartbeat', None) on silence, and ('stalled', None) when
+    the silence budget is exhausted. Reader exceptions re-raise here.
+    """
+    import queue
+    import threading
+
+    q = queue.Queue()
+
+    def reader():
+        try:
+            for ev in client.iter_events(upstream):
+                q.put(('event', ev))
+            q.put(('end', None))
+        except Exception as exc:  # relayed to the consumer thread
+            q.put(('error', exc))
+
+    threading.Thread(target=reader, daemon=True).start()
+
+    silent_for = 0
+    while True:
+        try:
+            kind, value = q.get(timeout=STREAM_HEARTBEAT_SECONDS)
+        except queue.Empty:
+            silent_for += STREAM_HEARTBEAT_SECONDS
+            if silent_for >= STREAM_SILENCE_BUDGET_SECONDS:
+                yield ('stalled', None)
+                return
+            yield ('heartbeat', None)
+            continue
+        silent_for = 0
+        if kind == 'event':
+            yield ('event', value)
+        elif kind == 'end':
+            return
+        else:
+            raise value
+
+
 def _sse_stream(client, user, conversation, system_prompt, contents, started):
     """Connect to a model and relay its stream as delta events.
 
@@ -172,12 +249,8 @@ def _sse_stream(client, user, conversation, system_prompt, contents, started):
     feedback, then runs a second model turn (with the tool result) so the model
     can confirm to the user in its own words.
     """
-    accumulated = ''
-    feedback_sent = False
-    error_note = ''
     model = ''
     upstream = None
-
     try:
         attempts = 0
         for kind, m, resp in client.open_stream_events(system_prompt, contents,
@@ -199,10 +272,28 @@ def _sse_stream(client, user, conversation, system_prompt, contents, started):
         _save_reply(conversation, '', '', started, False, 'LLMUnavailable')
         return
 
+    yield from _stream_reply(client, user, conversation, system_prompt, contents,
+                             started, model, upstream)
+
+
+def _stream_reply(client, user, conversation, system_prompt, contents, started, model, upstream):
+    """Relay the connected model stream; owns reply accumulation and persistence."""
+    accumulated = ''
+    feedback_sent = False
+    error_note = ''
     finish_reason = ''
     try:
         function_call = None
-        for event in client.iter_events(upstream):
+        stalled = False
+        for kind, event in _pumped_events(client, upstream):
+            if kind == 'heartbeat':
+                if not accumulated:
+                    yield _sse_event({'type': 'status',
+                                      'text': 'Still working on it, thanks for your patience...'})
+                continue
+            if kind == 'stalled':
+                stalled = True
+                break
             if 'text' in event:
                 delta = _clean_text(event['text'])
                 accumulated += delta
@@ -211,6 +302,13 @@ def _sse_stream(client, user, conversation, system_prompt, contents, started):
                 function_call = event['function_call']
             elif 'finish_reason' in event:
                 finish_reason = event['finish_reason']
+
+        if stalled:
+            error_note = 'stalled'
+            if not accumulated:
+                yield _sse_event({'type': 'error', 'error': 'The assistant is taking too long to respond. Please try again in a moment.'})
+                _save_reply(conversation, '', model, started, feedback_sent, error_note)
+                return
 
         if function_call and function_call.get('name') == 'submit_feedback':
             args = function_call.get('args', {})
@@ -234,6 +332,13 @@ def _sse_stream(client, user, conversation, system_prompt, contents, started):
                     delta = _clean_text(event['text'])
                     accumulated += delta
                     yield _sse_event({'type': 'delta', 'text': delta})
+    except GeneratorExit:
+        # Client disconnected mid-stream (tab closed, stop button): keep what
+        # the model already said so the conversation history stays complete.
+        if accumulated.strip():
+            _save_reply(conversation, _final_text(accumulated), model, started,
+                        feedback_sent, 'client_disconnected')
+        raise
     except (requests.RequestException, QuotaExhausted, LLMUnavailable) as exc:
         error_note = type(exc).__name__
         if not accumulated:
@@ -259,8 +364,9 @@ def _sse_stream(client, user, conversation, system_prompt, contents, started):
         yield _sse_event({'type': 'delta', 'text': note})
         error_note = error_note or 'truncated:MAX_TOKENS'
 
-    # The model occasionally echoes the internal <user_data> markup — scrub it.
-    final_text = re.sub(r'</?user_data>', '', accumulated).strip()
+    # The model occasionally echoes the internal <user_data> markup; scrub it,
+    # and enforce house style once more for anything split across deltas.
+    final_text = _final_text(accumulated)
     reply = _save_reply(conversation, final_text, model, started, feedback_sent, error_note)
     yield _sse_event({
         'type': 'done',
@@ -290,24 +396,33 @@ def _save_reply(conversation, text, model, started, feedback_sent, error_note):
         return None
 
 
-def _rate_limited(user):
-    """Cache-based throttle: per-minute and per-day message caps per user."""
-    minute_key = f'assistant-rl-minute-{user.pk}'
-    day_key = f'assistant-rl-day-{user.pk}'
-
-    cache.add(minute_key, 0, timeout=60)
-    cache.add(day_key, 0, timeout=60 * 60 * 24)
+def _bump(key, timeout):
+    """Increment a cache counter, tolerating the add/incr expiry race."""
+    cache.add(key, 0, timeout=timeout)
     try:
-        minute_count = cache.incr(minute_key)
-        day_count = cache.incr(day_key)
+        return cache.incr(key)
     except ValueError:
-        # Key expired between add() and incr() — let the request through
-        return False, ''
+        return 1
 
-    if day_count > RATE_LIMIT_PER_DAY:
-        return True, "You've reached the daily limit for the assistant. It resets tomorrow. For urgent questions, please use the Contact page."
-    if minute_count > RATE_LIMIT_PER_MINUTE:
+
+def _rate_limited(user):
+    """Cache-based throttle: per-user minute/day caps plus a global daily cap.
+
+    Checked in escalating order so a blocked request doesn't burn the larger
+    buckets: minute-limited spam never consumes the user's daily allowance,
+    and user-limited requests never consume the global one.
+    """
+    if _bump(f'assistant-rl-minute-{user.pk}', 60) > RATE_LIMIT_PER_MINUTE:
         return True, "You're sending messages a little too fast. Please wait a minute and try again."
+
+    if _bump(f'assistant-rl-day-{user.pk}', 60 * 60 * 24) > RATE_LIMIT_PER_DAY:
+        return True, "You've reached the daily limit for the assistant. It resets tomorrow. For urgent questions, please use the Contact page."
+
+    global_cap = getattr(settings, 'ASSISTANT_GLOBAL_DAILY_CAP', GLOBAL_LIMIT_PER_DAY)
+    if _bump('assistant-rl-global-day', 60 * 60 * 24) > global_cap:
+        logger.warning('assistant: global daily cap (%s) reached', global_cap)
+        return True, "The assistant has been very busy today and reached its daily capacity. It resets overnight; for urgent questions, please use the Contact page."
+
     return False, ''
 
 

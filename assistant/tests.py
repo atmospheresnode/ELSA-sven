@@ -27,7 +27,9 @@ class FakeUpstream:
 
     def iter_lines(self, decode_unicode=True):
         for chunk in self._chunks:
-            if isinstance(chunk, dict) and '__finish__' in chunk:
+            if isinstance(chunk, dict) and '__raw__' in chunk:
+                payload = json.dumps(chunk['__raw__'])
+            elif isinstance(chunk, dict) and '__finish__' in chunk:
                 payload = json.dumps({'candidates': [{'content': {'parts': []},
                                                       'finishReason': chunk['__finish__']}]})
             else:
@@ -216,6 +218,41 @@ class ChatEndpointTests(TestCase):
         resp = self.post_chat({'message': 'hi'})
         self.assertEqual(resp.status_code, 429)
         self.assertIn('too fast', resp.json()['error'])
+
+    @patch('assistant.llm.requests.post')
+    def test_client_disconnect_saves_partial_reply(self, mock_post):
+        mock_post.return_value = FakeUpstream(['Partial ', 'answer ', 'text'])
+        resp = self.post_chat({'message': 'hi'})
+        stream = iter(resp.streaming_content)
+        seen = b''
+        while b'"delta"' not in seen:
+            seen += next(stream)
+        resp.close()  # simulates the tab closing / stop button mid-stream
+
+        conv = Conversation.objects.get(user=self.user)
+        reply = conv.messages.filter(role='model').order_by('-created_at').first()
+        self.assertIsNotNone(reply)
+        self.assertIn('Partial', reply.text)
+        self.assertEqual(reply.error, 'client_disconnected')
+
+    @patch('assistant.llm.requests.post')
+    def test_prompt_block_gives_honest_error(self, mock_post):
+        mock_post.return_value = FakeUpstream(
+            [{'__raw__': {'promptFeedback': {'blockReason': 'SAFETY'}}}])
+        events = sse_events(self.post_chat({'message': 'hi'}))
+        errors = [e for e in events if e['type'] == 'error']
+        self.assertTrue(errors)
+        self.assertIn('could not answer', errors[0]['error'])
+        reply = (Conversation.objects.get(user=self.user)
+                 .messages.filter(role='model').order_by('-created_at').first())
+        self.assertEqual(reply.error, 'blocked:PROMPT_SAFETY')
+
+    def test_cache_kill_switch_disables_chat(self):
+        cache.set('assistant-disabled', 1, None)
+        try:
+            self.assertEqual(self.post_chat({'message': 'hi'}).status_code, 503)
+        finally:
+            cache.delete('assistant-disabled')
 
 
 class HistoryAndRatingTests(TestCase):
@@ -520,6 +557,108 @@ class PromptTests(TestCase):
         self.assertIn('profile page', _page_context(self.user, '/elsa/accounts/17/'))
         self.assertIsNone(_page_context(self.user, '/elsa/build/999999/'))
         self.assertIsNone(_page_context(self.user, ''))
+
+
+class RateLimitTests(TestCase):
+
+    def setUp(self):
+        cache.clear()
+        self.user = User.objects.create_user(username='rluser', password='pw')
+
+    def test_minute_block_does_not_burn_day_bucket(self):
+        from .views import RATE_LIMIT_PER_MINUTE, _rate_limited
+        cache.set(f'assistant-rl-minute-{self.user.pk}', RATE_LIMIT_PER_MINUTE, 60)
+        limited, msg = _rate_limited(self.user)
+        self.assertTrue(limited)
+        self.assertIn('too fast', msg)
+        self.assertIsNone(cache.get(f'assistant-rl-day-{self.user.pk}'))
+        self.assertIsNone(cache.get('assistant-rl-global-day'))
+
+    def test_global_daily_cap(self):
+        from .views import _rate_limited
+        with override_settings(ASSISTANT_GLOBAL_DAILY_CAP=1):
+            cache.set('assistant-rl-global-day', 1, 600)
+            limited, msg = _rate_limited(self.user)
+        self.assertTrue(limited)
+        self.assertIn('busy', msg)
+
+    def test_kill_switch_via_cache(self):
+        from .views import _assistant_enabled
+        self.assertTrue(_assistant_enabled())
+        cache.set('assistant-disabled', 1, None)
+        try:
+            self.assertFalse(_assistant_enabled())
+        finally:
+            cache.delete('assistant-disabled')
+
+
+class StreamPumpTests(SimpleTestCase):
+
+    def test_heartbeats_then_stall_on_silent_model(self):
+        import time as _time
+        from unittest.mock import patch as _patch
+
+        from . import views
+
+        class SilentClient:
+            @staticmethod
+            def iter_events(upstream):
+                _time.sleep(1)
+                if False:
+                    yield None
+
+        with _patch.object(views, 'STREAM_HEARTBEAT_SECONDS', 0.05), \
+                _patch.object(views, 'STREAM_SILENCE_BUDGET_SECONDS', 0.15):
+            kinds = [k for k, _ in views._pumped_events(SilentClient(), None)]
+        self.assertIn('heartbeat', kinds)
+        self.assertEqual(kinds[-1], 'stalled')
+
+
+class RetrieverScoringTests(SimpleTestCase):
+
+    def test_unique_matches_beat_repetition(self):
+        from .retriever import _make_chunk, _score, _tokens
+        q = set(_tokens('how do I upload netcdf data files'))
+        short_relevant = _make_chunk(
+            'short', '# Uploading data files\nUpload NetCDF data files to your bundle.')
+        long_spam = _make_chunk(
+            'long', '# Something else\n' + 'bundle bundle data data data ' * 50)
+        self.assertGreater(_score(short_relevant, q), _score(long_spam, q))
+
+
+class OpsCommandTests(TestCase):
+
+    def test_toggle_purge_stats(self):
+        from datetime import timedelta
+        from io import StringIO
+
+        from django.core.management import call_command
+        from django.utils import timezone
+
+        cache.clear()
+        out = StringIO()
+        call_command('assistant_toggle', 'off', stdout=out)
+        self.assertTrue(cache.get('assistant-disabled'))
+        call_command('assistant_toggle', 'on', stdout=out)
+        self.assertFalse(cache.get('assistant-disabled'))
+
+        user = User.objects.create_user(username='purgeuser', password='pw')
+        conv = Conversation.objects.create(user=user)
+        Conversation.objects.filter(pk=conv.pk).update(
+            updated_at=timezone.now() - timedelta(days=120))
+
+        out = StringIO()
+        call_command('assistant_purge', stdout=out)
+        self.assertIn('would be deleted', out.getvalue())
+        self.assertTrue(Conversation.objects.filter(pk=conv.pk).exists())
+
+        out = StringIO()
+        call_command('assistant_purge', '--delete', stdout=out)
+        self.assertFalse(Conversation.objects.filter(pk=conv.pk).exists())
+
+        out = StringIO()
+        call_command('assistant_stats', stdout=out)
+        self.assertIn('Assistant stats', out.getvalue())
 
 
 class KnowledgeCheckTests(SimpleTestCase):
