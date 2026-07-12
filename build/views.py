@@ -110,7 +110,7 @@ def alias_edit(request, pk_bundle, pk_alias):  # DEPRECATED: to be replaced by e
         # Get Alias and its form
         alias = Alias.objects.get(pk=pk_alias)
         initial_alias = {
-            'atlernate_id': alias.alternate_id,
+            'alternate_id': alias.alternate_id,
             'alternate_title': alias.alternate_title,
             'comment': alias.comment,
         }
@@ -738,7 +738,152 @@ def bundle(request, pk_bundle):
         additional_collections_set = AdditionalCollections.objects.filter(bundle=bundle)
 
         # get citation information associated with bundle
+        # citation_information_set = Citation_Information.objects.filter(bundle=bundle)
+
         citation_information_set = Citation_Information.objects.filter(bundle=bundle)
+
+        product_bundle = Product_Bundle.objects.get(bundle=bundle)
+        label_list = open_label_with_tree(product_bundle.label())
+        label_root = label_list[1]
+
+        identification_area = label_root.find('{}Identification_Area'.format(NAMESPACE))
+        citation_xml = identification_area.find('{}Citation_Information'.format(NAMESPACE))
+
+        for citation_information in citation_information_set:
+            citation_information.display_authors = []
+            citation_information.display_editors = []
+
+            if citation_xml is not None:
+                list_author = citation_xml.find('{}List_Author'.format(NAMESPACE))
+
+                if list_author is not None:
+                    for person in list_author.findall('{}Person'.format(NAMESPACE)):
+                        given = person.findtext('{}given_name'.format(NAMESPACE), default='')
+                        family = person.findtext('{}family_name'.format(NAMESPACE), default='')
+                        affiliation = person.find('{}Affiliation'.format(NAMESPACE))
+                        orcid = person.findtext('{}person_orcid'.format(NAMESPACE), default='')
+
+                        organization = ''
+                        if affiliation is not None:
+                            organization = affiliation.findtext('{}organization_name'.format(NAMESPACE), default='')
+
+                        citation_information.display_authors.append({
+                            'type': 'Person',
+                            'name': f'{given} {family}'.strip(),
+                            'organization': organization,
+                            'orcid': orcid,
+                        })
+
+                    for org in list_author.findall('{}Organization'.format(NAMESPACE)):
+                        org_name = org.findtext('{}organization_name'.format(NAMESPACE), default='')
+                        parent_org = org.find('{}Parent_Organization'.format(NAMESPACE))
+
+                        parent_name = ''
+                        if parent_org is not None:
+                            parent_name = parent_org.findtext('{}parent_organization_name'.format(NAMESPACE), default='')
+
+                        citation_information.display_authors.append({
+                            'type': 'Organization',
+                            'name': org_name,
+                            'organization': parent_name,
+                        })
+
+                    list_editor = citation_xml.find('{}List_Editor'.format(NAMESPACE))
+
+                    if list_editor is not None:
+
+                        # Editor people
+                        for person in list_editor.findall('{}Person'.format(NAMESPACE)):
+                            given = person.findtext(
+                                '{}given_name'.format(NAMESPACE),
+                                default=''
+                            )
+
+                            family = person.findtext(
+                                '{}family_name'.format(NAMESPACE),
+                                default=''
+                            )
+
+                            orcid = person.findtext(
+                                '{}person_orcid'.format(NAMESPACE),
+                                default=''
+                            )
+
+                            affiliation = person.find(
+                                '{}Affiliation'.format(NAMESPACE)
+                            )
+
+                            organization = ''
+
+                            if affiliation is not None:
+                                organization = affiliation.findtext(
+                                    '{}organization_name'.format(NAMESPACE),
+                                    default=''
+                                )
+
+                            citation_information.display_editors.append({
+                                'type': 'Person',
+                                'name': f'{given} {family}'.strip(),
+                                'organization': organization,
+                                'orcid': orcid,
+                            })
+
+                        # Editor organizations
+                        for organization_element in list_editor.findall(
+                            '{}Organization'.format(NAMESPACE)
+                        ):
+                            organization_name = organization_element.findtext(
+                                '{}organization_name'.format(NAMESPACE),
+                                default=''
+                            )
+
+                            organization_rorid = organization_element.findtext(
+                                '{}organization_rorid'.format(NAMESPACE),
+                                default=''
+                            )
+
+                            sequence_number = organization_element.findtext(
+                                '{}sequence_number'.format(NAMESPACE),
+                                default=''
+                            )
+
+                            parent_organization = organization_element.find(
+                                '{}Parent_Organization'.format(NAMESPACE)
+                            )
+
+                            parent_organization_name = ''
+
+                            if parent_organization is not None:
+                                parent_organization_name = parent_organization.findtext(
+                                    '{}parent_organization_name'.format(NAMESPACE),
+                                    default=''
+                                )
+
+                            # Do not display completely empty organization elements
+                            if (
+                                organization_name
+                                or organization_rorid
+                                or sequence_number
+                                or parent_organization_name
+                            ):
+                                citation_information.display_editors.append({
+                                    'type': 'Organization',
+                                    'name': organization_name,
+                                    'rorid': organization_rorid,
+                                    'sequence_number': sequence_number,
+                                    'parent_organization': parent_organization_name,
+                                })
+
+                    citation_information.display_editor_people_count = sum(
+                        1 for editor in citation_information.display_editors
+                        if editor.get('type') == 'Person'
+                    )
+
+                    citation_information.display_editor_organization_count = sum(
+                        1 for editor in citation_information.display_editors
+                        if editor.get('type') == 'Organization'
+                    )
+
         modification_history_set = Modification_History.objects.filter(bundle=bundle)
         # get set of data collections currently associated with the bundle
         data_set = Data.objects.filter(bundle=bundle)
@@ -1031,6 +1176,7 @@ def bundle(request, pk_bundle):
             citation_information = form_citation_information.save(commit=False)
             citation_information.bundle = bundle
             citation_information.save()
+            print("CITATION SAVE SUCCESSFUL")
             print('Citation Information model object: {}'.format(citation_information))
 
             product_bundle = Product_Bundle.objects.get(bundle=bundle)
@@ -1050,7 +1196,14 @@ def bundle(request, pk_bundle):
             context_dict['form_citation_information'] = form_citation_information
 
             # # fixes the refresh duplication issue - deric
-            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/citation_information_current/' + str(citation_information.pk) + '/')
+            # return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/citation_information_current/' + str(citation_information.pk) + '/')
+            
+            next_page = request.GET.get('next')
+
+            if next_page == 'bundle':
+                return redirect(reverse('build:bundle', args=[pk_bundle]))
+            else:
+                return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/citation_information_current/' + str(citation_information.pk) + '/')
 
             # fixes the refresh duplication issue, use this one for offline testing - deric
             # return HttpResponseRedirect('/build/' + pk_bundle + '/')
@@ -1647,7 +1800,13 @@ def citation_information(request, pk_bundle):
             write_into_label(citation_information, product_bundle, product_collections_list)
 
             print('------------- End Build Citation Information -------------------')
-            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/citation_information_current/' + str(citation_information.pk) + '/')
+
+            next_page = request.GET.get('next')
+
+            if next_page == 'bundle':
+                return redirect(reverse('build:bundle', args=[pk_bundle]))
+            else:
+                return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/citation_information_current/' + str(citation_information.pk) + '/')
             # return redirect(reverse('build:context_search', args=[pk_bundle]))
             
         # Update context_dict with the current Citation_Information models associated with the user's bundle
@@ -1706,10 +1865,17 @@ def edit_citation_information(request, pk_bundle, pk_citation_information):
 
             #Adding a check for bundle type, so it skips context search if external selected - RUPAK
             # Context search is back for AMA, but I'm still living the if statement (for now) in case something changes on the archive end - Nicholas
+            next_page = request.GET.get('next')
             if bundle.bundle_type == 'External':
-                return redirect(reverse('build:context_search', args=[pk_bundle]))  
+                if next_page == 'bundle':
+                    return redirect(reverse('build:bundle', args=[pk_bundle]))
+                else:
+                    return redirect(reverse('build:context_search', args=[pk_bundle]))  
             else:
-                return redirect(reverse('build:context_search', args=[pk_bundle]))
+                if next_page == 'bundle':
+                    return redirect(reverse('build:bundle', args=[pk_bundle]))
+                else:
+                    return redirect(reverse('build:context_search', args=[pk_bundle]))  
 
 
         context_dict = {
