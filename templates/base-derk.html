@@ -285,10 +285,12 @@
     .elsa-note { text-align: center; color: #94a3b8; font-size: 0.7rem; margin: 8px 0; }
 
     .elsa-inputbar { padding: 10px 12px; background: #fff; border-top: 1px solid #eef2f6; }
-    .elsa-inputbar form { display: flex; gap: 8px; align-items: center; }
+    .elsa-inputbar form { display: flex; gap: 8px; align-items: flex-end; }
     #elsaAssistantInput {
-        flex: 1; border: 1.5px solid #e2e8f0; border-radius: 999px;
+        flex: 1; border: 1.5px solid #e2e8f0; border-radius: 18px;
         padding: 8px 16px; font-size: 0.85rem; outline: none;
+        resize: none; max-height: 120px; overflow-y: auto;
+        font-family: inherit; line-height: 1.4;
         transition: border-color .12s ease, box-shadow .12s ease;
     }
     #elsaAssistantInput:focus { border-color: #14b8a6; box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.15); }
@@ -323,15 +325,16 @@
                     <button type="button" class="elsa-icon-btn" id="elsaAssistantClose" aria-label="Close" title="Close"><i class="bi bi-x-lg"></i></button>
                 </div>
             </div>
-            <div id="elsaAssistantMessages"></div>
+            <div id="elsaAssistantMessages" role="log" aria-live="polite" aria-label="Conversation with the ELSA Assistant"></div>
             <div class="elsa-inputbar">
                 <form id="elsaAssistantForm">
                     {% csrf_token %}
-                    <input type="text" id="elsaAssistantInput"
-                           placeholder="Ask about ELSA or PDS4..." autocomplete="off" maxlength="2000">
+                    <textarea id="elsaAssistantInput" rows="1"
+                              placeholder="Ask about ELSA or PDS4... (Shift+Enter for a new line)"
+                              autocomplete="off" maxlength="4000"></textarea>
                     <button type="submit" id="elsaAssistantSend" aria-label="Send"><i class="bi bi-send-fill"></i></button>
                 </form>
-                <p class="elsa-disclaimer">AI-generated, so verify important details. I can also pass feedback to the ELSA team.</p>
+                <p class="elsa-disclaimer">AI-generated, so verify important details. Chats are stored to help improve ELSA.</p>
             </div>
         </div>
     </div>
@@ -350,7 +353,13 @@
         const sendBtn = document.getElementById('elsaAssistantSend');
         const csrfToken = form.querySelector('[name=csrfmiddlewaretoken]').value;
 
-        const SUGGESTIONS = [
+        // Suggestions follow the page: on a bundle page they target that bundle.
+        const SUGGESTIONS = /^\/build\/\d+\//.test(window.location.pathname) ? [
+            "What is still missing in this bundle?",
+            "What's inside my uploaded files?",
+            "How do I submit this bundle?",
+            "I found a bug",
+        ] : [
             "What does my bundle still need?",
             "Bundle ID vs Alias?",
             "What goes in Citation Information?",
@@ -412,10 +421,25 @@
             return {row: row, col: col, bubble: bubble};
         }
 
-        function addRating(col, messageId, current) {
+        function addRating(col, messageId, current, rawText) {
             if (!messageId) return;
             const bar = document.createElement('div');
             bar.className = 'elsa-rate-bar';
+            if (rawText && navigator.clipboard) {
+                const copyBtn = document.createElement('button');
+                copyBtn.type = 'button';
+                copyBtn.className = 'elsa-rate-btn';
+                copyBtn.setAttribute('aria-label', 'Copy answer');
+                copyBtn.title = 'Copy answer';
+                copyBtn.innerHTML = '<i class="bi bi-clipboard"></i>';
+                copyBtn.addEventListener('click', function () {
+                    navigator.clipboard.writeText(rawText).then(function () {
+                        copyBtn.innerHTML = '<i class="bi bi-check-lg"></i>';
+                        setTimeout(function () { copyBtn.innerHTML = '<i class="bi bi-clipboard"></i>'; }, 1500);
+                    }).catch(function () {});
+                });
+                bar.appendChild(copyBtn);
+            }
             [[1, 'bi-hand-thumbs-up'], [-1, 'bi-hand-thumbs-down']].forEach(function ([value, icon]) {
                 const btn = document.createElement('button');
                 btn.type = 'button';
@@ -482,7 +506,7 @@
                         if (data.messages && data.messages.length) {
                             data.messages.forEach(function (m) {
                                 const {col} = addBubble(m.role, renderText(m.text));
-                                if (m.role === 'model') addRating(col, m.id, m.rating);
+                                if (m.role === 'model') addRating(col, m.id, m.rating, m.text);
                             });
                         } else {
                             greet();
@@ -547,7 +571,7 @@
                         gotDone = true;
                         conversationId = ev.conversation_id;
                         reply.bubble.innerHTML = renderText(ev.reply);
-                        addRating(reply.col, ev.message_id, 0);
+                        addRating(reply.col, ev.message_id, 0, ev.reply);
                         if (ev.feedback_sent) addSystemNote('✓ Feedback sent to the ELSA team');
                     } else if (ev.type === 'error') {
                         reader.cancel();
@@ -560,16 +584,27 @@
             }
         }
 
+        let aborter = null;
+
+        function setStreaming(on) {
+            input.disabled = on;
+            sendBtn.dataset.mode = on ? 'stop' : 'send';
+            sendBtn.setAttribute('aria-label', on ? 'Stop generating' : 'Send');
+            sendBtn.title = on ? 'Stop generating' : '';
+            sendBtn.querySelector('i').className = on ? 'bi bi-stop-fill' : 'bi bi-send-fill';
+        }
+
         function sendMessage(text) {
             addBubble('user', renderText(text));
-            sendBtn.disabled = true;
-            input.disabled = true;
+            setStreaming(true);
+            aborter = new AbortController();
 
             const reply = addBubble('model', TYPING_HTML);
 
             fetch("{% url 'assistant:chat' %}", {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken},
+                signal: aborter.signal,
                 body: JSON.stringify({
                     conversation_id: conversationId,
                     message: text,
@@ -585,21 +620,49 @@
                 await readSseStream(r, reply);
             })
             .catch((err) => {
+                if (err && err.name === 'AbortError') {
+                    // User pressed stop: keep whatever streamed in; the server
+                    // saves the partial reply to history too.
+                    if (reply.bubble.querySelector('.elsa-typing')) {
+                        reply.row.remove();
+                    }
+                    addSystemNote('Stopped.');
+                    return;
+                }
                 reply.bubble.innerHTML = renderText(err.message || 'Network error. Please try again.');
             })
             .finally(() => {
-                sendBtn.disabled = false;
-                input.disabled = false;
+                aborter = null;
+                setStreaming(false);
                 input.focus();
             });
         }
 
         form.addEventListener('submit', function (e) {
             e.preventDefault();
+            if (sendBtn.dataset.mode === 'stop') {
+                if (aborter) aborter.abort();
+                return;
+            }
             const text = input.value.trim();
-            if (!text || sendBtn.disabled) return;
+            if (!text) return;
             input.value = '';
+            autoGrow();
             sendMessage(text);
+        });
+
+        // Textarea behavior: Enter sends, Shift+Enter inserts a newline, and
+        // the box grows with the content up to its CSS max-height.
+        function autoGrow() {
+            input.style.height = 'auto';
+            input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+        }
+        input.addEventListener('input', autoGrow);
+        input.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                form.dispatchEvent(new Event('submit', {cancelable: true}));
+            }
         });
     })();
     </script>
