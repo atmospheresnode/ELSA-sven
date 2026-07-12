@@ -1,5 +1,5 @@
 <!-- watches: build/views.py, templates/build/bundle/bundle.html, build/models.py -->
-<!-- reviewed: 2026-07-10 -->
+<!-- reviewed: 2026-07-12 -->
 # External Bundle Workflow (AMA)
 
 External bundles are ELSA's lighter-weight bundle type, used for the Atmospheres
