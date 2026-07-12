@@ -1,4 +1,5 @@
 <!-- watches: build/models.py, templates/build/bundle/bundle.html -->
+<!-- reviewed: 2026-07-12 -->
 # Alias and Alias List
 
 PDS4 Information Model (v1.24 / 1O00): the Alias class provides a single
