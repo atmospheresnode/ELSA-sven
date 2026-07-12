@@ -1,4 +1,5 @@
 <!-- watches: build/views.py, build/models.py -->
+<!-- reviewed: 2026-07-10 -->
 # Targets and Context Products
 
 PDS4 Information Model (v1.24 / 1O00): the Target_Identification class provides

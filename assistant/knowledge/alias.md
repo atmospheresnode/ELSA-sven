@@ -19,3 +19,8 @@ empty rather than a red "Missing" badge. Bundle ID (the LID / logical_identifier
 is different from an Alias: the Bundle ID is the unique, permanent PDS4
 identifier auto-generated from the bundle name, while an Alias is an optional
 extra name recorded for cross-reference.
+
+A bundle holds one alias in ELSA. The Alias modal shows the create form only
+while no alias exists; once one is saved, the modal shows the current alias
+with edit and delete actions instead, and asks you to edit or delete the
+existing alias rather than create another one.
