@@ -197,7 +197,12 @@ def build_system_prompt(user, page_path=None, query=''):
         for chunk in chunks:
             lines.append(f'\n--- {chunk["title"]} ---\n{chunk["text"].strip()}')
 
-    lines.append(f"\nCURRENT USER: {_user_data(user.username)}")
+    agency = ''
+    try:
+        agency = f' (agency: {user.userprofile.agency})'
+    except Exception:
+        pass
+    lines.append(f"\nCURRENT USER: {_user_data(user.username)}{agency}")
 
     page = _page_context(user, page_path)
     if page:
@@ -219,7 +224,9 @@ def build_system_prompt(user, page_path=None, query=''):
 
 
 def _bundle_summary(b):
-    """One prompt line per bundle: status plus which required components are missing."""
+    """One prompt line per bundle: complete identity, status, components, and
+    contents. Everything a user can see about their bundle in ELSA should be
+    answerable from this line; absence of a thing is stated, never omitted."""
     try:
         status = b.get_status().replace('_', ' ')
     except Exception:
@@ -227,6 +234,21 @@ def _bundle_summary(b):
     submitted = ''
     if b.submitted_at:
         submitted = f", last submitted {b.submitted_at.strftime('%Y-%m-%d')}"
+
+    # Identity: LID (the bundle's URN), Bundle ID, PDS4 IM version, created date.
+    identity = ''
+    try:
+        lid = b.lid() if callable(getattr(b, 'lid', None)) else ''
+        if lid:
+            identity += f', LID/URN: {_user_data(lid)}'
+        if b.bundleID:
+            identity += f', Bundle ID: {_user_data(b.bundleID)}'
+        if b.version and len(str(b.version)) == 4:
+            identity += f', PDS4 IM version {".".join(str(b.version))}'
+        if b.created_at:
+            identity += f', created {b.created_at.strftime("%Y-%m-%d")}'
+    except Exception:
+        pass
 
     detail = ''
     try:
@@ -244,9 +266,18 @@ def _bundle_summary(b):
         else:
             detail = '; all required components complete'
         try:
+            mh_count = b.modification_history_set.count()
+            if mh_count:
+                detail += f' ({mh_count} modification history entr{"y" if mh_count == 1 else "ies"})'
+        except Exception:
+            pass
+        try:
             from build.models import Alias
-            if not Alias.objects.filter(bundle=b).exists():
+            alias = Alias.objects.filter(bundle=b).first()
+            if alias is None:
                 detail += '; Alias not set (optional)'
+            else:
+                detail += f'; Alias: {_user_data(alias.alternate_title or alias.alternate_id or "set")}'
         except Exception:
             pass
         try:
@@ -290,6 +321,9 @@ def _bundle_summary(b):
                 detail += f'; about: {_user_data(citation.description[:180])}'
             if citation is not None and citation.keyword:
                 detail += f'; keywords: {_user_data(citation.keyword[:80])}'
+            year = getattr(citation, 'publication_year', '') if citation else ''
+            if year:
+                detail += f'; publication year: {_user_data(year)}'
         except Exception:
             pass
         try:
@@ -301,5 +335,5 @@ def _bundle_summary(b):
     except Exception:
         pass
 
-    return (f"- {_user_data(b.name)} ({b.bundle_type} bundle, status: {status}"
+    return (f"- {_user_data(b.name)} ({b.bundle_type} bundle{identity}, status: {status}"
             f"{submitted}{detail}; page: /build/{b.pk}/)")

@@ -517,6 +517,29 @@ class BundleSummaryRealModelTests(TestCase):
         self.assertIn('data collections: <user_data>mydata</user_data> (External)', line)
         self.assertIn('missing required', line)
 
+    def test_summary_is_comprehensive(self):
+        """Every user-visible fact about a bundle must be in its summary.
+
+        This guards the 'assistant does not know X about my bundle' class of
+        gap: when ELSA starts storing a new user-visible bundle fact, add it
+        to _bundle_summary and assert it here.
+        """
+        from build.models import Alias, Bundle
+        user = User.objects.create_user(username='compuser', password='pw')
+        b = Bundle.objects.create(user=user, name='comp check', bundle_type='External', version='1800')
+        Alias.objects.create(bundle=b, alternate_title='My Model Run',
+                             alternate_id='', comment='')
+
+        line = _bundle_summary(b)
+
+        self.assertIn('LID/URN: <user_data>urn:', line)          # identity
+        self.assertIn('Bundle ID: <user_data>comp_check', line)  # generated id
+        self.assertIn('PDS4 IM version 1.8.0.0', line)           # IM version
+        self.assertIn('created 20', line)                        # creation date
+        self.assertIn("Alias: <user_data>My Model Run", line)    # alias value, not just a flag
+        self.assertIn('status:', line)                           # lifecycle
+        self.assertIn(f'page: /build/{b.pk}/', line)             # linkable page
+
 
 class PromptTests(TestCase):
 

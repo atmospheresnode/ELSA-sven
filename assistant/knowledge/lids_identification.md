@@ -19,3 +19,8 @@ In ELSA: the Bundle ID (shown under the bundle name on the bundle page) is the
 LID, auto-generated from the bundle name when the bundle is created, users do
 not type it by hand. Products within the bundle get LIDs that extend the bundle
 LID (e.g. urn:nasa:pds:mybundle:document:userguide).
+
+Terminology: the LID IS a URN, so "URN", "LID", "logical identifier", and
+"Bundle ID" all refer to the same identifier for a bundle. Each bundle's
+LID/URN is listed in the user's bundle context, so quote it directly when
+asked; there is no need to send the user elsewhere to look it up.
