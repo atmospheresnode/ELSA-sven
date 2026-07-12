@@ -136,8 +136,19 @@ class GeminiClient:
                     continue
                 try:
                     chunk = json.loads(line[len('data: '):])
+                except ValueError:
+                    continue
+                # A prompt-level block arrives with no candidates at all;
+                # surface it so the user gets an honest message instead of
+                # a generic "empty response".
+                block = chunk.get('promptFeedback', {}).get('blockReason')
+                if block:
+                    logger.warning('assistant: prompt blocked (%s)', block)
+                    yield {'finish_reason': f'PROMPT_{block}'}
+                    continue
+                try:
                     candidate = chunk['candidates'][0]
-                except (KeyError, IndexError, ValueError):
+                except (KeyError, IndexError):
                     continue
                 for part in candidate.get('content', {}).get('parts', []):
                     if part.get('text'):

@@ -1,10 +1,11 @@
 from django import template
-from django.conf import settings
 
 register = template.Library()
 
 
 @register.simple_tag
 def assistant_enabled():
-    """Kill switch: set ASSISTANT_ENABLED = False in settings to hide the widget."""
-    return getattr(settings, 'ASSISTANT_ENABLED', True)
+    """Kill switch: ASSISTANT_ENABLED=False in settings, or the instant cache
+    flag set by `manage.py assistant_toggle off`. Hides the widget entirely."""
+    from assistant.views import _assistant_enabled
+    return _assistant_enabled()
