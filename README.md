@@ -28,6 +28,9 @@ This section provides a timeline of ELSA's release history, highlighting key upd
 > ### **Version 1.37.2 (July 10, 2026)**
 - ELSA Assistant: A new AI-powered ELSA Assistant has been introduced to help users get answers to PDS4-related questions directly from the website.
 - Citation Information: The Editors section has been re-introduced.
+- Citation Information: Improved UI for viewing authors and organizations.
+- Citation Information and Alias: Fixed the issue with users being able to add multiple citations and aliases.
+- Alias: Fixed the overlay issue with users not being able to delete existing aliases.
   
 > ### **Version 1.37.0 (June 12, 2026)**
 - External Bundle: Target selection page now includes a note clarifying that "Laboratory Analog" refers to model/simulation data, not a physical lab sample.
