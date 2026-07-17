@@ -1,4 +1,5 @@
 <!-- watches: build/forms.py, build/models.py, templates/build/citation_information -->
+<!-- reviewed: 2026-07-12 -->
 # Citation Information
 
 PDS4 Information Model (v1.24 / 1O00): the Citation_Information class provides the
@@ -34,3 +35,7 @@ additional editor persons/organizations on the citation form, then fill in
 their names on the citation details page (Editors tab). Citation Information is
 one of the three required components before an External bundle can be
 submitted.
+
+A bundle holds one Citation Information section (PDS4 allows exactly one per
+bundle). Once it exists, the modal shows the current citation with edit and
+delete actions instead of the create form.

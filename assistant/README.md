@@ -91,6 +91,24 @@ costs ~$0.30 per million input tokens, i.e. cents/month at ELSA's scale. The
 paid tier also excludes prompts from Google's product-improvement (training)
 data use, which matters once real scientists use it.
 
+Spend guards: per-user limits (20/min, 200/day) plus a global cap across all
+users (default 2000/day; override with `ASSISTANT_GLOBAL_DAILY_CAP` in
+settings).
+
+## Operations
+
+```
+# Instant kill switch (shared cache; applies to all workers, no restart):
+python3 manage.py assistant_toggle off      # or: on / no arg to show state
+
+# Usage + quality report; prints thumbs-down exchanges to triage into
+# knowledge updates or eval cases:
+python3 manage.py assistant_stats --days 7
+
+# Data retention (dry run by default):
+python3 manage.py assistant_purge --days 90 --delete
+```
+
 ## Keeping knowledge up to date
 
 The assistant's live data (user bundles, completion status, current page, and
