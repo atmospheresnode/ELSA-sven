@@ -1,4 +1,5 @@
 <!-- watches: friends/views.py, build/forms.py, templates/friends -->
+<!-- reviewed: 2026-07-12 -->
 # Getting Started: Registration, Login, and Your First Bundle
 
 Registering: create an account from the ELSA registration page with your name,
@@ -6,8 +7,9 @@ email, agency (NASA, ESA, or JAXA), and a password. ELSA emails you a one-time
 verification code (OTP), enter it on the verification page to activate the
 account. Until the code is verified the account stays inactive.
 
-Logging in: use your username and password. Login is also protected with a
-one-time code sent by email. If you forget your password, use the password
+Logging in: the login form is on the ELSA landing page (the front page you see
+when signed out). Use your username and password; login is also protected with
+a one-time code sent by email. If you forget your password, use the password
 reset link on the login page.
 
 Creating your first bundle:

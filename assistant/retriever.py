@@ -37,7 +37,7 @@ def _make_chunk(name, text):
         'title': title,
         'text': text,
         'title_tokens': set(_tokens(title)),
-        'body_tokens': _tokens(text),
+        'body_tokens': set(_tokens(text)),
     }
 
 
@@ -49,25 +49,46 @@ def _load_chunks():
 _CHUNKS = _load_chunks()
 
 
+def _refresh_release_notes():
+    """Fetch and cache the release notes; runs in a background thread."""
+    try:
+        import requests
+        from django.core.cache import cache
+        from main.views import parse_release_notes
+        resp = requests.get(
+            'https://raw.githubusercontent.com/atmospheresnode/ELSA-sven/main/README.md',
+            timeout=5)
+        resp.raise_for_status()
+        releases = parse_release_notes(resp.text)
+        # Data kept for a day (stale is better than absent); freshness marker
+        # controls how often the background refresh actually runs.
+        cache.set('elsa_release_notes', releases, 60 * 60 * 24)
+        cache.set('elsa_release_notes_fresh', 1, 60 * 60)
+    except Exception:
+        pass
+    finally:
+        try:
+            from django.db import connections
+            connections.close_all()  # don't leak this thread's DB-cache connection
+        except Exception:
+            pass
+
+
 def _release_notes_chunk():
     """Live chunk built from the GitHub README release notes.
 
-    Reuses the About page's fetcher and its 1-hour cache, so "what's new"
-    answers track the latest release automatically with no hand-edited
-    knowledge. Returns None quietly when the notes can't be fetched.
+    Never blocks the chat request: cached notes are used even when stale, and
+    a background thread refreshes them at most once an hour. Returns None
+    quietly until the first fetch completes.
     """
     try:
         from django.core.cache import cache
         releases = cache.get('elsa_release_notes')
-        if releases is None:
-            import requests
-            from main.views import parse_release_notes
-            resp = requests.get(
-                'https://raw.githubusercontent.com/atmospheresnode/ELSA-sven/main/README.md',
-                timeout=5)
-            resp.raise_for_status()
-            releases = parse_release_notes(resp.text)
-            cache.set('elsa_release_notes', releases, 60 * 60)
+        if not cache.get('elsa_release_notes_fresh'):
+            # Claim the refresh so concurrent requests don't all spawn threads.
+            if cache.add('elsa_release_notes_refreshing', 1, 120):
+                import threading
+                threading.Thread(target=_refresh_release_notes, daemon=True).start()
         if not releases:
             return None
         lines = ["# What's New in ELSA (Latest Release Notes)", '']
@@ -79,6 +100,14 @@ def _release_notes_chunk():
         return _make_chunk('release_notes_live', '\n'.join(lines))
     except Exception:
         return None
+
+
+def _score(chunk, q_tokens):
+    """Unique matched terms, title matches weighted: a short chunk that covers
+    the query beats a long chunk that merely repeats one query word often."""
+    body_hits = len(chunk['body_tokens'] & q_tokens)
+    title_hits = len(q_tokens & chunk['title_tokens'])
+    return body_hits + 5 * title_hits
 
 
 def retrieve(query, top_k=3):
@@ -94,9 +123,7 @@ def retrieve(query, top_k=3):
 
     scored = []
     for chunk in chunks:
-        body_hits = sum(1 for t in chunk['body_tokens'] if t in q_tokens)
-        title_hits = len(q_tokens & chunk['title_tokens'])
-        score = body_hits + 5 * title_hits
+        score = _score(chunk, q_tokens)
         if score > 0:
             scored.append((score, chunk))
 

@@ -1,4 +1,5 @@
 <!-- watches: friends/views.py, templates/friends/bundle_hub.html, build/views.py, templates/build/bundle/bundle.html -->
+<!-- reviewed: 2026-07-12 -->
 # Deleting Bundles (Single and Bulk) and Deleting Files
 
 Deleting ONE bundle: open the bundle's page and click the red **Delete Bundle**

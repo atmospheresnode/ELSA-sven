@@ -146,10 +146,10 @@ def friend_login(request):
                 return render(request, 'friends/inactive.html', {'user':user})
         else:
             messages.error(request, "Invalid username or password.")
-            return render(request, 'main:index')
+            return HttpResponseRedirect(reverse('main:index'))
     else:
-        # On GET, show the login form
-        return render(request, 'main:index')
+        # On GET, send the user to the landing page, which has the login form
+        return HttpResponseRedirect(reverse('main:index'))
 
 
 # friends/views.py

@@ -33,6 +33,20 @@ STYLE:
 - Be concise and friendly. Use short paragraphs or bullet lists.
 - Never use em dashes in your replies. Use commas, colons, periods, or
   parentheses instead.
+- When you tell the user to go somewhere in ELSA, include a markdown link to
+  it, e.g. "open the [Review area](/review/)" or "on [your bundle's page]
+  (/build/12/)". Only link to the paths listed under SITE LINKS or to bundle
+  pages from the user's bundle list below. Never invent or guess other URLs,
+  and never link to external sites.
+
+SITE LINKS:
+- Bundle Hub (list of the user's bundles, create new bundles): /accounts/bundles/
+- Review area (bundle review form, save drafts, export DOCX/PDF): /review/
+- Account page: /accounts/useraccount/
+- About page (release notes): /about/
+- Contact page: /contact/
+- A specific bundle's page: /build/<id>/ (each bundle's id is given in the
+  user's bundle list below)
 - Ground answers in the reference material when it covers the topic; if it
   doesn't and you are unsure, say so and suggest the Contact page.
 - If asked something unrelated to ELSA, PDS4, or planetary data archiving,
@@ -76,6 +90,67 @@ def _user_data(value):
     return f'<user_data>{value}</user_data>'
 
 
+def _netcdf_contents(nc_file):
+    """Compact, cached description of what is inside an uploaded NetCDF file.
+
+    Reads only the file header (lazy open), so this is cheap; results are
+    cached because chat requests recur far more often than files change.
+    Returns '' when the file cannot be read.
+    """
+    from django.core.cache import cache
+    key = f'assistant-nc-contents-{nc_file.pk}'
+    cached = cache.get(key)
+    if cached is not None:
+        return cached
+
+    summary = ''
+    try:
+        import os
+
+        import xarray as xr
+
+        # Processing moves the file from uploads/ into the bundle directory
+        # without updating the FileField, so resolve the real location.
+        path = nc_file.file.path
+        if not os.path.exists(path) and nc_file.bundle_id:
+            moved = os.path.join(nc_file.bundle.directory(), os.path.basename(path))
+            if os.path.exists(moved):
+                path = moved
+        ds = xr.open_dataset(path, decode_times=False)
+        try:
+            parts = []
+            title = str(ds.attrs.get('title', '')).strip()
+            if title:
+                parts.append(f'title: {title[:120]}')
+            dims = ', '.join(f'{k}={v}' for k, v in ds.sizes.items())
+            if dims:
+                parts.append(f'dimensions: {dims}')
+            names = list(ds.data_vars)
+            var_bits = []
+            for name in names[:15]:
+                attrs = ds[name].attrs
+                long_name = str(attrs.get('long_name', '')).strip()
+                units = str(attrs.get('units', '')).strip()
+                label = name
+                if long_name and units:
+                    label += f' ({long_name}, {units})'
+                elif long_name or units:
+                    label += f' ({long_name or units})'
+                var_bits.append(label)
+            if var_bits:
+                more = f' (and {len(names) - 15} more)' if len(names) > 15 else ''
+                parts.append(f'variables: {", ".join(var_bits)}{more}')
+            summary = '; '.join(parts)
+        finally:
+            ds.close()
+    except Exception:
+        summary = ''
+
+    summary = _user_data(summary) if summary else ''
+    cache.set(key, summary, 3600)
+    return summary
+
+
 def _page_context(user, page_path):
     """Describe the page the user is currently viewing; resolve bundle pages to the bundle."""
     if not page_path:
@@ -88,11 +163,24 @@ def _page_context(user, page_path):
             try:
                 from build.models import Bundle
                 bundle = Bundle.objects.get(pk=match.group(1), user=user)
-                return (
+                context = (
                     f'the detail page of their {_user_data(bundle.name)} bundle '
                     f'({bundle.bundle_type} bundle, status: {bundle.get_status().replace("_", " ")}). '
                     'Questions like "this bundle" or "why can\'t I submit?" refer to this bundle.'
                 )
+                # Since the user is looking at this bundle, include what their
+                # uploaded data files actually contain.
+                try:
+                    for nc in bundle.netcdf_files.all()[:3]:
+                        contents = _netcdf_contents(nc)
+                        if contents:
+                            context += (
+                                f'\nContents of their uploaded NetCDF file '
+                                f'{_user_data(nc.title)}: {contents}'
+                            )
+                except Exception:
+                    pass
+                return context
             except Exception:
                 return None
         return description
@@ -109,7 +197,12 @@ def build_system_prompt(user, page_path=None, query=''):
         for chunk in chunks:
             lines.append(f'\n--- {chunk["title"]} ---\n{chunk["text"].strip()}')
 
-    lines.append(f"\nCURRENT USER: {_user_data(user.username)}")
+    agency = ''
+    try:
+        agency = f' (agency: {user.userprofile.agency})'
+    except Exception:
+        pass
+    lines.append(f"\nCURRENT USER: {_user_data(user.username)}{agency}")
 
     page = _page_context(user, page_path)
     if page:
@@ -131,7 +224,9 @@ def build_system_prompt(user, page_path=None, query=''):
 
 
 def _bundle_summary(b):
-    """One prompt line per bundle: status plus which required components are missing."""
+    """One prompt line per bundle: complete identity, status, components, and
+    contents. Everything a user can see about their bundle in ELSA should be
+    answerable from this line; absence of a thing is stated, never omitted."""
     try:
         status = b.get_status().replace('_', ' ')
     except Exception:
@@ -139,6 +234,21 @@ def _bundle_summary(b):
     submitted = ''
     if b.submitted_at:
         submitted = f", last submitted {b.submitted_at.strftime('%Y-%m-%d')}"
+
+    # Identity: LID (the bundle's URN), Bundle ID, PDS4 IM version, created date.
+    identity = ''
+    try:
+        lid = b.lid() if callable(getattr(b, 'lid', None)) else ''
+        if lid:
+            identity += f', LID/URN: {_user_data(lid)}'
+        if b.bundleID:
+            identity += f', Bundle ID: {_user_data(b.bundleID)}'
+        if b.version and len(str(b.version)) == 4:
+            identity += f', PDS4 IM version {".".join(str(b.version))}'
+        if b.created_at:
+            identity += f', created {b.created_at.strftime("%Y-%m-%d")}'
+    except Exception:
+        pass
 
     detail = ''
     try:
@@ -156,14 +266,52 @@ def _bundle_summary(b):
         else:
             detail = '; all required components complete'
         try:
-            from build.models import Alias
-            if not Alias.objects.filter(bundle=b).exists():
-                detail += '; Alias not set (optional)'
+            mh_count = b.modification_history_set.count()
+            if mh_count:
+                detail += f' ({mh_count} modification history entr{"y" if mh_count == 1 else "ies"})'
         except Exception:
             pass
         try:
-            netcdf_count = b.netcdffile_set.count()
-            detail += f'; {netcdf_count} NetCDF file{"s" if netcdf_count != 1 else ""} uploaded'
+            from build.models import Alias
+            alias = Alias.objects.filter(bundle=b).first()
+            if alias is None:
+                detail += '; Alias not set (optional)'
+            else:
+                detail += f'; Alias: {_user_data(alias.alternate_title or alias.alternate_id or "set")}'
+        except Exception:
+            pass
+        try:
+            nc = list(b.netcdf_files.values_list('title', 'processed'))
+            if nc:
+                shown = ', '.join(_user_data(t) for t, _ in nc[:4] if t)
+                more = f' (and {len(nc) - 4} more)' if len(nc) > 4 else ''
+                detail += f'; {len(nc)} NetCDF file{"s" if len(nc) != 1 else ""} uploaded: {shown}{more}'
+                unprocessed = sum(1 for _, p in nc if not p)
+                if unprocessed:
+                    detail += f' ({unprocessed} not processed)'
+            else:
+                detail += '; no NetCDF files uploaded yet'
+        except Exception:
+            pass
+        try:
+            docs = [d for d in b.product_document_set.values_list('document_name', flat=True) if d]
+            if docs:
+                shown = ', '.join(_user_data(d) for d in docs[:4])
+                more = f' (and {len(docs) - 4} more)' if len(docs) > 4 else ''
+                detail += f'; {len(docs)} document{"s" if len(docs) != 1 else ""}: {shown}{more}'
+            else:
+                detail += '; no documents yet'
+        except Exception:
+            pass
+        try:
+            cols = [
+                f'{_user_data(name)} ({ctype})'
+                for name, ctype in b.additionalcollections_set.values_list('collection_name', 'collection_type')[:4]
+            ]
+            if cols:
+                detail += f'; data collections: {", ".join(cols)}'
+            elif b.bundle_type == 'External':
+                detail += '; no data collection created yet (needed before uploading files)'
         except Exception:
             pass
         # What the bundle is about: citation description, keywords, and targets
@@ -173,6 +321,9 @@ def _bundle_summary(b):
                 detail += f'; about: {_user_data(citation.description[:180])}'
             if citation is not None and citation.keyword:
                 detail += f'; keywords: {_user_data(citation.keyword[:80])}'
+            year = getattr(citation, 'publication_year', '') if citation else ''
+            if year:
+                detail += f'; publication year: {_user_data(year)}'
         except Exception:
             pass
         try:
@@ -184,4 +335,5 @@ def _bundle_summary(b):
     except Exception:
         pass
 
-    return f"- {_user_data(b.name)} ({b.bundle_type} bundle, status: {status}{submitted}{detail})"
+    return (f"- {_user_data(b.name)} ({b.bundle_type} bundle{identity}, status: {status}"
+            f"{submitted}{detail}; page: /build/{b.pk}/)")
