@@ -4364,7 +4364,9 @@ def _process_single_netcdf(bundle, nc_path, NS, allowed_variable_fields, allowed
     if id_area is not None:
 
         # Find Existing Element <pds:logical_identifier> and Append to It
-        lid_elem = id_area.find("logical_identifier", namespaces=NS)
+        # (must be prefixed: unprefixed find() misses default-namespace elements
+        # and the else branch would append a duplicate logical_identifier)
+        lid_elem = id_area.find("pds:logical_identifier", namespaces=NS)
         if lid_elem is not None and lid_elem.text:
             # Append your suffix
             lid_elem.text = f"{lid_elem.text}:{subdir_name.lower()}:{nc_filename}"
@@ -4398,10 +4400,8 @@ def _process_single_netcdf(bundle, nc_path, NS, allowed_variable_fields, allowed
     # 5. Insert New Variable & Coordinate Metadata
     # =====================================================================================
     variable_elements = dataframe_to_variable_elements(variable_metadata, NS, allowed_variable_fields)
-    variable_elements = dataframe_to_variable_elements(variable_metadata, NS, [])
 
     for elem in variable_elements:
-        print(elem)
         model_output.append(elem)
 
     coord_elements = dataframe_to_coord_elements(coord_metadata, NS, allowed_coord_fields)
@@ -4410,14 +4410,37 @@ def _process_single_netcdf(bundle, nc_path, NS, allowed_variable_fields, allowed
         model_output.append(elem)
 
     # =====================================================================================
-    # 6. Write to Output File
+    # 6. Fill <File_Area_External> with the Actual Uploaded File's Info
+    # =====================================================================================
+    file_elem = root.find(".//pds:File_Area_External/pds:File", namespaces=NS)
+    if file_elem is not None:
+        file_name_elem = file_elem.find("pds:file_name", namespaces=NS)
+        if file_name_elem is not None:
+            file_name_elem.text = nc_filename
+        creation_elem = file_elem.find("pds:creation_date_time", namespaces=NS)
+        if creation_elem is not None:
+            creation_elem.text = datetime.datetime.utcfromtimestamp(
+                os.path.getmtime(nc_path)).strftime('%Y-%m-%dT%H:%MZ')
+        size_elem = file_elem.find("pds:file_size", namespaces=NS)
+        if size_elem is not None:
+            size_elem.text = str(os.path.getsize(nc_path))
+
+    encoded_name_elem = root.find(".//pds:File_Area_External/pds:Encoded_External/pds:name", namespaces=NS)
+    if encoded_name_elem is not None:
+        encoded_name_elem.text = nc_name
+
+    # =====================================================================================
+    # 7. Write to Output File
     # =====================================================================================
     with open(output_path, "w", encoding="utf-8") as f:
         f.write(ET.tostring(root, encoding='unicode'))
 
     update = Version()
 
-    update.version_update_old(bundle.version, source_file, output_path)
+    # Stamp the PDS4 version into the label just written (in place). The source must
+    # be output_path, not the template — version_update_old copies its source over
+    # its destination, so passing the template here blanks the populated label.
+    update.version_update_old(bundle.version, output_path, output_path)
 
 
     alias_set = Alias.objects.filter(bundle=bundle)
