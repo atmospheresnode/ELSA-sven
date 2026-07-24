@@ -20,10 +20,16 @@ This section provides a timeline of ELSA's release history, highlighting key upd
 
 ### **Current Version** 
 
-> ### **Version 1.37.3 (July 17, 2026)**
-- ELSA Assistant: Bug fixes and context improvements.
+> ### **Version 1.37.5 (July 17, 2026)**
+- Archive Bundle: Bundle UI is up to date with the External Bundle UI.
 
 ### **Previous Versions** 
+
+> ### **Version 1.37.4 (July 23, 2026)**
+- External Bundle: Fixed a bug related to XML not populating from uploaded netCDF files.
+  
+> ### **Version 1.37.3 (July 17, 2026)**
+- ELSA Assistant: Bug fixes and context improvements.
 
 > ### **Version 1.37.2 (July 10, 2026)**
 - ELSA Assistant: A new AI-powered ELSA Assistant has been introduced to help users get answers to PDS4-related questions directly from the website.
