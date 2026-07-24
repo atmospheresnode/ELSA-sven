@@ -22,6 +22,9 @@ This section provides a timeline of ELSA's release history, highlighting key upd
 
 > ### **Version 1.37.5 (July 17, 2026)**
 - Archive Bundle: Bundle UI is up to date with the External Bundle UI.
+- Alias: Fixed issue with created Aliases not being deleted from XML files after being updated.
+- Targets: Fixed issue with targets redirecting to Document Collections on the bundle view.
+- Targets: Fixed error when deleting targets.
 
 ### **Previous Versions** 
 
