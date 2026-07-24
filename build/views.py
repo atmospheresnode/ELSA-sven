@@ -108,27 +108,25 @@ def alias_edit(request, pk_bundle, pk_alias):  # DEPRECATED: to be replaced by e
         print('authorized user: {}'.format(request.user))
 
         # Get Alias and its form
-        alias = Alias.objects.get(pk=pk_alias)
-        initial_alias = {
-            'alternate_id': alias.alternate_id,
-            'alternate_title': alias.alternate_title,
-            'comment': alias.comment,
-        }
-        form_alias = AliasForm(request.POST or None, initial=initial_alias)
+        alias = Alias.objects.get(pk=pk_alias, bundle=bundle)
 
-        if form_alias.is_valid and form_alias.has_changed:
-            print('Changed: {}'.format(form_alias.changed_data))
+        form_alias = AliasForm(request.POST or None, instance=alias)
 
-            for change in form_alias.changed_data:
-                if change == 'alternate_id':
-                    alias.alternate_id = form_alias['alternate_id'].value()
-                elif change == 'alternate_title':
-                    alias.alternate_title = form_alias['alternate_title'].value(
-                    )
-                elif change == 'comment':
-                    alias.comment = form_alias['comment'].value()
-                alias.save()
+        # We're removing the old alias first and then adding it back with the updated information.
+        if request.method == 'POST' and form_alias.is_valid():
+            if form_alias.has_changed():
+                old_alias = Alias.objects.get(pk=pk_alias, bundle=bundle)
+                product_bundle = Product_Bundle.objects.get(bundle=bundle)
+                product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
 
+                remove_from_label(old_alias, product_bundle, product_collections_list,)
+
+                alias = form_alias.save()
+
+                write_into_label(alias, product_bundle, product_collections_list)
+
+            return redirect('build:bundle', pk_bundle=pk_bundle)
+                
         # Declare context_dict for templating language used in ELSAs templates
         context_dict = {
             'alias': alias,
@@ -2180,6 +2178,8 @@ def context_search_target(request, pk_bundle):
 
                 write_into_label(i, product_bundle, product_collections_list)
 
+        if request.GET.get('next') == 'bundle':
+            return redirect('build:bundle', pk_bundle=pk_bundle)
         #return render(request, 'build/collections/annex_collection_document.html', context_dict)
         if bundle.bundle_type == "External":
             return redirect('build:annex_collection_document', pk_bundle=pk_bundle)
