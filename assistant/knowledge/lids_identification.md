@@ -1,4 +1,5 @@
 <!-- watches: build/models.py -->
+<!-- reviewed: 2026-07-24 -->
 # LIDs, VIDs, and the Identification Area
 
 PDS4 Information Model (v1.24 / 1O00): every PDS4 product label has an
