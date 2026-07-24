@@ -1470,17 +1470,31 @@ class Target(models.Model):
         #     label.close()
 
     def remove_xml(self, label_root):
-        Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE))
+        context_area = label_root.find(
+            './/{}Context_Area'.format(NAMESPACE)
+        )
 
-        Observing_System = Context_Area.find('{}Observing_System'.format(NAMESPACE))
+        if context_area is None:
+            return label_root
 
-        for component in Observing_System:
-            if(component.tag == "{http://pds.nasa.gov/pds4/pds/v1}Target_Identification"):
-                if(component[0].text.title() == self.name.title()):
-                    component.getparent().remove(component)
+        for target_identification in context_area.findall(
+            '{}Target_Identification'.format(NAMESPACE)
+        ):
+            target_name = target_identification.find(
+                '{}name'.format(NAMESPACE)
+            )
+
+            if (
+                target_name is not None
+                and target_name.text
+                and self.name
+                and target_name.text.strip().casefold()
+                == self.name.strip().casefold()
+            ):
+                context_area.remove(target_identification)
+                print('Removed target from XML:', self.name)
 
         return label_root
-
 
 
 
