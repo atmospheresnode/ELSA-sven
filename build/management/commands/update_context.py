@@ -37,7 +37,7 @@ class Command(BaseCommand):
             # id_list = fetch_ids()
 
             # For Testing/Demo-ing Purposes
-            id_list = fetch_ids(limit=100)
+            id_list = fetch_ids(limit=5000)
 
             global problem_products
             # to track anythings that throws an error the code can't get around,
