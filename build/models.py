@@ -821,7 +821,10 @@ class Investigation(models.Model):
 
     instrument_hosts = models.ManyToManyField("Instrument_Host")
     facilities = models.ManyToManyField("Facility")
-    targets = models.ManyToManyField("Target")
+    # related_name gives Target back a `.investigations` accessor. There used to
+    # be a second, separate M2M declared on Target with that name; the two were
+    # never kept in sync, so it was merged into this one in migration 0067.
+    targets = models.ManyToManyField("Target", related_name='investigations')
 
     # Attributes used to manage Investigation object
     #objects = InvestigationManager()
@@ -1372,8 +1375,8 @@ class Target(models.Model):
     vid = models.FloatField(default=1.0)
     file_ref = models.CharField(max_length=MAX_CHAR_FIELD)
 
-    # Hold's investigations target was chosen from
-    investigations = models.ManyToManyField("Investigation")
+    # The investigations this target belongs to are reachable as
+    # target.investigations, supplied by Investigation.targets' related_name.
 
     # Attributes used to manage Instrument Host object
     #objects = TargetManager()

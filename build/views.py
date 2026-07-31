@@ -2229,7 +2229,12 @@ def context_search_target_inv(request, pk_bundle, pk_investigation):
                 context_dict['target'] = i
                 bundle.targets.add(i)
 
-                i.investigations.add(investigation)
+                # Deliberately NOT doing i.investigations.add(investigation) here.
+                # Investigation.targets mirrors the target list PDS publishes for
+                # that investigation. It is shared reference data behind every
+                # user's bundle, so writing one user's pick into it would drift
+                # the "related targets" grouping for everyone. The user's choice
+                # belongs to their bundle, which bundle.targets.add already records.
 
                 # Label Fix for context products - Said
                 product_bundle = Product_Bundle.objects.get(bundle=bundle)
@@ -3994,9 +3999,10 @@ def delete_investigation(request, pk_bundle, pk_investigation):
 
     bundle.investigations.remove(investigation)
 
-    # have screen to choose between deleting investigation or choosing new host
-    # return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/contextsearch/investigation/')
-    return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/contextsearch/investigation/')
+    # Used to redirect to context_search_investigation, which re-renders
+    # bundle.html from a four-key context and so painted a near-empty page.
+    # Return to the bundle page, the same place delete_target goes.
+    return redirect('build:bundle', pk_bundle=pk_bundle)
 
 # Directory View
 def _get_abs_virtual_root():
