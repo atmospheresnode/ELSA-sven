@@ -821,7 +821,10 @@ class Investigation(models.Model):
 
     instrument_hosts = models.ManyToManyField("Instrument_Host")
     facilities = models.ManyToManyField("Facility")
-    targets = models.ManyToManyField("Target")
+    # related_name gives Target back a `.investigations` accessor. There used to
+    # be a second, separate M2M declared on Target with that name; the two were
+    # never kept in sync, so it was merged into this one in migration 0067.
+    targets = models.ManyToManyField("Target", related_name='investigations')
 
     # Attributes used to manage Investigation object
     #objects = InvestigationManager()
@@ -1372,8 +1375,8 @@ class Target(models.Model):
     vid = models.FloatField(default=1.0)
     file_ref = models.CharField(max_length=MAX_CHAR_FIELD)
 
-    # Hold's investigations target was chosen from
-    investigations = models.ManyToManyField("Investigation")
+    # The investigations this target belongs to are reachable as
+    # target.investigations, supplied by Investigation.targets' related_name.
 
     # Attributes used to manage Instrument Host object
     #objects = TargetManager()
@@ -1470,17 +1473,31 @@ class Target(models.Model):
         #     label.close()
 
     def remove_xml(self, label_root):
-        Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE))
+        context_area = label_root.find(
+            './/{}Context_Area'.format(NAMESPACE)
+        )
 
-        Observing_System = Context_Area.find('{}Observing_System'.format(NAMESPACE))
+        if context_area is None:
+            return label_root
 
-        for component in Observing_System:
-            if(component.tag == "{http://pds.nasa.gov/pds4/pds/v1}Target_Identification"):
-                if(component[0].text.title() == self.name.title()):
-                    component.getparent().remove(component)
+        for target_identification in context_area.findall(
+            '{}Target_Identification'.format(NAMESPACE)
+        ):
+            target_name = target_identification.find(
+                '{}name'.format(NAMESPACE)
+            )
+
+            if (
+                target_name is not None
+                and target_name.text
+                and self.name
+                and target_name.text.strip().casefold()
+                == self.name.strip().casefold()
+            ):
+                context_area.remove(target_identification)
+                print('Removed target from XML:', self.name)
 
         return label_root
-
 
 
 

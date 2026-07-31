@@ -34,6 +34,7 @@
    <br>
    
    {% if bundle_type == "Archive" %}
+   <div class="archive-theme">
       <!-- Help Button -->
       <div class="col-md-2">
          <button class="btn btn-teal" data-toggle="bundle-collapse" href="#content" role="button"> What is a bundle? </button>
@@ -83,6 +84,7 @@
             <br>
          </div>
       </div>
+   </div>
    </div>
 
 
@@ -152,38 +154,161 @@
 
  <!-- Archive Contents -->
  {% if bundle_type == "Archive" %}
+   <div class="archive-theme">
+   <style>
+         /* ===== Archive bundle theme ===== */
+        .archive-theme{
+         --archive: #008080;
+         --archive-hover: #006666;
+         }
+
+         /* Recolor ALL buttons inside Archive EXCEPT ones marked keep-bg */
+         .archive-theme .btn:not(.btn-keep-bg){
+         background-color: var(--archive) !important;
+         border-color: var(--archive) !important;
+         color: #fff !important;
+         box-shadow: none !important;
+         }
+         .archive-theme .btn:not(.btn-keep-bg):hover{
+         background-color: var(--archive-hover) !important;
+         border-color: var(--archive-hover) !important;
+         }
+
+         /* Legacy custom button classes in header */
+         .archive-theme .btn-teal:not(.btn-keep-bg),
+         .archive-theme .btn-cyan:not(.btn-keep-bg),
+         .archive-theme .btn-blue:not(.btn-keep-bg),
+         .archive-theme .btn-red:not(.btn-keep-bg){
+         background-color: var(--archive) !important;
+         border-color: var(--archive) !important;
+         color: #fff !important;
+         }
+   </style>
+
       <div class="container-fluid pt-3">
-         <!-- Info Card -->
-         <div class="row justify-content-center align-items-center">
-            <div class="col-md-12">
-               <div class="card d-flex p-2">
+         <!-- Info Card + Bundle Components -->
+         <div class="row align-items-stretch">
+            <div class="col-md-6">
+               <div class="card d-flex p-2 h-100">
                   <h2 class="card-title text-center mt-3" style="font-family: 'Outfit', sans-serif; font-size: 2rem; font-weight: 600;">{{ bundle.name }}</h2>
                   <p class="text-center text-muted small font-monospace mb-0">{{ bundle.lid }}</p>
                   <p class="card-body text-left z-depth-2">
-                     Welcome to your Bundle View. Here you have the ability to edit and adjust parts of your bundle. 
-                     In this section you have the ability to Delete your bundle should you need to and Download the entire bundle template set as a zip file. 
+                     Welcome to your Bundle View. Here you have the ability to edit and adjust parts of your bundle.
+                     In this section you have the ability to Delete your bundle should you need to and Download the entire bundle template set as a zip file.
                      Global settings in your bundle handled in the Investigation Area OR Context Product references can be edited here.
-         
-                     <div class="col p-1 m-3 mt-0 text-center">
 
-                           <a type="button" class="btn btn-danger text-light" data-bs-toggle="modal" data-bs-target="#delete_modal" aria-expanded="false" style="box-shadow: none;">Delete Bundle</a>
-                           <a type="button" class="btn btn-success text-light" href="{% url 'build:bundle_download' bundle.pk %}" aria-expanded="false" style="box-shadow: none;">Download Bundle</a>
-                           
-                           <a type="button" class="btn btn-light text-light dropdown-toggle" id="investigation_dropdown" data-bs-toggle="dropdown" aria-expanded="false" style="box-shadow: none;">Edit Investigation Area</a>
-                              <ul class="dropdown-menu" aria-labelledby="investigation_dropdown">
-                                 <li><a class="dropdown-item" data-bs-toggle="modal" data-bs-target="#alias_modal">Alias</a></li>
-                                 <li><a class="dropdown-item" data-bs-toggle="modal" data-bs-target="#mod_history_modal">Modification History</a></li>
-                                 <li><a class="dropdown-item" data-bs-toggle="modal" data-bs-target="#citation_information_modal">Citation Information</a></li>
-                              </ul>
-                           
-                           <a type="button" class="btn btn-light text-light" data-bs-toggle="modal" data-bs-target="#context_modal" aria-expanded="false" style="box-shadow: none;">Edit Context Products</a>
+                     <div class="col p-1 m-3 mt-0 text-center">
+                           <a class="btn btn-danger text-light btn-keep-bg" data-bs-toggle="modal" data-bs-target="#delete_modal" aria-expanded="false" style="box-shadow: none;">Delete Bundle</a>
+                           <a class="btn btn-success text-light btn-keep-bg" href="{% url 'build:bundle_download' bundle.pk %}" aria-expanded="false" style="box-shadow: none;">Download Bundle</a>
                      </div>
                   </p>
                </div>
             </div>
+
+            <!-- Bundle Components Card -->
+            <div class="col-md-6">
+               <div class="card h-100">
+                  <h5 class="card-header bg-secondary text-white text-center position-relative">
+                     Bundle Components
+                     <span class="ms-1 d-inline-flex align-items-center">
+                        <i class="bi bi-info-circle text-light opacity-75" style="cursor: help;" role="button" tabindex="0"
+                           data-bs-toggle="tooltip" data-bs-placement="left"
+                           title="Click any component to edit it. All required components must be completed before your bundle can go through peer review."></i>
+                     </span>
+                  </h5>
+                  <div class="p-3">
+
+                     <!-- Investigation Area -->
+                     <div class="d-flex align-items-center gap-2 mb-2">
+                        <span class="text-muted fw-semibold text-nowrap" style="font-size:0.7rem; letter-spacing:0.07em; text-transform:uppercase;">Investigation Area</span>
+                        <hr class="flex-grow-1 my-0 opacity-50">
+                     </div>
+                     <div class="list-group rounded overflow-hidden mb-3">
+                        <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2" data-bs-toggle="modal" data-bs-target="#alias_modal">
+                           <span class="small">Alias</span>
+                           {% if status_dict.Alias %}
+                              <span class="badge rounded-pill bg-success">Added</span>
+                           {% else %}
+                              <span class="badge rounded-pill bg-warning text-dark">Optional</span>
+                           {% endif %}
+                        </a>
+                        <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2" data-bs-toggle="modal" data-bs-target="#mod_history_modal">
+                           <span class="small">Modification History</span>
+                           <span class="badge rounded-pill {% if status_dict.Modification_History %}bg-success{% else %}bg-danger{% endif %}">
+                              {% if status_dict.Modification_History %}Added{% else %}Missing{% endif %}
+                           </span>
+                        </a>
+                        <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2" data-bs-toggle="modal" data-bs-target="#citation_information_modal">
+                           <span class="small">Citation Information</span>
+                           <span class="badge rounded-pill {% if status_dict.Citation_Information %}bg-success{% else %}bg-danger{% endif %}">
+                              {% if status_dict.Citation_Information %}Added{% else %}Missing{% endif %}
+                           </span>
+                        </a>
+                     </div>
+
+                     <!-- Context Products -->
+                     <div class="d-flex align-items-center gap-2 mb-2">
+                        <span class="text-muted fw-semibold text-nowrap" style="font-size:0.7rem; letter-spacing:0.07em; text-transform:uppercase;">Context Products</span>
+                        <hr class="flex-grow-1 my-0 opacity-50">
+                     </div>
+                     <div class="list-group rounded overflow-hidden mb-0">
+                        <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2" data-bs-toggle="modal" data-bs-target="#context_modal" data-tab="con_inv">
+                           <span class="small">Investigations</span>
+                           <span class="badge rounded-pill {% if status_dict.Investigations %}bg-success{% else %}bg-danger{% endif %}">
+                              {% if status_dict.Investigations %}
+                                 {% with ic=investigations|length %}{{ ic }} selected{% endwith %}
+                              {% else %}
+                                 Missing
+                              {% endif %}
+                           </span>
+                        </a>
+                        {% if status_dict.Investigations or status_dict.Hosts %}
+                        <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2" data-bs-toggle="modal" data-bs-target="#context_modal" data-tab="con_ih">
+                           <span class="small">Hosts</span>
+                           <span class="badge rounded-pill {% if status_dict.Hosts %}bg-success{% else %}bg-danger{% endif %}">
+                              {% if status_dict.Hosts %}Added{% else %}Missing{% endif %}
+                           </span>
+                        </a>
+                        {% else %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-2 disabled" aria-disabled="true" title="Add an investigation before you can add hosts">
+                           <span class="small text-muted"><i class="bi bi-lock-fill me-1 opacity-75"></i>Hosts</span>
+                           <span class="small text-muted fst-italic">Add an investigation first</span>
+                        </div>
+                        {% endif %}
+                        {% if status_dict.Hosts or status_dict.Instruments %}
+                        <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2" data-bs-toggle="modal" data-bs-target="#context_modal" data-tab="con_ins">
+                           <span class="small">Instruments</span>
+                           <span class="badge rounded-pill {% if status_dict.Instruments %}bg-success{% else %}bg-danger{% endif %}">
+                              {% if status_dict.Instruments %}
+                                 {% with nc=instruments|length %}{{ nc }} selected{% endwith %}
+                              {% else %}
+                                 Missing
+                              {% endif %}
+                           </span>
+                        </a>
+                        {% else %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-2 disabled" aria-disabled="true" title="Add a host before you can add instruments">
+                           <span class="small text-muted"><i class="bi bi-lock-fill me-1 opacity-75"></i>Instruments</span>
+                           <span class="small text-muted fst-italic">Add a host first</span>
+                        </div>
+                        {% endif %}
+                        <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2" data-bs-toggle="modal" data-bs-target="#context_modal" data-tab="con_tar">
+                           <span class="small">Targets</span>
+                           <span class="badge rounded-pill {% if status_dict.Targets %}bg-success{% else %}bg-danger{% endif %}">
+                              {% if status_dict.Targets %}
+                                 {% with tc=targets|length %}{{ tc }} selected{% endwith %}
+                              {% else %}
+                                 Missing
+                              {% endif %}
+                           </span>
+                        </a>
+                     </div>
+
+                  </div>
+               </div>
+            </div>
          </div>
 
-      
       <!-- Collections Card -->
       <div class="row justify-content-center align-items-center mt-3">
          <div class="col-md-12">
@@ -233,27 +358,88 @@
                         </div>
 
                         <!-- List of Product Documents -->
-                        <div class="modal-footer justify-content-start mt-3 mb-3">
+                        <div class="row g-3">
                            {% if documents %}
-                              {% for document in documents %}
-                              <div class="card snippet-card ms-0 me-3">
-                                 <div class="card-body">
-                                    <h5 class="card-title">{{ document.document_name }}</h5>
-                                    <p class="card-text">Acknowledgment list: {{ document.acknowledgement_text }}</p>
-                                    <p class="card-text">Author list: {{ document.author_list }}</p>
-                                    <p class="card-text">Copyright: {{ document.copyright }}</p>
-                                    <p class="card-text">Description: {{ document.description }}</p>
-                                    <p class="card-text">Document editions: {{ document.document_editions }}</p>
-                                    <p class="card-text">DOI: {{ document.doi }}</p>
-                                    <p class="card-text">Editor list {{ document.editor_list }}</p>
-                                    <p class="card-text">Publication date: {{ document.publication_date }}</p>
-                                    <p class="card-text">revision ID: {{ document.revision_id }}</p>
-                                    <a href="{%  url 'build:product_document' bundle.pk document.pk %}" class="btn btn-light text-light d-flex justify-content-center">Edit</a>
+                                 {% for document in documents %}
+                                 <div class="col-12 col-md-6 col-lg-4 mb-3">
+                                    <div class="card h-100 mt-3 shadow-sm border">
+                                       <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
+                                             <div class="d-flex align-items-center text-truncate" style="max-width: 85%;">
+                                                <i class="bi bi-file-earmark-text text-secondary me-2"></i>
+                                                <span class="fw-bold text-truncate" title="{{ document.document_name }}">
+                                                   {{ document.document_name }}
+                                                </span>
+                                             </div>
+                                             <button class="btn btn-sm btn-link text-decoration-none text-dark p-0 btn-keep-bg" type="button" data-bs-toggle="collapse" data-bs-target="#doc_details_{{ document.pk }}" aria-expanded="false">
+                                                <i class="bi bi-chevron-down"></i>
+                                             </button>
+                                       </div>
+                                       <div class="collapse" id="doc_details_{{ document.pk }}">
+                                             <div class="card-body bg-light small">
+                                                <div class="mb-2">
+                                                   <strong>Author List:</strong><br>
+                                                   <span class="text-muted">{{ document.author_list|default:"—" }}</span>
+                                                </div>
+                                                <div class="mb-2">
+                                                   <strong>Publication Date:</strong><br>
+                                                   <span class="text-muted">{{ document.publication_date|default:"—" }}</span>
+                                                </div>
+                                                <div class="mb-2">
+                                                   <strong>DOI:</strong><br>
+                                                   <span class="text-muted">{{ document.doi|default:"—" }}</span>
+                                                </div>
+                                                <div class="mb-3">
+                                                   <strong>Description:</strong><br>
+                                                   <span class="text-muted">{{ document.description|default:"—" }}</span>
+                                                </div>
+                                                <div class="d-flex gap-2">
+                                                   <a href="{% url 'build:product_document' bundle.pk document.pk %}" class="btn btn-sm btn-outline-secondary w-100">
+                                                         Edit Details
+                                                   </a>
+                                                   <button type="button" class="btn btn-sm btn-outline-danger btn-keep-bg w-100"
+                                                         data-bs-toggle="modal" data-bs-target="#deleteDocModal{{ document.pk }}">
+                                                         <i class="bi bi-trash me-1"></i> Delete
+                                                   </button>
+                                                </div>
+                                             </div>
+                                       </div>
+                                    </div>
                                  </div>
-                              </div>
-                              {% endfor%}
+
+                                 <!-- Delete Document Modal — outside card, inside loop -->
+                                 <div class="modal fade" id="deleteDocModal{{ document.pk }}" tabindex="-1" aria-hidden="true">
+                                    <div class="modal-dialog modal-dialog-centered">
+                                       <div class="modal-content">
+                                             <div class="modal-header border-0 pb-0">
+                                                <h5 class="modal-title text-danger">
+                                                   <i class="bi bi-exclamation-triangle me-2"></i> Delete Document
+                                                </h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                             </div>
+                                             <div class="modal-body">
+                                                <p>Are you sure you want to delete <strong>{{ document.document_name }}</strong>?</p>
+                                                <p class="text-muted small mb-0"><i class="bi bi-info-circle me-1"></i> This action cannot be undone.</p>
+                                             </div>
+                                             <div class="modal-footer border-0">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                <form action="{% url 'build:delete_product_document' bundle.pk document.pk %}" method="post" class="mb-0">
+                                                   {% csrf_token %}
+                                                   <button type="submit" class="btn btn-danger btn-keep-bg">
+                                                         <i class="bi bi-trash me-1"></i> Delete
+                                                   </button>
+                                                </form>
+                                             </div>
+                                       </div>
+                                    </div>
+                                 </div>
+
+                                 {% endfor %}
                            {% else %}
-                              <p>No Documents Found</p>
+                                 <div class="col-12">
+                                    <div class="alert alert-light text-center border text-muted">
+                                       No documents!
+                                    </div>
+                                 </div>
                            {% endif %}
                         </div>
                      </div>
@@ -371,7 +557,14 @@
       <div class="col-md-3">
          <!-- Files Card -->
          <div class="card d-flex mb-4">
-            <h5 class="card-header bg-secondary text-light text-center">Files <span class="ms-1 align-baseline" style="position: relative; top: -1px;" data-bs-toggle="tooltip" data-bs-placement="top" title="This section allows you to select XML labels from your bundle to be displayed in the XML viewer to the right. As you add more files to your bundle, this list will expand to include all of them."><i class="bi bi-info-circle"></i></span></h5>
+            <h5 class="card-header bg-secondary text-light text-center position-relative">
+               Files
+               <span class="ms-1 d-inline-flex align-items-center">
+                  <i class="bi bi-info-circle text-light opacity-75" style="cursor: help;" role="button" tabindex="0"
+                     data-bs-toggle="tooltip" data-bs-placement="left"
+                     title="This section allows you to select XML labels from your bundle to be displayed in the XML viewer to the right. As you add more files to your bundle, this list will expand to include all of them."></i>
+               </span>
+            </h5>
             <div class="card_body m-4">
             <div class="col">
                {% for f in file_context %}
@@ -390,78 +583,24 @@
             </div>
          </div>
 
-         <!-- Bundle Progress Card-->
-         <div class="card progress-sidebar">
-         <h5 class="card-header bg-secondary text-white text-center">Bundle Progress <span class="ms-1 align-baseline" style="position: relative; top: -1px;" data-bs-toggle="tooltip" data-bs-placement="top" title="This section shows a qualitative depiction of the overall completion progress of this bundle."><i class="bi bi-info-circle"></i></span></h5>
-         <div class="list-group list-group-flush">
-            <!-- Alias -->
-            <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" data-bs-toggle="modal" data-bs-target="#alias_modal">
-               Alias
-               <span class="badge {% if status_dict.Alias %}bg-success{% else %}bg-danger{% endif %}">
-                  {% if status_dict.Alias %}<i class="bi bi-check-circle-fill"></i>{% else %}<i class="bi bi-x-circle-fill"></i>{% endif %}
-               </span>
-            </a>
-            <!-- Modification History -->
-            <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" data-bs-toggle="modal" data-bs-target="#mod_history_modal">
-               Modification History
-               <span class="badge {% if status_dict.Modification_History %}bg-success{% else %}bg-danger{% endif %}">
-                  {% if status_dict.Modification_History %}<i class="bi bi-check-circle-fill"></i>{% else %}<i class="bi bi-x-circle-fill"></i>{% endif %}
-               </span>
-            </a>
-            <!-- Citation Information -->
-            <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" data-bs-toggle="modal" data-bs-target="#citation_information_modal">
-               Citation Information
-               <span class="badge {% if status_dict.Citation_Information %}bg-success{% else %}bg-danger{% endif %}">
-                  {% if status_dict.Citation_Information %}<i class="bi bi-check-circle-fill"></i>{% else %}<i class="bi bi-x-circle-fill"></i>{% endif %}
-               </span>
-            </a>
-            <!-- Investigations -->
-            <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" data-bs-toggle="modal" data-bs-target="#context_modal" data-tab="con_inv">
-               Investigations
-               <span class="badge {% if status_dict.Investigations %}bg-success{% else %}bg-danger{% endif %}">
-                  {% if status_dict.Investigations %}<i class="bi bi-check-circle-fill"></i>{% else %}<i class="bi bi-x-circle-fill"></i>{% endif %}
-               </span>
-            </a>
-            <!-- Hosts -->
-            <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" data-bs-toggle="modal" data-bs-target="#context_modal" data-tab="con_ih">
-               Hosts
-               <span class="badge {% if status_dict.Hosts %}bg-success{% else %}bg-danger{% endif %}">
-                  {% if status_dict.Hosts %}<i class="bi bi-check-circle-fill"></i>{% else %}<i class="bi bi-x-circle-fill"></i>{% endif %}
-               </span>
-            </a>
-            <!-- Instruments -->
-            <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" data-bs-toggle="modal" data-bs-target="#context_modal" data-tab="con_ins">
-               Instruments
-               <span class="badge {% if status_dict.Instruments %}bg-success{% else %}bg-danger{% endif %}">
-                  {% if status_dict.Instruments %}<i class="bi bi-check-circle-fill"></i>{% else %}<i class="bi bi-x-circle-fill"></i>{% endif %}
-               </span>
-            </a>
-            <!-- Targets -->
-            <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" data-bs-toggle="modal" data-bs-target="#context_modal" data-tab="con_tar">
-               Targets
-               <span class="badge {% if status_dict.Targets %}bg-success{% else %}bg-danger{% endif %}">
-                  {% if status_dict.Targets %}<i class="bi bi-check-circle-fill"></i>{% else %}<i class="bi bi-x-circle-fill"></i>{% endif %}
-               </span>
-            </a>
-         </div>
-      </div>
       </div>
 
 
 
          <div class="col-md-9">
             <div class="card d-flex">
-               <h5 class="card-header bg-secondary text-light text-center">
+               <h5 class="card-header bg-secondary text-light text-center position-relative">
                   XML Viewer
-                  <span class="ms-1 align-baseline" style="position: relative; top: -1px;"
-                        data-bs-toggle="tooltip" data-bs-placement="top"
-                        title="This section allows you to view edited XML labels, selected via the File list on the left of the screen.">
-                     <i class="bi bi-info-circle"></i>
+                  <span class="ms-1 d-inline-flex align-items-center">
+                     <i class="bi bi-info-circle text-light opacity-75" style="cursor: help;" role="button" tabindex="0"
+                        data-bs-toggle="tooltip" data-bs-placement="left"
+                        title="This section allows you to view edited XML labels, selected via the File list on the left of the screen."></i>
                   </span>
                </h5>
                <div class="card-body m-3 mt-2">
                   <h5 class="text-center mb-3" id="fileName">File Content</h5>
-                  <pre style="max-height: 800px; overflow-y: auto; overflow-x: auto;"><code id="fileContent"></code></pre>               </div>
+                  <pre style="max-height: 800px; overflow-y: auto; overflow-x: auto;"><code id="fileContent"></code></pre>
+               </div>
             </div>
          </div>
 
@@ -496,11 +635,8 @@
                new bootstrap.Tooltip(el);
             });
          </script>
-         <style>
-            .progress-sidebar a.list-group-item-action:hover { text-decoration: underline; }
-         </style>
          <script>
-            // Open context modal to the right tab when triggered from the progress sidebar
+            // Open context modal to the right tab when triggered from the Bundle Components card
             document.querySelectorAll('[data-bs-target="#context_modal"][data-tab]').forEach(function(trigger) {
                trigger.addEventListener('click', function() {
                   var tabId = this.getAttribute('data-tab');
@@ -716,10 +852,13 @@
                                                       <a type="button" class="btn btn-light text-light" href="{% url 'build:context_search_instrument' bundle.pk investigation.pk instrument_host.pk %}">Add Instrument</a>
                                                    {% endif %}
                                                 {% endfor %}
-                                                <a type="button" class="btn btn-light text-light" href="{% url 'build:context_search_target_investigation' bundle.pk investigation.pk %}">Add Target</a>
                                              {% else %}
                                                 <a type="button" class="btn btn-light text-light" href="{% url 'build:context_search_instrument_host_and_facility' bundle.pk investigation.pk %}">Add Host</a>
                                              {% endif %}
+
+                                             <!-- A target does not depend on an instrument host in PDS4, so this
+                                                  is offered whether or not a host has been added yet. -->
+                                             <a type="button" class="btn btn-light text-light" href="{% url 'build:context_search_target_investigation' bundle.pk investigation.pk %}">Add Target</a>
 
 
                                              <a type="button" class="btn btn-danger" href="{% url 'build:delete_investigation' bundle.pk investigation.pk %}">Remove</a>
@@ -851,22 +990,31 @@
                         <div class="col-md-12">
                            <div class="card">
                            <div class="card-header">
-                              <p>Choose the target(s) you wish to add to your bundle. This is a complete list of availabe targets, independent of any investigations chosen.</p>
+                              {% if form_target.related_investigation_names %}
+                                 <p>Choose the target(s) you wish to add to your bundle. The menu groups targets under each investigation PDS lists them for, with every remaining target below. PDS4 does not require a target to belong to an investigation, so you can pick one from the lower group if your data calls for it.</p>
+                              {% else %}
+                                 <p>Choose the target(s) you wish to add to your bundle. This is a complete list of available targets. Add an investigation first and the targets PDS lists for it will be grouped at the top.</p>
+                              {% endif %}
                            </div>
-                           
-                           <form class="card-header black-text text-left z-depth-2"id="query01" method="post" action="{% url 'build:context_search_target' bundle.pk %}">
-                              
+
+                           <!-- No off-list confirmation here on purpose. This tab is the
+                                bundle-level target list and has no single investigation in
+                                scope, so picking from "All other targets" is a normal choice,
+                                not something to second-guess. The per-investigation Add Target
+                                page is where that confirmation belongs. -->
+                           <form class="card-header black-text text-left z-depth-2" id="query01" method="post" action="{% url 'build:context_search_target' bundle.pk %}">
+
                               {% csrf_token %}
                               {{ form_target }}
                               {{ form.errors }}
                               {{ form.non_field_errors }}
-                              
+
                            <div class="d-flex">
                               <input type="submit" name="submit_target" class="btn btn-light text-light mt-4" value="Submit"/>
                               <input type="button" class="btn btn-light text-light mt-4 ms-auto" data-bs-toggle="modal" data-bs-target="#contactModal" value="Contact">
                            </div>
-                                 
-                           </form>                  
+
+                           </form>
                            </br>
                            </div>
                         </div>
@@ -945,7 +1093,7 @@
                                  {{ form.errors }}
                                  {{ form.non_field_errors }}
                                  
-                                 <input type="submit" class="btn btn-light text-light" value="Submit"/>
+                                 <input type="submit" name="submit_target" class="btn btn-light text-light mt-4" value="Submit"/>
                                  
                               </form>  
                            </br>
@@ -1701,6 +1849,8 @@
    
 
    
+   </div>
+
     <!--     Contents -->
    {% elif bundle_type == "External" %}
    <div class="external-theme">
@@ -2914,10 +3064,13 @@
                                                       <a type="button" class="btn btn-light text-light" href="{% url 'build:context_search_instrument' bundle.pk investigation.pk instrument_host.pk %}">Add Instrument</a>
                                                    {% endif %}
                                                 {% endfor %}
-                                                <a type="button" class="btn btn-light text-light" href="{% url 'build:context_search_target_investigation' bundle.pk investigation.pk %}">Add Target</a>
                                              {% else %}
                                                 <a type="button" class="btn btn-light text-light" href="{% url 'build:context_search_instrument_host_and_facility' bundle.pk investigation.pk %}">Add Host</a>
                                              {% endif %}
+
+                                             <!-- A target does not depend on an instrument host in PDS4, so this
+                                                  is offered whether or not a host has been added yet. -->
+                                             <a type="button" class="btn btn-light text-light" href="{% url 'build:context_search_target_investigation' bundle.pk investigation.pk %}">Add Target</a>
 
 
                                              <a type="button" class="btn btn-danger" href="{% url 'build:delete_investigation' bundle.pk investigation.pk %}">Remove</a>
@@ -3051,7 +3204,7 @@
                            <div class="card-header">
                               <p>Choose the target(s) you wish to add to your bundle. This is a complete list of availabe targets, independent of any investigations chosen.</p>
                            </div>
-                           <form class="card-header black-text text-left z-depth-2"id="query01" method="post" action="{% url 'build:context_search_target' bundle.pk %}">
+                           <form class="card-header black-text text-left z-depth-2"id="query01" method="post" action="{% url 'build:context_search_target' bundle.pk %}?next=bundle">
                               
                               {% csrf_token %}
                               {{ form_target }}
@@ -3059,7 +3212,7 @@
                               {{ form.non_field_errors }}
                               
                            <div class="d-flex">
-                              <input type="submit" class="btn btn-light text-light mt-4" value="Submit"/>
+                              <input type="submit" name="submit_target" class="btn btn-light text-light mt-4" value="Submit"/>
                               <input type="button" class="btn btn-light text-light mt-4 ms-auto" data-bs-toggle="modal" data-bs-target="#contactModal" value="Contact">
                            </div>
                                  
@@ -3135,14 +3288,14 @@
                                  <strong>Working with model or simulation data?</strong> Choose the "Laboratory Analog" entry for the body you're simulating (e.g., "Mars Laboratory Analog" for a Mars atmosphere simulation). It's not a physical lab sample, PDS4 just uses this name for the target.
                               </div>
                            </div>
-                           <form class="card-header black-text text-left z-depth-2"id="query01" method="post" action="{% url 'build:context_search_target' bundle.pk %}">
+                           <form class="card-header black-text text-left z-depth-2"id="query01" method="post" action="{% url 'build:context_search_target' bundle.pk %}?next=bundle">
                               
                                  {% csrf_token %}
                                  {{ form_target }}
                                  {{ form.errors }}
                                  {{ form.non_field_errors }}
                                  
-                                 <input type="submit" class="btn btn-light text-light" value="Submit"/>
+                                 <input type="submit" name="submit_target" class="btn btn-light text-light mt-4" value="Submit"/>
                                  
                               </form>  
                            </br>
@@ -3938,5 +4091,6 @@
       </div>
    </div>
 </div>
+
 
 {% endblock %}

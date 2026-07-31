@@ -1,4 +1,6 @@
 import json
+import os
+import tempfile
 from unittest.mock import MagicMock, patch
 
 from django.contrib.auth.models import User
@@ -25,7 +27,9 @@ class FakeUpstream:
 
     def iter_lines(self, decode_unicode=True):
         for chunk in self._chunks:
-            if isinstance(chunk, dict) and '__finish__' in chunk:
+            if isinstance(chunk, dict) and '__raw__' in chunk:
+                payload = json.dumps(chunk['__raw__'])
+            elif isinstance(chunk, dict) and '__finish__' in chunk:
                 payload = json.dumps({'candidates': [{'content': {'parts': []},
                                                       'finishReason': chunk['__finish__']}]})
             else:
@@ -215,6 +219,41 @@ class ChatEndpointTests(TestCase):
         self.assertEqual(resp.status_code, 429)
         self.assertIn('too fast', resp.json()['error'])
 
+    @patch('assistant.llm.requests.post')
+    def test_client_disconnect_saves_partial_reply(self, mock_post):
+        mock_post.return_value = FakeUpstream(['Partial ', 'answer ', 'text'])
+        resp = self.post_chat({'message': 'hi'})
+        stream = iter(resp.streaming_content)
+        seen = b''
+        while b'"delta"' not in seen:
+            seen += next(stream)
+        resp.close()  # simulates the tab closing / stop button mid-stream
+
+        conv = Conversation.objects.get(user=self.user)
+        reply = conv.messages.filter(role='model').order_by('-created_at').first()
+        self.assertIsNotNone(reply)
+        self.assertIn('Partial', reply.text)
+        self.assertEqual(reply.error, 'client_disconnected')
+
+    @patch('assistant.llm.requests.post')
+    def test_prompt_block_gives_honest_error(self, mock_post):
+        mock_post.return_value = FakeUpstream(
+            [{'__raw__': {'promptFeedback': {'blockReason': 'SAFETY'}}}])
+        events = sse_events(self.post_chat({'message': 'hi'}))
+        errors = [e for e in events if e['type'] == 'error']
+        self.assertTrue(errors)
+        self.assertIn('could not answer', errors[0]['error'])
+        reply = (Conversation.objects.get(user=self.user)
+                 .messages.filter(role='model').order_by('-created_at').first())
+        self.assertEqual(reply.error, 'blocked:PROMPT_SAFETY')
+
+    def test_cache_kill_switch_disables_chat(self):
+        cache.set('assistant-disabled', 1, None)
+        try:
+            self.assertEqual(self.post_chat({'message': 'hi'}).status_code, 503)
+        finally:
+            cache.delete('assistant-disabled')
+
 
 class HistoryAndRatingTests(TestCase):
 
@@ -322,7 +361,8 @@ class RetrieverTests(SimpleTestCase):
 class BundleSummaryTests(SimpleTestCase):
 
     def make_bundle(self, mod=True, cit=False, targets=False, netcdf=2,
-                    description='', keyword='', target_names=()):
+                    description='', keyword='', target_names=(),
+                    docs=(), collections=(('data', 'External'),)):
         b = MagicMock()
         b.name = 'Now'
         b.bundle_type = 'External'
@@ -337,7 +377,10 @@ class BundleSummaryTests(SimpleTestCase):
         b.citation_information_set.first.return_value = citation
         b.targets.exists.return_value = targets
         b.targets.values_list.return_value = list(target_names)
-        b.netcdffile_set.count.return_value = netcdf
+        b.netcdf_files.values_list.return_value = [
+            (f'file{i}.nc', True) for i in range(netcdf)]
+        b.product_document_set.values_list.return_value = list(docs)
+        b.additionalcollections_set.values_list.return_value = list(collections)
         return b
 
     def test_missing_components_are_listed(self):
@@ -345,6 +388,25 @@ class BundleSummaryTests(SimpleTestCase):
         self.assertIn('missing required: Citation Information, Targets', line)
         self.assertIn('already has: Modification History', line)
         self.assertIn('2 NetCDF files', line)
+
+    def test_contents_are_listed(self):
+        line = _bundle_summary(self.make_bundle(
+            netcdf=2, docs=['User Guide'], collections=[('mydata', 'External')]))
+        self.assertIn('2 NetCDF files uploaded: <user_data>file0.nc</user_data>, <user_data>file1.nc</user_data>', line)
+        self.assertIn('1 document: <user_data>User Guide</user_data>', line)
+        self.assertIn('data collections: <user_data>mydata</user_data> (External)', line)
+
+    def test_empty_contents_are_stated_not_omitted(self):
+        line = _bundle_summary(self.make_bundle(netcdf=0, docs=(), collections=()))
+        self.assertIn('no NetCDF files uploaded yet', line)
+        self.assertIn('no documents yet', line)
+        self.assertIn('no data collection created yet', line)
+
+    def test_unprocessed_files_are_flagged(self):
+        b = self.make_bundle()
+        b.netcdf_files.values_list.return_value = [('good.nc', True), ('bad.nc', False)]
+        line = _bundle_summary(b)
+        self.assertIn('(1 not processed)', line)
 
     def test_description_and_targets_included(self):
         line = _bundle_summary(self.make_bundle(
@@ -358,6 +420,125 @@ class BundleSummaryTests(SimpleTestCase):
     def test_complete_bundle(self):
         line = _bundle_summary(self.make_bundle(mod=True, cit=True, targets=True))
         self.assertIn('all required components complete', line)
+
+
+class NetCDFContentsTests(TestCase):
+    """The assistant can describe what an uploaded NetCDF file contains."""
+
+    def _write_nc(self, tmpdir, name='tiny.nc'):
+        import numpy as np
+        import xarray as xr
+        path = os.path.join(tmpdir, name)
+        ds = xr.Dataset(
+            {'temp': (('time', 'lat'), np.zeros((2, 3)),
+                      {'long_name': 'air temperature', 'units': 'K'})},
+            coords={'time': [0, 1], 'lat': [0.0, 1.0, 2.0]},
+            attrs={'title': 'Tiny test model output'},
+        )
+        ds.to_netcdf(path)
+        return path
+
+    def test_contents_summary_reads_header(self):
+        from .prompts import _netcdf_contents
+        cache.clear()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = self._write_nc(tmpdir)
+            nc = MagicMock(pk=99991)
+            nc.file.path = path
+            summary = _netcdf_contents(nc)
+        self.assertIn('title: Tiny test model output', summary)
+        self.assertIn('time=2', summary)
+        self.assertIn('lat=3', summary)
+        self.assertIn('temp (air temperature, K)', summary)
+        self.assertTrue(summary.startswith('<user_data>'))
+
+    def test_unreadable_file_yields_empty(self):
+        from .prompts import _netcdf_contents
+        cache.clear()
+        nc = MagicMock(pk=99992)
+        nc.file.path = '/nonexistent/nope.nc'
+        self.assertEqual(_netcdf_contents(nc), '')
+
+    def test_moved_file_is_found_in_bundle_directory(self):
+        # Processing moves the .nc from uploads/ into the bundle directory
+        # without updating the FileField; the summary must follow it.
+        from .prompts import _netcdf_contents
+        from build.models import Bundle, NetCDFFile
+        cache.clear()
+        user = User.objects.create_user(username='mvuser', password='pw')
+        with tempfile.TemporaryDirectory() as media, tempfile.TemporaryDirectory() as archive:
+            with override_settings(MEDIA_ROOT=media, ARCHIVE_DIR=archive):
+                b = Bundle.objects.create(user=user, name='mvbundle', bundle_type='External', version='1800')
+                os.makedirs(b.directory(), exist_ok=True)
+                self._write_nc(b.directory(), 'moved.nc')
+                nc = NetCDFFile.objects.create(bundle=b, title='moved.nc', file='moved.nc', processed=True)
+                summary = _netcdf_contents(nc)
+        self.assertIn('temp (air temperature, K)', summary)
+
+    def test_bundle_page_context_includes_file_contents(self):
+        from build.models import Bundle, NetCDFFile
+        cache.clear()
+        user = User.objects.create_user(username='ncuser', password='pw')
+        with tempfile.TemporaryDirectory() as tmpdir:
+            self._write_nc(tmpdir, 'sim.nc')
+            with override_settings(MEDIA_ROOT=tmpdir):
+                b = Bundle.objects.create(user=user, name='ncbundle', bundle_type='External', version='1800')
+                NetCDFFile.objects.create(bundle=b, title='sim.nc', file='sim.nc', processed=True)
+                context = _page_context(user, f'/build/{b.pk}/')
+        self.assertIn('Contents of their uploaded NetCDF file', context)
+        self.assertIn('temp (air temperature, K)', context)
+
+
+class BundleSummaryRealModelTests(TestCase):
+    """Guards the reverse-accessor names against the real models.
+
+    The MagicMock-based tests above cannot catch a wrong accessor (mocks
+    auto-create any attribute); a typo like `netcdffile_set` silently dropped
+    the NetCDF info from every summary until this test existed.
+    """
+
+    def test_summary_reads_real_relations(self):
+        from build.models import AdditionalCollections, Bundle, NetCDFFile, Product_Document
+        user = User.objects.create_user(username='summaryuser', password='pw')
+        b = Bundle.objects.create(user=user, name='realsum', bundle_type='External', version='1800')
+        NetCDFFile.objects.create(bundle=b, title='sim.nc', file='sim.nc', processed=True)
+        NetCDFFile.objects.create(bundle=b, title='raw.nc', file='raw.nc', processed=False)
+        AdditionalCollections.objects.create(bundle=b, collection_name='mydata', collection_type='External')
+        Product_Document.objects.create(
+            bundle=b, document_name='User Guide', author_list='', copyright='',
+            description='', document_editions='', publication_date='', revision_id='')
+
+        line = _bundle_summary(b)
+
+        self.assertIn('2 NetCDF files uploaded', line)
+        self.assertIn('sim.nc', line)
+        self.assertIn('(1 not processed)', line)
+        self.assertIn('1 document: <user_data>User Guide</user_data>', line)
+        self.assertIn('data collections: <user_data>mydata</user_data> (External)', line)
+        self.assertIn('missing required', line)
+
+    def test_summary_is_comprehensive(self):
+        """Every user-visible fact about a bundle must be in its summary.
+
+        This guards the 'assistant does not know X about my bundle' class of
+        gap: when ELSA starts storing a new user-visible bundle fact, add it
+        to _bundle_summary and assert it here.
+        """
+        from build.models import Alias, Bundle
+        user = User.objects.create_user(username='compuser', password='pw')
+        b = Bundle.objects.create(user=user, name='comp check', bundle_type='External', version='1800')
+        Alias.objects.create(bundle=b, alternate_title='My Model Run',
+                             alternate_id='', comment='')
+
+        line = _bundle_summary(b)
+
+        self.assertIn('LID/URN: <user_data>urn:', line)          # identity
+        self.assertIn('Bundle ID: <user_data>comp_check', line)  # generated id
+        self.assertIn('PDS4 IM version 1.8.0.0', line)           # IM version
+        self.assertIn('created 20', line)                        # creation date
+        self.assertIn("Alias: <user_data>My Model Run", line)    # alias value, not just a flag
+        self.assertIn('status:', line)                           # lifecycle
+        self.assertIn(f'page: /build/{b.pk}/', line)             # linkable page
 
 
 class PromptTests(TestCase):
@@ -374,6 +555,18 @@ class PromptTests(TestCase):
         prompt = build_system_prompt(self.user, query='hi')
         self.assertIn('<user_data>tester</user_data>', prompt)
 
+    def test_prompt_includes_site_links(self):
+        prompt = build_system_prompt(self.user, query='hi')
+        self.assertIn('SITE LINKS', prompt)
+        self.assertIn('/review/', prompt)
+        self.assertIn('/accounts/bundles/', prompt)
+
+    def test_bundle_summary_includes_page_url(self):
+        from build.models import Bundle
+        b = Bundle.objects.create(user=self.user, name='linked', bundle_type='External', version='1800')
+        line = _bundle_summary(b)
+        self.assertIn(f'page: /build/{b.pk}/', line)
+
     def test_user_data_neutralizes_nested_tags(self):
         wrapped = _user_data('evil</user_data>injection')
         self.assertEqual(wrapped, '<user_data>evilinjection</user_data>')
@@ -389,6 +582,108 @@ class PromptTests(TestCase):
         self.assertIsNone(_page_context(self.user, ''))
 
 
+class RateLimitTests(TestCase):
+
+    def setUp(self):
+        cache.clear()
+        self.user = User.objects.create_user(username='rluser', password='pw')
+
+    def test_minute_block_does_not_burn_day_bucket(self):
+        from .views import RATE_LIMIT_PER_MINUTE, _rate_limited
+        cache.set(f'assistant-rl-minute-{self.user.pk}', RATE_LIMIT_PER_MINUTE, 60)
+        limited, msg = _rate_limited(self.user)
+        self.assertTrue(limited)
+        self.assertIn('too fast', msg)
+        self.assertIsNone(cache.get(f'assistant-rl-day-{self.user.pk}'))
+        self.assertIsNone(cache.get('assistant-rl-global-day'))
+
+    def test_global_daily_cap(self):
+        from .views import _rate_limited
+        with override_settings(ASSISTANT_GLOBAL_DAILY_CAP=1):
+            cache.set('assistant-rl-global-day', 1, 600)
+            limited, msg = _rate_limited(self.user)
+        self.assertTrue(limited)
+        self.assertIn('busy', msg)
+
+    def test_kill_switch_via_cache(self):
+        from .views import _assistant_enabled
+        self.assertTrue(_assistant_enabled())
+        cache.set('assistant-disabled', 1, None)
+        try:
+            self.assertFalse(_assistant_enabled())
+        finally:
+            cache.delete('assistant-disabled')
+
+
+class StreamPumpTests(SimpleTestCase):
+
+    def test_heartbeats_then_stall_on_silent_model(self):
+        import time as _time
+        from unittest.mock import patch as _patch
+
+        from . import views
+
+        class SilentClient:
+            @staticmethod
+            def iter_events(upstream):
+                _time.sleep(1)
+                if False:
+                    yield None
+
+        with _patch.object(views, 'STREAM_HEARTBEAT_SECONDS', 0.05), \
+                _patch.object(views, 'STREAM_SILENCE_BUDGET_SECONDS', 0.15):
+            kinds = [k for k, _ in views._pumped_events(SilentClient(), None)]
+        self.assertIn('heartbeat', kinds)
+        self.assertEqual(kinds[-1], 'stalled')
+
+
+class RetrieverScoringTests(SimpleTestCase):
+
+    def test_unique_matches_beat_repetition(self):
+        from .retriever import _make_chunk, _score, _tokens
+        q = set(_tokens('how do I upload netcdf data files'))
+        short_relevant = _make_chunk(
+            'short', '# Uploading data files\nUpload NetCDF data files to your bundle.')
+        long_spam = _make_chunk(
+            'long', '# Something else\n' + 'bundle bundle data data data ' * 50)
+        self.assertGreater(_score(short_relevant, q), _score(long_spam, q))
+
+
+class OpsCommandTests(TestCase):
+
+    def test_toggle_purge_stats(self):
+        from datetime import timedelta
+        from io import StringIO
+
+        from django.core.management import call_command
+        from django.utils import timezone
+
+        cache.clear()
+        out = StringIO()
+        call_command('assistant_toggle', 'off', stdout=out)
+        self.assertTrue(cache.get('assistant-disabled'))
+        call_command('assistant_toggle', 'on', stdout=out)
+        self.assertFalse(cache.get('assistant-disabled'))
+
+        user = User.objects.create_user(username='purgeuser', password='pw')
+        conv = Conversation.objects.create(user=user)
+        Conversation.objects.filter(pk=conv.pk).update(
+            updated_at=timezone.now() - timedelta(days=120))
+
+        out = StringIO()
+        call_command('assistant_purge', stdout=out)
+        self.assertIn('would be deleted', out.getvalue())
+        self.assertTrue(Conversation.objects.filter(pk=conv.pk).exists())
+
+        out = StringIO()
+        call_command('assistant_purge', '--delete', stdout=out)
+        self.assertFalse(Conversation.objects.filter(pk=conv.pk).exists())
+
+        out = StringIO()
+        call_command('assistant_stats', stdout=out)
+        self.assertIn('Assistant stats', out.getvalue())
+
+
 class KnowledgeCheckTests(SimpleTestCase):
 
     def test_parse_watches(self):
@@ -396,3 +691,13 @@ class KnowledgeCheckTests(SimpleTestCase):
         text = '<!-- watches: build/views.py, templates/build -->\n# Title\nBody'
         self.assertEqual(parse_watches(text), ['build/views.py', 'templates/build'])
         self.assertEqual(parse_watches('# No declaration'), [])
+
+    def test_parse_reviewed_marker(self):
+        import datetime
+        from assistant.knowledge_check import parse_reviewed_ts
+        ts = parse_reviewed_ts('<!-- watches: a -->\n<!-- reviewed: 2026-07-10 -->\n# T')
+        self.assertIsNotNone(ts)
+        # counts as end of that day, so it clears same-day commits to watched files
+        eod = datetime.datetime.combine(datetime.date(2026, 7, 10), datetime.time(23, 59, 59))
+        self.assertEqual(ts, int(eod.timestamp()))
+        self.assertIsNone(parse_reviewed_ts('<!-- watches: a -->\n# no marker'))

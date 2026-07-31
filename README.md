@@ -20,10 +20,29 @@ This section provides a timeline of ELSA's release history, highlighting key upd
 
 ### **Current Version** 
 
-> ### **Version 1.37.0 (June 12, 2026)**
-- External Bundle: Target selection page now includes a note clarifying that "Laboratory Analog" refers to model/simulation data, not a physical lab sample.
+> ### **Version 1.37.5 (July 17, 2026)**
+- Archive Bundle: Bundle UI is up to date with the External Bundle UI.
+- Alias: Fixed issue with created Aliases not being deleted from XML files after being updated.
+- Targets: Fixed issue with targets redirecting to Document Collections on the bundle view.
+- Targets: Fixed error when deleting targets.
 
 ### **Previous Versions** 
+
+> ### **Version 1.37.4 (July 23, 2026)**
+- External Bundle: Fixed a bug related to XML not populating from uploaded netCDF files.
+  
+> ### **Version 1.37.3 (July 17, 2026)**
+- ELSA Assistant: Bug fixes and context improvements.
+
+> ### **Version 1.37.2 (July 10, 2026)**
+- ELSA Assistant: A new AI-powered ELSA Assistant has been introduced to help users get answers to PDS4-related questions directly from the website.
+- Citation Information: The Editors section has been re-introduced.
+- Citation Information: Improved UI for viewing authors and organizations.
+- Citation Information and Alias: Fixed the issue with users being able to add multiple citations and aliases.
+- Alias: Fixed the overlay issue with users not being able to delete existing aliases.
+  
+> ### **Version 1.37.0 (June 12, 2026)**
+- External Bundle: Target selection page now includes a note clarifying that "Laboratory Analog" refers to model/simulation data, not a physical lab sample.
 
 > ### **Version 1.36.0 (June 05, 2026)**
 - External Bundle: Fixed an issue where uploaded NetCDF files were not generating XML labels.

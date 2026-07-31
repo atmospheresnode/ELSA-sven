@@ -108,27 +108,25 @@ def alias_edit(request, pk_bundle, pk_alias):  # DEPRECATED: to be replaced by e
         print('authorized user: {}'.format(request.user))
 
         # Get Alias and its form
-        alias = Alias.objects.get(pk=pk_alias)
-        initial_alias = {
-            'alternate_id': alias.alternate_id,
-            'alternate_title': alias.alternate_title,
-            'comment': alias.comment,
-        }
-        form_alias = AliasForm(request.POST or None, initial=initial_alias)
+        alias = Alias.objects.get(pk=pk_alias, bundle=bundle)
 
-        if form_alias.is_valid and form_alias.has_changed:
-            print('Changed: {}'.format(form_alias.changed_data))
+        form_alias = AliasForm(request.POST or None, instance=alias)
 
-            for change in form_alias.changed_data:
-                if change == 'alternate_id':
-                    alias.alternate_id = form_alias['alternate_id'].value()
-                elif change == 'alternate_title':
-                    alias.alternate_title = form_alias['alternate_title'].value(
-                    )
-                elif change == 'comment':
-                    alias.comment = form_alias['comment'].value()
-                alias.save()
+        # We're removing the old alias first and then adding it back with the updated information.
+        if request.method == 'POST' and form_alias.is_valid():
+            if form_alias.has_changed():
+                old_alias = Alias.objects.get(pk=pk_alias, bundle=bundle)
+                product_bundle = Product_Bundle.objects.get(bundle=bundle)
+                product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
 
+                remove_from_label(old_alias, product_bundle, product_collections_list,)
+
+                alias = form_alias.save()
+
+                write_into_label(alias, product_bundle, product_collections_list)
+
+            return redirect('build:bundle', pk_bundle=pk_bundle)
+                
         # Declare context_dict for templating language used in ELSAs templates
         context_dict = {
             'alias': alias,
@@ -743,11 +741,17 @@ def bundle(request, pk_bundle):
         citation_information_set = Citation_Information.objects.filter(bundle=bundle)
 
         product_bundle = Product_Bundle.objects.get(bundle=bundle)
-        label_list = open_label_with_tree(product_bundle.label())
-        label_root = label_list[1]
-
-        identification_area = label_root.find('{}Identification_Area'.format(NAMESPACE))
-        citation_xml = identification_area.find('{}Citation_Information'.format(NAMESPACE))
+        # A missing or unreadable bundle label must not 500 the whole page;
+        # citation author/editor display just falls back to the DB values.
+        citation_xml = None
+        try:
+            label_list = open_label_with_tree(product_bundle.label())
+            label_root = label_list[1]
+            identification_area = label_root.find('{}Identification_Area'.format(NAMESPACE))
+            if identification_area is not None:
+                citation_xml = identification_area.find('{}Citation_Information'.format(NAMESPACE))
+        except Exception as e:
+            print('bundle view: could not read bundle label for citation display: {}'.format(e))
 
         for citation_information in citation_information_set:
             citation_information.display_authors = []
@@ -2179,6 +2183,8 @@ def context_search_target(request, pk_bundle):
 
                 write_into_label(i, product_bundle, product_collections_list)
 
+        if request.GET.get('next') == 'bundle':
+            return redirect('build:bundle', pk_bundle=pk_bundle)
         #return render(request, 'build/collections/annex_collection_document.html', context_dict)
         if bundle.bundle_type == "External":
             return redirect('build:annex_collection_document', pk_bundle=pk_bundle)
@@ -2228,7 +2234,12 @@ def context_search_target_inv(request, pk_bundle, pk_investigation):
                 context_dict['target'] = i
                 bundle.targets.add(i)
 
-                i.investigations.add(investigation)
+                # Deliberately NOT doing i.investigations.add(investigation) here.
+                # Investigation.targets mirrors the target list PDS publishes for
+                # that investigation. It is shared reference data behind every
+                # user's bundle, so writing one user's pick into it would drift
+                # the "related targets" grouping for everyone. The user's choice
+                # belongs to their bundle, which bundle.targets.add already records.
 
                 # Label Fix for context products - Said
                 product_bundle = Product_Bundle.objects.get(bundle=bundle)
@@ -3993,9 +4004,10 @@ def delete_investigation(request, pk_bundle, pk_investigation):
 
     bundle.investigations.remove(investigation)
 
-    # have screen to choose between deleting investigation or choosing new host
-    # return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/contextsearch/investigation/')
-    return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/contextsearch/investigation/')
+    # Used to redirect to context_search_investigation, which re-renders
+    # bundle.html from a four-key context and so painted a near-empty page.
+    # Return to the bundle page, the same place delete_target goes.
+    return redirect('build:bundle', pk_bundle=pk_bundle)
 
 # Directory View
 def _get_abs_virtual_root():
@@ -4363,7 +4375,9 @@ def _process_single_netcdf(bundle, nc_path, NS, allowed_variable_fields, allowed
     if id_area is not None:
 
         # Find Existing Element <pds:logical_identifier> and Append to It
-        lid_elem = id_area.find("logical_identifier", namespaces=NS)
+        # (must be prefixed: unprefixed find() misses default-namespace elements
+        # and the else branch would append a duplicate logical_identifier)
+        lid_elem = id_area.find("pds:logical_identifier", namespaces=NS)
         if lid_elem is not None and lid_elem.text:
             # Append your suffix
             lid_elem.text = f"{lid_elem.text}:{subdir_name.lower()}:{nc_filename}"
@@ -4397,10 +4411,8 @@ def _process_single_netcdf(bundle, nc_path, NS, allowed_variable_fields, allowed
     # 5. Insert New Variable & Coordinate Metadata
     # =====================================================================================
     variable_elements = dataframe_to_variable_elements(variable_metadata, NS, allowed_variable_fields)
-    variable_elements = dataframe_to_variable_elements(variable_metadata, NS, [])
 
     for elem in variable_elements:
-        print(elem)
         model_output.append(elem)
 
     coord_elements = dataframe_to_coord_elements(coord_metadata, NS, allowed_coord_fields)
@@ -4409,14 +4421,37 @@ def _process_single_netcdf(bundle, nc_path, NS, allowed_variable_fields, allowed
         model_output.append(elem)
 
     # =====================================================================================
-    # 6. Write to Output File
+    # 6. Fill <File_Area_External> with the Actual Uploaded File's Info
+    # =====================================================================================
+    file_elem = root.find(".//pds:File_Area_External/pds:File", namespaces=NS)
+    if file_elem is not None:
+        file_name_elem = file_elem.find("pds:file_name", namespaces=NS)
+        if file_name_elem is not None:
+            file_name_elem.text = nc_filename
+        creation_elem = file_elem.find("pds:creation_date_time", namespaces=NS)
+        if creation_elem is not None:
+            creation_elem.text = datetime.datetime.utcfromtimestamp(
+                os.path.getmtime(nc_path)).strftime('%Y-%m-%dT%H:%MZ')
+        size_elem = file_elem.find("pds:file_size", namespaces=NS)
+        if size_elem is not None:
+            size_elem.text = str(os.path.getsize(nc_path))
+
+    encoded_name_elem = root.find(".//pds:File_Area_External/pds:Encoded_External/pds:name", namespaces=NS)
+    if encoded_name_elem is not None:
+        encoded_name_elem.text = nc_name
+
+    # =====================================================================================
+    # 7. Write to Output File
     # =====================================================================================
     with open(output_path, "w", encoding="utf-8") as f:
         f.write(ET.tostring(root, encoding='unicode'))
 
     update = Version()
 
-    update.version_update_old(bundle.version, source_file, output_path)
+    # Stamp the PDS4 version into the label just written (in place). The source must
+    # be output_path, not the template — version_update_old copies its source over
+    # its destination, so passing the template here blanks the populated label.
+    update.version_update_old(bundle.version, output_path, output_path)
 
 
     alias_set = Alias.objects.filter(bundle=bundle)

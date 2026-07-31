@@ -7,6 +7,7 @@ from django.utils.safestring import mark_safe
 #from django.forms import modelformset_factory
 
 from lxml import etree
+import json
 import urllib.request
 import urllib.error
 import urllib.parse
@@ -122,8 +123,25 @@ VERSION_CHOICES = (
     ('1D00', '1D00'),
 )
 
+# PDS4 caps a logical identifier at 255 characters. A bundle's name becomes the
+# bundle_id segment of every LID ELSA generates, and collection and product
+# segments are appended after it:
+#
+#     urn:<agency>:<bundle_id>:<collection>:<product>
+#
+# so the name cannot spend the whole budget. These bound it.
+MAX_LID_LENGTH = 255
+# Longest prefix in use: External bundles use 'urn:nasa:pds-ama:' (17), Archive
+# uses 'urn:' plus the agency ('nasa:pds', 'esa:psa', 'jaxa:darts') plus ':'.
+LONGEST_LID_PREFIX = len('urn:nasa:pds-ama:')
+# Left over for ':<collection>:<product>' on the deepest products.
+LID_SEGMENT_RESERVE = 64
+# Ceiling the name and bundleID fields are allowed to reach.
+MAX_BUNDLE_NAME = 150
+
+
 class BundleForm(forms.ModelForm):
-    name = forms.CharField(required=True, max_length=50, widget = forms.TextInput(attrs={
+    name = forms.CharField(required=True, max_length=MAX_BUNDLE_NAME, widget = forms.TextInput(attrs={
             'class': 'form-control',
             'id': 'bundle_name',
             'placeholder': 'Bundle Name'
@@ -143,7 +161,7 @@ class BundleForm(forms.ModelForm):
         })
     )
 
-    bundleID = forms.CharField(required=False, max_length=50, widget=forms.TextInput(attrs={
+    bundleID = forms.CharField(required=False, max_length=MAX_BUNDLE_NAME, widget=forms.TextInput(attrs={
             'class' : 'form-control',
             'id': 'bundleID',
             'placeholder': 'Bundle ID (Optional - Leave blank to auto generate)'
@@ -165,27 +183,48 @@ class BundleForm(forms.ModelForm):
             - The user should not append bundle to the end of the bundle name.
     """
 
-    # name_edit can be removed from this function
     def clean(self):
         cleaned_data = self.cleaned_data
         name = cleaned_data.get('name')
 
-        # - The name of the bundle should be less than or equal to 255 characters
+        # The field's own max_length already rejected an over-long name, and a
+        # missing name is reported by the required check, so there is nothing
+        # left to validate here.
+        if not name:
+            return cleaned_data
 
-        if len(name) <= 255:
-            name_edit = name
-            name_edit = name_edit.lower()
-            # replace spaces with underscores
-            name_edit = replace_all(name_edit, ' ', '_')
-            if name_edit.endswith("bundle"):
-                # seven because there is probably an underscore by now
-                name_edit = name_edit[:-7]
-            if name_edit.find(':') != -1:
-                raise forms.ValidationError(
-                    "The colon (:) is used to delimit segments of a urn and thus is not permitted within a bundle name.")
-        else:
+        name_edit = replace_all(name.lower(), ' ', '_')
+
+        # Check for the colon before trimming anything. This test used to run
+        # after the trailing "bundle" was stripped, so "my:bundle" lost its
+        # colon along with the suffix and was accepted, even though
+        # Bundle.save() derives bundleID from the raw name and the colon then
+        # became a stray delimiter in the LID.
+        if name_edit.find(':') != -1:
             raise forms.ValidationError(
-                "The length of your bundle name is too large")
+                "The colon (:) is used to delimit segments of a urn and thus is not permitted within a bundle name.")
+
+        if name_edit.endswith("bundle"):
+            # seven because there is probably an underscore by now
+            name_edit = name_edit[:-7]
+
+        # Guard the assembled identifier, not just the raw name. This used to
+        # compare the name against 255 directly, which both ignored the LID
+        # prefix and the appended collection/product segments, and could never
+        # fire anyway because the field was capped at 50.
+        bundle_id = (cleaned_data.get('bundleID') or '').strip().lower().replace(' ', '_')
+        if not bundle_id:
+            bundle_id = name_edit
+
+        budget = MAX_LID_LENGTH - LONGEST_LID_PREFIX - LID_SEGMENT_RESERVE
+        if len(bundle_id) > budget:
+            raise forms.ValidationError(
+                "This name makes the bundle's logical identifier too long. A PDS4 "
+                "logical identifier is limited to {} characters, and collection and "
+                "product names are appended after the bundle name. Please use {} "
+                "characters or fewer.".format(MAX_LID_LENGTH, budget))
+
+        return cleaned_data
 
 
 """
@@ -641,8 +680,8 @@ class TargetForm(forms.Form):
 
         super(TargetForm, self).__init__(*args, **kwargs)
 
-        # self.fields['target'] = forms.ModelChoiceField(
-        #     queryset=Target.objects.filter(investigation=self.pk_ins), required=True)
+        self.related_pks = set()
+        self.related_investigation_names = []
 
         # If the bundle type is 'External', we filter targets that start with 'urn:nasa:pds:context:target:laboratory_analog' -Rupak
         if self.bundle.bundle_type == 'External':
@@ -651,11 +690,123 @@ class TargetForm(forms.Form):
                 required=True
             )
         else:
-            self.fields['target'] = forms.ModelChoiceField(
-                Target.objects.filter(investigation=self.pk_ins),
-                required=True
+            # This list used to be restricted to the investigation's own targets,
+            # which made an observation of anything the mission is not formally
+            # listed against impossible to record. PDS4 does not tie a target to
+            # an investigation, so the list is grouped rather than filtered:
+            # related targets first, everything else still selectable underneath.
+            investigation = Investigation.objects.filter(pk=self.pk_ins).first()
+            if investigation is not None:
+                self.related_investigation_names = [
+                    investigation_display_name(investigation)
+                ]
+                self.related_pks = set(
+                    investigation.targets.values_list('pk', flat=True)
+                )
+
+            related_groups = []
+            if self.related_pks:
+                related_groups.append((
+                    'Listed for {}'.format(self.related_investigation_names[0]),
+                    self.related_pks,
+                ))
+
+            self.fields['target'] = GroupedTargetChoiceField(
+                queryset=Target.objects.all(),
+                required=True,
+                related_groups=related_groups,
             )
+
+    @property
+    def related_investigation_label(self):
+        names = self.related_investigation_names
+        return names[0] if names else ''
+
+    @property
+    def related_pks_json(self):
+        return json.dumps(sorted(self.related_pks))
     
+def investigation_display_name(investigation):
+    """Best available label for an investigation.
+
+    Nine context investigations came out of the crawl with a blank name (DART
+    among them), which would render as an empty optgroup heading. Fall back to
+    the LID's trailing segment, so 'mission.double_asteroid_redirection_test'
+    reads as 'Double Asteroid Redirection Test'.
+    """
+    if investigation is None:
+        return 'this investigation'
+
+    name = (investigation.name or '').strip()
+    if name:
+        return name
+
+    lid = (investigation.lid or '').strip()
+    if lid:
+        segment = lid.split(':')[-1]
+        # Drop the leading type qualifier, e.g. 'mission.' or 'individual.'.
+        if '.' in segment:
+            segment = segment.split('.', 1)[1]
+        segment = segment.replace('_', ' ').strip()
+        if segment:
+            return segment.title()
+
+    return 'this investigation'
+
+
+class GroupedTargetIterator(forms.models.ModelChoiceIterator):
+    """Groups the target list by investigation, then lists everything else.
+
+    One optgroup per investigation rather than a single merged "related" group,
+    because merging cannot say which investigation a target came from, and a
+    target may legitimately be listed for several of them (the Moon is listed
+    for both Apollo 11 and Apollo 17, so it appears under each).
+
+    PDS4 does not tie a target to an investigation: Target is a standalone
+    context product, and Target_Identification sits alongside Investigation_Area
+    in a label with no link between them. So this grouping is a navigation aid,
+    never a restriction. Every target stays selectable.
+    """
+
+    def __iter__(self):
+        field = self.field
+
+        if field.empty_label is not None:
+            yield ('', field.empty_label)
+
+        objects = list(self.queryset)
+        grouped = set()
+
+        for label, pks in field.related_groups:
+            if not pks:
+                # An investigation PDS publishes no targets for gets no empty
+                # heading, which would read as "this mission has no targets".
+                continue
+            members = [self.choice(o) for o in objects if o.pk in pks]
+            if members:
+                yield (label, members)
+                grouped |= pks
+
+        others = [self.choice(o) for o in objects if o.pk not in grouped]
+
+        if grouped:
+            yield ('All other targets', others)
+        else:
+            # Nothing published for this bundle's investigations, so a flat list
+            # is more honest than an empty "related" group.
+            for choice in others:
+                yield choice
+
+
+class GroupedTargetChoiceField(forms.ModelChoiceField):
+    iterator = GroupedTargetIterator
+
+    def __init__(self, *args, **kwargs):
+        # List of (optgroup label, set of target pks), one entry per investigation.
+        self.related_groups = list(kwargs.pop('related_groups', ()) or ())
+        super(GroupedTargetChoiceField, self).__init__(*args, **kwargs)
+
+
 class TargetFormAll(forms.Form):
 
     target = forms.ModelChoiceField(
@@ -669,16 +820,62 @@ class TargetFormAll(forms.Form):
 
         super(TargetFormAll, self).__init__(*args, **kwargs)
 
+        self.related_pks = set()
+        self.related_investigation_names = []
+
         if self.bundle.bundle_type == 'External':
             self.fields['target'] = forms.ModelChoiceField(
                 queryset=Target.objects.filter(lid__startswith='urn:nasa:pds:context:target:laboratory_analog'),
                 required=True
             )
         else:
-            self.fields['target'] = forms.ModelChoiceField(
+            investigations = list(self.bundle.investigations.all())
+            self.related_investigation_names = [
+                investigation_display_name(i) for i in investigations
+            ]
+
+            # One group per investigation, so the menu says which investigation
+            # each target is listed for instead of merging them into one heading.
+            related_groups = []
+            for investigation in investigations:
+                pks = set(
+                    investigation.targets.values_list('pk', flat=True)
+                )
+                if not pks:
+                    continue
+                related_groups.append((
+                    'Listed for {}'.format(investigation_display_name(investigation)),
+                    pks,
+                ))
+                self.related_pks |= pks
+
+            self.fields['target'] = GroupedTargetChoiceField(
                 queryset=Target.objects.all(),
-                required=True
+                required=True,
+                related_groups=related_groups,
             )
+
+    @property
+    def related_investigation_label(self):
+        """Human-readable investigation list, for the caution message."""
+        names = self.related_investigation_names
+        if not names:
+            return ''
+        if len(names) == 1:
+            return names[0]
+        if len(names) <= 3:
+            return '{} and {}'.format(', '.join(names[:-1]), names[-1])
+        return '{} and {} others'.format(', '.join(names[:3]), len(names) - 3)
+
+    @property
+    def related_pks_json(self):
+        """Target pks PDS lists for this bundle's investigations.
+
+        Consumed by the template so it can raise a caution when the user picks
+        something outside the list. Empty means we have nothing to compare
+        against and no caution should fire.
+        """
+        return json.dumps(sorted(self.related_pks))
 
 
 

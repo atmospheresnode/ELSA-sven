@@ -34,10 +34,16 @@ class Command(BaseCommand):
             global id_list
             id_list = []
             #id_list = fetch_ids(context_type=ct)
-            # id_list = fetch_ids()
 
+<<<<<<< HEAD
             # For Testing/Demo-ing Purposes
             id_list = fetch_ids(limit=5000)
+=======
+            # Was fetch_ids(limit=100) for demo purposes, which quietly capped
+            # every refresh at the first 100 context products. The default limit
+            # covers the whole registry.
+            id_list = fetch_ids()
+>>>>>>> 9279e91318e7147d3e1661c503e5a42e38e64660
 
             global problem_products
             # to track anythings that throws an error the code can't get around,
