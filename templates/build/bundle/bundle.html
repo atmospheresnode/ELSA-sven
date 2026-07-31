@@ -852,10 +852,13 @@
                                                       <a type="button" class="btn btn-light text-light" href="{% url 'build:context_search_instrument' bundle.pk investigation.pk instrument_host.pk %}">Add Instrument</a>
                                                    {% endif %}
                                                 {% endfor %}
-                                                <a type="button" class="btn btn-light text-light" href="{% url 'build:context_search_target_investigation' bundle.pk investigation.pk %}">Add Target</a>
                                              {% else %}
                                                 <a type="button" class="btn btn-light text-light" href="{% url 'build:context_search_instrument_host_and_facility' bundle.pk investigation.pk %}">Add Host</a>
                                              {% endif %}
+
+                                             <!-- A target does not depend on an instrument host in PDS4, so this
+                                                  is offered whether or not a host has been added yet. -->
+                                             <a type="button" class="btn btn-light text-light" href="{% url 'build:context_search_target_investigation' bundle.pk investigation.pk %}">Add Target</a>
 
 
                                              <a type="button" class="btn btn-danger" href="{% url 'build:delete_investigation' bundle.pk investigation.pk %}">Remove</a>
@@ -987,22 +990,31 @@
                         <div class="col-md-12">
                            <div class="card">
                            <div class="card-header">
-                              <p>Choose the target(s) you wish to add to your bundle. This is a complete list of availabe targets, independent of any investigations chosen.</p>
+                              {% if form_target.related_investigation_names %}
+                                 <p>Choose the target(s) you wish to add to your bundle. The menu groups targets under each investigation PDS lists them for, with every remaining target below. PDS4 does not require a target to belong to an investigation, so you can pick one from the lower group if your data calls for it.</p>
+                              {% else %}
+                                 <p>Choose the target(s) you wish to add to your bundle. This is a complete list of available targets. Add an investigation first and the targets PDS lists for it will be grouped at the top.</p>
+                              {% endif %}
                            </div>
-                           
-                           <form class="card-header black-text text-left z-depth-2"id="query01" method="post" action="{% url 'build:context_search_target' bundle.pk %}">
-                              
+
+                           <!-- No off-list confirmation here on purpose. This tab is the
+                                bundle-level target list and has no single investigation in
+                                scope, so picking from "All other targets" is a normal choice,
+                                not something to second-guess. The per-investigation Add Target
+                                page is where that confirmation belongs. -->
+                           <form class="card-header black-text text-left z-depth-2" id="query01" method="post" action="{% url 'build:context_search_target' bundle.pk %}">
+
                               {% csrf_token %}
                               {{ form_target }}
                               {{ form.errors }}
                               {{ form.non_field_errors }}
-                              
+
                            <div class="d-flex">
                               <input type="submit" name="submit_target" class="btn btn-light text-light mt-4" value="Submit"/>
                               <input type="button" class="btn btn-light text-light mt-4 ms-auto" data-bs-toggle="modal" data-bs-target="#contactModal" value="Contact">
                            </div>
-                                 
-                           </form>                  
+
+                           </form>
                            </br>
                            </div>
                         </div>
@@ -3052,10 +3064,13 @@
                                                       <a type="button" class="btn btn-light text-light" href="{% url 'build:context_search_instrument' bundle.pk investigation.pk instrument_host.pk %}">Add Instrument</a>
                                                    {% endif %}
                                                 {% endfor %}
-                                                <a type="button" class="btn btn-light text-light" href="{% url 'build:context_search_target_investigation' bundle.pk investigation.pk %}">Add Target</a>
                                              {% else %}
                                                 <a type="button" class="btn btn-light text-light" href="{% url 'build:context_search_instrument_host_and_facility' bundle.pk investigation.pk %}">Add Host</a>
                                              {% endif %}
+
+                                             <!-- A target does not depend on an instrument host in PDS4, so this
+                                                  is offered whether or not a host has been added yet. -->
+                                             <a type="button" class="btn btn-light text-light" href="{% url 'build:context_search_target_investigation' bundle.pk investigation.pk %}">Add Target</a>
 
 
                                              <a type="button" class="btn btn-danger" href="{% url 'build:delete_investigation' bundle.pk investigation.pk %}">Remove</a>
@@ -4076,5 +4091,6 @@
       </div>
    </div>
 </div>
+
 
 {% endblock %}

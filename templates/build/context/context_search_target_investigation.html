@@ -30,9 +30,15 @@ Add Context: Target
             </div>
             <div class="card-body text-center mb-2">
                 <p class="mb-3">
-                     Targets are often provided based on the selected context. A pull-down menu of available targets may be provided, especially if you’ve selected Mission context products. For more general-purpose observing systems or non-affiliated instruments, you may need to select a target from the entire list of available targets.
+                    {% if form_target.related_investigation_names %}
+                        Targets PDS lists for {{ form_target.related_investigation_label }} appear at the top of the menu. Every other target is still available below them. PDS4 does not require a target to belong to an investigation, so if your data observes something outside that list you can still add it.
+                    {% else %}
+                        PDS does not publish a target list for this investigation, so the full list of available targets is shown.
+                    {% endif %}
                 </p>
-                <form id="query01" method="post" action="{% url 'build:context_search_target_investigation' bundle.pk investigation.pk %}" class="d-flex justify-content-center align-items-center">
+                <form id="query01" method="post" action="{% url 'build:context_search_target_investigation' bundle.pk investigation.pk %}" class="d-flex justify-content-center align-items-center"
+                      data-related-targets="{{ form_target.related_pks_json }}"
+                      data-investigation-label="{{ form_target.related_investigation_label }}">
                     {% csrf_token %}
                     <div class="form-group mr-2">
                         {{ form_target }}
@@ -89,9 +95,87 @@ Add Context: Target
           Bundle Details
     </a>
     </div>
-</div> 
+</div>
 
+<!-- Off-list Target Caution Modal. Outside the cards above so nothing clips it. -->
+<div class="modal fade" id="targetCautionModal" tabindex="-1" aria-hidden="true">
+   <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+         <div class="modal-header border-0 pb-0">
+            <h5 class="modal-title text-warning">
+               <i class="bi bi-exclamation-triangle me-2"></i>Target Not Listed for This Investigation
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+         </div>
+         <div class="modal-body">
+            <p class="mb-2">
+               PDS does not list <strong id="targetCautionName"></strong> as a target of
+               <strong id="targetCautionInvestigation"></strong>.
+            </p>
+            <p class="text-muted small mb-0">
+               <i class="bi bi-info-circle me-1"></i>This is only a heads up. PDS4 does not
+               require a target to belong to an investigation, and the list PDS publishes is
+               often incomplete. Adding it records the target on your bundle and leaves
+               <span id="targetCautionInvestigationEcho"></span> unchanged, so if your data
+               observes this target, go ahead.
+            </p>
+         </div>
+         <div class="modal-footer border-0">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Pick a different target</button>
+            <button type="button" class="btn btn-keep-bg text-white" style="background-color: teal;" id="targetCautionConfirm">Add anyway</button>
+         </div>
+      </div>
+   </div>
+</div>
+
+<script type="text/javascript">
+   (function () {
+      var form = document.getElementById('query01');
+      if (!form || !form.hasAttribute('data-related-targets')) { return; }
+
+      var cautionEl = document.getElementById('targetCautionModal');
+      if (!cautionEl) { return; }
+
+      var related;
+      try {
+         related = JSON.parse(form.getAttribute('data-related-targets') || '[]');
+      } catch (e) {
+         related = [];
+      }
+
+      // Nothing published for this investigation means nothing to compare against.
+      if (!related.length) { return; }
+
+      var relatedSet = {};
+      related.forEach(function (pk) { relatedSet[String(pk)] = true; });
+
+      var investigationLabel = form.getAttribute('data-investigation-label') || 'this investigation';
+      var cautionModal = new bootstrap.Modal(cautionEl);
+      var confirmed = false;
+
+      form.addEventListener('submit', function (event) {
+         if (confirmed) { return; }
+
+         var select = form.querySelector('select[name="target"]');
+         if (!select || !select.value) { return; }
+         if (relatedSet[select.value]) { return; }
+
+         event.preventDefault();
+         document.getElementById('targetCautionName').textContent =
+            select.options[select.selectedIndex].text;
+         document.getElementById('targetCautionInvestigation').textContent = investigationLabel;
+         document.getElementById('targetCautionInvestigationEcho').textContent = investigationLabel;
+         cautionModal.show();
+      });
+
+      document.getElementById('targetCautionConfirm').addEventListener('click', function () {
+         confirmed = true;
+         cautionModal.hide();
+         form.submit();
+      });
+   })();
+</script>
 
 {% endblock %}
-{% block footie_block %}    
+{% block footie_block %}
 {% endblock %}
