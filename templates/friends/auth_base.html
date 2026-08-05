@@ -1,0 +1,69 @@
+{% extends "base-derk.html" %}
+{% load static %}
+
+{% comment %} Shared shell for every sign-in screen.  base-derk.html renders no navbar or
+   footer for anyone who is not signed in, which is everybody here, so this
+   carries the ELSA branding itself: the mark sits above the card, and the card
+   holds only the task.  The look lives in css/auth.css, which the landing page
+   loads too, so the sign-in card there and these screens are the same
+   component. {% endcomment %}
+
+{% block extra_css %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" as="style"
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600&display=swap">
+<link rel="stylesheet" media="print" onload="this.media='all'; this.onload=null;"
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600&display=swap">
+<noscript>
+  <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600&display=swap">
+</noscript>
+<link rel="stylesheet" href="{% static 'css/auth.css' %}">
+{% endblock %}
+
+{% block body_block %}
+<style>
+    body { background-color: #f4f4f4; }
+    {% block auth_css %}{% endblock %}
+</style>
+
+<div class="container d-flex justify-content-center align-items-center py-5"
+     style="min-height: 80vh;">
+    <div class="auth-shell {% block auth_shell_class %}{% endblock %}">
+
+        <a href="{% url 'main:index' %}" class="auth-brand">
+            <img src="{% static 'images/thumbnail_ELSA_Logo-black.png' %}" alt="ELSA">
+            <img src="{% static 'images/PDS_Planets.png' %}" alt="Planetary Data System">
+        </a>
+
+        <div class="card auth-card {% block auth_card_class %}{% endblock %}">
+            <div class="auth-body">
+                <h1 class="auth-heading">{% block auth_title %}Sign in{% endblock %}</h1>
+
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags|default:'danger' }} border-0 mb-3 py-2 px-3"
+                             style="font-size: 0.875rem;" role="alert">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+
+                {% block auth_body %}{% endblock %}
+            </div>
+
+            <div class="auth-foot text-center">
+                {% block auth_foot %}
+                Trouble signing in? <a href="mailto:atm-elsa@nmsu.edu">atm-elsa@nmsu.edu</a>
+                {% endblock %}
+            </div>
+        </div>
+
+        <p class="auth-colophon">
+            Educational Labeling System @Atmospheres<br>
+            Planetary Data System Atmospheres Node, NMSU
+        </p>
+    </div>
+</div>
+
+{% block auth_scripts %}{% endblock %}
+{% endblock %}
