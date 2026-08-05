@@ -1,0 +1,17 @@
+{% autoescape off %}ELSA -- Educational Labeling System @Atmospheres
+
+{% if purpose == 'register' %}Welcome to ELSA{% if first_name %}, {{ first_name }}{% endif %}.  Use the code below to confirm your
+email address and finish setting up your account.{% else %}Hello{% if first_name %} {{ first_name }}{% endif %}, use the code below to finish signing in to ELSA.{% endif %}
+
+    Verification code:  {{ code }}
+
+This code expires in {{ ttl_minutes }} minutes.
+
+ELSA staff will never ask you for this code.  If you did not {% if purpose == 'register' %}sign up for an
+ELSA account, you can ignore this message.{% else %}try to sign in, please
+change your ELSA password, because someone else may know it.{% endif %}
+
+--
+Sent automatically by ELSA, Planetary Data System Atmospheres Node,
+New Mexico State University.
+{% endautoescape %}

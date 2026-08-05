@@ -1,0 +1,82 @@
+{% autoescape off %}<!DOCTYPE html>
+<html>
+<!-- Mail clients cannot be relied on to load webfonts, so ELSA's Roboto is
+     requested by name (present on many systems) with Helvetica and Arial
+     behind it.  No remote font is fetched. -->
+<body style="margin:0;padding:0;background-color:#f4f4f4;font-family:Roboto,'Helvetica Neue',Helvetica,Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f4;padding:32px 0;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+
+          <!-- Header.  The logo travels with the message as a CID part, so it
+               renders without the reader approving remote images.  The text
+               wordmark stays put and carries the branding on its own if the
+               image is stripped or fails to load. -->
+          <tr>
+            <td style="background-color:#008080;padding:24px 32px;border-bottom:4px solid #2bbbad;">
+              <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+                <tr>
+                  <td align="left" valign="middle">
+                    <p style="margin:0;color:#e9f6f5;font-size:11px;letter-spacing:1px;text-transform:uppercase;">Educational Labeling System @Atmospheres</p>
+                    <h1 style="margin:6px 0 0;color:#ffffff;font-size:22px;">{% if purpose == 'register' %}Confirm your email address{% else %}Your sign-in code{% endif %}</h1>
+                  </td>
+                  {% if logo_cid %}
+                  <td align="right" valign="middle" width="120" style="padding-left:16px;">
+                    <img src="cid:{{ logo_cid }}" alt="ELSA" width="120" height="67"
+                         style="display:block;border:0;outline:none;text-decoration:none;width:120px;height:67px;">
+                  </td>
+                  {% endif %}
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Lead -->
+          <tr>
+            <td style="padding:28px 32px 0;">
+              <p style="margin:0;font-size:15px;color:#333333;line-height:1.6;">
+                {% if purpose == 'register' %}
+                  Welcome to ELSA{% if first_name %}, {{ first_name }}{% endif %}. Enter the code below to confirm your email address and finish setting up your account.
+                {% else %}
+                  Hello{% if first_name %} {{ first_name }}{% endif %}, enter the code below to finish signing in to ELSA.
+                {% endif %}
+              </p>
+            </td>
+          </tr>
+
+          <!-- The code -->
+          <tr>
+            <td style="padding:24px 32px 8px;" align="center">
+              <p style="margin:0 0 10px;font-size:11px;color:#888888;text-transform:uppercase;letter-spacing:0.5px;">Verification code</p>
+              <div style="background-color:#f8f8f8;border:1px solid #e4e4e4;border-radius:6px;padding:18px 24px;display:inline-block;">
+                <span style="font-family:Roboto,'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:34px;font-weight:bold;letter-spacing:10px;color:#1f8a7f;">{{ code }}</span>
+              </div>
+              <p style="margin:12px 0 0;font-size:13px;color:#888888;">This code expires in {{ ttl_minutes }} minutes.</p>
+            </td>
+          </tr>
+
+          <!-- Security note -->
+          <tr>
+            <td style="padding:20px 32px 32px;">
+              <div style="background-color:#f8f8f8;border-left:4px solid #2bbbad;border-radius:4px;padding:16px 20px;font-size:14px;color:#333333;line-height:1.6;">
+                ELSA staff will never ask you for this code. If you did not
+                {% if purpose == 'register' %}sign up for an ELSA account{% else %}try to sign in{% endif %},
+                you can ignore this message{% if purpose != 'register' %}, but please change your ELSA password, because someone else may know it{% endif %}.
+              </div>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color:#f8f8f8;padding:16px 32px;border-top:1px solid #eeeeee;">
+              <p style="margin:0;font-size:12px;color:#aaaaaa;">This message was sent automatically by ELSA, Educational Labeling System @Atmospheres, Planetary Data System Atmospheres Node, New Mexico State University.</p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>{% endautoescape %}

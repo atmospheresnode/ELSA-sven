@@ -1,0 +1,332 @@
+/*
+ * ELSA sign-in surfaces.
+ *
+ * Shared by the landing page's sign-in card and by every screen that follows
+ * it, so identifying yourself, using a passkey, entering a password and typing
+ * an emailed code all look like one continuous flow rather than four pages
+ * built at different times.
+ *
+ * Load this AFTER css/styles.css: several rules here deliberately override the
+ * global .card and .btn-light styling, and they rely on source order to do it.
+ */
+
+:root {
+    /* ELSA teal, all values already in use elsewhere in the app.  styles.css
+       calls these "green" but they are teal hues. */
+    --elsa-teal-deep: #008080;
+    --elsa-teal: #26a498;
+    --elsa-teal-hover: #1f8a7f;
+    --elsa-teal-bright: #2bbbad;
+    --elsa-teal-tint: #e9f6f5;
+    --elsa-ink: #212529;
+    --elsa-muted: #6c757d;
+    --elsa-line: #e4e4e4;
+
+    --elsa-display: 'Outfit', 'Roboto', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --elsa-body: 'Roboto', system-ui, -apple-system, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* ---------------------------------------------------------------- card ---- */
+
+/* Brand above the card, card itself kept quiet.  Putting the teal band, an
+   eyebrow line and two logos inside the card meant a lot of furniture sitting
+   on top of a single input, all competing with it for attention.  The mark
+   identifies the site, the card holds only the task, and teal is spent on the
+   action alone. */
+
+.auth-shell {
+    width: 100%;
+    max-width: 420px;
+    margin: 0 auto;
+}
+
+.auth-brand {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    text-decoration: none;
+}
+
+/* Height only, so neither logo is squashed out of its aspect ratio. */
+.auth-brand img { height: 44px; width: auto; }
+
+.auth-card {
+    border: 1px solid #d5d9d9;
+    border-radius: 12px;
+    overflow: hidden;
+    background-color: #fff;
+    font-family: var(--elsa-body);
+    /* The global .card rule sets a heavy offset drop shadow.  Same specificity,
+       so source order is what replaces it with almost nothing. */
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.auth-body { padding: 1.75rem; }
+
+.auth-heading {
+    font-family: var(--elsa-display);
+    font-weight: 600;
+    font-size: 1.5rem;
+    color: var(--elsa-ink);
+    margin: 0 0 1.25rem;
+    line-height: 1.25;
+}
+
+.auth-foot {
+    background-color: #fafafa;
+    border-top: 1px solid #eee;
+    padding: 0.875rem 1.75rem;
+    font-size: 0.75rem;
+    color: #999;
+}
+
+.auth-foot a { color: #888; }
+
+/* Quiet line under the card, where a site normally puts its colophon. */
+.auth-colophon {
+    margin: 1.25rem 0 0;
+    text-align: center;
+    font-size: 0.75rem;
+    color: #9aa0a6;
+    line-height: 1.5;
+}
+
+/* ------------------------------------------------------------ identity ---- */
+
+/* Whose account this is, once it is known.  Reassures the user they are
+   signing in to the right place, and gives them a way back if not. */
+.auth-identity {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background-color: #f8f8f8;
+    border: 1px solid var(--elsa-line);
+    border-radius: 999px;
+    padding: 0.375rem 0.875rem;
+    font-size: 0.875rem;
+    color: #555;
+    max-width: 100%;
+}
+
+.auth-identity strong {
+    color: var(--elsa-ink);
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.auth-identity a {
+    color: var(--elsa-teal);
+    font-weight: 600;
+    text-decoration: none;
+    font-size: 0.8125rem;
+    white-space: nowrap;
+}
+
+.auth-identity a:hover { color: var(--elsa-teal-hover); text-decoration: underline; }
+
+/* --------------------------------------------------------------- forms ---- */
+
+.auth-label {
+    display: block;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--elsa-ink);
+    margin-bottom: 0.375rem;
+}
+
+.form-control-elsa {
+    display: block;
+    width: 100%;
+    border: 2px solid var(--elsa-line);
+    border-radius: 10px;
+    padding: 0.8125rem 1rem;
+    background-color: #fbfbfb;
+    font-family: var(--elsa-body);
+    font-size: 1rem;
+    color: var(--elsa-ink);
+    transition: border-color .15s ease, background-color .15s ease, box-shadow .15s ease;
+}
+
+.form-control-elsa::placeholder { color: #9aa0a6; }
+
+.form-control-elsa:focus {
+    outline: none;
+    background-color: #fff;
+    border-color: var(--elsa-teal);
+    box-shadow: 0 0 0 4px rgba(38, 164, 152, 0.18);
+}
+
+/* The prefilled username repeated on the password screen so password managers
+   can tell which account the credential belongs to.  display:none rather than
+   a visually-hidden clip, because the username is already shown in the identity
+   pill and a screen reader should not meet it twice. */
+.pm-username { display: none; }
+
+/* Signing up needs more room than signing in: six fields rather than one. */
+.auth-shell-wide { max-width: 560px; }
+
+/* Django renders <select> for choice fields, so it needs the same treatment as
+   the text inputs, minus the native chrome. */
+select.form-control-elsa {
+    appearance: none;
+    -webkit-appearance: none;
+    padding-right: 2.5rem;
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%236c757d' d='M4.5 6.5 8 10l3.5-3.5z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.875rem center;
+    background-size: 1rem;
+}
+
+/* Field-level validation.  Without these a rejected form looks identical to a
+   fresh one, which is how the sign-up page shipped for a long time. */
+.form-control-elsa.is-invalid {
+    border-color: #dc3545;
+    background-color: #fff8f8;
+}
+
+.form-control-elsa.is-invalid:focus {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 4px rgba(220, 53, 69, 0.15);
+}
+
+.field-error {
+    display: block;
+    margin-top: 0.375rem;
+    font-size: 0.8125rem;
+    color: #dc3545;
+}
+
+.field-hint {
+    display: block;
+    margin-top: 0.375rem;
+    font-size: 0.75rem;
+    color: var(--elsa-muted);
+}
+
+.field-wrap { position: relative; }
+
+/* Reserves room for a trailing button so text never runs underneath it. */
+.field-wrap .form-control-elsa { padding-right: 3rem; }
+
+.field-action {
+    position: absolute;
+    top: 0;
+    right: 0;
+    height: 100%;
+    width: 3rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--elsa-muted);
+    border-radius: 0 10px 10px 0;
+}
+
+.field-action:hover { color: var(--elsa-teal-hover); }
+.field-action:focus-visible { outline: 2px solid var(--elsa-teal); outline-offset: -2px; }
+
+/* ------------------------------------------------------------- buttons ---- */
+
+.btn-elsa {
+    display: block;
+    width: 100%;
+    background-color: var(--elsa-teal);
+    color: #fff;
+    font-family: var(--elsa-body);
+    font-size: 1rem;
+    font-weight: 600;
+    padding: 0.8125rem 1.5rem;
+    border: none;
+    border-radius: 10px;
+    transition: background-color .15s ease, transform .15s ease, box-shadow .15s ease;
+}
+
+.btn-elsa:hover:not(:disabled) {
+    background-color: var(--elsa-teal-hover);
+    color: #fff;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(38, 164, 152, 0.32);
+}
+
+.btn-elsa:active:not(:disabled) { transform: translateY(0); }
+.btn-elsa:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.btn-link-elsa {
+    background: none;
+    border: none;
+    padding: 0;
+    font-family: var(--elsa-body);
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--elsa-teal);
+    text-decoration: none;
+}
+
+.btn-link-elsa:hover:not(:disabled) { color: var(--elsa-teal-hover); text-decoration: underline; }
+.btn-link-elsa:disabled { color: #adb5bd; cursor: not-allowed; }
+
+/* --------------------------------------------------------------- bits ----- */
+
+.auth-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background-color: var(--elsa-teal-tint);
+    color: var(--elsa-teal-hover);
+    margin-bottom: 1.25rem;
+}
+
+.auth-divider {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 1.5rem 0;
+    color: var(--elsa-muted);
+    font-size: 0.8125rem;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+    content: '';
+    flex: 1 1 auto;
+    height: 1px;
+    background-color: var(--elsa-line);
+}
+
+/* Quiet note explaining that a saved passkey will be offered here.  Deliberately
+   understated: it informs without competing with the field above it. */
+.auth-hint {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    background-color: var(--elsa-teal-tint);
+    border-radius: 10px;
+    padding: 0.75rem 0.875rem;
+    font-size: 0.8125rem;
+    color: #38706b;
+    line-height: 1.45;
+}
+
+.auth-hint i { color: var(--elsa-teal-hover); margin-top: 0.1rem; }
+
+.auth-alt {
+    text-align: center;
+    font-size: 0.875rem;
+    color: var(--elsa-muted);
+}
+
+@media (max-width: 575px) {
+    
+    .auth-body { padding: 1.5rem 1.25rem; }
+    .auth-foot { padding: 1rem 1.25rem; }
+    
+}
