@@ -1,86 +1,125 @@
-{% extends 'base-derk.html' %}
+{% extends "friends/auth_base.html" %}
 {% load static %}
 
-{% block title_block %}
-Register
-{% endblock %}
+{% comment %} Sign-up, on the same shell as the sign-in screens.  Wider than those,
+   because this is six fields rather than one. {% endcomment %}
 
-<!-- Figure out if we really need this -->
-{% block main_header_block %}
-    {% if user.is_authenticated %}
-        Hey, {{ user }}.
-    {% else %}
-        Register here
-    {% endif %}
-{% endblock %}
+{% block title_block %}Create your ELSA account{% endblock %}
 
+{% block auth_shell_class %}auth-shell-wide{% endblock %}
 
-{% block body_block %}
-    <div class="container-fluid">
-        <div class="row justify-content-center align-items-center vh-100">
-            <div class="col-12 col-lg-9 col-xl-10">
-                <div class="card">
-                    <div class="card-body p-4 p-md-5">
-                        <h2 class="mb-4 pb-2 pb-md-0 mb-md-4">Sign Up</h2>
+{% block auth_title %}Create your account{% endblock %}
 
-                        <!-- Signup Form -->
-                        <form form id="register_form" method="post" action="{% url 'friends:register' %}" enctype="multipart/form-data">
-                            {% csrf_token %}
-                            <div class="row">
-                                <!-- First & Last Name -->
-                                <div class="col-md-6">
-                                    {{ user_form.first_name }}
-                                </div>
-                                <div class="col-md-6">
-                                    {{ user_form.last_name }}
-                                </div>
-                            </div>
+{% block auth_body %}
 
-                            <!-- Email -->
-                            <div class="mb-4">
-                                {{ user_form.email }}
-                            </div>
+{% comment %} The old page rendered no errors at all, so a taken username or a bad
+   address just returned the form with nothing explaining why. {% endcomment %}
+{% if user_form.non_field_errors or profile_form.non_field_errors %}
+<div class="alert alert-danger border-0 py-2 px-3 mb-4" style="font-size: 0.875rem;" role="alert">
+    {% for error in user_form.non_field_errors %}{{ error }}{% endfor %}
+    {% for error in profile_form.non_field_errors %}{{ error }}{% endfor %}
+</div>
+{% elif user_form.errors or profile_form.errors %}
+<div class="alert alert-danger border-0 py-2 px-3 mb-4" style="font-size: 0.875rem;" role="alert">
+    Please check the highlighted fields below.
+</div>
+{% endif %}
 
-                            <!-- Username -->
-                            <div class="mb-4 form-outline">
-                                {{ user_form.username }}
+<form id="register_form" method="post" action="{% url 'friends:register' %}" novalidate>
+    {% csrf_token %}
 
-                                <!-- Username Guidelines Info Tooltip -->
-                                <span tabindex="0" data-toggle="tooltip" title="150 characters or fewer. Letters, digits and @/./+/-/_ only">
-                                    <button type="button" class="btn btn-block" style="pointer-events: none; border: none;" disabled>
-                                        <i class="fa fa-question"></i>
-                                    </button>
-                                </span>
-                            </div>
-
-                            <!-- Password -->
-                            <div class="mb-4">
-                                {{ user_form.password }}
-                            </div>
-
-                            <!-- Agency Dropdown -->
-                            <div class="row">
-                                <div class="col-md-2 mt-2">
-                                    <h6>Agency</h6>
-                                </div>
-
-                                <div class="col-md-10">
-                                    {{ profile_form }}
-                                </div>
-                            </div>
-
-                            <!-- Create Account/Register -->
-                            <div class="d-flex align-items-center mt-5">
-                                <button type="submit" class="btn btn-light text-light">Create Account</button>
-                                <p class="mb-0" style="margin-left: 2rem;">Already have an account? <a href="{% url 'main:index' %}" class="text-decoration-none" style="color:blue; font-weight:500">Log in</a></p>
-                            </div>
-                        </form>                       
-                    </div>
-                </div>
-            </div>
+    <div class="row g-3 mb-3">
+        <div class="col-12 col-sm-6">
+            <label for="{{ user_form.first_name.id_for_label }}" class="auth-label">First name</label>
+            {{ user_form.first_name }}
+            {% for error in user_form.first_name.errors %}
+                <span class="field-error">{{ error }}</span>
+            {% endfor %}
+        </div>
+        <div class="col-12 col-sm-6">
+            <label for="{{ user_form.last_name.id_for_label }}" class="auth-label">Last name</label>
+            {{ user_form.last_name }}
+            {% for error in user_form.last_name.errors %}
+                <span class="field-error">{{ error }}</span>
+            {% endfor %}
         </div>
     </div>
-    
 
+    <div class="mb-3">
+        <label for="{{ user_form.email.id_for_label }}" class="auth-label">Email address</label>
+        {{ user_form.email }}
+        {% for error in user_form.email.errors %}
+            <span class="field-error">{{ error }}</span>
+        {% endfor %}
+    </div>
 
+    <div class="mb-3">
+        <label for="{{ user_form.username.id_for_label }}" class="auth-label">Username</label>
+        {{ user_form.username }}
+        {% for error in user_form.username.errors %}
+            <span class="field-error">{{ error }}</span>
+        {% endfor %}
+        <span class="field-hint">Letters, digits and @ . + - _ only. 150 characters or fewer.</span>
+    </div>
+
+    <div class="mb-3">
+        <label for="{{ user_form.password.id_for_label }}" class="auth-label">Password</label>
+        <div class="field-wrap">
+            {{ user_form.password }}
+            <button type="button" id="toggle-password" class="field-action" aria-label="Show password">
+                <i class="bi bi-eye" id="toggle-password-icon"></i>
+            </button>
+        </div>
+        {% for error in user_form.password.errors %}
+            <span class="field-error">{{ error }}</span>
+        {% endfor %}
+    </div>
+
+    <div class="mb-4">
+        <label for="{{ profile_form.agency.id_for_label }}" class="auth-label">Agency</label>
+        {{ profile_form.agency }}
+        {% for error in profile_form.agency.errors %}
+            <span class="field-error">{{ error }}</span>
+        {% endfor %}
+    </div>
+
+    <div class="mb-4">
+        {{ user_form.captcha }}
+        {% for error in user_form.captcha.errors %}
+            <span class="field-error">{{ error }}</span>
+        {% endfor %}
+    </div>
+
+    <button type="submit" class="btn-elsa">Create account</button>
+</form>
+
+<div class="auth-divider">already registered?</div>
+
+<div class="auth-alt">
+    <a href="{% url 'main:index' %}" class="btn-link-elsa">Sign in instead</a>
+</div>
+{% endblock %}
+
+{% block auth_foot %}
+We email you a code to confirm your address before the account becomes active.
+{% endblock %}
+
+{% block auth_scripts %}
+<script>
+(function () {
+    var input = document.getElementById('{{ user_form.password.id_for_label }}');
+    var toggle = document.getElementById('toggle-password');
+    var icon = document.getElementById('toggle-password-icon');
+
+    if (!input || !toggle) { return; }
+
+    toggle.addEventListener('click', function () {
+        var showing = input.type === 'text';
+        input.type = showing ? 'password' : 'text';
+        icon.className = showing ? 'bi bi-eye' : 'bi bi-eye-slash';
+        toggle.setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
+        input.focus();
+    });
+})();
+</script>
 {% endblock %}

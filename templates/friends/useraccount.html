@@ -61,11 +61,178 @@ User Account
             </div>
         </div>
     </div>
+
+    {% comment %} Own row, not the column above: .col-md-8 is a centring flex container,
+       so a second child would sit beside the first rather than below it. {% endcomment %}
+    <div class="row g-4 mt-1">
+        <div class="col-12">
+            <div class="card shadow-sm border-0 p-4">
+                <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+                    <div>
+                        <h3 class="card-title text-muted mb-1">Security</h3>
+                        <p class="text-muted mb-0" style="font-size: 0.9375rem;">
+                            A passkey signs you in with your fingerprint, face, or device PIN
+                            instead of a code from your email. It is tied to this site, so it
+                            cannot be used on a page pretending to be ELSA.
+                        </p>
+                    </div>
+                    <button type="button" class="btn text-white" id="add-passkey-btn"
+                            style="background-color: #26a498; white-space: nowrap;">
+                        <i class="bi bi-plus-lg me-1"></i> Add a passkey
+                    </button>
+                </div>
+
+                {% comment %} Adding and removing passkeys reports through the messages
+                   framework, so this page has to render them.  Without a block
+                   here nothing consumes them, and they surface on whatever page
+                   the user visits next. {% endcomment %}
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags|default:'info' }} border-0 py-2 px-3 mb-3"
+                             style="font-size: 0.875rem;" role="alert">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+
+                <div id="passkey-alert" class="alert d-none py-2 px-3 mb-3"
+                     style="font-size: 0.875rem;" role="alert"></div>
+
+                {% if passkeys %}
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0">
+                        <thead>
+                            <tr class="text-muted" style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px;">
+                                <th scope="col">Name</th>
+                                <th scope="col">Added</th>
+                                <th scope="col">Last used</th>
+                                <th scope="col"><span class="visually-hidden">Actions</span></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for passkey in passkeys %}
+                            <tr>
+                                <td>
+                                    <i class="bi bi-shield-lock me-2" style="color: #26a498;"></i>
+                                    {{ passkey.name }}
+                                    {% if passkey.backed_up %}
+                                    <span class="badge ms-2"
+                                          style="background-color: #e9f6f5; color: #1f8a7f; font-weight: 600;">Synced</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-muted">{{ passkey.created_at|date:"M j, Y" }}</td>
+                                <td class="text-muted">
+                                    {% if passkey.last_used_at %}{{ passkey.last_used_at|date:"M j, Y" }}{% else %}Never{% endif %}
+                                </td>
+                                <td class="text-end">
+                                    <button type="button" class="btn btn-sm btn-outline-danger btn-keep-bg delete-passkey-btn"
+                                            data-bs-toggle="modal" data-bs-target="#deletePasskeyModal"
+                                            data-passkey-name="{{ passkey.name }}"
+                                            data-passkey-url="{% url 'friends:passkey_delete' passkey.pk %}">
+                                        Remove
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted mb-0" style="font-size: 0.9375rem;">
+                    <i class="bi bi-info-circle me-1"></i>
+                    You have no passkeys yet. Until you add one, ELSA will keep emailing
+                    you a code each time you sign in.
+                </p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
 </div>
+
+{% comment %} Outside the card and column structure: modals inside collapsible or flex
+   parents cause whitespace issues. {% endcomment %}
+<div class="modal fade" id="deletePasskeyModal" tabindex="-1" aria-labelledby="deletePasskeyLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deletePasskeyLabel">Remove passkey</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-2">Remove <strong id="delete-passkey-name"></strong>?</p>
+                <p class="text-muted mb-0" style="font-size: 0.875rem;">
+                    You will not be able to sign in with it again. If it is your only passkey,
+                    ELSA will go back to emailing you a code.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="post" id="delete-passkey-form">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger btn-keep-bg text-white">Remove passkey</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="{% static 'js/passkeys.js' %}"></script>
+<script>
+(function () {
+    var csrf = '{{ csrf_token }}';
+    var addBtn = document.getElementById('add-passkey-btn');
+    var alertBox = document.getElementById('passkey-alert');
+
+    function show(kind, text) {
+        alertBox.className = 'alert alert-' + kind + ' py-2 px-3 mb-3';
+        alertBox.textContent = text;
+    }
+
+    if (!window.ElsaPasskeys || !window.ElsaPasskeys.supported()) {
+        addBtn.disabled = true;
+        show('warning', 'This browser does not support passkeys. Try a current version of ' +
+                        'Chrome, Safari, Edge, or Firefox.');
+    }
+
+    addBtn.addEventListener('click', function () {
+        var label = window.prompt(
+            'Name this passkey so you can recognise it later:',
+            'My ' + (navigator.platform || 'device'));
+        if (label === null) {
+            return;
+        }
+
+        addBtn.disabled = true;
+        show('info', 'Follow your browser or device prompt to finish adding the passkey.');
+
+        window.ElsaPasskeys.register({
+            options: "{% url 'friends:passkey_register_options' %}",
+            verify: "{% url 'friends:passkey_register_verify' %}"
+        }, csrf, label.trim() || 'Passkey').then(function () {
+            // Reload so the new key appears with its real dates.
+            window.location.reload();
+        }).catch(function (error) {
+            addBtn.disabled = false;
+            show('danger', window.ElsaPasskeys.describe(error));
+        });
+    });
+
+    // One modal reused for every row.
+    var deleteModal = document.getElementById('deletePasskeyModal');
+    if (deleteModal) {
+        deleteModal.addEventListener('show.bs.modal', function (event) {
+            var button = event.relatedTarget;
+            if (!button) { return; }
+            document.getElementById('delete-passkey-name').textContent =
+                button.getAttribute('data-passkey-name');
+            document.getElementById('delete-passkey-form').action =
+                button.getAttribute('data-passkey-url');
+        });
+    }
+})();
+</script>
 
 <style>
     body {
-        background-color: #f8f9fc; 
+        background-color: #f8f9fc;
         color: #444;
     }
     .card {

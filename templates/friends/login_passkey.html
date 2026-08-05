@@ -1,0 +1,99 @@
+{% extends "friends/auth_base.html" %}
+{% load static %}
+
+{% comment %} Passkey screen.  Reached two ways: straight after the identifier screen for
+   someone who has a passkey (stage 'identify', the passkey signs them in on its
+   own), or after a password as the second factor (stage 'second_factor'). {% endcomment %}
+
+{% block auth_title %}Confirm it's you{% endblock %}
+
+{% block auth_body %}
+<div class="text-center">
+
+    <div class="auth-mark">
+        <svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M8 1a2 2 0 0 1 2 2v4H6V3a2 2 0 0 1 2-2zm3 6V3a3 3 0 0 0-6 0v4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2zM8 10a1 1 0 0 1 .5 1.866V13a.5.5 0 0 1-1 0v-1.134A1 1 0 0 1 8 10z"/>
+        </svg>
+    </div>
+
+    <div class="auth-identity">
+        <i class="bi bi-person-circle"></i>
+        <strong>{{ username }}</strong>
+        <a href="{% url 'main:index' %}">Change</a>
+    </div>
+
+    <p class="text-muted mb-4" style="font-size: 0.9375rem;">
+        Your browser or device will ask for your fingerprint, face, or PIN.
+    </p>
+
+    <div id="passkey-alert" class="alert d-none py-2 px-3 mb-4"
+         style="font-size: 0.875rem;" role="alert"></div>
+
+    <button type="button" class="btn btn-elsa w-100" id="passkey-btn">
+        Use my passkey
+    </button>
+
+    <div class="mt-4 pt-3 border-top">
+        {% if stage == 'identify' %}
+        <form method="post" action="{% url 'friends:login_use_password' %}" class="d-inline">
+            {% csrf_token %}
+            <span class="text-muted" style="font-size: 0.875rem;">Don't have your device?</span>
+            <button type="submit" class="btn-link-elsa">Use your password instead</button>
+        </form>
+        {% else %}
+        <form method="post" action="{% url 'friends:passkey_use_email' %}" class="d-inline">
+            {% csrf_token %}
+            <span class="text-muted" style="font-size: 0.875rem;">Don't have your device?</span>
+            <button type="submit" class="btn-link-elsa">Email me a code instead</button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block auth_foot %}
+ELSA never asks for your passkey outside this page.
+Trouble signing in? <a href="mailto:atm-elsa@nmsu.edu" style="color: #888;">atm-elsa@nmsu.edu</a>
+{% endblock %}
+
+{% block auth_scripts %}
+<script src="{% static 'js/passkeys.js' %}"></script>
+<script>
+(function () {
+    var csrf = '{{ csrf_token }}';
+    var button = document.getElementById('passkey-btn');
+    var alertBox = document.getElementById('passkey-alert');
+
+    function show(kind, text) {
+        alertBox.className = 'alert alert-' + kind + ' py-2 px-3 mb-4';
+        alertBox.textContent = text;
+    }
+
+    if (!window.ElsaPasskeys || !window.ElsaPasskeys.supported()) {
+        button.disabled = true;
+        show('warning', 'This browser does not support passkeys. Use the option below instead.');
+        return;
+    }
+
+    function run() {
+        button.disabled = true;
+        alertBox.classList.add('d-none');
+
+        window.ElsaPasskeys.authenticate({
+            options: "{% url 'friends:passkey_auth_options' %}",
+            verify: "{% url 'friends:passkey_auth_verify' %}"
+        }, csrf).then(function (data) {
+            window.location.href = data.redirect;
+        }).catch(function (error) {
+            button.disabled = false;
+            show('danger', window.ElsaPasskeys.describe(error));
+        });
+    }
+
+    button.addEventListener('click', run);
+
+    // Fire straight away; the button stays as the retry.
+    run();
+})();
+</script>
+{% endblock %}
