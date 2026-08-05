@@ -48,9 +48,14 @@ from django.core.cache import cache
 
 # index is the home page for elsa.
 def index(request):
+    from friends.views import _read_passkey_hint
+
     contact_form = ContactForm(request.POST or None)
     context_dict = {
         'contact_form': contact_form,
+        # Only mention passkeys on a browser where one has actually been used.
+        # Everywhere else the note would promise something that will not happen.
+        'browser_has_passkey': bool(_read_passkey_hint(request)['known']),
     }
     return render(request, 'main/index.html', context_dict)
 
