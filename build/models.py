@@ -5374,3 +5374,219 @@ class NetCDFFile(models.Model):
 
     def __str__(self):
         return self.title
+
+
+# ------------------------------------------------------------------------------------------------ #
+#                              AMA Discipline Dictionary user-supplied classes
+# ------------------------------------------------------------------------------------------------ #
+# The NetCDF harvest (views.variable_coord_to_product) fills ama:Variable and ama:Coordinate inside
+# ama:Model_Output automatically. The remaining AMA content cannot be harvested from the file, so it
+# is collected from the user through the models below:
+#
+#   ModelMetadata           -> ama:Model_Metadata            (bundle-wide, one per bundle)
+#   SimulationConfiguration -> ama:Simulation_Configuration  (bundle default + optional per-file override)
+#   FileDescription         -> ama:Model_Output/ama:File_Description (bundle default + per-file override)
+#
+# Scoping note: the LDD/science intent is "one setting for the whole collection", but NetCDFFile has
+# no collection relation (it points straight at Bundle), so the default rows are bundle-scoped. If a
+# collection relation is added later, the `bundle` FK below is the field to re-point.
+#
+# Field types follow PDS4_AMA_1O00_1300.xsd:
+#   - every string attribute is ASCII_Short_String_Collapsed with minLength=1, maxLength=255
+#   - description is ASCII_Text_Collapsed with minLength=1
+#   - model_timestep / upper_boundary / lower_boundary / top_level / bottom_level are ASCII_Real
+#   - the four compass boundaries are ASCII_Real with ranges, carried with a required unit attribute
+# minLength=1 is why blank values must be OMITTED from the label rather than written as empty
+# elements: an empty <ama:type/> is schema-INVALID, not merely uninformative.
+
+
+class AMADefaultOverrideMixin(models.Model):
+    """Shared resolution logic for AMA classes that have a bundle default and per-file overrides.
+
+    A row with `netcdf_file` NULL is the bundle-wide default; a row with `netcdf_file` set is that
+    file's override. MariaDB treats NULLs as distinct in a UNIQUE index, so "at most one default per
+    bundle" cannot be enforced by a database constraint here and is instead maintained by always
+    going through `default_for_bundle()`.
+    """
+
+    class Meta(object):
+        abstract = True
+
+    @classmethod
+    def default_for_bundle(cls, bundle):
+        """Return the bundle-wide default row, or None if the user has not filled one in."""
+        return cls.objects.filter(bundle=bundle, netcdf_file__isnull=True).first()
+
+    @classmethod
+    def override_for_file(cls, netcdf_file):
+        """Return this file's override row, or None if the file uses the bundle default."""
+        return cls.objects.filter(netcdf_file=netcdf_file).first()
+
+    @classmethod
+    def resolve_for_file(cls, netcdf_file):
+        """Return the row whose values belong in this file's label: override first, else default."""
+        override = cls.override_for_file(netcdf_file)
+        if override is not None:
+            return override
+        if netcdf_file.bundle is None:
+            return None
+        return cls.default_for_bundle(netcdf_file.bundle)
+
+    def is_default(self):
+        return self.netcdf_file_id is None
+
+    def filled_values(self):
+        """Ordered {element_name: text} of non-blank values, ready to write into a PDS4 label.
+
+        Blank values are dropped so the caller never emits an empty element. Order follows
+        `ELEMENT_ORDER`, which mirrors the xs:sequence in the LDD - PDS4 labels are order-sensitive.
+        """
+        values = {}
+        for field_name in self.ELEMENT_ORDER:
+            value = getattr(self, field_name)
+            if value is None:
+                continue
+            text = str(value).strip()
+            if text == '':
+                continue
+            values[field_name] = text
+        return values
+
+    def copy_values_from(self, other):
+        """Copy every AMA content field from `other` onto self (leaves bundle/netcdf_file alone)."""
+        for field_name in self.ELEMENT_ORDER:
+            setattr(self, field_name, getattr(other, field_name))
+
+
+class ModelMetadata(models.Model):
+    """ama:Model_Metadata - describes the model itself, identical for every file in the bundle."""
+
+    ELEMENT_ORDER = ('type', 'name', 'version', 'institution')
+
+    bundle = models.OneToOneField(
+        Bundle, on_delete=models.CASCADE, related_name='model_metadata')
+
+    type = models.CharField(max_length=MAX_CHAR_FIELD, blank=True, default='')
+    name = models.CharField(max_length=MAX_CHAR_FIELD, blank=True, default='')
+    version = models.CharField(max_length=MAX_CHAR_FIELD, blank=True, default='')
+    institution = models.CharField(max_length=MAX_CHAR_FIELD, blank=True, default='')
+
+    def filled_values(self):
+        values = {}
+        for field_name in self.ELEMENT_ORDER:
+            text = (getattr(self, field_name) or '').strip()
+            if text:
+                values[field_name] = text
+        return values
+
+    def __str__(self):
+        return 'Model Metadata for {}'.format(self.bundle)
+
+
+class SimulationConfiguration(AMADefaultOverrideMixin):
+    """ama:Simulation_Configuration - bundle default plus optional per-file overrides."""
+
+    ELEMENT_ORDER = (
+        'horizontal_grid_type',
+        'model_resolution',
+        'model_resolution_unit',
+        'vertical_grid_type',
+        'vertical_grid_unit',
+        'model_timestep',
+        'model_timestep_unit',
+        'upper_boundary',
+        'lower_boundary',
+        'northern_boundary',
+        'southern_boundary',
+        'eastern_boundary',
+        'western_boundary',
+        'start_time',
+        'end_time',
+        'time_unit',
+        'description',
+    )
+
+    # The four compass boundaries carry a required unit attribute in the LDD. The template hardcodes
+    # degrees, so the writer stamps the same value rather than asking the user for a unit.
+    BOUNDARY_UNIT_ATTRIBUTE = {
+        'northern_boundary': 'deg',
+        'southern_boundary': 'deg',
+        'eastern_boundary': 'deg',
+        'western_boundary': 'deg',
+    }
+
+    bundle = models.ForeignKey(
+        Bundle, on_delete=models.CASCADE, related_name='simulation_configurations')
+    netcdf_file = models.OneToOneField(
+        NetCDFFile, on_delete=models.CASCADE, related_name='simulation_configuration',
+        null=True, blank=True)
+
+    horizontal_grid_type = models.CharField(max_length=MAX_CHAR_FIELD, blank=True, default='')
+    model_resolution = models.CharField(max_length=MAX_CHAR_FIELD, blank=True, default='')
+    model_resolution_unit = models.CharField(max_length=MAX_CHAR_FIELD, blank=True, default='')
+    vertical_grid_type = models.CharField(max_length=MAX_CHAR_FIELD, blank=True, default='')
+    vertical_grid_unit = models.CharField(max_length=MAX_CHAR_FIELD, blank=True, default='')
+    model_timestep = models.FloatField(null=True, blank=True)
+    model_timestep_unit = models.CharField(max_length=MAX_CHAR_FIELD, blank=True, default='')
+    upper_boundary = models.FloatField(null=True, blank=True)
+    lower_boundary = models.FloatField(null=True, blank=True)
+    northern_boundary = models.FloatField(
+        null=True, blank=True,
+        validators=[MinValueValidator(-90.0), MaxValueValidator(90.0)])
+    southern_boundary = models.FloatField(
+        null=True, blank=True,
+        validators=[MinValueValidator(-90.0), MaxValueValidator(90.0)])
+    eastern_boundary = models.FloatField(
+        null=True, blank=True,
+        validators=[MinValueValidator(-180.0), MaxValueValidator(360.0)])
+    western_boundary = models.FloatField(
+        null=True, blank=True,
+        validators=[MinValueValidator(-180.0), MaxValueValidator(360.0)])
+    start_time = models.CharField(max_length=MAX_CHAR_FIELD, blank=True, default='')
+    end_time = models.CharField(max_length=MAX_CHAR_FIELD, blank=True, default='')
+    time_unit = models.CharField(max_length=MAX_CHAR_FIELD, blank=True, default='')
+    description = models.TextField(blank=True, default='')
+
+    def __str__(self):
+        if self.netcdf_file_id is None:
+            return 'Simulation Configuration default for {}'.format(self.bundle)
+        return 'Simulation Configuration for {}'.format(self.netcdf_file)
+
+
+class FileDescription(AMADefaultOverrideMixin):
+    """ama:Model_Output/ama:File_Description - bundle default plus optional per-file overrides.
+
+    The harvest never populates this class, so without user input it is emitted empty. Some fields
+    could in principle be derived from the NetCDF coordinates, but postprocessing_methods never can.
+    """
+
+    ELEMENT_ORDER = (
+        'top_level',
+        'bottom_level',
+        'level_unit',
+        'start_time',
+        'end_time',
+        'time_unit',
+        'postprocessing_methods',
+    )
+
+    BOUNDARY_UNIT_ATTRIBUTE = {}
+
+    bundle = models.ForeignKey(
+        Bundle, on_delete=models.CASCADE, related_name='file_descriptions')
+    netcdf_file = models.OneToOneField(
+        NetCDFFile, on_delete=models.CASCADE, related_name='file_description',
+        null=True, blank=True)
+
+    top_level = models.FloatField(null=True, blank=True)
+    bottom_level = models.FloatField(null=True, blank=True)
+    level_unit = models.CharField(max_length=MAX_CHAR_FIELD, blank=True, default='')
+    start_time = models.CharField(max_length=MAX_CHAR_FIELD, blank=True, default='')
+    end_time = models.CharField(max_length=MAX_CHAR_FIELD, blank=True, default='')
+    time_unit = models.CharField(max_length=MAX_CHAR_FIELD, blank=True, default='')
+    postprocessing_methods = models.CharField(max_length=MAX_CHAR_FIELD, blank=True, default='')
+
+    def __str__(self):
+        if self.netcdf_file_id is None:
+            return 'File Description default for {}'.format(self.bundle)
+        return 'File Description for {}'.format(self.netcdf_file)

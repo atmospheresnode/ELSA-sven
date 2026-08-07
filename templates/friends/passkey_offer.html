@@ -1,0 +1,102 @@
+{% extends "friends/auth_base.html" %}
+{% load static %}
+
+{% comment %} Post-login invitation to enroll a passkey on this device.  Shown only
+   after a completed sign-in, and only on a browser that has not used one for
+   this account. {% endcomment %}
+
+{% block auth_title %}Sign in faster next time{% endblock %}
+
+{% block auth_body %}
+<div class="text-center">
+
+    <div class="auth-mark">
+        <svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M8 1a2 2 0 0 1 2 2v4H6V3a2 2 0 0 1 2-2zm3 6V3a3 3 0 0 0-6 0v4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2zM8 10a1 1 0 0 1 .5 1.866V13a.5.5 0 0 1-1 0v-1.134A1 1 0 0 1 8 10z"/>
+        </svg>
+    </div>
+
+    <p class="text-muted mb-4" style="font-size: 0.9375rem;">
+        {% if has_passkey_elsewhere %}
+            You already use a passkey on another device. Passkeys stay on the device
+            that made them, so this one needs its own.
+        {% else %}
+            Set up a passkey and you can sign in with your fingerprint, face, or
+            device PIN instead of a password and an emailed code.
+        {% endif %}
+    </p>
+
+    <div id="passkey-alert" class="alert d-none py-2 px-3 mb-4"
+         style="font-size: 0.875rem;" role="alert"></div>
+
+    <button type="button" class="btn-elsa" id="passkey-setup-btn">
+        Set up a passkey on this device
+    </button>
+
+    <div class="mt-3">
+        <form method="post" action="{% url 'friends:passkey_offer_dismiss' %}">
+            {% csrf_token %}
+            <button type="submit" class="btn-link-elsa" id="skip-btn">Not now</button>
+        </form>
+    </div>
+
+    <div class="auth-divider">what this changes</div>
+
+    <ul class="text-start text-muted mb-0" style="font-size: 0.8125rem; line-height: 1.6;">
+        <li>Your password and email code keep working as before.</li>
+        <li>Nothing about your fingerprint or face leaves the device.</li>
+        <li>You can remove it any time from your account page.</li>
+    </ul>
+</div>
+{% endblock %}
+
+{% block auth_foot %}
+You can always set this up later from your account page.
+{% endblock %}
+
+{% block auth_scripts %}
+<script src="{% static 'js/passkeys.js' %}"></script>
+<script>
+(function () {
+    var csrf = '{{ csrf_token }}';
+    var button = document.getElementById('passkey-setup-btn');
+    var alertBox = document.getElementById('passkey-alert');
+
+    function show(kind, text) {
+        alertBox.className = 'alert alert-' + kind + ' py-2 px-3 mb-4';
+        alertBox.textContent = text;
+    }
+
+    // Nothing to offer on a browser that cannot do this, so say so plainly
+    // rather than presenting a button that will fail.
+    if (!window.ElsaPasskeys || !window.ElsaPasskeys.supported()) {
+        button.disabled = true;
+        show('warning', 'This browser does not support passkeys. You can set one up '
+                      + 'later from a browser that does.');
+        return;
+    }
+
+    button.addEventListener('click', function () {
+        var label = window.prompt(
+            'Name this device so you can recognise it later:',
+            'My ' + (navigator.platform || 'device'));
+        if (label === null) {
+            return;
+        }
+
+        button.disabled = true;
+        show('info', 'Follow your browser or device prompt to finish.');
+
+        window.ElsaPasskeys.register({
+            options: "{% url 'friends:passkey_register_options' %}",
+            verify: "{% url 'friends:passkey_register_verify' %}"
+        }, csrf, label.trim() || 'Passkey').then(function () {
+            window.location.href = "{% url 'main:index' %}";
+        }).catch(function (error) {
+            button.disabled = false;
+            show('danger', window.ElsaPasskeys.describe(error));
+        });
+    });
+})();
+</script>
+{% endblock %}

@@ -1906,3 +1906,210 @@ class MultipleNetCDFUploadForm(forms.Form):
             raise forms.ValidationError("No files were selected.")
 
         return files
+
+
+"""
+    AMA discipline dictionary forms
+
+    These collect the AMA content the NetCDF harvest cannot produce. Every attribute in these three
+    classes is minOccurs="0" in PDS4_AMA_1O00_1300.xsd, so nothing here is required by the schema and
+    nothing is marked required in the form either; blank values are omitted from the label entirely
+    (an empty element would violate the schema's minLength="1"). The LDD defines no enumerations for
+    any of these attributes, so the dropdown-looking fields are deliberately free text.
+"""
+
+
+def _ama_text_widget(placeholder=''):
+    attrs = {'class': 'form-control form-control-sm'}
+    if placeholder:
+        attrs['placeholder'] = placeholder
+    return forms.TextInput(attrs=attrs)
+
+
+def _ama_number_widget(placeholder=''):
+    attrs = {'class': 'form-control form-control-sm', 'step': 'any'}
+    if placeholder:
+        attrs['placeholder'] = placeholder
+    return forms.NumberInput(attrs=attrs)
+
+
+class AMAFormGroupsMixin(object):
+    """Lets a template render an AMA form in labelled sections instead of one long field wall.
+
+    Simulation Configuration alone has 17 attributes; presented flat they are hard to scan. The
+    grouping lives on the form rather than in the template so the bundle-page modal and the
+    per-file page cannot drift apart.
+    """
+
+    FIELD_GROUPS = ()
+
+    def groups(self):
+        for title, field_names in self.FIELD_GROUPS:
+            # Fields removed for this scope (apply_to_all on per-file forms) are skipped, and an
+            # entirely empty group is dropped rather than rendering a bare heading.
+            bound_fields = [self[name] for name in field_names if name in self.fields]
+            if bound_fields:
+                yield {'title': title, 'fields': bound_fields}
+
+
+class ModelMetadataForm(AMAFormGroupsMixin, forms.ModelForm):
+    """ama:Model_Metadata. Bundle-wide - there is no per-file variant by design."""
+
+    FIELD_GROUPS = (
+        ('', ('type', 'name', 'version', 'institution')),
+    )
+
+    class Meta(object):
+        model = ModelMetadata
+        exclude = ('bundle',)
+        labels = {
+            'type': 'Type of Model',
+            'name': 'Model Name',
+            'version': 'Model Version',
+            'institution': 'Institution',
+        }
+        widgets = {
+            'type': _ama_text_widget('e.g. General Circulation Model'),
+            'name': _ama_text_widget('e.g. MarsWRF'),
+            'version': _ama_text_widget('e.g. 3.2.1'),
+            'institution': _ama_text_widget('e.g. NASA Ames Research Center'),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.required = False
+
+
+class AMAScopedFormMixin(AMAFormGroupsMixin):
+    """Shared behaviour for the two classes that have a bundle default and per-file overrides.
+
+    `scope` is 'default' for the bundle-wide row and 'file' for a per-file override. The
+    apply_to_all checkbox only makes sense on the default form, so it is removed on file forms.
+    """
+
+    def __init__(self, *args, **kwargs):
+        self.scope = kwargs.pop('scope', 'default')
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.required = False
+        if self.scope != 'default':
+            self.fields.pop('apply_to_all', None)
+
+    def has_any_value(self):
+        """True when the user actually supplied something worth storing."""
+        if not self.is_valid():
+            return False
+        for name, value in self.cleaned_data.items():
+            if name == 'apply_to_all':
+                continue
+            if value is None:
+                continue
+            if isinstance(value, str) and value.strip() == '':
+                continue
+            return True
+        return False
+
+
+class SimulationConfigurationForm(AMAScopedFormMixin, forms.ModelForm):
+    """ama:Simulation_Configuration."""
+
+    FIELD_GROUPS = (
+        ('Grid and Resolution', ('horizontal_grid_type', 'model_resolution',
+                                 'model_resolution_unit', 'vertical_grid_type',
+                                 'vertical_grid_unit')),
+        ('Timing', ('model_timestep', 'model_timestep_unit', 'start_time', 'end_time',
+                    'time_unit')),
+        ('Spatial Extent', ('upper_boundary', 'lower_boundary', 'northern_boundary',
+                            'southern_boundary', 'eastern_boundary', 'western_boundary')),
+        ('Description', ('description',)),
+    )
+
+    # Only rendered on the bundle-default form; overwrites every per-file override when checked.
+    apply_to_all = forms.BooleanField(
+        required=False,
+        label='Apply these values to every file in this bundle',
+        help_text='Overwrites any per-file Simulation Configuration edits.',
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}))
+
+    class Meta(object):
+        model = SimulationConfiguration
+        exclude = ('bundle', 'netcdf_file')
+        labels = {
+            'horizontal_grid_type': 'Horizontal Grid Type',
+            'model_resolution': 'Model Resolution',
+            'model_resolution_unit': 'Model Resolution Unit',
+            'vertical_grid_type': 'Vertical Grid Type',
+            'vertical_grid_unit': 'Vertical Grid Unit',
+            'model_timestep': 'Model Timestep',
+            'model_timestep_unit': 'Model Timestep Unit',
+            'upper_boundary': 'Upper Boundary',
+            'lower_boundary': 'Lower Boundary',
+            'northern_boundary': 'Northern Boundary (deg)',
+            'southern_boundary': 'Southern Boundary (deg)',
+            'eastern_boundary': 'Eastern Boundary (deg)',
+            'western_boundary': 'Western Boundary (deg)',
+            'start_time': 'Start Time',
+            'end_time': 'End Time',
+            'time_unit': 'Time Unit',
+            'description': 'Description',
+        }
+        widgets = {
+            'horizontal_grid_type': _ama_text_widget('e.g. lat/lon'),
+            'model_resolution': _ama_text_widget('e.g. 5x5'),
+            'model_resolution_unit': _ama_text_widget('e.g. deg'),
+            'vertical_grid_type': _ama_text_widget('e.g. sigma'),
+            'vertical_grid_unit': _ama_text_widget('e.g. Pa'),
+            'model_timestep': _ama_number_widget(),
+            'model_timestep_unit': _ama_text_widget('e.g. s'),
+            'upper_boundary': _ama_number_widget(),
+            'lower_boundary': _ama_number_widget(),
+            'northern_boundary': _ama_number_widget('-90 to 90'),
+            'southern_boundary': _ama_number_widget('-90 to 90'),
+            'eastern_boundary': _ama_number_widget('-180 to 360'),
+            'western_boundary': _ama_number_widget('-180 to 360'),
+            # start_time / end_time are ASCII_Short_String_Collapsed in the LDD, not dates, so they
+            # stay free text - a date picker here would be wrong for model time (e.g. sol 120).
+            'start_time': _ama_text_widget('free text, e.g. sol 0'),
+            'end_time': _ama_text_widget('free text, e.g. sol 668'),
+            'time_unit': _ama_text_widget('e.g. sols'),
+            'description': forms.Textarea(attrs={'class': 'form-control form-control-sm', 'rows': 3}),
+        }
+
+
+class FileDescriptionForm(AMAScopedFormMixin, forms.ModelForm):
+    """ama:Model_Output/ama:File_Description."""
+
+    FIELD_GROUPS = (
+        ('Vertical Extent', ('top_level', 'bottom_level', 'level_unit')),
+        ('Time Coverage', ('start_time', 'end_time', 'time_unit')),
+        ('Processing', ('postprocessing_methods',)),
+    )
+
+    apply_to_all = forms.BooleanField(
+        required=False,
+        label='Apply these values to every file in this bundle',
+        help_text='Overwrites any per-file File Description edits.',
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}))
+
+    class Meta(object):
+        model = FileDescription
+        exclude = ('bundle', 'netcdf_file')
+        labels = {
+            'top_level': 'Top Level',
+            'bottom_level': 'Bottom Level',
+            'level_unit': 'Level Unit',
+            'start_time': 'Start Time',
+            'end_time': 'End Time',
+            'time_unit': 'Time Unit',
+            'postprocessing_methods': 'Postprocessing Methods',
+        }
+        widgets = {
+            'top_level': _ama_number_widget(),
+            'bottom_level': _ama_number_widget(),
+            'level_unit': _ama_text_widget('e.g. Pa'),
+            'start_time': _ama_text_widget('free text, e.g. sol 0'),
+            'end_time': _ama_text_widget('free text, e.g. sol 668'),
+            'time_unit': _ama_text_widget('e.g. sols'),
+            'postprocessing_methods': _ama_text_widget("e.g. time:mean(interval=3 hours)"),
+        }

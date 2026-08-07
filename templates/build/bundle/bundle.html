@@ -152,6 +152,18 @@
 
 {% block body_block %}
 
+ <!-- Messages (AMA metadata saves, label refresh warnings) -->
+ {% if messages %}
+   <div class="container-fluid pt-3">
+      {% for message in messages %}
+         <div class="alert {% if message.tags == 'error' %}alert-danger{% elif message.tags == 'warning' %}alert-warning{% elif message.tags == 'info' %}alert-info{% else %}alert-success{% endif %} alert-dismissible fade show">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+         </div>
+      {% endfor %}
+   </div>
+ {% endif %}
+
  <!-- Archive Contents -->
  {% if bundle_type == "Archive" %}
    <div class="archive-theme">
@@ -2216,9 +2228,19 @@
 
                                        <!-- Progress bar -->
                                        <div id="uploadProgressWrapper" style="display:none;" class="mb-3">
-                                             <div class="d-flex justify-content-between small text-muted mb-1">
+                                             <div class="d-flex justify-content-between align-items-center small text-muted mb-1">
                                                 <span id="uploadStatusText">Uploading...</span>
-                                                <span id="uploadPercent">0%</span>
+                                                <div class="d-flex align-items-center gap-2">
+                                                   <span id="uploadPercent">0%</span>
+                                                   <!-- Only offered while bytes are still in flight. Once the server starts
+                                                        processing, aborting the request cannot stop it, so the button is
+                                                        replaced by a note rather than left there making a false promise. -->
+                                                   <button type="button" id="uploadCancelBtn"
+                                                      class="btn btn-sm btn-outline-danger btn-keep-bg py-0 px-2"
+                                                      style="display:none; font-size: .75rem;">
+                                                      Cancel
+                                                   </button>
+                                                </div>
                                              </div>
                                              <div class="progress" style="height: 10px;">
                                                 <div id="uploadProgressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-success"
@@ -2283,8 +2305,22 @@
                                                             <i class="bi bi-exclamation-triangle-fill me-1"></i>Not processed
                                                          </span>
                                                       {% endif %}
+                                                      {% if nc_file.has_ama_override %}
+                                                         <span class="badge bg-info text-dark ms-2"
+                                                            title="This file has its own Simulation Configuration or File Description values instead of the bundle defaults.">
+                                                            Custom AMA
+                                                         </span>
+                                                      {% endif %}
                                                 </div>
-                                                <span class="text-muted small">{{ nc_file.uploaded_at|date:"M d, H:i" }}</span>
+                                                <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                                                   <!-- Link, not a nested form: this list already sits inside the bulk-delete form. -->
+                                                   <a href="{% url 'build:netcdf_ama' pk_bundle=bundle.id pk_netcdf=nc_file.id %}"
+                                                      class="btn btn-sm btn-outline-secondary py-0"
+                                                      title="Edit this file's Simulation Configuration and File Description">
+                                                      <i class="bi bi-sliders me-1"></i>AMA
+                                                   </a>
+                                                   <span class="text-muted small">{{ nc_file.uploaded_at|date:"M d, H:i" }}</span>
+                                                </div>
                                              </li>
                                              {% empty %}
                                              <li class="list-group-item text-center text-muted py-4 bg-transparent">
@@ -2297,6 +2333,98 @@
 
                                  </form>
                               </div>
+                              </div>
+
+                              <!-- AMA metadata the NetCDF file cannot supply. Variables and Coordinates
+                                   are harvested automatically; these three classes are user-entered.
+                                   Presented as status cards rather than a row of buttons so the user can
+                                   see what is filled in without opening each one. -->
+                              <hr class="my-4">
+                              <div class="d-flex justify-content-between align-items-end flex-wrap gap-2 mb-3 px-1">
+                                 <div>
+                                    <h6 class="mb-1">AMA Metadata Defaults</h6>
+                                    <p class="text-muted small mb-0">
+                                       Written into every NetCDF label in this bundle. Variables and
+                                       Coordinates are read from the files automatically; these are not.
+                                    </p>
+                                 </div>
+                                 {% if ama_status.override_count %}
+                                    <span class="badge rounded-pill bg-info text-dark">
+                                       <i class="bi bi-sliders me-1"></i>{{ ama_status.override_count }} file{{ ama_status.override_count|pluralize }} customized
+                                    </span>
+                                 {% endif %}
+                              </div>
+
+                              <div class="row g-3 row-cols-1 row-cols-md-3 px-1">
+                                 <div class="col">
+                                    <div class="card h-100 border">
+                                       <div class="card-body p-3 d-flex flex-column">
+                                          <div class="d-flex justify-content-between align-items-start mb-1">
+                                             <h6 class="mb-0 small fw-bold">Model Metadata</h6>
+                                             {% if ama_status.model_metadata.is_set %}
+                                                <span class="badge bg-success">{{ ama_status.model_metadata.filled }} of {{ ama_status.model_metadata.total }}</span>
+                                             {% else %}
+                                                <span class="badge bg-light text-muted border">Not set</span>
+                                             {% endif %}
+                                          </div>
+                                          <p class="text-muted small mb-3 flex-grow-1">
+                                             {% if ama_status.model_name %}
+                                                {{ ama_status.model_name }}
+                                             {% else %}
+                                                Which model produced these files, and who ran it.
+                                             {% endif %}
+                                          </p>
+                                          <button type="button" class="btn btn-sm btn-outline-secondary w-100"
+                                             data-bs-toggle="modal" data-bs-target="#amaModelMetadataModal">
+                                             <i class="bi bi-pencil me-1"></i>Edit
+                                          </button>
+                                       </div>
+                                    </div>
+                                 </div>
+
+                                 <div class="col">
+                                    <div class="card h-100 border">
+                                       <div class="card-body p-3 d-flex flex-column">
+                                          <div class="d-flex justify-content-between align-items-start mb-1">
+                                             <h6 class="mb-0 small fw-bold">Simulation Configuration</h6>
+                                             {% if ama_status.simulation.is_set %}
+                                                <span class="badge bg-success">{{ ama_status.simulation.filled }} of {{ ama_status.simulation.total }}</span>
+                                             {% else %}
+                                                <span class="badge bg-light text-muted border">Not set</span>
+                                             {% endif %}
+                                          </div>
+                                          <p class="text-muted small mb-3 flex-grow-1">
+                                             Grid, timing and spatial extent of the run. Files can override this.
+                                          </p>
+                                          <button type="button" class="btn btn-sm btn-outline-secondary w-100"
+                                             data-bs-toggle="modal" data-bs-target="#amaSimulationModal">
+                                             <i class="bi bi-pencil me-1"></i>Edit
+                                          </button>
+                                       </div>
+                                    </div>
+                                 </div>
+
+                                 <div class="col">
+                                    <div class="card h-100 border">
+                                       <div class="card-body p-3 d-flex flex-column">
+                                          <div class="d-flex justify-content-between align-items-start mb-1">
+                                             <h6 class="mb-0 small fw-bold">File Description</h6>
+                                             {% if ama_status.file_description.is_set %}
+                                                <span class="badge bg-success">{{ ama_status.file_description.filled }} of {{ ama_status.file_description.total }}</span>
+                                             {% else %}
+                                                <span class="badge bg-light text-muted border">Not set</span>
+                                             {% endif %}
+                                          </div>
+                                          <p class="text-muted small mb-3 flex-grow-1">
+                                             What each output file covers. Files can override this.
+                                          </p>
+                                          <button type="button" class="btn btn-sm btn-outline-secondary w-100"
+                                             data-bs-toggle="modal" data-bs-target="#amaFileDescriptionModal">
+                                             <i class="bi bi-pencil me-1"></i>Edit
+                                          </button>
+                                       </div>
+                                    </div>
+                                 </div>
                               </div>
                            </div>
                         </div>
@@ -2799,13 +2927,33 @@
             var uploadPercent  = form.querySelector('#uploadPercent');
             var uploadStatusText = form.querySelector('#uploadStatusText');
             var uploadSuccessMsg = form.querySelector('#uploadSuccessMsg');
+            var cancelBtn      = form.querySelector('#uploadCancelBtn');
 
             var formData = new FormData(form);
             var xhr = new XMLHttpRequest();
 
+            // Held on the form, not in a shared variable: this form is duplicated across the
+            // collection tab panes, so two panes must not fight over one xhr reference.
+            form._netcdfUploadXhr = xhr;
+
+            function resetUploadUI() {
+               if (progressWrapper) progressWrapper.style.display = 'none';
+               if (progressBar) {
+                  progressBar.style.width = '0%';
+                  progressBar.setAttribute('aria-valuenow', 0);
+                  progressBar.classList.remove('bg-info', 'bg-danger');
+                  progressBar.classList.add('bg-success', 'progress-bar-animated');
+               }
+               if (uploadPercent) uploadPercent.textContent = '0%';
+               if (uploadStatusText) uploadStatusText.textContent = 'Uploading...';
+               if (cancelBtn) { cancelBtn.style.display = 'none'; cancelBtn.disabled = false; }
+               if (uploadBtn) { uploadBtn.disabled = false; uploadBtn.textContent = 'Upload'; }
+            }
+
             if (progressWrapper) progressWrapper.style.display = 'block';
             if (uploadBtn) { uploadBtn.disabled = true; uploadBtn.textContent = 'Uploading...'; }
             if (uploadSuccessMsg) uploadSuccessMsg.style.display = 'none';
+            if (cancelBtn) { cancelBtn.style.display = 'inline-block'; cancelBtn.disabled = false; }
 
             xhr.upload.addEventListener('progress', function(ev) {
                if (ev.lengthComputable && progressBar) {
@@ -2818,11 +2966,29 @@
                      progressBar.classList.remove('bg-success');
                      progressBar.classList.add('bg-info');
                      if (uploadBtn) uploadBtn.textContent = 'Processing...';
+                     // The bytes are all sent and the view is now saving records and harvesting
+                     // metadata. Aborting here would close the connection without stopping any of
+                     // that, so the offer is withdrawn instead of silently lying.
+                     if (cancelBtn) cancelBtn.style.display = 'none';
                   }
                }
             });
 
+            xhr.addEventListener('abort', function() {
+               resetUploadUI();
+               if (uploadSuccessMsg) uploadSuccessMsg.style.display = 'none';
+               var cancelNote = form.querySelector('.netcdf-upload-cancelled');
+               if (!cancelNote) {
+                  cancelNote = document.createElement('div');
+                  cancelNote.className = 'netcdf-upload-cancelled alert alert-secondary alert-dismissible fade show py-2 small mt-2';
+                  form.insertAdjacentElement('beforebegin', cancelNote);
+               }
+               cancelNote.innerHTML = 'Upload cancelled. Nothing was added to this bundle.' +
+                  '<button type="button" class="btn-close float-end" data-bs-dismiss="alert"></button>';
+            });
+
             xhr.addEventListener('load', function() {
+               if (cancelBtn) cancelBtn.style.display = 'none';
                if (xhr.status === 400) {
                   var errorMsg = 'Upload failed.';
                   try { errorMsg = JSON.parse(xhr.responseText).error; } catch (err) {}
@@ -2850,6 +3016,7 @@
             });
 
             xhr.addEventListener('error', function() {
+               if (cancelBtn) cancelBtn.style.display = 'none';
                if (uploadStatusText) uploadStatusText.textContent = 'Upload failed. Please try again.';
                if (progressBar) {
                   progressBar.classList.add('bg-danger');
@@ -2860,6 +3027,22 @@
 
             xhr.open('POST', form.action || window.location.href);
             xhr.send(formData);
+         });
+
+         // Cancel an in-flight upload. Delegated for the same reason the submit handler is: the
+         // upload form is repeated once per collection tab pane, so IDs are not unique.
+         document.addEventListener('click', function(e) {
+            var btn = e.target.closest ? e.target.closest('#uploadCancelBtn') : null;
+            if (!btn) return;
+            var form = btn.closest('form');
+            if (!form || !form._netcdfUploadXhr) return;
+            e.preventDefault();
+            btn.disabled = true;
+            // abort() fires the xhr 'abort' listener, which resets the UI. Safe to do only while
+            // bytes are still uploading: at that point Django has not run the view, so there are
+            // no NetCDFFile records or files on disk to clean up.
+            form._netcdfUploadXhr.abort();
+            form._netcdfUploadXhr = null;
          });
 
          </script>
@@ -4088,6 +4271,149 @@
                </button>
             </form>
          </div>
+      </div>
+   </div>
+</div>
+
+<!-- ===================== AMA metadata modals =====================
+     Bundle-wide defaults for the AMA classes the NetCDF harvest cannot fill. Kept outside every
+     card and collapsible: modals nested in those render with stray whitespace in this project.
+     Saving any of these rewrites the affected NetCDF labels on disk. -->
+<style>
+   /* Bootstrap's scrollable modal expects .modal-header/.modal-body/.modal-footer to be the
+      direct children of .modal-content, which sets max-height:100%;overflow:hidden. These modals
+      wrap those three in a <form>, so without this the body has no bounded height: it overflows,
+      gets clipped, and cannot be scrolled. Making the form the flex container restores the
+      height chain and gives the body a real scroll area with a pinned header and footer. */
+   .ama-modal .modal-content > form {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      max-height: 100%;
+   }
+   .ama-modal .modal-body {
+      overflow-y: auto;
+   }
+   .ama-modal .modal-header,
+   .ama-modal .modal-footer {
+      flex-shrink: 0;
+   }
+   .ama-modal .form-control {
+      font-size: .875rem;
+   }
+   /* Scope note, kept visually distinct from the fields it applies to. */
+   .ama-scope-note {
+      background-color: rgba(13, 202, 240, .07);
+      border: 1px solid rgba(13, 202, 240, .35);
+      border-radius: .5rem;
+   }
+</style>
+
+<div class="modal fade ama-modal" id="amaModelMetadataModal" tabindex="-1" aria-hidden="true">
+   <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content">
+         <form method="post" action="{% url 'build:ama_model_metadata' pk_bundle=bundle.id %}">
+            {% csrf_token %}
+            <div class="modal-header">
+               <div>
+                  <h5 class="modal-title mb-0">Model Metadata</h5>
+                  <div class="text-muted small">Applies to every file in this bundle</div>
+               </div>
+               <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+               <p class="text-muted small mb-4">
+                  Describes the model itself. Blank fields are left out of the label entirely.
+               </p>
+               {% include "build/bundle/_ama_form_fields.html" with form=form_ama_model_metadata %}
+            </div>
+            <div class="modal-footer">
+               <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+               <button type="submit" class="btn btn-keep-bg text-white" style="background-color: teal;">
+                  <i class="bi bi-save me-1"></i>Save
+               </button>
+            </div>
+         </form>
+      </div>
+   </div>
+</div>
+
+<div class="modal fade ama-modal" id="amaSimulationModal" tabindex="-1" aria-hidden="true">
+   <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content">
+         <form method="post" action="{% url 'build:ama_simulation_configuration' pk_bundle=bundle.id %}">
+            {% csrf_token %}
+            <div class="modal-header">
+               <div>
+                  <h5 class="modal-title mb-0">Simulation Configuration</h5>
+                  <div class="text-muted small">Bundle default, used by every file that has no values of its own</div>
+               </div>
+               <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+               <p class="text-muted small mb-4">
+                  Start and end time are free text in the AMA dictionary, so model time such as
+                  "sol 120" is fine. Blank fields are left out of the label entirely.
+               </p>
+               {% include "build/bundle/_ama_form_fields.html" with form=form_ama_simulation %}
+
+               <div class="ama-scope-note p-3 mt-4">
+                  <div class="form-check mb-0">
+                     {{ form_ama_simulation.apply_to_all }}
+                     <label class="form-check-label small fw-semibold" for="{{ form_ama_simulation.apply_to_all.id_for_label }}">
+                        {{ form_ama_simulation.apply_to_all.label }}
+                     </label>
+                     <div class="form-text mb-0">{{ form_ama_simulation.apply_to_all.help_text }}</div>
+                  </div>
+               </div>
+            </div>
+            <div class="modal-footer">
+               <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+               <button type="submit" class="btn btn-keep-bg text-white" style="background-color: teal;">
+                  <i class="bi bi-save me-1"></i>Save
+               </button>
+            </div>
+         </form>
+      </div>
+   </div>
+</div>
+
+<div class="modal fade ama-modal" id="amaFileDescriptionModal" tabindex="-1" aria-hidden="true">
+   <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content">
+         <form method="post" action="{% url 'build:ama_file_description' pk_bundle=bundle.id %}">
+            {% csrf_token %}
+            <div class="modal-header">
+               <div>
+                  <h5 class="modal-title mb-0">File Description</h5>
+                  <div class="text-muted small">Bundle default, used by every file that has no values of its own</div>
+               </div>
+               <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+               <p class="text-muted small mb-4">
+                  Describes what each output file covers. None of this can be read from the NetCDF
+                  file, so it is left out of the label unless entered here or per file.
+               </p>
+               {% include "build/bundle/_ama_form_fields.html" with form=form_ama_file_description %}
+
+               <div class="ama-scope-note p-3 mt-4">
+                  <div class="form-check mb-0">
+                     {{ form_ama_file_description.apply_to_all }}
+                     <label class="form-check-label small fw-semibold" for="{{ form_ama_file_description.apply_to_all.id_for_label }}">
+                        {{ form_ama_file_description.apply_to_all.label }}
+                     </label>
+                     <div class="form-text mb-0">{{ form_ama_file_description.apply_to_all.help_text }}</div>
+                  </div>
+               </div>
+            </div>
+            <div class="modal-footer">
+               <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+               <button type="submit" class="btn btn-keep-bg text-white" style="background-color: teal;">
+                  <i class="bi bi-save me-1"></i>Save
+               </button>
+            </div>
+         </form>
       </div>
    </div>
 </div>
