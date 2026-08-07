@@ -14,6 +14,7 @@ from django.db.models import Q
 from django.http import HttpResponse, HttpRequest, JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.template import RequestContext
+from django.urls import reverse
 from django import forms
 from django.forms import modelformset_factory
 from django.views.generic.edit import UpdateView, DeleteView
@@ -1047,7 +1048,20 @@ def bundle(request, pk_bundle):
             
             # To handle NetCDF files
             'form_netcdf': form_netcdf,
-            'netcdf_files': NetCDFFile.objects.filter(bundle=bundle)
+            'netcdf_files': _netcdf_files_with_ama_flags(bundle),
+
+            # AMA discipline metadata the NetCDF harvest cannot supply. These are the bundle-wide
+            # defaults; per-file overrides are edited on the netcdf_ama page.
+            'form_ama_model_metadata': ModelMetadataForm(
+                instance=ModelMetadata.objects.filter(bundle=bundle).first(),
+                prefix=AMA_MODEL_METADATA_PREFIX),
+            'form_ama_simulation': SimulationConfigurationForm(
+                instance=SimulationConfiguration.default_for_bundle(bundle), scope='default',
+                prefix=AMA_SIMULATION_PREFIX),
+            'form_ama_file_description': FileDescriptionForm(
+                instance=FileDescription.default_for_bundle(bundle), scope='default',
+                prefix=AMA_FILE_DESCRIPTION_PREFIX),
+            'ama_status': _ama_status(bundle),
         }
 
         # Compute status for bundle progress checklist
@@ -1518,6 +1532,259 @@ def bulk_delete_netcdf(request, pk_bundle):
 
     else:
         return redirect('main:restricted_access')
+
+
+# ------------------------------------------------------------------------------------------------ #
+#                                    AMA discipline metadata views
+# ------------------------------------------------------------------------------------------------ #
+# The NetCDF harvest fills ama:Variable and ama:Coordinate. These views collect the rest of the AMA
+# area from the user: Model_Metadata (bundle-wide), and Simulation_Configuration / File_Description
+# (a bundle-wide default that individual files may override).
+#
+# Every save re-runs label generation so the XML on disk matches what the user just entered -
+# labels are otherwise only written at upload time, which is before these forms are ever filled in.
+#
+# The forms carry prefixes because Simulation Configuration and File Description share three field
+# names (start_time, end_time, time_unit) and both modals live on the bundle page at once. Without
+# prefixes they would emit duplicate element ids, and a <label for> click in one modal would focus
+# the other modal's input.
+AMA_MODEL_METADATA_PREFIX = 'model'
+AMA_SIMULATION_PREFIX = 'sim'
+AMA_FILE_DESCRIPTION_PREFIX = 'desc'
+
+def _ama_status(bundle):
+    """At-a-glance completeness of the three AMA classes, for the bundle page summary cards.
+
+    Shows how many attributes carry a value out of how many exist, so a user can tell whether a
+    class has been filled in without opening its modal.
+    """
+
+    def summarize(record, model_class):
+        total = len(model_class.ELEMENT_ORDER)
+        filled = len(record.filled_values()) if record else 0
+        return {'filled': filled, 'total': total, 'is_set': filled > 0}
+
+    model_metadata = ModelMetadata.objects.filter(bundle=bundle).first()
+    status = {
+        'model_metadata': summarize(model_metadata, ModelMetadata),
+        'simulation': summarize(
+            SimulationConfiguration.default_for_bundle(bundle), SimulationConfiguration),
+        'file_description': summarize(
+            FileDescription.default_for_bundle(bundle), FileDescription),
+        'model_name': model_metadata.name if model_metadata else '',
+    }
+
+    overridden = set(SimulationConfiguration.objects.filter(
+        bundle=bundle, netcdf_file__isnull=False).values_list('netcdf_file_id', flat=True))
+    overridden.update(FileDescription.objects.filter(
+        bundle=bundle, netcdf_file__isnull=False).values_list('netcdf_file_id', flat=True))
+    status['override_count'] = len(overridden)
+
+    return status
+
+
+def _netcdf_files_with_ama_flags(bundle):
+    """NetCDF files for a bundle, each tagged with whether it overrides the bundle AMA defaults.
+
+    Two queries instead of two per file, so the flag stays cheap on bundles holding many files.
+    """
+    netcdf_files = list(NetCDFFile.objects.filter(bundle=bundle))
+
+    overridden_ids = set(
+        SimulationConfiguration.objects.filter(bundle=bundle, netcdf_file__isnull=False)
+        .values_list('netcdf_file_id', flat=True))
+    overridden_ids.update(
+        FileDescription.objects.filter(bundle=bundle, netcdf_file__isnull=False)
+        .values_list('netcdf_file_id', flat=True))
+
+    for netcdf_file in netcdf_files:
+        netcdf_file.has_ama_override = netcdf_file.pk in overridden_ids
+
+    return netcdf_files
+
+
+def _report_label_refresh(request, errors):
+    """Surface label-regeneration problems without pretending the save failed."""
+    if errors:
+        messages.warning(
+            request,
+            'Saved, but some labels could not be refreshed: {}'.format('; '.join(errors)))
+        return
+    messages.success(request, 'Saved. NetCDF labels have been updated.')
+
+
+@login_required
+def ama_model_metadata(request, pk_bundle):
+    """Save the bundle-wide ama:Model_Metadata values."""
+    bundle = get_object_or_404(Bundle, pk=pk_bundle)
+
+    if request.user != bundle.user:
+        return redirect('main:restricted_access')
+
+    if request.method == 'POST':
+        instance = ModelMetadata.objects.filter(bundle=bundle).first()
+        form = ModelMetadataForm(request.POST, instance=instance,
+                                 prefix=AMA_MODEL_METADATA_PREFIX)
+        if form.is_valid():
+            model_metadata = form.save(commit=False)
+            model_metadata.bundle = bundle
+            model_metadata.save()
+            _report_label_refresh(request, regenerate_netcdf_labels(bundle))
+        else:
+            messages.error(request, 'Model Metadata could not be saved: {}'.format(
+                form.errors.as_text()))
+
+    return HttpResponseRedirect('/elsa/build/' + str(pk_bundle) + '/')
+
+
+def _save_ama_default(request, bundle, form_class, model_class, label, prefix):
+    """Save a bundle-wide default row for one of the two override-capable AMA classes.
+
+    'Apply to all files' is implemented by deleting the per-file override rows rather than by
+    copying the defaults into each of them: with no override present a file resolves to the
+    default, so the resulting labels are identical and later edits to the default keep
+    propagating instead of going stale.
+    """
+    instance = model_class.default_for_bundle(bundle)
+    form = form_class(request.POST, instance=instance, scope='default', prefix=prefix)
+
+    if not form.is_valid():
+        messages.error(request, '{} could not be saved: {}'.format(label, form.errors.as_text()))
+        return
+
+    record = form.save(commit=False)
+    record.bundle = bundle
+    record.netcdf_file = None
+    record.save()
+
+    if form.cleaned_data.get('apply_to_all'):
+        removed = model_class.objects.filter(bundle=bundle, netcdf_file__isnull=False).delete()[0]
+        if removed:
+            messages.info(request, '{} reset on {} file{} that had custom values.'.format(
+                label, removed, '' if removed == 1 else 's'))
+
+    _report_label_refresh(request, regenerate_netcdf_labels(bundle))
+
+
+@login_required
+def ama_simulation_configuration(request, pk_bundle):
+    """Save the bundle-wide ama:Simulation_Configuration default."""
+    bundle = get_object_or_404(Bundle, pk=pk_bundle)
+
+    if request.user != bundle.user:
+        return redirect('main:restricted_access')
+
+    if request.method == 'POST':
+        _save_ama_default(request, bundle, SimulationConfigurationForm, SimulationConfiguration,
+                          'Simulation Configuration', AMA_SIMULATION_PREFIX)
+
+    return HttpResponseRedirect('/elsa/build/' + str(pk_bundle) + '/')
+
+
+@login_required
+def ama_file_description(request, pk_bundle):
+    """Save the bundle-wide ama:File_Description default."""
+    bundle = get_object_or_404(Bundle, pk=pk_bundle)
+
+    if request.user != bundle.user:
+        return redirect('main:restricted_access')
+
+    if request.method == 'POST':
+        _save_ama_default(request, bundle, FileDescriptionForm, FileDescription,
+                          'File Description', AMA_FILE_DESCRIPTION_PREFIX)
+
+    return HttpResponseRedirect('/elsa/build/' + str(pk_bundle) + '/')
+
+
+def _save_ama_override(bundle, netcdf_file, form, model_class):
+    """Store one file's override, or drop it when the user cleared every field.
+
+    Clearing the form has to delete the row rather than save an empty one: an empty override still
+    wins over the bundle default, so keeping it would silently strip values from this file's label
+    and quietly ignore every future edit to the default.
+    """
+    if not form.has_any_value():
+        model_class.objects.filter(netcdf_file=netcdf_file).delete()
+        return
+
+    record = form.save(commit=False)
+    record.bundle = bundle
+    record.netcdf_file = netcdf_file
+    record.save()
+
+
+@login_required
+def netcdf_ama(request, pk_bundle, pk_netcdf):
+    """Per-file AMA editor: Simulation Configuration and File Description for one NetCDF file.
+
+    This is a dedicated page rather than a modal in bundle.html because a bundle can hold many
+    NetCDF files and these two forms carry 24 fields between them - rendering a pair per file
+    would add hundreds of inputs to a page that is already large.
+    """
+    bundle = get_object_or_404(Bundle, pk=pk_bundle)
+
+    if request.user != bundle.user:
+        return redirect('main:restricted_access')
+
+    netcdf_file = get_object_or_404(NetCDFFile, pk=pk_netcdf, bundle=bundle)
+
+    simulation_override = SimulationConfiguration.override_for_file(netcdf_file)
+    description_override = FileDescription.override_for_file(netcdf_file)
+
+    if request.method == 'POST':
+        # The GET branch pre-fills an unedited file's forms from the bundle defaults, so a submit
+        # after changing one field carries the inherited values through rather than blanking them.
+        form_simulation = SimulationConfigurationForm(
+            request.POST, instance=simulation_override, scope='file', prefix=AMA_SIMULATION_PREFIX)
+        form_description = FileDescriptionForm(
+            request.POST, instance=description_override, scope='file', prefix=AMA_FILE_DESCRIPTION_PREFIX)
+
+        if form_simulation.is_valid() and form_description.is_valid():
+            _save_ama_override(bundle, netcdf_file, form_simulation, SimulationConfiguration)
+            _save_ama_override(bundle, netcdf_file, form_description, FileDescription)
+
+            _report_label_refresh(request, regenerate_netcdf_labels(bundle, [netcdf_file]))
+            return HttpResponseRedirect(
+                reverse('build:netcdf_ama', kwargs={'pk_bundle': bundle.pk, 'pk_netcdf': netcdf_file.pk}))
+    else:
+        # An unedited file shows the bundle defaults, so the user can see what it will inherit and
+        # adjust from there instead of starting from an empty form.
+        form_simulation = SimulationConfigurationForm(
+            instance=simulation_override or SimulationConfiguration.default_for_bundle(bundle),
+            scope='file', prefix=AMA_SIMULATION_PREFIX)
+        form_description = FileDescriptionForm(
+            instance=description_override or FileDescription.default_for_bundle(bundle),
+            scope='file', prefix=AMA_FILE_DESCRIPTION_PREFIX)
+
+    context_dict = {
+        'bundle': bundle,
+        'netcdf_file': netcdf_file,
+        'form_simulation': form_simulation,
+        'form_description': form_description,
+        'has_simulation_override': simulation_override is not None,
+        'has_description_override': description_override is not None,
+        'model_metadata': ModelMetadata.objects.filter(bundle=bundle).first(),
+    }
+    return render(request, 'build/bundle/netcdf_ama.html', context_dict)
+
+
+@login_required
+def netcdf_ama_reset(request, pk_bundle, pk_netcdf):
+    """Drop a file's overrides so it falls back to the bundle-wide defaults."""
+    bundle = get_object_or_404(Bundle, pk=pk_bundle)
+
+    if request.user != bundle.user:
+        return redirect('main:restricted_access')
+
+    netcdf_file = get_object_or_404(NetCDFFile, pk=pk_netcdf, bundle=bundle)
+
+    if request.method == 'POST':
+        SimulationConfiguration.objects.filter(netcdf_file=netcdf_file).delete()
+        FileDescription.objects.filter(netcdf_file=netcdf_file).delete()
+        _report_label_refresh(request, regenerate_netcdf_labels(bundle, [netcdf_file]))
+
+    return HttpResponseRedirect(
+        reverse('build:netcdf_ama', kwargs={'pk_bundle': bundle.pk, 'pk_netcdf': netcdf_file.pk}))
 
 
 # This view is for when a user clicks the submit bundle for review button on the bundle detail page (Currently implemented for External Bundles- Rupak).  This view marks the bundle as submitted by adding a timestamp to the submitted_at field in the Bundle model, and then sends an email to ATM with the details of the submission.
@@ -4229,6 +4496,151 @@ def dataframe_to_coord_elements(coord_metadata: pd.DataFrame, NS: dict, allowed_
 def normalize(field):
     return field.lower().replace("_", "")
 
+
+# =========================================================================================
+# AMA user-supplied classes (Model_Metadata, Simulation_Configuration, File_Description)
+# =========================================================================================
+# The harvest above can only produce ama:Variable and ama:Coordinate. Everything else in the AMA
+# area is model provenance the file does not carry, so it comes from the forms backed by the
+# ModelMetadata / SimulationConfiguration / FileDescription models.
+AMA_LDD_URL = 'https://pds.nasa.gov/pds4/ama/v1/PDS4_AMA_1O00_1300.xsd'
+
+
+def _ama_namespaces():
+    """Namespace map used for every AMA label operation, with prefixes registered for output."""
+    NS = {
+        'xs': 'http://www.w3.org/2001/XMLSchema',
+        'pds': 'http://pds.nasa.gov/pds4/pds/v1',
+        'xsi': 'http://www.w3.org/2001/XMLSchema-instance',
+        'ama': 'http://pds.nasa.gov/pds4/ama/v1',
+    }
+    ET.register_namespace('ama', NS['ama'])  # Needed to preserve ama prefix in output
+    ET.register_namespace('pds', NS['pds'])  # Add this alongside ama
+    return NS
+
+
+def _fill_ama_container(container, values, NS, unit_attributes=None):
+    """Replace a container's children with only the non-blank values, in LDD sequence order.
+
+    Every AMA attribute has minLength="1" in the schema, so an element with empty text is invalid.
+    The base template ships these containers pre-populated with empty elements, which means the
+    labels ELSA generated before this existed did not validate. Clearing first fixes that as a
+    side effect: a field the user left blank produces no element at all.
+    """
+    if container is None:
+        return
+
+    for child in list(container):
+        container.remove(child)
+    container.text = None
+
+    unit_attributes = unit_attributes or {}
+    for element_name, text in values.items():
+        sub_elem = ET.SubElement(container, '{{{}}}{}'.format(NS['ama'], element_name))
+        sub_elem.text = text
+        if element_name in unit_attributes:
+            # The compass boundaries declare unit as use="required" in the LDD.
+            sub_elem.set('unit', unit_attributes[element_name])
+
+
+def write_ama_user_classes(root, NS, bundle, netcdf_obj=None):
+    """Write Model_Metadata, Simulation_Configuration and File_Description into a parsed label.
+
+    Simulation_Configuration and File_Description resolve per-file override first, bundle default
+    second. Model_Metadata is bundle-wide by design. Containers themselves are always kept, even
+    when empty, because the LDD declares all three as minOccurs="1" inside ama:AMA.
+    """
+    ama = root.find('.//pds:Context_Area/pds:Discipline_Area/ama:AMA', namespaces=NS)
+    if ama is None:
+        print('write_ama_user_classes: no <ama:AMA> in label, nothing to fill.')
+        return
+
+    model_metadata = ModelMetadata.objects.filter(bundle=bundle).first()
+    _fill_ama_container(
+        ama.find('ama:Model_Metadata', namespaces=NS),
+        model_metadata.filled_values() if model_metadata else {},
+        NS)
+
+    if netcdf_obj is not None:
+        simulation_configuration = SimulationConfiguration.resolve_for_file(netcdf_obj)
+        file_description = FileDescription.resolve_for_file(netcdf_obj)
+    else:
+        simulation_configuration = SimulationConfiguration.default_for_bundle(bundle)
+        file_description = FileDescription.default_for_bundle(bundle)
+
+    _fill_ama_container(
+        ama.find('ama:Simulation_Configuration', namespaces=NS),
+        simulation_configuration.filled_values() if simulation_configuration else {},
+        NS,
+        unit_attributes=SimulationConfiguration.BOUNDARY_UNIT_ATTRIBUTE)
+
+    # File_Description must stay the FIRST child of Model_Output: the LDD sequence is
+    # File_Description, Variable*, Coordinate*, and the harvest appends Variables and Coordinates
+    # after it. Filling it in place (rather than removing and re-adding it) preserves that order.
+    _fill_ama_container(
+        ama.find('ama:Model_Output/ama:File_Description', namespaces=NS),
+        file_description.filled_values() if file_description else {},
+        NS)
+
+
+def regenerate_netcdf_labels(bundle, netcdf_objs=None):
+    """Rebuild the PDS4 label for already-uploaded NetCDF files.
+
+    Labels used to be written only during upload, so AMA values entered afterwards never reached
+    the XML. This rebuilds each label from the pristine template, which keeps the operation
+    idempotent - re-running it cannot double-append to the logical_identifier the way patching an
+    already-written label would.
+
+    Files whose NetCDF is not on disk are skipped rather than failed: an upload that never got
+    processed has no label to refresh, and its label is built by the upload path instead.
+    Returns a list of human-readable error strings; empty means everything succeeded.
+    """
+    NS = _ama_namespaces()
+
+    if netcdf_objs is None:
+        netcdf_objs = NetCDFFile.objects.filter(bundle=bundle)
+    netcdf_objs = list(netcdf_objs)
+    if not netcdf_objs:
+        return []
+
+    try:
+        allowed_variable_fields = get_allowed_variable_fields_from_ldd_url(AMA_LDD_URL, NS)
+        allowed_coord_fields = get_allowed_coord_fields_from_ldd_url(AMA_LDD_URL, NS)
+    except Exception as e:
+        # A PDS outage must not lose the user's form input - the values are already saved, and the
+        # next regeneration will pick them up.
+        print('regenerate_netcdf_labels: could not load LDD: {}'.format(e))
+        return ['Could not reach the PDS data dictionary, so labels were not refreshed: {}'.format(e)]
+
+    os.environ['HDF5_USE_FILE_LOCKING'] = 'FALSE'
+
+    errors = []
+    for nc_obj in netcdf_objs:
+        try:
+            if not nc_obj.file:
+                continue
+            nc_path = os.path.join(bundle.directory(), os.path.basename(nc_obj.file.name))
+            if not os.path.exists(nc_path):
+                print('regenerate_netcdf_labels: skipping {}, not in bundle directory.'.format(nc_obj.title))
+                continue
+
+            _process_single_netcdf(
+                bundle, nc_path, NS, allowed_variable_fields, allowed_coord_fields,
+                netcdf_obj=nc_obj)
+
+            nc_obj.processed = True
+            nc_obj.processing_error = ''
+            nc_obj.save(update_fields=['processed', 'processing_error'])
+        except Exception as e:
+            print('regenerate_netcdf_labels: error on "{}": {}'.format(nc_obj.title, e))
+            nc_obj.processed = False
+            nc_obj.processing_error = str(e)
+            nc_obj.save(update_fields=['processed', 'processing_error'])
+            errors.append('{}: {}'.format(nc_obj.title, e))
+
+    return errors
+
+
 def variable_coord_to_product(bundle, netcdf_objs):
     """Extract metadata from each uploaded NetCDF file and generate its PDS4 XML label.
 
@@ -4240,22 +4652,14 @@ def variable_coord_to_product(bundle, netcdf_objs):
     # =========================================================================================
     # Set Up XML Namespace
     # =========================================================================================
-    NS = {
-        'xs' : 'http://www.w3.org/2001/XMLSchema',
-        'pds': 'http://pds.nasa.gov/pds4/pds/v1',
-        'xsi': 'http://www.w3.org/2001/XMLSchema-instance',
-        'ama': 'http://pds.nasa.gov/pds4/ama/v1'
-        }
-    ET.register_namespace('ama', NS['ama'])  # Needed to preserve ama prefix in output
-    ET.register_namespace('pds', NS['pds'])  # Add this alongside ama
+    NS = _ama_namespaces()
 
     # =========================================================================================
     # Load Online Local Data Dictionary & Extract Permitted Variable/Coordinate Fields
     # (cached for an hour; see _fetch_ldd_content)
     # =========================================================================================
-    ldd_url = 'https://pds.nasa.gov/pds4/ama/v1/PDS4_AMA_1O00_1300.xsd'
-    allowed_variable_fields = get_allowed_variable_fields_from_ldd_url(ldd_url, NS)
-    allowed_coord_fields = get_allowed_coord_fields_from_ldd_url(ldd_url, NS)
+    allowed_variable_fields = get_allowed_variable_fields_from_ldd_url(AMA_LDD_URL, NS)
+    allowed_coord_fields = get_allowed_coord_fields_from_ldd_url(AMA_LDD_URL, NS)
 
     os.environ['HDF5_USE_FILE_LOCKING'] = 'FALSE'
 
@@ -4270,7 +4674,9 @@ def variable_coord_to_product(bundle, netcdf_objs):
             nc_path = os.path.join(bundle.directory(), os.path.basename(nc_obj.file.path))
             print(nc_path)
 
-            _process_single_netcdf(bundle, nc_path, NS, allowed_variable_fields, allowed_coord_fields)
+            _process_single_netcdf(
+                bundle, nc_path, NS, allowed_variable_fields, allowed_coord_fields,
+                netcdf_obj=nc_obj)
 
             nc_obj.processed = True
             nc_obj.processing_error = ''
@@ -4285,8 +4691,14 @@ def variable_coord_to_product(bundle, netcdf_objs):
     return errors
 
 
-def _process_single_netcdf(bundle, nc_path, NS, allowed_variable_fields, allowed_coord_fields):
-    """Generate the PDS4 XML label for a single NetCDF file. Raises on failure."""
+def _process_single_netcdf(bundle, nc_path, NS, allowed_variable_fields, allowed_coord_fields,
+                           netcdf_obj=None):
+    """Generate the PDS4 XML label for a single NetCDF file. Raises on failure.
+
+    `netcdf_obj` is the NetCDFFile record for this path, when known. It is what lets the AMA
+    Simulation_Configuration and File_Description resolve a per-file override instead of the
+    bundle default, so regeneration must always pass it.
+    """
     # Define output file name. Files may be uploaded WITHOUT a .nc extension
     # (validation is by magic bytes, not extension), so strip a trailing .nc only
     # if present and always append .xml. This avoids producing extensionless labels
@@ -4414,6 +4826,13 @@ def _process_single_netcdf(bundle, nc_path, NS, allowed_variable_fields, allowed
 
     for elem in coord_elements:
         model_output.append(elem)
+
+    # =====================================================================================
+    # 5b. Fill the AMA classes the NetCDF cannot supply (user-entered via the AMA forms)
+    # =====================================================================================
+    # Runs after the Variable/Coordinate append so File_Description keeps its place as the first
+    # child of Model_Output, matching the LDD sequence.
+    write_ama_user_classes(root, NS, bundle, netcdf_obj=netcdf_obj)
 
     # =====================================================================================
     # 6. Fill <File_Area_External> with the Actual Uploaded File's Info

@@ -122,6 +122,13 @@ urlpatterns = [
 
     #delete net cdf file
     re_path(r'^(?P<pk_bundle>\d+)/netcdf/bulk_delete/$', views.bulk_delete_netcdf, name='bulk_delete_netcdf'),
+
+    # AMA discipline metadata (the parts of the AMA area the NetCDF harvest cannot supply)
+    re_path(r'^(?P<pk_bundle>\d+)/ama/model_metadata/$', views.ama_model_metadata, name='ama_model_metadata'),
+    re_path(r'^(?P<pk_bundle>\d+)/ama/simulation_configuration/$', views.ama_simulation_configuration, name='ama_simulation_configuration'),
+    re_path(r'^(?P<pk_bundle>\d+)/ama/file_description/$', views.ama_file_description, name='ama_file_description'),
+    re_path(r'^(?P<pk_bundle>\d+)/netcdf/(?P<pk_netcdf>\d+)/ama/$', views.netcdf_ama, name='netcdf_ama'),
+    re_path(r'^(?P<pk_bundle>\d+)/netcdf/(?P<pk_netcdf>\d+)/ama/reset/$', views.netcdf_ama_reset, name='netcdf_ama_reset'),
     
     # Submit Bundle for Review
     re_path(r'^(?P<pk_bundle>\d+)/submit/$', views.submit_bundle_internal, name='submit_bundle_internal'),
