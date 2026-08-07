@@ -1493,3 +1493,42 @@ class SignupCaptchaTests(CaptchaPassing, TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertFalse(User.objects.filter(username='bot').exists())
+
+
+class ExpectedOriginTests(TestCase):
+    """
+    The origin handed to the verifier has to match what the browser signed.
+    Getting this wrong fails every ceremony and looks exactly like a forged
+    credential, which is how it reached production unnoticed.
+    """
+
+    def _origin(self, secure=False, **settings_kwargs):
+        from django.test import RequestFactory, override_settings
+        from friends import passkeys
+
+        request = RequestFactory(headers={'host': 'atmos.nmsu.edu'}).post('/')
+        if secure:
+            request.META['wsgi.url_scheme'] = 'https'
+
+        with override_settings(ALLOWED_HOSTS=['atmos.nmsu.edu'], **settings_kwargs):
+            return passkeys.expected_origin(request)
+
+    def test_tls_terminated_upstream_still_yields_https(self):
+        # Apache forwards over plain http, so request.scheme says http even
+        # though the browser used https.  Pinning it is what fixes production.
+        self.assertEqual(self._origin(secure=False, DEBUG=False),
+                         'https://atmos.nmsu.edu')
+
+    def test_debug_keeps_the_real_scheme_so_localhost_works(self):
+        self.assertEqual(self._origin(secure=False, DEBUG=True),
+                         'http://atmos.nmsu.edu')
+
+    def test_an_explicit_setting_wins(self):
+        self.assertEqual(
+            self._origin(secure=False, DEBUG=False,
+                         WEBAUTHN_ORIGIN='https://elsa.example.org'),
+            'https://elsa.example.org')
+
+    def test_a_genuinely_secure_request_is_unchanged(self):
+        self.assertEqual(self._origin(secure=True, DEBUG=False),
+                         'https://atmos.nmsu.edu')

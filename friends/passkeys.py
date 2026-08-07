@@ -9,6 +9,7 @@ the session between the halves and must be single use.
 from __future__ import unicode_literals
 
 import json
+import logging
 
 from django.conf import settings
 
@@ -29,6 +30,8 @@ from webauthn.helpers.structs import (
 
 from .models import Passkey
 
+
+logger = logging.getLogger(__name__)
 
 RP_NAME = 'ELSA: Educational Labeling System @Atmospheres'
 
@@ -51,11 +54,24 @@ def relying_party_id(request):
 
 
 def expected_origin(request):
-    """Scheme and host exactly as the browser saw it, port included."""
+    """
+    Scheme and host exactly as the browser saw it, port included.
+
+    request.scheme reports http whenever TLS terminates upstream and
+    SECURE_PROXY_SSL_HEADER is unset, which breaks every verification in a way
+    that looks identical to a forged credential: the browser signs https into
+    the client data and the server sits there expecting http.
+
+    A passkey cannot work over plain http anyway, localhost aside, so outside
+    DEBUG the scheme is pinned rather than trusted.  WEBAUTHN_ORIGIN still wins
+    if a deployment needs something else.
+    """
     configured = getattr(settings, 'WEBAUTHN_ORIGIN', None)
     if configured:
         return configured
-    return '{0}://{1}'.format(request.scheme, request.get_host())
+
+    scheme = 'https' if not settings.DEBUG else request.scheme
+    return '{0}://{1}'.format(scheme, request.get_host())
 
 
 def stash_challenge(request, key, challenge):
@@ -118,7 +134,12 @@ def verify_registration(request, user, credential, label):
             expected_origin=expected_origin(request),
         )
     except Exception:
-        # The reason is withheld deliberately: it would help an attacker.
+        # The reason is withheld from the user deliberately, but it has to go
+        # somewhere or a misconfigured origin looks identical to a forged
+        # credential and neither can be diagnosed.
+        logger.warning('passkey registration rejected (rp_id=%s origin=%s)',
+                       relying_party_id(request), expected_origin(request),
+                       exc_info=True)
         return None, 'That passkey could not be verified. Please try again.'
 
     from webauthn.helpers import bytes_to_base64url
@@ -196,6 +217,9 @@ def verify_authentication(request, credential, user=None):
             require_user_verification=True,
         )
     except Exception:
+        logger.warning('passkey assertion rejected (rp_id=%s origin=%s credential=%s)',
+                       relying_party_id(request), expected_origin(request),
+                       raw_id[:16], exc_info=True)
         return None, 'That passkey could not be verified. Please try again.'
 
     # A counter that fails to advance suggests a cloned authenticator.  Plenty
