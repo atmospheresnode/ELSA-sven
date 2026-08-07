@@ -1,0 +1,28 @@
+{% comment %}
+Renders an AMA form in the labelled sections defined by its FIELD_GROUPS.
+
+Used by both the bundle-page modals and the per-file AMA page so the two cannot drift apart.
+Expects `form` in context. apply_to_all is never rendered here - it is a scope control, not AMA
+content, so the modal places it separately near the save button.
+{% endcomment %}
+{% for group in form.groups %}
+   <div class="{% if not forloop.first %}mt-4{% endif %}">
+      {% if group.title %}
+         <div class="d-flex align-items-center mb-2">
+            <span class="text-uppercase text-muted fw-semibold" style="font-size: .7rem; letter-spacing: .06em;">{{ group.title }}</span>
+            <span class="flex-grow-1 border-bottom ms-2"></span>
+         </div>
+      {% endif %}
+      <div class="row g-3">
+         {% for field in group.fields %}
+            <div class="{% if field.name == 'description' %}col-12{% else %}col-12 col-sm-6 col-lg-4{% endif %}">
+               <label for="{{ field.id_for_label }}" class="form-label small text-muted mb-1">{{ field.label }}</label>
+               {{ field }}
+               {% if field.errors %}
+                  <div class="text-danger small mt-1">{{ field.errors|striptags }}</div>
+               {% endif %}
+            </div>
+         {% endfor %}
+      </div>
+   </div>
+{% endfor %}
