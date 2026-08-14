@@ -580,6 +580,11 @@ class DataForm(forms.ModelForm):
     name = forms.CharField(required=True)
     class Meta(object):
         model = Data
+        # exclude = ('bundle',)
+        # fields = ['name', 'processing_level', 'data_type', 'header', 'collection']
+        # widgets = {
+        #     'collection': forms.HiddenInput(),  # This makes the field hidden
+        # }
         exclude = ('bundle','collection')
         #exclude = ('bundle','data_enum',)
 
@@ -1890,6 +1895,7 @@ class DictionaryForm(forms.Form):
 
 # To handle multiple NetCDF files
 class MultipleNetCDFUploadForm(forms.Form):
+    collection = forms.CharField(widget=forms.HiddenInput)
     netcdf_files = forms.FileField(
         widget=forms.ClearableFileInput(attrs={
             'multiple': True,
@@ -1898,6 +1904,12 @@ class MultipleNetCDFUploadForm(forms.Form):
         label='Select NetCDF files',
         required=True
     )
+
+    # class Meta:
+    #     widgets = {'collection': forms.HiddenInput()}
+
+    # def __init__(self, *args, **kwargs):
+    #     super(MultipleNetCDFUploadForm, self).__init__(*args, **kwargs)
 
     def clean_netcdf_files(self):
         files = self.files.getlist('netcdf_files')

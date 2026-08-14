@@ -5368,6 +5368,7 @@ class NetCDFFile(models.Model):
     # extension, so no FileExtensionValidator here — uploads may be extensionless.
     file = models.FileField(upload_to='')
     bundle = models.ForeignKey(Bundle, on_delete=models.CASCADE, related_name='netcdf_files', null=True, blank=True)
+    # collection = models.ForeignKey(AdditionalCollections, on_delete=models.CASCADE, default='', null=True, blank=True)
     # Tracks whether metadata extraction / XML label generation succeeded for this file.
     processed = models.BooleanField(default=False)
     processing_error = models.TextField(blank=True, default='')
