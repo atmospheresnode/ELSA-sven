@@ -7,6 +7,8 @@ from builtins import str
 from builtins import object
 from enum import unique
 from queue import Empty
+from enum import unique
+from queue import Empty
 from django.db import models
 from django.conf import settings
 from django.contrib.auth.models import User

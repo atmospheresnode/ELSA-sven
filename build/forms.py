@@ -576,6 +576,7 @@ class DataEnum(forms.ModelForm):
     Data
 """
 
+
 class DataForm(forms.ModelForm):
     name = forms.CharField(required=True)
     class Meta(object):
