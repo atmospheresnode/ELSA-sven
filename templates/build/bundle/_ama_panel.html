@@ -1,0 +1,118 @@
+{% comment %}
+The AMA editing panel, used in three places:
+  - inline under the Files card on the bundle page (fetched over AJAX)
+  - the standalone per-file page
+  - the standalone collection-defaults page
+
+It covers both scopes. `is_default_scope` means these are the collection's defaults, inherited by
+every file in the collection that has no values of its own, including files uploaded later.
+Otherwise it is one file's overrides.
+
+All three sections render the same way and each carries its own apply-to-collection checkbox, so a
+user can push Model Metadata out to the whole collection while leaving per-file File Descriptions
+untouched.
+
+The data-* attributes on the root are the contract with the inline editor's JS: it reads them to
+refresh the selected row and to know whether a save succeeded.
+{% endcomment %}
+<div id="amaPanelInner"
+     data-scope="{% if is_default_scope %}default{% else %}file{% endif %}"
+     data-netcdf-id="{% if netcdf_file %}{{ netcdf_file.id }}{% endif %}"
+     data-collection-id="{{ collection.id }}"
+     data-has-override="{% if has_any_override %}true{% else %}false{% endif %}"
+     data-saved="{% if panel_saved %}true{% else %}false{% endif %}">
+
+   <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+      <div>
+         <h6 class="mb-1">
+            {% if is_default_scope %}
+               <i class="bi bi-layers me-1"></i>Collection Defaults
+            {% else %}
+               <i class="bi bi-file-earmark-code me-1"></i>{{ netcdf_file.title }}
+            {% endif %}
+         </h6>
+         <div class="text-muted small">
+            {% if is_default_scope %}
+               Applied to every file in <strong>{{ collection.collection_name }}</strong>, including
+               files uploaded later, unless a file has values of its own.
+            {% elif has_any_override %}
+               <span class="badge bg-info text-dark">Custom values</span>
+               In <strong>{{ collection.collection_name }}</strong>. This file no longer follows all
+               of the collection defaults.
+            {% else %}
+               <span class="badge bg-light text-dark border">Following collection defaults</span>
+               In <strong>{{ collection.collection_name }}</strong>. Saving an edit here makes only
+               this file's values independent.
+            {% endif %}
+         </div>
+      </div>
+      {% if not is_default_scope and has_any_override %}
+         {% comment %}A real form so revert still works without JS on the standalone page; the inline editor
+            intercepts the submit. It is a sibling of the main panel form, never nested inside it.{% endcomment %}
+         <form method="post" id="amaRevertForm"
+            action="{% url 'build:netcdf_ama_reset' pk_bundle=bundle.id pk_netcdf=netcdf_file.id %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm btn-outline-danger btn-keep-bg">
+               <i class="bi bi-arrow-counterclockwise me-1"></i>Follow Collection Defaults
+            </button>
+         </form>
+      {% endif %}
+   </div>
+
+   <form method="post" id="amaPanelForm"
+      action="{% if is_default_scope %}{% url 'build:ama_collection_defaults' pk_bundle=bundle.id pk_collection=collection.id %}{% else %}{% url 'build:netcdf_ama' pk_bundle=bundle.id pk_netcdf=netcdf_file.id %}{% endif %}">
+      {% csrf_token %}
+
+      <div class="accordion" id="amaSections">
+         {% for section in sections %}
+            <div class="accordion-item">
+               <h2 class="accordion-header" id="amaHeading{{ section.prefix }}">
+                  <button class="accordion-button {% if not forloop.first %}collapsed{% endif %}" type="button"
+                     data-bs-toggle="collapse" data-bs-target="#amaSection{{ section.prefix }}"
+                     aria-expanded="{% if forloop.first %}true{% else %}false{% endif %}"
+                     aria-controls="amaSection{{ section.prefix }}">
+                     <span class="fw-bold small">{{ section.label }}</span>
+                     {% if not is_default_scope %}
+                        {% if section.has_override %}
+                           <span class="badge bg-info text-dark ms-2">Custom</span>
+                        {% else %}
+                           <span class="badge bg-light text-dark border ms-2">Inherited</span>
+                        {% endif %}
+                     {% endif %}
+                  </button>
+               </h2>
+               <div id="amaSection{{ section.prefix }}"
+                  class="accordion-collapse collapse {% if forloop.first %}show{% endif %}"
+                  aria-labelledby="amaHeading{{ section.prefix }}" data-bs-parent="#amaSections">
+                  <div class="accordion-body">
+                     {% if section.form.non_field_errors %}
+                        <div class="alert alert-danger py-2 small">{{ section.form.non_field_errors }}</div>
+                     {% endif %}
+
+                     {% include "build/bundle/_ama_form_fields.html" with form=section.form %}
+
+                     <div class="ama-scope-note p-3 mt-4">
+                        <div class="form-check mb-0">
+                           {{ section.form.apply_to_collection }}
+                           <label class="form-check-label small fw-semibold" for="{{ section.form.apply_to_collection.id_for_label }}">
+                              {{ section.form.apply_to_collection.label }}
+                           </label>
+                           <div class="form-text mb-0">{{ section.form.apply_to_collection.help_text }}</div>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+            </div>
+         {% endfor %}
+      </div>
+
+      <div class="d-flex justify-content-end align-items-center gap-2 mt-3">
+         <span class="text-muted small me-auto">
+            <i class="bi bi-info-circle me-1"></i>Blank fields are left out of the label.
+         </span>
+         <button type="submit" class="btn btn-sm btn-keep-bg text-white" style="background-color: teal;">
+            <i class="bi bi-save me-1"></i>{% if is_default_scope %}Save Collection Defaults{% else %}Save for This File{% endif %}
+         </button>
+      </div>
+   </form>
+</div>

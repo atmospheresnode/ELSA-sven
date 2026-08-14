@@ -1,15 +1,28 @@
 {% extends 'base-derk.html' %}
 {% load static %}
 
-{% block title_block %}AMA Metadata for {{ netcdf_file.title }}{% endblock %}
+{% comment %}
+Standalone AMA editor. The bundle page normally shows this same panel inline, fetched over AJAX;
+this page is what a direct link, a bookmark, or a browser without JS lands on. Both render
+_ama_panel.html, so they cannot drift apart.
+{% endcomment %}
+
+{% block title_block %}AMA Metadata{% if netcdf_file %} for {{ netcdf_file.title }}{% endif %}{% endblock %}
 
 {% block body_block %}
 
+<style>
+   .ama-scope-note {
+      background-color: rgba(13, 202, 240, .07);
+      border: 1px solid rgba(13, 202, 240, .35);
+      border-radius: .5rem;
+   }
+</style>
+
 <div class="container-fluid">
     <div class="row justify-content-center py-4">
-        <div class="col-12 col-lg-10 col-xl-9">
+        <div class="col-12 col-xxl-11">
 
-            <!-- Messages -->
             {% if messages %}
                 {% for message in messages %}
                     <div class="alert {% if message.tags == 'error' %}alert-danger{% elif message.tags == 'warning' %}alert-warning{% elif message.tags == 'info' %}alert-info{% else %}alert-success{% endif %} alert-dismissible fade show">
@@ -19,12 +32,12 @@
                 {% endfor %}
             {% endif %}
 
-            <!-- Header -->
             <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
                 <div>
                     <h4 class="mb-1">AMA Metadata</h4>
                     <div class="text-muted small">
-                        <i class="bi bi-file-earmark-code me-1"></i>{{ netcdf_file.title }}
+                        Variables and Coordinates are read from the NetCDF files automatically.
+                        These fields cannot be, so they are collected here.
                     </div>
                 </div>
                 <a href="{% url 'build:bundle' pk_bundle=bundle.id %}" class="btn btn-sm btn-outline-secondary">
@@ -32,118 +45,12 @@
                 </a>
             </div>
 
-            <!-- What is harvested vs. what is asked -->
-            <div class="alert alert-light border small">
-                <i class="bi bi-info-circle me-1"></i>
-                The Variables and Coordinates in this file's label are read automatically from the NetCDF
-                file. The fields below cannot be read from the file, so they are collected here.
-                Anything left blank is omitted from the label. Model Metadata applies to the whole bundle
-                and is edited on the bundle page.
-            </div>
-
-            <!-- Model Metadata (read-only reminder of what this file will inherit) -->
-            <div class="card mb-3">
+            <div class="card mb-4">
                 <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <h6 class="card-title mb-0">Model Metadata <span class="badge bg-secondary ms-1">Bundle-wide</span></h6>
-                        <a href="{% url 'build:bundle' pk_bundle=bundle.id %}" class="btn btn-sm btn-outline-secondary">Edit on Bundle Page</a>
-                    </div>
-                    {% if model_metadata %}
-                        <div class="row small text-muted">
-                            <div class="col-md-3"><strong>Type:</strong> {{ model_metadata.type|default:"not set" }}</div>
-                            <div class="col-md-3"><strong>Name:</strong> {{ model_metadata.name|default:"not set" }}</div>
-                            <div class="col-md-3"><strong>Version:</strong> {{ model_metadata.version|default:"not set" }}</div>
-                            <div class="col-md-3"><strong>Institution:</strong> {{ model_metadata.institution|default:"not set" }}</div>
-                        </div>
-                    {% else %}
-                        <div class="small text-muted">Not filled in yet, so no Model Metadata is written to this label.</div>
-                    {% endif %}
+                    {% include "build/bundle/_ama_panel.html" %}
                 </div>
             </div>
 
-            <form method="post" action="{% url 'build:netcdf_ama' pk_bundle=bundle.id pk_netcdf=netcdf_file.id %}">
-                {% csrf_token %}
-
-                <!-- Simulation Configuration -->
-                <div class="card mb-3">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="card-title mb-0">Simulation Configuration</h6>
-                            {% if has_simulation_override %}
-                                <span class="badge bg-info text-dark">Custom for this file</span>
-                            {% else %}
-                                <span class="badge bg-light text-dark border">Using bundle default</span>
-                            {% endif %}
-                        </div>
-
-                        {% if form_simulation.non_field_errors %}
-                            <div class="alert alert-danger py-2 small">{{ form_simulation.non_field_errors }}</div>
-                        {% endif %}
-
-                        {% include "build/bundle/_ama_form_fields.html" with form=form_simulation %}
-                    </div>
-                </div>
-
-                <!-- File Description -->
-                <div class="card mb-3">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="card-title mb-0">File Description</h6>
-                            {% if has_description_override %}
-                                <span class="badge bg-info text-dark">Custom for this file</span>
-                            {% else %}
-                                <span class="badge bg-light text-dark border">Using bundle default</span>
-                            {% endif %}
-                        </div>
-
-                        {% if form_description.non_field_errors %}
-                            <div class="alert alert-danger py-2 small">{{ form_description.non_field_errors }}</div>
-                        {% endif %}
-
-                        {% include "build/bundle/_ama_form_fields.html" with form=form_description %}
-                    </div>
-                </div>
-
-                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
-                    {% if has_simulation_override or has_description_override %}
-                        <button type="button" class="btn btn-sm btn-outline-danger btn-keep-bg"
-                            data-bs-toggle="modal" data-bs-target="#resetAMAModal">
-                            <i class="bi bi-arrow-counterclockwise me-1"></i>Revert to Bundle Defaults
-                        </button>
-                    {% else %}
-                        <span></span>
-                    {% endif %}
-                    <button type="submit" class="btn btn-keep-bg text-white" style="background-color: teal;">
-                        <i class="bi bi-save me-1"></i>Save for This File
-                    </button>
-                </div>
-            </form>
-
-        </div>
-    </div>
-</div>
-
-<!-- Revert confirmation. Kept outside the card structure: modals nested inside cards/collapsibles
-     render with stray whitespace in this project. -->
-<div class="modal fade" id="resetAMAModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Revert to Bundle Defaults?</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                This discards the Simulation Configuration and File Description values saved for
-                <strong>{{ netcdf_file.title }}</strong>. The file will use the bundle-wide defaults again,
-                and its label will be rebuilt.
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <form method="post" action="{% url 'build:netcdf_ama_reset' pk_bundle=bundle.id pk_netcdf=netcdf_file.id %}">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-danger btn-keep-bg">Revert</button>
-                </form>
-            </div>
         </div>
     </div>
 </div>
