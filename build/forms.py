@@ -1965,8 +1965,105 @@ class AMAFormGroupsMixin(object):
                 yield {'title': title, 'fields': bound_fields}
 
 
-class ModelMetadataForm(AMAFormGroupsMixin, forms.ModelForm):
-    """ama:Model_Metadata. Bundle-wide - there is no per-file variant by design."""
+class AMAScopedFormMixin(AMAFormGroupsMixin):
+    """Shared behaviour for all three AMA classes.
+
+    `scope` is 'collection' for the collection-wide default row and 'file' for one file's override.
+    `apply_to_collection` is offered in both scopes but means slightly different things: on the
+    default form it clears the per-file overrides so everything follows the default, and on a file
+    form it promotes that file's values to the collection default and clears the other overrides.
+    Each of the three forms carries its own checkbox, so a user can push Model Metadata out to the
+    whole collection while leaving per-file File Descriptions alone.
+    """
+
+    # Declared on each concrete form rather than here: Django's form metaclass only collects
+    # Field attributes from the class being defined and from bases that already have
+    # `declared_fields`, which a plain mixin does not.
+    CONTROL_FIELDS = ('apply_to_collection',)
+
+    def __init__(self, *args, **kwargs):
+        self.scope = kwargs.pop('scope', 'collection')
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.required = False
+
+        checkbox = self.fields.get('apply_to_collection')
+        if checkbox is not None:
+            if self.scope == 'file':
+                checkbox.label = 'Apply these values to every file in this collection'
+                checkbox.help_text = (
+                    'Makes this the collection default and clears the other files\' custom '
+                    '{} values.'.format(self.SECTION_LABEL))
+            else:
+                checkbox.label = 'Reset every file in this collection to these values'
+                checkbox.help_text = (
+                    'Clears any per-file {} values so all files follow this '
+                    'default.'.format(self.SECTION_LABEL))
+
+    def clean(self):
+        """Enforce the two text rules the PDS4 base types impose, which Django cannot see.
+
+        Both ASCII_Short_String_Collapsed and ASCII_Text_Collapsed derive from xs:token and carry
+        the pattern \\p{IsBasicLatin}*:
+
+        * xs:token collapses whitespace, so a value stored with newlines or runs of spaces would
+          be silently rewritten when the archive is read back. Collapsing here keeps what is
+          stored identical to what is archived.
+        * Basic Latin means ASCII only. An institution such as "Universite de Paris" is fine but
+          "Université" is not, and the resulting label fails PDS4 validation. Users would
+          otherwise only discover that at submission time, so it is rejected at entry with an
+          explanation instead.
+        """
+        cleaned_data = super().clean()
+
+        for name, value in list(cleaned_data.items()):
+            if name in self.CONTROL_FIELDS or not isinstance(value, str):
+                continue
+
+            collapsed = ' '.join(value.split())
+            cleaned_data[name] = collapsed
+            if not collapsed:
+                continue
+
+            offenders = sorted({character for character in collapsed if ord(character) > 127})
+            if offenders:
+                self.add_error(name, forms.ValidationError(
+                    'The PDS4 dictionary allows only basic Latin (ASCII) characters here. '
+                    'Please replace: {}'.format(' '.join(offenders))))
+
+        return cleaned_data
+
+    def has_any_value(self):
+        """True when the user actually supplied something worth storing."""
+        if not self.is_valid():
+            return False
+        for name, value in self.cleaned_data.items():
+            if name in self.CONTROL_FIELDS:
+                continue
+            if value is None:
+                continue
+            if isinstance(value, str) and value.strip() == '':
+                continue
+            return True
+        return False
+
+    def wants_apply_to_collection(self):
+        return bool(self.is_valid() and self.cleaned_data.get('apply_to_collection'))
+
+
+class ModelMetadataForm(AMAScopedFormMixin, forms.ModelForm):
+    """ama:Model_Metadata.
+
+    Usually identical for every file in a collection, so it is normally filled in once and pushed
+    out with the apply-to-collection checkbox. The per-file override exists so a single mislabelled
+    file can be corrected without disturbing the rest.
+    """
+
+    SECTION_LABEL = 'Model Metadata'
+
+    apply_to_collection = forms.BooleanField(
+        required=False,
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}))
 
     FIELD_GROUPS = (
         ('', ('type', 'name', 'version', 'institution')),
@@ -1974,7 +2071,7 @@ class ModelMetadataForm(AMAFormGroupsMixin, forms.ModelForm):
 
     class Meta(object):
         model = ModelMetadata
-        exclude = ('bundle',)
+        exclude = ('bundle', 'collection', 'netcdf_file')
         labels = {
             'type': 'Type of Model',
             'name': 'Model Name',
@@ -1987,41 +2084,6 @@ class ModelMetadataForm(AMAFormGroupsMixin, forms.ModelForm):
             'version': _ama_text_widget('e.g. 3.2.1'),
             'institution': _ama_text_widget('e.g. NASA Ames Research Center'),
         }
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        for field in self.fields.values():
-            field.required = False
-
-
-class AMAScopedFormMixin(AMAFormGroupsMixin):
-    """Shared behaviour for the two classes that have a bundle default and per-file overrides.
-
-    `scope` is 'default' for the bundle-wide row and 'file' for a per-file override. The
-    apply_to_all checkbox only makes sense on the default form, so it is removed on file forms.
-    """
-
-    def __init__(self, *args, **kwargs):
-        self.scope = kwargs.pop('scope', 'default')
-        super().__init__(*args, **kwargs)
-        for field in self.fields.values():
-            field.required = False
-        if self.scope != 'default':
-            self.fields.pop('apply_to_all', None)
-
-    def has_any_value(self):
-        """True when the user actually supplied something worth storing."""
-        if not self.is_valid():
-            return False
-        for name, value in self.cleaned_data.items():
-            if name == 'apply_to_all':
-                continue
-            if value is None:
-                continue
-            if isinstance(value, str) and value.strip() == '':
-                continue
-            return True
-        return False
 
 
 class SimulationConfigurationForm(AMAScopedFormMixin, forms.ModelForm):
@@ -2038,16 +2100,15 @@ class SimulationConfigurationForm(AMAScopedFormMixin, forms.ModelForm):
         ('Description', ('description',)),
     )
 
-    # Only rendered on the bundle-default form; overwrites every per-file override when checked.
-    apply_to_all = forms.BooleanField(
+    SECTION_LABEL = 'Simulation Configuration'
+
+    apply_to_collection = forms.BooleanField(
         required=False,
-        label='Apply these values to every file in this bundle',
-        help_text='Overwrites any per-file Simulation Configuration edits.',
         widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}))
 
     class Meta(object):
         model = SimulationConfiguration
-        exclude = ('bundle', 'netcdf_file')
+        exclude = ('bundle', 'collection', 'netcdf_file')
         labels = {
             'horizontal_grid_type': 'Horizontal Grid Type',
             'model_resolution': 'Model Resolution',
@@ -2099,15 +2160,15 @@ class FileDescriptionForm(AMAScopedFormMixin, forms.ModelForm):
         ('Processing', ('postprocessing_methods',)),
     )
 
-    apply_to_all = forms.BooleanField(
+    SECTION_LABEL = 'File Description'
+
+    apply_to_collection = forms.BooleanField(
         required=False,
-        label='Apply these values to every file in this bundle',
-        help_text='Overwrites any per-file File Description edits.',
         widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}))
 
     class Meta(object):
         model = FileDescription
-        exclude = ('bundle', 'netcdf_file')
+        exclude = ('bundle', 'collection', 'netcdf_file')
         labels = {
             'top_level': 'Top Level',
             'bottom_level': 'Bottom Level',

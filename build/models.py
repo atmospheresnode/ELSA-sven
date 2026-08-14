@@ -5370,13 +5370,29 @@ class NetCDFFile(models.Model):
     # extension, so no FileExtensionValidator here — uploads may be extensionless.
     file = models.FileField(upload_to='')
     bundle = models.ForeignKey(Bundle, on_delete=models.CASCADE, related_name='netcdf_files', null=True, blank=True)
-    # collection = models.ForeignKey(AdditionalCollections, on_delete=models.CASCADE, default='', null=True, blank=True)
+    # Which collection this file was uploaded into. The upload already writes the file into the
+    # collection's directory, but the directory alone is not enough: label regeneration and the
+    # AMA forms both need to know a file's collection long after the upload request is over.
+    # Nullable only for rows that predate this field; new uploads always set it.
+    collection = models.ForeignKey(
+        AdditionalCollections, on_delete=models.CASCADE, related_name='netcdf_files',
+        null=True, blank=True)
     # Tracks whether metadata extraction / XML label generation succeeded for this file.
     processed = models.BooleanField(default=False)
     processing_error = models.TextField(blank=True, default='')
 
     def __str__(self):
         return self.title
+
+    def directory(self):
+        """Where this file and its XML label live on disk.
+
+        Falls back to the bundle root for rows uploaded before files were filed by collection, so
+        that legacy labels remain findable.
+        """
+        if self.collection_id is not None:
+            return self.collection.directory()
+        return self.bundle.directory()
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -5386,13 +5402,18 @@ class NetCDFFile(models.Model):
 # ama:Model_Output automatically. The remaining AMA content cannot be harvested from the file, so it
 # is collected from the user through the models below:
 #
-#   ModelMetadata           -> ama:Model_Metadata            (bundle-wide, one per bundle)
-#   SimulationConfiguration -> ama:Simulation_Configuration  (bundle default + optional per-file override)
-#   FileDescription         -> ama:Model_Output/ama:File_Description (bundle default + per-file override)
+#   ModelMetadata           -> ama:Model_Metadata
+#   SimulationConfiguration -> ama:Simulation_Configuration
+#   FileDescription         -> ama:Model_Output/ama:File_Description
 #
-# Scoping note: the LDD/science intent is "one setting for the whole collection", but NetCDFFile has
-# no collection relation (it points straight at Bundle), so the default rows are bundle-scoped. If a
-# collection relation is added later, the `bundle` FK below is the field to re-point.
+# All three share one shape: a per-collection default that every file in that collection inherits,
+# including files uploaded later, plus an optional per-file override. In practice Model Metadata is
+# uniform across a collection and File Description differs per file, but the mechanism is the same
+# for all three so there is one code path rather than three.
+#
+# The `bundle` FK is kept alongside `collection` as a denormalised convenience for the bundle-wide
+# queries the page does (counting overrides, regenerating every label). `collection` is the scope
+# that matters; `bundle` must always agree with `collection.bundle`.
 #
 # Field types follow PDS4_AMA_1O00_1300.xsd:
 #   - every string attribute is ASCII_Short_String_Collapsed with minLength=1, maxLength=255
@@ -5403,37 +5424,67 @@ class NetCDFFile(models.Model):
 # elements: an empty <ama:type/> is schema-INVALID, not merely uninformative.
 
 
-class AMADefaultOverrideMixin(models.Model):
-    """Shared resolution logic for AMA classes that have a bundle default and per-file overrides.
+class AMACollectionScopedMixin(models.Model):
+    """Shared resolution for the AMA classes: a collection default plus per-file overrides.
 
-    A row with `netcdf_file` NULL is the bundle-wide default; a row with `netcdf_file` set is that
-    file's override. MariaDB treats NULLs as distinct in a UNIQUE index, so "at most one default per
-    bundle" cannot be enforced by a database constraint here and is instead maintained by always
-    going through `default_for_bundle()`.
+    A row with `netcdf_file` NULL is the default for its collection, applied to every file in that
+    collection that has no values of its own - including files uploaded later. A row with
+    `netcdf_file` set overrides the default for that one file.
+
+    Scope is the collection, not the bundle: one bundle can hold output from more than one model
+    run, and PDS collections are the unit a set of model output is described at.
+
+    MariaDB treats NULLs as distinct in a UNIQUE index, so "at most one default per collection"
+    cannot be a database constraint and is instead maintained by always going through
+    `default_for_collection()`.
     """
 
     class Meta(object):
         abstract = True
 
     @classmethod
-    def default_for_bundle(cls, bundle):
-        """Return the bundle-wide default row, or None if the user has not filled one in."""
-        return cls.objects.filter(bundle=bundle, netcdf_file__isnull=True).first()
+    def default_for_collection(cls, collection):
+        """Return the collection's default row, or None if nothing has been filled in."""
+        if collection is None:
+            return None
+        return cls.objects.filter(collection=collection, netcdf_file__isnull=True).first()
 
     @classmethod
     def override_for_file(cls, netcdf_file):
-        """Return this file's override row, or None if the file uses the bundle default."""
+        """Return this file's override row, or None if the file follows its collection default."""
+        if netcdf_file is None:
+            return None
         return cls.objects.filter(netcdf_file=netcdf_file).first()
 
     @classmethod
     def resolve_for_file(cls, netcdf_file):
-        """Return the row whose values belong in this file's label: override first, else default."""
+        """The row whose values belong in this file's label: override first, else the default."""
         override = cls.override_for_file(netcdf_file)
         if override is not None:
             return override
-        if netcdf_file.bundle is None:
+        if netcdf_file is None:
             return None
-        return cls.default_for_bundle(netcdf_file.bundle)
+        return cls.default_for_collection(netcdf_file.collection)
+
+    @classmethod
+    def apply_to_collection(cls, source, collection):
+        """Push one row's values out to every file in the collection.
+
+        Implemented by writing the values onto the collection default and deleting the per-file
+        overrides, rather than by copying the values into each file's own row: with no override
+        present a file resolves to the default, so the labels come out identical and later edits to
+        the default keep propagating instead of going stale. Returns how many overrides were
+        cleared.
+        """
+        default = cls.default_for_collection(collection)
+        if default is None:
+            default = cls(collection=collection, netcdf_file=None)
+        default.copy_values_from(source)
+        default.bundle = collection.bundle
+        default.save()
+
+        return cls.objects.filter(
+            collection=collection, netcdf_file__isnull=False).exclude(pk=default.pk).delete()[0]
 
     def is_default(self):
         return self.netcdf_file_id is None
@@ -5455,39 +5506,48 @@ class AMADefaultOverrideMixin(models.Model):
             values[field_name] = text
         return values
 
+    def has_any_value(self):
+        return bool(self.filled_values())
+
     def copy_values_from(self, other):
-        """Copy every AMA content field from `other` onto self (leaves bundle/netcdf_file alone)."""
+        """Copy every AMA content field from `other` (leaves collection/netcdf_file alone)."""
         for field_name in self.ELEMENT_ORDER:
             setattr(self, field_name, getattr(other, field_name))
 
 
-class ModelMetadata(models.Model):
-    """ama:Model_Metadata - describes the model itself, identical for every file in the bundle."""
+class ModelMetadata(AMACollectionScopedMixin):
+    """ama:Model_Metadata - which model produced the files, per collection.
+
+    Normally identical for every file in a collection, so it is edited as the collection default
+    and pushed out with apply_to_collection(). The per-file override exists because a user may need
+    to correct a single file without disturbing the rest.
+    """
 
     ELEMENT_ORDER = ('type', 'name', 'version', 'institution')
+    BOUNDARY_UNIT_ATTRIBUTE = {}
 
-    bundle = models.OneToOneField(
-        Bundle, on_delete=models.CASCADE, related_name='model_metadata')
+    bundle = models.ForeignKey(
+        Bundle, on_delete=models.CASCADE, related_name='model_metadata_set')
+    collection = models.ForeignKey(
+        AdditionalCollections, on_delete=models.CASCADE, related_name='model_metadata_set',
+        null=True, blank=True)
+    netcdf_file = models.OneToOneField(
+        NetCDFFile, on_delete=models.CASCADE, related_name='model_metadata',
+        null=True, blank=True)
 
     type = models.CharField(max_length=MAX_CHAR_FIELD, blank=True, default='')
     name = models.CharField(max_length=MAX_CHAR_FIELD, blank=True, default='')
     version = models.CharField(max_length=MAX_CHAR_FIELD, blank=True, default='')
     institution = models.CharField(max_length=MAX_CHAR_FIELD, blank=True, default='')
 
-    def filled_values(self):
-        values = {}
-        for field_name in self.ELEMENT_ORDER:
-            text = (getattr(self, field_name) or '').strip()
-            if text:
-                values[field_name] = text
-        return values
-
     def __str__(self):
-        return 'Model Metadata for {}'.format(self.bundle)
+        if self.netcdf_file_id is None:
+            return 'Model Metadata default for {}'.format(self.collection)
+        return 'Model Metadata for {}'.format(self.netcdf_file)
 
 
-class SimulationConfiguration(AMADefaultOverrideMixin):
-    """ama:Simulation_Configuration - bundle default plus optional per-file overrides."""
+class SimulationConfiguration(AMACollectionScopedMixin):
+    """ama:Simulation_Configuration - collection default plus optional per-file overrides."""
 
     ELEMENT_ORDER = (
         'horizontal_grid_type',
@@ -5520,6 +5580,9 @@ class SimulationConfiguration(AMADefaultOverrideMixin):
 
     bundle = models.ForeignKey(
         Bundle, on_delete=models.CASCADE, related_name='simulation_configurations')
+    collection = models.ForeignKey(
+        AdditionalCollections, on_delete=models.CASCADE, related_name='simulation_configurations',
+        null=True, blank=True)
     netcdf_file = models.OneToOneField(
         NetCDFFile, on_delete=models.CASCADE, related_name='simulation_configuration',
         null=True, blank=True)
@@ -5552,15 +5615,16 @@ class SimulationConfiguration(AMADefaultOverrideMixin):
 
     def __str__(self):
         if self.netcdf_file_id is None:
-            return 'Simulation Configuration default for {}'.format(self.bundle)
+            return 'Simulation Configuration default for {}'.format(self.collection)
         return 'Simulation Configuration for {}'.format(self.netcdf_file)
 
 
-class FileDescription(AMADefaultOverrideMixin):
-    """ama:Model_Output/ama:File_Description - bundle default plus optional per-file overrides.
+class FileDescription(AMACollectionScopedMixin):
+    """ama:Model_Output/ama:File_Description - collection default plus per-file overrides.
 
-    The harvest never populates this class, so without user input it is emitted empty. Some fields
-    could in principle be derived from the NetCDF coordinates, but postprocessing_methods never can.
+    The one class where per-file values are expected rather than exceptional: each output file
+    typically covers a different slice of time or altitude. The harvest never populates it, and
+    postprocessing_methods can never be derived from the file at all.
     """
 
     ELEMENT_ORDER = (
@@ -5577,6 +5641,9 @@ class FileDescription(AMADefaultOverrideMixin):
 
     bundle = models.ForeignKey(
         Bundle, on_delete=models.CASCADE, related_name='file_descriptions')
+    collection = models.ForeignKey(
+        AdditionalCollections, on_delete=models.CASCADE, related_name='file_descriptions',
+        null=True, blank=True)
     netcdf_file = models.OneToOneField(
         NetCDFFile, on_delete=models.CASCADE, related_name='file_description',
         null=True, blank=True)
@@ -5591,5 +5658,5 @@ class FileDescription(AMADefaultOverrideMixin):
 
     def __str__(self):
         if self.netcdf_file_id is None:
-            return 'File Description default for {}'.format(self.bundle)
+            return 'File Description default for {}'.format(self.collection)
         return 'File Description for {}'.format(self.netcdf_file)

@@ -343,9 +343,17 @@
                   
                   {% for add_collection in additional_collections_set %}
                   <li class="nav-item" role="presentation">
-                     <button class="nav-link" data-bs-toggle="tab" data-bs-target="#additional_{{ add_collection.collection_name }}_collection" type="button" role="tab" aria-selected="false">{{ add_collection.collection_name }}</button>
+                     <button class="nav-link" data-bs-toggle="tab" data-bs-target="#additional_collection_{{ add_collection.id }}" type="button" role="tab" aria-selected="false">{{ add_collection.collection_name }}</button>
                   </li>
                   {% endfor %}
+
+                  {% if unassigned_netcdf_files %}
+                  <li class="nav-item" role="presentation">
+                     <button class="nav-link text-warning" data-bs-toggle="tab" data-bs-target="#unassigned_netcdf" type="button" role="tab" aria-selected="false">
+                        <i class="bi bi-exclamation-triangle me-1"></i>Unassigned ({{ unassigned_netcdf_files|length }})
+                     </button>
+                  </li>
+                  {% endif %}
                   
                   <li class="nav-item" role="presentation">
                      <button class="nav-link" data-bs-toggle="tab" data-bs-target="#add_a_collection" type="button" role="tab" aria-selected="false"><i class="fa fa-plus me-2"></i> Add New Collection</button>
@@ -458,7 +466,7 @@
                   
                   <!-- Additional Collections -->
                   {% for add_collection in additional_collections_set %}
-                  <div class="tab-pane fade" id="additional_{{ add_collection.collection_name }}_collection" role="tabpanel">
+                  <div class="tab-pane fade" id="additional_collection_{{ add_collection.id }}" role="tabpanel">
                      <br>
                      <div class="col-md-12">
                         <div class="card">
@@ -2018,9 +2026,17 @@
                   
                   {% for add_collection in additional_collections_set %}
                   <li class="nav-item" role="presentation">
-                     <button class="nav-link" data-bs-toggle="tab" data-bs-target="#additional_{{ add_collection.collection_name }}_collection" type="button" role="tab" aria-selected="false">{{ add_collection.collection_name }}</button>
+                     <button class="nav-link" data-bs-toggle="tab" data-bs-target="#additional_collection_{{ add_collection.id }}" type="button" role="tab" aria-selected="false">{{ add_collection.collection_name }}</button>
                   </li>
                   {% endfor %}
+
+                  {% if unassigned_netcdf_files %}
+                  <li class="nav-item" role="presentation">
+                     <button class="nav-link text-warning" data-bs-toggle="tab" data-bs-target="#unassigned_netcdf" type="button" role="tab" aria-selected="false">
+                        <i class="bi bi-exclamation-triangle me-1"></i>Unassigned ({{ unassigned_netcdf_files|length }})
+                     </button>
+                  </li>
+                  {% endif %}
                   
                   <li class="nav-item" role="presentation">
                      <button class="nav-link" data-bs-toggle="tab" data-bs-target="#add_a_collection" type="button" role="tab" aria-selected="false"><i class="fa fa-plus me-2"></i> Add New Collection</button>
@@ -2131,7 +2147,7 @@
                   
                   <!-- Additional Collections -->
                   {% for add_collection in additional_collections_set %}
-                  <div class="tab-pane fade" id="additional_{{ add_collection.collection_name }}_collection" role="tabpanel">
+                  <div class="tab-pane fade" id="additional_collection_{{ add_collection.id }}" role="tabpanel">
                      <br>
                      <div class="col-md-12">
                         <div class="card mb-3 border-0 bg-light">
@@ -2219,8 +2235,14 @@
                                     </div>
                                     {% endif %}
                                     <div class="mb-3">
-                                       {{ form_netcdf.netcdf_files.label_tag }}
-                                       {{ form_netcdf.netcdf_files }}
+                                       {% comment %}The upload card renders once per collection, so the
+                                          widget id must be per collection too: otherwise every
+                                          tab's <label for> points at the first tab's input.{% endcomment %}
+                                       <label for="id_netcdf_files_{{ add_collection.id }}">{{ form_netcdf.netcdf_files.label }}</label>
+                                       {% comment %}Rendered by hand rather than as {{ form_netcdf.netcdf_files }} only so the id can
+                                          be unique per collection; the name must stay netcdf_files for the view.{% endcomment %}
+                                       <input type="file" name="netcdf_files" multiple class="form-control"
+                                          id="id_netcdf_files_{{ add_collection.id }}">
                                        <div class="form-text">You can select multiple NetCDF files (.nc or extensionless).</div>
                                     </div>
                                     
@@ -2267,12 +2289,12 @@
                                  <div class="d-flex align-items-center gap-2">
                                     <h6 class="card-title mb-0">Uploaded Files</h6>
                                     <span class="badge rounded-pill bg-light text-dark border">
-                                       {{ netcdf_files|length }} File{% if netcdf_files|length != 1 %}s{% endif %}
+                                       {{ add_collection.ama_files|length }} File{% if add_collection.ama_files|length != 1 %}s{% endif %}
                                     </span>
                                  </div>
-                                 {% if netcdf_files %}
+                                 {% if add_collection.ama_files %}
                                  <div class="d-flex align-items-center gap-2">
-                                    <button type="button" class="btn btn-sm btn-outline-secondary" id="selectAllWrapper" style="display: none;" onclick="toggleSelectAll()">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" id="selectAllWrapper" style="display: none;" onclick="toggleSelectAll(this)">
                                        Select All
                                     </button>
                                     <button type="button" class="btn btn-sm btn-outline-danger btn-keep-bg"
@@ -2286,7 +2308,9 @@
                            
                            <div class="border rounded bg-light" style="max-height: 250px; overflow-y: auto;">
                               <ul class="list-group list-group-flush">
-                                 {% for nc_file in netcdf_files %}
+                                 {% comment %}Scoped to this collection: a file uploaded here must not appear
+                                    under every other collection's tab.{% endcomment %}
+                                 {% for nc_file in add_collection.ama_files %}
                                  <li class="list-group-item d-flex justify-content-between align-items-center px-2 bg-transparent">
                                     <div class="d-flex align-items-center" style="overflow:hidden;">
                                        <input class="form-check-input me-2 netcdf-checkbox" type="checkbox"
@@ -2306,20 +2330,33 @@
                                     <i class="bi bi-exclamation-triangle-fill me-1"></i>Not processed
                                  </span>
                                  {% endif %}
+                                 {% if nc_file.is_unassigned %}
+                                 <span class="badge bg-warning text-dark ms-2"
+                                 title="Uploaded before files were filed by collection, and its collection could not be determined. Re-upload it into a collection to edit its AMA metadata.">
+                                 Unassigned
+                              </span>
+                              {% endif %}
                                  {% if nc_file.has_ama_override %}
                                  <span class="badge bg-info text-dark ms-2"
-                                 title="This file has its own Simulation Configuration or File Description values instead of the bundle defaults.">
+                                 title="This file has AMA values of its own instead of the collection defaults.">
                                  Custom AMA
                               </span>
                               {% endif %}
                            </div>
                            <div class="d-flex align-items-center gap-2 flex-shrink-0">
-                              <!-- Link, not a nested form: this list already sits inside the bulk-delete form. -->
-                              <a href="{% url 'build:netcdf_ama' pk_bundle=bundle.id pk_netcdf=nc_file.id %}"
-                              class="btn btn-sm btn-outline-secondary py-0"
-                              title="Edit this file's Simulation Configuration and File Description">
-                              <i class="bi bi-sliders me-1"></i>AMA
-                           </a>
+                              <!-- type="button" matters: this list sits inside the bulk-delete form and a
+                                   default-type button would submit it. The row itself is deliberately not
+                                   the click target - it already carries a checkbox and a download link. -->
+                              {% if not nc_file.is_unassigned %}
+                              <button type="button"
+                                 class="btn btn-sm btn-outline-secondary py-0 ama-select"
+                                 data-ama-url="{% url 'build:netcdf_ama' pk_bundle=bundle.id pk_netcdf=nc_file.id %}"
+                                 data-ama-key="file-{{ nc_file.id }}"
+                                 data-ama-panel="amaPanel{{ add_collection.id }}"
+                                 title="Edit this file's AMA metadata">
+                                 <i class="bi bi-sliders me-1"></i>AMA
+                              </button>
+                              {% endif %}
                            <span class="text-muted small">{{ nc_file.uploaded_at|date:"M d, H:i" }}</span>
                         </div>
                      </li>
@@ -2336,102 +2373,159 @@
          </div>
       </div>
       
-      <!-- AMA metadata the NetCDF file cannot supply. Variables and Coordinates
-      are harvested automatically; these three classes are user-entered.
-      Presented as status cards rather than a row of buttons so the user can
-      see what is filled in without opening each one. -->
+      <!-- AMA metadata the NetCDF harvest cannot supply. Variables and Coordinates are read
+           from the files; Model Metadata, Simulation Configuration and File Description are not.
+           All three are scoped to this collection: a default every file inherits, which any
+           single file can override. -->
       <hr class="my-4">
       <div class="d-flex justify-content-between align-items-end flex-wrap gap-2 mb-3 px-1">
          <div>
-            <h6 class="mb-1">AMA Metadata Defaults</h6>
+            <h6 class="mb-1">AMA Metadata</h6>
             <p class="text-muted small mb-0">
-               Written into every NetCDF label in this bundle. Variables and
-               Coordinates are read from the files automatically; these are not.
+               Applies to every file in <strong>{{ add_collection.collection_name }}</strong>,
+               including files uploaded later. Pick a file above to give it its own values.
             </p>
          </div>
-         {% if ama_status.override_count %}
-         <span class="badge rounded-pill bg-info text-dark">
-            <i class="bi bi-sliders me-1"></i>{{ ama_status.override_count }} file{{ ama_status.override_count|pluralize }} customized
-         </span>
-         {% endif %}
+         <div class="d-flex align-items-center gap-2">
+            {% if add_collection.ama_status.override_count %}
+            <span class="badge rounded-pill bg-info text-dark">
+               {{ add_collection.ama_status.override_count }} file{{ add_collection.ama_status.override_count|pluralize }} customized
+            </span>
+            {% endif %}
+            <button type="button" class="btn btn-sm btn-outline-secondary ama-select"
+               data-ama-url="{% url 'build:ama_collection_defaults' pk_bundle=bundle.id pk_collection=add_collection.id %}"
+               data-ama-key="defaults-{{ add_collection.id }}"
+               data-ama-panel="amaPanel{{ add_collection.id }}">
+               <i class="bi bi-layers me-1"></i>Collection Defaults
+            </button>
+         </div>
       </div>
-      
+
       <div class="row g-3 row-cols-1 row-cols-md-3 px-1">
          <div class="col">
-            <div class="card h-100 border">
-               <div class="card-body p-3 d-flex flex-column">
+            <div class="card border h-100">
+               <div class="card-body p-3">
                   <div class="d-flex justify-content-between align-items-start mb-1">
                      <h6 class="mb-0 small fw-bold">Model Metadata</h6>
-                     {% if ama_status.model_metadata.is_set %}
-                     <span class="badge bg-success">{{ ama_status.model_metadata.filled }} of {{ ama_status.model_metadata.total }}</span>
+                     {% if add_collection.ama_status.model.is_set %}
+                     <span class="badge bg-success">{{ add_collection.ama_status.model.filled }} of {{ add_collection.ama_status.model.total }}</span>
                      {% else %}
                      <span class="badge bg-light text-muted border">Not set</span>
                      {% endif %}
                   </div>
-                  <p class="text-muted small mb-3 flex-grow-1">
-                     {% if ama_status.model_name %}
-                     {{ ama_status.model_name }}
+                  <p class="text-muted small mb-0">
+                     {% if add_collection.ama_status.model_name %}
+                     {{ add_collection.ama_status.model_name }}
                      {% else %}
                      Which model produced these files, and who ran it.
                      {% endif %}
                   </p>
-                  <button type="button" class="btn btn-sm btn-outline-secondary w-100"
-                  data-bs-toggle="modal" data-bs-target="#amaModelMetadataModal">
-                  <i class="bi bi-pencil me-1"></i>Edit
-               </button>
-            </div>
-         </div>
-      </div>
-      
-      <div class="col">
-         <div class="card h-100 border">
-            <div class="card-body p-3 d-flex flex-column">
-               <div class="d-flex justify-content-between align-items-start mb-1">
-                  <h6 class="mb-0 small fw-bold">Simulation Configuration</h6>
-                  {% if ama_status.simulation.is_set %}
-                  <span class="badge bg-success">{{ ama_status.simulation.filled }} of {{ ama_status.simulation.total }}</span>
-                  {% else %}
-                  <span class="badge bg-light text-muted border">Not set</span>
-                  {% endif %}
                </div>
-               <p class="text-muted small mb-3 flex-grow-1">
-                  Grid, timing and spatial extent of the run. Files can override this.
-               </p>
-               <button type="button" class="btn btn-sm btn-outline-secondary w-100"
-               data-bs-toggle="modal" data-bs-target="#amaSimulationModal">
-               <i class="bi bi-pencil me-1"></i>Edit
-            </button>
+            </div>
+         </div>
+         <div class="col">
+            <div class="card border h-100">
+               <div class="card-body p-3">
+                  <div class="d-flex justify-content-between align-items-start mb-1">
+                     <h6 class="mb-0 small fw-bold">Simulation Configuration</h6>
+                     {% if add_collection.ama_status.sim.is_set %}
+                     <span class="badge bg-success">{{ add_collection.ama_status.sim.filled }} of {{ add_collection.ama_status.sim.total }}</span>
+                     {% else %}
+                     <span class="badge bg-light text-muted border">Not set</span>
+                     {% endif %}
+                  </div>
+                  <p class="text-muted small mb-0">Grid, timing and spatial extent of the run.</p>
+               </div>
+            </div>
+         </div>
+         <div class="col">
+            <div class="card border h-100">
+               <div class="card-body p-3">
+                  <div class="d-flex justify-content-between align-items-start mb-1">
+                     <h6 class="mb-0 small fw-bold">File Description</h6>
+                     {% if add_collection.ama_status.desc.is_set %}
+                     <span class="badge bg-success">{{ add_collection.ama_status.desc.filled }} of {{ add_collection.ama_status.desc.total }}</span>
+                     {% else %}
+                     <span class="badge bg-light text-muted border">Not set</span>
+                     {% endif %}
+                  </div>
+                  <p class="text-muted small mb-0">What each output file covers. Usually differs per file.</p>
+               </div>
+            </div>
+         </div>
+      </div>
+
+      <!-- Master-detail target: the files and the Collection Defaults button are the master, this
+           is the detail. Content is fetched on demand so the page carries one panel per collection
+           rather than one per file. One wrapper per collection, since the card is inside the
+           collection loop and ids must stay unique. -->
+      <div id="amaPanel{{ add_collection.id }}" class="ama-panel-wrapper mt-3 px-1" style="display: none;">
+         <div class="card border">
+            <div class="card-body">
+               <div class="ama-panel-loading text-center text-muted py-4" style="display: none;">
+                  <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                  Loading...
+               </div>
+               <div class="ama-panel-error alert alert-danger py-2 small" style="display: none;"></div>
+               <div class="ama-panel-content"></div>
+            </div>
+         </div>
+      </div>
          </div>
       </div>
    </div>
-   
-   <div class="col">
-      <div class="card h-100 border">
-         <div class="card-body p-3 d-flex flex-column">
-            <div class="d-flex justify-content-between align-items-start mb-1">
-               <h6 class="mb-0 small fw-bold">File Description</h6>
-               {% if ama_status.file_description.is_set %}
-               <span class="badge bg-success">{{ ama_status.file_description.filled }} of {{ ama_status.file_description.total }}</span>
-               {% else %}
-               <span class="badge bg-light text-muted border">Not set</span>
-               {% endif %}
-            </div>
-            <p class="text-muted small mb-3 flex-grow-1">
-               What each output file covers. Files can override this.
-            </p>
-            <button type="button" class="btn btn-sm btn-outline-secondary w-100"
-            data-bs-toggle="modal" data-bs-target="#amaFileDescriptionModal">
-            <i class="bi bi-pencil me-1"></i>Edit
-         </button>
+{% endfor %}
+
+{% if unassigned_netcdf_files %}
+{% comment %}
+Files that predate the collection field and that the backfill could not place. They belong to no
+collection, so they get their own pane rather than being folded into one: showing them inside the
+first collection made them look like they hopped between collections whenever one was deleted,
+when in fact their collection was NULL the whole time.
+{% endcomment %}
+<div class="tab-pane fade" id="unassigned_netcdf" role="tabpanel">
+   <div class="card mt-3 mb-3 border border-warning">
+      <h5 class="card-header bg-warning text-dark text-center">Files Not In Any Collection</h5>
+      <div class="card-body">
+         <p class="text-muted small">
+            These were uploaded before files were filed by collection, and there was no way to tell
+            which collection they belonged to. They are not part of any collection, so they carry no
+            AMA metadata and are not included in a collection's labels. Move each one into a
+            collection, or delete it.
+         </p>
+         <ul class="list-group list-group-flush">
+            {% for nc_file in unassigned_netcdf_files %}
+            <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap gap-2 px-2 bg-transparent">
+               <div class="d-flex align-items-center" style="overflow:hidden;">
+                  <i class="bi bi-file-earmark-code me-2 text-secondary"></i>
+                  <span class="text-truncate" style="max-width: 260px;" title="{{ nc_file.title }}">{{ nc_file.title }}</span>
+                  <span class="badge bg-warning text-dark ms-2">Not in a collection</span>
+               </div>
+               <div class="d-flex align-items-center gap-2">
+                  <form method="post" class="d-flex align-items-center gap-2"
+                     action="{% url 'build:assign_netcdf_collection' pk_bundle=bundle.id pk_netcdf=nc_file.id %}">
+                     {% csrf_token %}
+                     <select name="collection" class="form-select form-select-sm" style="width: auto;" aria-label="Collection">
+                        {% for choice in additional_collections_set %}
+                        <option value="{{ choice.id }}">{{ choice.collection_name }}</option>
+                        {% endfor %}
+                     </select>
+                     <button type="submit" class="btn btn-sm btn-outline-secondary">Move Here</button>
+                  </form>
+                  <form method="post" action="{% url 'build:bulk_delete_netcdf' pk_bundle=bundle.id %}">
+                     {% csrf_token %}
+                     <input type="hidden" name="selected_netcdf" value="{{ nc_file.pk }}">
+                     <button type="submit" class="btn btn-sm btn-outline-danger btn-keep-bg">Delete</button>
+                  </form>
+               </div>
+            </li>
+            {% endfor %}
+         </ul>
       </div>
    </div>
 </div>
-</div>
-</div>
-</div>
+{% endif %}
 
-</div>
-{% endfor %}
 
 <!-- Add s Collections -->
 <div class="tab-pane fade" id="add_a_collection" role="tabpanel">
@@ -2873,8 +2967,13 @@
    
    
    
-   function toggleSelectAll() {
-      var boxes = document.querySelectorAll('.netcdf-checkbox');
+   // Scoped to the form the button lives in. The NetCDF card renders once per collection, so a
+   // document-wide selector would tick every collection's files and the delete that follows would
+   // remove files the user cannot even see from this tab.
+   function toggleSelectAll(button) {
+      var form = button && button.closest ? button.closest('form') : null;
+      var scope = form || document;
+      var boxes = scope.querySelectorAll('.netcdf-checkbox');
       var allChecked = Array.from(boxes).every(function(c) { return c.checked; });
       boxes.forEach(function(cb) { cb.checked = !allChecked; });
    }
@@ -2883,7 +2982,12 @@
    // If nothing is selected, block the modal from opening.
    document.addEventListener('show.bs.modal', function(e) {
       if (e.target.id !== 'bulkDeleteNetCDFModal') return;
-      var checked = document.querySelectorAll('.netcdf-checkbox:checked');
+      // relatedTarget is the button that opened the modal, which tells us which collection's list
+      // to read. Without it the modal collects checked boxes from every collection and deletes
+      // files the user cannot even see from this tab.
+      var opener = e.relatedTarget;
+      var openerForm = opener && opener.closest ? opener.closest('form') : null;
+      var checked = (openerForm || document).querySelectorAll('.netcdf-checkbox:checked');
       if (checked.length === 0) { e.preventDefault(); return; }
       var container = document.getElementById('ncDeleteHiddenIds');
       if (!container) return;
@@ -4278,148 +4382,241 @@ Has its own form; JS populates hidden inputs with the selected IDs on show. -->
    </div>
 </div>
 
-<!-- ===================== AMA metadata modals =====================
-Bundle-wide defaults for the AMA classes the NetCDF harvest cannot fill. Kept outside every
-card and collapsible: modals nested in those render with stray whitespace in this project.
-Saving any of these rewrites the affected NetCDF labels on disk. -->
+<!-- ===================== AMA metadata =====================
+     All three AMA classes are edited in the inline panel under each collection's Files card, so
+     there are no AMA modals any more: 28 fields across three sections is far too much for a modal,
+     and the values are per collection and per file rather than per bundle. -->
 <style>
-   /* Bootstrap's scrollable modal expects .modal-header/.modal-body/.modal-footer to be the
-   direct children of .modal-content, which sets max-height:100%;overflow:hidden. These modals
-   wrap those three in a <form>, so without this the body has no bounded height: it overflows,
-      gets clipped, and cannot be scrolled. Making the form the flex container restores the
-      height chain and gives the body a real scroll area with a pinned header and footer. */
-      .ama-modal .modal-content > form {
-         display: flex;
-         flex-direction: column;
-         overflow: hidden;
-         max-height: 100%;
-      }
-      .ama-modal .modal-body {
-         overflow-y: auto;
-      }
-      .ama-modal .modal-header,
-      .ama-modal .modal-footer {
-         flex-shrink: 0;
-      }
-      .ama-modal .form-control {
-         font-size: .875rem;
-      }
-      /* Scope note, kept visually distinct from the fields it applies to. */
-      .ama-scope-note {
-         background-color: rgba(13, 202, 240, .07);
-         border: 1px solid rgba(13, 202, 240, .35);
-         border-radius: .5rem;
-      }
-   </style>
-   
-   <div class="modal fade ama-modal" id="amaModelMetadataModal" tabindex="-1" aria-hidden="true">
-      <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-         <div class="modal-content">
-            <form method="post" action="{% url 'build:ama_model_metadata' pk_bundle=bundle.id %}">
-               {% csrf_token %}
-               <div class="modal-header">
-                  <div>
-                     <h5 class="modal-title mb-0">Model Metadata</h5>
-                     <div class="text-muted small">Applies to every file in this bundle</div>
-                  </div>
-                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-               </div>
-               <div class="modal-body">
-                  <p class="text-muted small mb-4">
-                     Describes the model itself. Blank fields are left out of the label entirely.
-                  </p>
-                  {% include "build/bundle/_ama_form_fields.html" with form=form_ama_model_metadata %}
-               </div>
-               <div class="modal-footer">
-                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                  <button type="submit" class="btn btn-keep-bg text-white" style="background-color: teal;">
-                     <i class="bi bi-save me-1"></i>Save
-                  </button>
-               </div>
-            </form>
+   .ama-scope-note {
+      background-color: rgba(13, 202, 240, .07);
+      border: 1px solid rgba(13, 202, 240, .35);
+      border-radius: .5rem;
+   }
+   .ama-select.ama-active {
+      background-color: teal;
+      border-color: teal;
+      color: #fff;
+   }
+   .ama-panel-wrapper .accordion-button {
+      padding-top: .6rem;
+      padding-bottom: .6rem;
+   }
+   .ama-panel-wrapper .form-control {
+      font-size: .875rem;
+   }
+</style>
+
+<!-- Unsaved-changes guard for the inline panel. Bootstrap modal rather than confirm(), per
+     project convention. -->
+<div class="modal fade" id="amaUnsavedModal" tabindex="-1" aria-hidden="true">
+   <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+         <div class="modal-header">
+            <h5 class="modal-title">Discard unsaved changes?</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+         </div>
+         <div class="modal-body">
+            You have edited this panel without saving. Switching now discards those changes.
+         </div>
+         <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Keep Editing</button>
+            <button type="button" class="btn btn-danger btn-keep-bg" id="amaDiscardConfirm">Discard and Switch</button>
          </div>
       </div>
    </div>
-   
-   <div class="modal fade ama-modal" id="amaSimulationModal" tabindex="-1" aria-hidden="true">
-      <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-         <div class="modal-content">
-            <form method="post" action="{% url 'build:ama_simulation_configuration' pk_bundle=bundle.id %}">
-               {% csrf_token %}
-               <div class="modal-header">
-                  <div>
-                     <h5 class="modal-title mb-0">Simulation Configuration</h5>
-                     <div class="text-muted small">Bundle default, used by every file that has no values of its own</div>
-                  </div>
-                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-               </div>
-               <div class="modal-body">
-                  <p class="text-muted small mb-4">
-                     Start and end time are free text in the AMA dictionary, so model time such as
-                     "sol 120" is fine. Blank fields are left out of the label entirely.
-                  </p>
-                  {% include "build/bundle/_ama_form_fields.html" with form=form_ama_simulation %}
-                  
-                  <div class="ama-scope-note p-3 mt-4">
-                     <div class="form-check mb-0">
-                        {{ form_ama_simulation.apply_to_all }}
-                        <label class="form-check-label small fw-semibold" for="{{ form_ama_simulation.apply_to_all.id_for_label }}">
-                           {{ form_ama_simulation.apply_to_all.label }}
-                        </label>
-                        <div class="form-text mb-0">{{ form_ama_simulation.apply_to_all.help_text }}</div>
-                     </div>
-                  </div>
-               </div>
-               <div class="modal-footer">
-                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                  <button type="submit" class="btn btn-keep-bg text-white" style="background-color: teal;">
-                     <i class="bi bi-save me-1"></i>Save
-                  </button>
-               </div>
-            </form>
-         </div>
-      </div>
-   </div>
-   
-   <div class="modal fade ama-modal" id="amaFileDescriptionModal" tabindex="-1" aria-hidden="true">
-      <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-         <div class="modal-content">
-            <form method="post" action="{% url 'build:ama_file_description' pk_bundle=bundle.id %}">
-               {% csrf_token %}
-               <div class="modal-header">
-                  <div>
-                     <h5 class="modal-title mb-0">File Description</h5>
-                     <div class="text-muted small">Bundle default, used by every file that has no values of its own</div>
-                  </div>
-                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-               </div>
-               <div class="modal-body">
-                  <p class="text-muted small mb-4">
-                     Describes what each output file covers. None of this can be read from the NetCDF
-                     file, so it is left out of the label unless entered here or per file.
-                  </p>
-                  {% include "build/bundle/_ama_form_fields.html" with form=form_ama_file_description %}
-                  
-                  <div class="ama-scope-note p-3 mt-4">
-                     <div class="form-check mb-0">
-                        {{ form_ama_file_description.apply_to_all }}
-                        <label class="form-check-label small fw-semibold" for="{{ form_ama_file_description.apply_to_all.id_for_label }}">
-                           {{ form_ama_file_description.apply_to_all.label }}
-                        </label>
-                        <div class="form-text mb-0">{{ form_ama_file_description.apply_to_all.help_text }}</div>
-                     </div>
-                  </div>
-               </div>
-               <div class="modal-footer">
-                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                  <button type="submit" class="btn btn-keep-bg text-white" style="background-color: teal;">
-                     <i class="bi bi-save me-1"></i>Save
-                  </button>
-               </div>
-            </form>
-         </div>
-      </div>
-   </div>
-   
-   
+</div>
+
+<script>
+(function () {
+   // Inline AMA editor. Each collection tab has its own master-detail pair: the Files list and the
+   // Collection Defaults button are the master, .ama-panel-wrapper is the detail. Panels are
+   // fetched on demand rather than server-rendered per file, which keeps a collection with many
+   // NetCDF files from carrying hundreds of hidden inputs.
+   var activeKey = null;
+   var dirty = false;
+   var pendingSwitch = null;
+   var unsavedModal = null;
+
+   function csrfToken() {
+      var input = document.querySelector('input[name="csrfmiddlewaretoken"]');
+      return input ? input.value : '';
+   }
+
+   // A save reloads the page so the badges and summary counts resync, but the collection tab bar
+   // always reopens on the hardcoded "document" tab - which would drop the user out of the
+   // collection they were working in and close the panel after every single save. Remember the
+   // place before reloading and put them back afterwards.
+   var PLACE_KEY = 'elsaAmaPlace';
+
+   function rememberPlace(collectionId, key) {
+      if (!collectionId || !key) return;
+      try { sessionStorage.setItem(PLACE_KEY, collectionId + '|' + key); } catch (err) {}
+   }
+
+   function restorePlace() {
+      var stored = null;
+      try {
+         stored = sessionStorage.getItem(PLACE_KEY);
+         sessionStorage.removeItem(PLACE_KEY);
+      } catch (err) { return; }
+      if (!stored) return;
+
+      var parts = stored.split('|');
+      var tab = document.querySelector(
+         '[data-bs-target="#additional_collection_' + parts[0] + '"]');
+      if (tab && window.bootstrap) {
+         bootstrap.Tab.getOrCreateInstance(tab).show();
+      }
+      var trigger = document.querySelector('.ama-select[data-ama-key="' + parts[1] + '"]');
+      if (trigger) trigger.click();
+   }
+
+   if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', restorePlace);
+   } else {
+      restorePlace();
+   }
+
+   function parts(wrapper) {
+      return {
+         wrapper: wrapper,
+         content: wrapper.querySelector('.ama-panel-content'),
+         loading: wrapper.querySelector('.ama-panel-loading'),
+         error: wrapper.querySelector('.ama-panel-error')
+      };
+   }
+
+   function setActive(key) {
+      activeKey = key;
+      document.querySelectorAll('.ama-select').forEach(function (btn) {
+         btn.classList.toggle('ama-active', btn.dataset.amaKey === key);
+      });
+   }
+
+   function showError(ui, message) {
+      if (!ui.error) return;
+      ui.error.textContent = message;
+      ui.error.style.display = 'block';
+   }
+
+   function loadPanel(url, key, wrapperId) {
+      var wrapper = document.getElementById(wrapperId);
+      if (!wrapper) return;
+      var ui = parts(wrapper);
+
+      wrapper.style.display = 'block';
+      if (ui.error) ui.error.style.display = 'none';
+      ui.content.innerHTML = '';
+      if (ui.loading) ui.loading.style.display = 'block';
+
+      fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' })
+         .then(function (response) {
+            if (!response.ok) throw new Error('HTTP ' + response.status);
+            return response.text();
+         })
+         .then(function (html) {
+            if (ui.loading) ui.loading.style.display = 'none';
+            ui.content.innerHTML = html;
+            dirty = false;
+            setActive(key);
+            wrapper.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+         })
+         .catch(function (err) {
+            if (ui.loading) ui.loading.style.display = 'none';
+            showError(ui, 'Could not load the AMA panel: ' + err.message);
+         });
+   }
+
+   function requestSwitch(url, key, wrapperId) {
+      if (dirty && key !== activeKey) {
+         pendingSwitch = { url: url, key: key, wrapperId: wrapperId };
+         if (!unsavedModal && window.bootstrap) {
+            unsavedModal = new bootstrap.Modal(document.getElementById('amaUnsavedModal'));
+         }
+         if (unsavedModal) { unsavedModal.show(); return; }
+      }
+      loadPanel(url, key, wrapperId);
+   }
+
+   document.addEventListener('click', function (e) {
+      var trigger = e.target.closest ? e.target.closest('.ama-select') : null;
+      if (trigger) {
+         e.preventDefault();
+         requestSwitch(trigger.dataset.amaUrl, trigger.dataset.amaKey, trigger.dataset.amaPanel);
+         return;
+      }
+      if (e.target.closest && e.target.closest('#amaDiscardConfirm')) {
+         if (unsavedModal) unsavedModal.hide();
+         if (pendingSwitch) {
+            var next = pendingSwitch;
+            pendingSwitch = null;
+            dirty = false;
+            loadPanel(next.url, next.key, next.wrapperId);
+         }
+      }
+   });
+
+   // Any edit inside a panel marks it dirty, so switching away warns first.
+   document.addEventListener('input', function (e) {
+      if (e.target.closest && e.target.closest('.ama-panel-content')) dirty = true;
+   });
+   document.addEventListener('change', function (e) {
+      if (e.target.closest && e.target.closest('.ama-panel-content')) dirty = true;
+   });
+
+   // Saving and reverting both post from inside a panel and both return a fresh panel.
+   document.addEventListener('submit', function (e) {
+      var form = e.target;
+      if (!form || (form.id !== 'amaPanelForm' && form.id !== 'amaRevertForm')) return;
+      var wrapper = form.closest('.ama-panel-wrapper');
+      if (!wrapper) return;
+      e.preventDefault();
+
+      var ui = parts(wrapper);
+      var submitBtn = form.querySelector('button[type="submit"]');
+      if (submitBtn) submitBtn.disabled = true;
+      if (ui.error) ui.error.style.display = 'none';
+
+      fetch(form.action, {
+         method: 'POST',
+         headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': csrfToken() },
+         credentials: 'same-origin',
+         body: new FormData(form)
+      })
+         .then(function (response) {
+            if (!response.ok) throw new Error('HTTP ' + response.status);
+            return response.text();
+         })
+         .then(function (html) {
+            ui.content.innerHTML = html;
+
+            var inner = ui.content.querySelector('#amaPanelInner');
+            // Only a successful save clears the dirty flag. A rejected save comes back with the
+            // user's values and the validation errors still in the form, so switching away would
+            // otherwise discard them without warning.
+            dirty = !(inner && inner.dataset.saved === 'true');
+
+            if (inner && inner.dataset.saved === 'true') {
+               // Labels on disk have been rewritten, so the file list badges and the summary
+               // counts on this page are now stale. Reloading is the honest way to resync them;
+               // rememberPlace puts the user back where they were afterwards.
+               rememberPlace(inner.dataset.collectionId, activeKey);
+               window.location.reload();
+            }
+         })
+         .catch(function (err) {
+            if (submitBtn) submitBtn.disabled = false;
+            showError(ui, 'Could not save: ' + err.message);
+         });
+   });
+
+   window.addEventListener('beforeunload', function (e) {
+      if (!dirty) return;
+      e.preventDefault();
+      e.returnValue = '';
+   });
+
+})();
+</script>
+
    {% endblock %}
