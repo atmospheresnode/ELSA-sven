@@ -20,14 +20,25 @@ This section provides a timeline of ELSA's release history, highlighting key upd
 
 ### **Current Version** 
 
+> ### **Version 1.37.9 (August 21, 2026)**
+- Files Card: Labels are now grouped under the collection they belong to, instead of being listed flat, on both External and Archive bundles.
+- Files Card: Data labels now name the NetCDF file they describe, and show whether that file was processed successfully.
+- Files Card: Labels are now ordered with the bundle label first, then the document collection, then collections in the order they were added.
+- Files Card: A search box and filters by label type have been added.
+- XML Viewer: The full path of the open label is now shown, and a Copy XML button has been added.
+- External and Archive Bundles: The bundle page now loads faster, as labels are opened on demand rather than all being loaded up front.
+- Review & Submit: Fixed every collection reporting zero NetCDF files.
+- Bundle: Fixed an error page appearing when opening a bundle whose creation did not finish.
+
+
+### **Previous Versions** 
+
 > ### **Version 1.37.8 (August 14, 2026)**
 - External Bundle: AMA metadata is now set per collection, with defaults every file inherits and per-file values where needed.
 - External Bundle: AMA metadata can now be edited directly on the bundle page.
 - NetCDF Files: Fixed bulk delete selecting files from other collections and leaving files behind on disk.
 - AMA Metadata: Fixed accented characters producing labels that fail PDS4 validation.
 - Sign In: Fixed passkey verification failing on the live site.
-
-### **Previous Versions** 
 
 > ### **Version 1.37.7 (August 07, 2026)**
 - Sign In: Passkey sign-in has been introduced, using a fingerprint, face, screen lock, or security key.
