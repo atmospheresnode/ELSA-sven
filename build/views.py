@@ -742,7 +742,14 @@ def bundle(request, pk_bundle):
 
         citation_information_set = Citation_Information.objects.filter(bundle=bundle)
 
-        product_bundle = Product_Bundle.objects.get(bundle=bundle)
+        # A bundle whose creation crashed partway (e.g. disk full) has no Product_Bundle; send the
+        # user back to the hub instead of a 500. This has to sit above the first access, not further
+        # down the view: DoesNotExist is raised here long before a check placed lower is reached.
+        try:
+            product_bundle = Product_Bundle.objects.get(bundle=bundle)
+        except Product_Bundle.DoesNotExist:
+            print('Bundle {} has no Product_Bundle (creation likely failed); redirecting.'.format(bundle.pk))
+            return HttpResponseRedirect(reverse('friends:bundle_hub'))
         # A missing or unreadable bundle label must not 500 the whole page;
         # citation author/editor display just falls back to the DB values.
         citation_xml = None
@@ -946,36 +953,6 @@ def bundle(request, pk_bundle):
         product_observational_set = Product_Observational.objects.filter(data__bundle=bundle)
 
 
-        # Following code is to get xml content of bundle xml files
-        # Temporary testing, will be better to add this to chocoloate.py as it's likely we want to do this multiple times
-        # Said Ajo :/
-        # A bundle whose creation crashed partway (e.g. disk full) has no
-        # Product_Bundle; send the user back to the hub instead of a 500.
-        try:
-            prod_bundle = Product_Bundle.objects.get(bundle=bundle)
-        except Product_Bundle.DoesNotExist:
-            print('Bundle {} has no Product_Bundle (creation likely failed); redirecting.'.format(bundle.pk))
-            return HttpResponseRedirect(reverse('friends:bundle_hub'))
-        prod_col_list = Product_Collection.objects.filter(bundle=bundle)
-        labels = []
-        labels.append(prod_bundle)
-        labels.extend(prod_col_list)
-        xml_content_set = []
-        for label in labels:
-        # parser = etree.XMLParser(remove_blank_text=False, remove_comments=False)
-            # A missing or corrupt label (interrupted write, full disk) must not
-            # make the whole bundle page unreachable.
-            try:
-                tree = etree.parse(label.label())
-                xml_content = etree.tostring(tree, pretty_print=True, encoding='unicode')
-            except (OSError, etree.XMLSyntaxError) as e:
-                print('Could not read label {}: {}'.format(label.label(), e))
-                xml_content = ('<!-- This label file could not be read ({}). '
-                               'Please contact the ELSA team via the Contact page. -->'
-                               .format(type(e).__name__))
-            xml_content_set.append(xml_content)
-
-
         instrument_host_investigations = []
         for instrument_host in bundle.instrument_hosts.all():
             instrument_host_investigations.append(instrument_host.investigations.last())      
@@ -992,7 +969,7 @@ def bundle(request, pk_bundle):
         for telescope in bundle.telescopes.all():
             telescope_investigations.append(telescope.investigations.last())
 
-        directory_name, c, file_context = index(request, bundle.relative_dir())
+        file_tree = _bundle_file_tree(bundle)
 
         table_set = []
         print(Table_Binary.objects.filter(bundle=bundle))
@@ -1002,7 +979,6 @@ def bundle(request, pk_bundle):
 
         # Context dictionary for template
         context_dict = {
-            'xml_content_set': xml_content_set,
             'bundle':bundle,
             'alias_set':alias_set,
             'alias_set_count':len(alias_set), 
@@ -1067,9 +1043,7 @@ def bundle(request, pk_bundle):
         }
 
         context_dict['status_dict'] = status_dict
-        context_dict['directory_name'] = directory_name
-        context_dict['subfiles'] = c 
-        context_dict['file_context'] = file_context
+        context_dict['file_tree'] = file_tree
 
         # To handle NetCDF files
         # if form_netcdf.is_valid():
@@ -1671,6 +1645,258 @@ def _unassigned_netcdf_files(bundle):
     was NULL the whole time.
     """
     return list(NetCDFFile.objects.filter(bundle=bundle, collection__isnull=True))
+
+
+# ------------------------------------------------------------------------------------------------ #
+#                                       Files tree (XML labels)
+# ------------------------------------------------------------------------------------------------ #
+# The Files card used to render one flat button per label, so a data product's label sat at the same
+# level as the collection label that contains it and there was no way to tell what belonged to what.
+# The bundle directory already encodes the PDS4 hierarchy, so the tree below simply keeps the shape
+# that the flat list was throwing away:
+#
+#   <bundle>_bundle/            bundle_<name>.xml            Product_Bundle
+#   +-- document/               collection_<id>_document.xml Product_Collection
+#   |                           <doc>.xml                    Product_Document
+#   +-- <collection>/           collection_<id>_<coll>.xml   Product_Collection
+#                               <file>.xml                   Product_Observational
+#                               <file>.nc                    the data file that label describes
+#
+# Label CONTENT is deliberately NOT read here. It is fetched one label at a time by label_content(),
+# so a bundle with many products neither parses every label on page load nor ships every label's
+# full XML inside the page HTML.
+
+# Caption shown under each row in the tree. The kind is derived from the filename prefix that the
+# label builders in models.py already guarantee, not by parsing the label.
+LABEL_KIND_CAPTIONS = {
+    'bundle': 'Bundle Label',
+    'collection': 'Collection Label',
+    'document': 'Document Label',
+    'data': 'Data Product Label',
+}
+
+# Directories ELSA creates itself and that have no AdditionalCollections row behind them.
+IMPLIED_COLLECTION_TYPES = {
+    'document': 'Document',
+    'context': 'Context',
+    'xml_schema': 'Schema',
+}
+
+# Order the tree lists directories in, most structural first: the collections ELSA creates for every
+# bundle, then the user's own. Listing directories alphabetically instead put a newly added
+# collection above `document` and split the user's collections around it, which is not the order
+# anything else on the page uses.
+ELSA_MANAGED_DIRS = ('document', 'context', 'xml_schema')
+
+# Kinds the Files card offers as filter chips, in the order they appear, with the plural wording
+# used on the chip itself.
+FILTERABLE_KINDS = (
+    ('collection', 'Collections'),
+    ('data', 'Data'),
+    ('document', 'Documents'),
+)
+
+
+def _label_kind(filename, folder_name):
+    """Which of the four PDS4 label kinds a generated label is."""
+    name = filename.lower()
+    if name.startswith('bundle_') or name.startswith('bundle.'):
+        return 'bundle'
+    if name.startswith('collection_') or name.startswith('collection.'):
+        return 'collection'
+    if folder_name.lower() == 'document':
+        return 'document'
+    return 'data'
+
+
+def _bundle_file_tree(bundle):
+    """The bundle's generated labels, grouped by the directory that gives each one its meaning.
+
+    Returns a dict with 'root_labels' (labels sitting at the bundle root, normally just the
+    Product_Bundle label), 'folders' (one per collection directory, each carrying its own labels),
+    and 'total'. A bundle whose directory is missing (failed creation, manual cleanup) yields an
+    empty tree rather than a 500.
+    """
+    root_dir = bundle.directory()
+    if not os.path.isdir(root_dir):
+        print('_bundle_file_tree: directory missing, skipping: {}'.format(root_dir))
+        return {'root_labels': [], 'folders': [], 'filter_kinds': [], 'total': 0}
+
+    # AdditionalCollections.directory() lowercases collection_name to form the directory name, so
+    # the directory basename is the key back to the collection record and its declared type.
+    # Ordered by pk, i.e. by creation: the model has no Meta.ordering, so this is the same order the
+    # Collections tabs on this page iterate, and the two cards agree on where a new collection goes.
+    collections_in_order = list(
+        AdditionalCollections.objects.filter(bundle=bundle).order_by('pk'))
+    collections_by_dir = {
+        collection.collection_name.lower(): collection
+        for collection in collections_in_order}
+
+    # A data label is matched to the file it describes by stem: 00000.atmos.nc <-> 00000.atmos.xml.
+    # Keyed on file.name, not title: title keeps the name the user uploaded, while Django's storage
+    # sanitises what actually lands on disk ("a - Copy.nc" becomes "a_-_Copy.nc"), and the label is
+    # written next to the file. Matching on title alone silently lost the status of every file whose
+    # name needed sanitising. Both are registered so rows with no stored file still resolve.
+    netcdf_by_stem = {}
+    for netcdf_file in NetCDFFile.objects.filter(bundle=bundle):
+        for candidate in (netcdf_file.file.name, netcdf_file.title):
+            if candidate:
+                netcdf_by_stem.setdefault(
+                    os.path.splitext(os.path.basename(candidate))[0], netcdf_file)
+
+    def describe(dir_path, folder_name, filename, siblings):
+        kind = _label_kind(filename, folder_name)
+        entry = {
+            'name': filename,
+            # Relative to the bundle directory. This is the key label_content() resolves back to
+            # an absolute path, so it must stay a path and not a bare filename: two collections can
+            # each hold a label of the same name.
+            'path': '{}/{}'.format(folder_name, filename) if folder_name else filename,
+            'kind': kind,
+            'kind_label': LABEL_KIND_CAPTIONS[kind],
+            'describes': None,
+            'processed': None,
+            'processing_error': '',
+        }
+
+        if kind != 'data':
+            return entry
+
+        # Naming the data file under its label is the point of the whole exercise: it is what tells
+        # the user this label is not a free-standing thing.
+        stem = os.path.splitext(filename)[0]
+        for sibling in siblings:
+            if sibling != filename and os.path.splitext(sibling)[0] == stem:
+                entry['describes'] = sibling
+                break
+
+        netcdf_file = netcdf_by_stem.get(stem)
+        if netcdf_file is not None:
+            entry['processed'] = netcdf_file.processed
+            entry['processing_error'] = netcdf_file.processing_error
+            if entry['describes'] is None:
+                # The label is on disk but its data file is not; still say what it stands for.
+                entry['describes'] = netcdf_file.title
+
+        return entry
+
+    def labels_in(dir_path, folder_name):
+        try:
+            siblings = sorted(os.listdir(dir_path))
+        except OSError as e:
+            print('_bundle_file_tree: unreadable directory {}: {}'.format(dir_path, e))
+            return []
+
+        labels = [
+            describe(dir_path, folder_name, name, siblings)
+            for name in siblings
+            if name.lower().endswith('.xml') and os.path.isfile(os.path.join(dir_path, name))]
+
+        # The collection label heads its own group: it is the parent of everything under it, so
+        # alphabetical order putting 00000.xml above collection_....xml would read backwards.
+        labels.sort(key=lambda label: (0 if label['kind'] == 'collection' else 1, label['name']))
+        return labels
+
+    root_labels = labels_in(root_dir, '')
+
+    on_disk = {name for name in os.listdir(root_dir)
+               if os.path.isdir(os.path.join(root_dir, name))}
+
+    ordered_names = [name for name in ELSA_MANAGED_DIRS if name in on_disk]
+    for collection in collections_in_order:
+        name = os.path.basename(collection.directory())
+        if name in on_disk and name not in ordered_names:
+            ordered_names.append(name)
+    # Anything on disk with no collection record behind it (hand-made, or a record since deleted)
+    # still belongs in the tree, after the directories whose order is known.
+    ordered_names.extend(sorted(on_disk.difference(ordered_names)))
+
+    folders = []
+    for name in ordered_names:
+        collection = collections_by_dir.get(name.lower())
+        labels = labels_in(os.path.join(root_dir, name), name)
+        folders.append({
+            'name': name,
+            'collection_type': (collection.collection_type if collection is not None
+                                else IMPLIED_COLLECTION_TYPES.get(name.lower(), '')),
+            'labels': labels,
+            'count': len(labels),
+        })
+
+    # Which kinds actually occur, so the filter offers only chips that can match something. The
+    # bundle label is left out: there is exactly one and it is pinned at the top, so a chip for it
+    # would filter the tree down to something already in view. Fewer than two chips is no choice at
+    # all, so the row is dropped entirely in that case.
+    kinds_present = {label['kind'] for label in root_labels}
+    for folder in folders:
+        kinds_present.update(label['kind'] for label in folder['labels'])
+
+    filter_kinds = [{'kind': kind, 'label': plural}
+                    for kind, plural in FILTERABLE_KINDS
+                    if kind in kinds_present]
+
+    return {
+        'root_labels': root_labels,
+        'folders': folders,
+        'filter_kinds': filter_kinds if len(filter_kinds) > 1 else [],
+        'total': len(root_labels) + sum(folder['count'] for folder in folders),
+    }
+
+
+def _resolve_label_path(bundle, relative_path):
+    """The absolute path of a label inside this bundle, or None if it is not one.
+
+    relative_path arrives from the browser, so it is resolved first and then checked to be inside
+    the bundle directory: a crafted '../../secrets.py' must not be readable through this view.
+    """
+    if not relative_path or not relative_path.lower().endswith('.xml'):
+        return None
+
+    root_dir = _eventual_path(bundle.directory())
+    candidate = _eventual_path(os.path.join(root_dir, relative_path))
+
+    if os.path.commonpath([root_dir, candidate]) != root_dir:
+        return None
+    if not os.path.isfile(candidate):
+        return None
+
+    return candidate
+
+
+@login_required
+def label_content(request, pk_bundle):
+    """One generated label's XML, fetched on demand by the Files tree.
+
+    Serving labels one at a time is what lets the bundle page stop embedding every label's full
+    XML in a data-content attribute and stop parsing every label on every page load.
+    """
+    bundle = get_object_or_404(Bundle, pk=pk_bundle)
+
+    if request.user != bundle.user:
+        return redirect('main:restricted_access')
+
+    relative_path = request.GET.get('path', '')
+    label_path = _resolve_label_path(bundle, relative_path)
+    if label_path is None:
+        return JsonResponse({'error': 'That label is not part of this bundle.'}, status=404)
+
+    # A corrupt label (interrupted write, full disk) must report itself in the viewer rather than
+    # break the page, matching how the old inline reader handled it.
+    try:
+        tree = etree.parse(label_path)
+        content = etree.tostring(tree, pretty_print=True, encoding='unicode')
+    except (OSError, etree.XMLSyntaxError) as e:
+        print('label_content: unreadable label {}: {}'.format(label_path, e))
+        return JsonResponse(
+            {'error': 'This label could not be read ({}). Please contact the ELSA team via the '
+                      'Contact page.'.format(type(e).__name__)},
+            status=500)
+
+    return JsonResponse({
+        'name': os.path.basename(label_path),
+        'path': relative_path,
+        'content': content,
+    })
 
 
 def _report_label_refresh(request, errors):
@@ -4462,73 +4688,6 @@ def _get_abs_virtual_root():
 
 def _eventual_path(path):
     return os.path.abspath(os.path.realpath(path))
-
-def index(request, path):
-    def index_maker():
-        def _index(inpath):
-            contents = os.listdir(inpath)
-            for mfile in contents:
-                t = os.path.join(inpath, mfile)
-                if os.path.isfile(t):
-                    link_target = os.path.relpath(t, start=os.path.join(
-                        _get_abs_virtual_root(), 'archive/'))
-                    yield loader.render_to_string('build/bundle/list_file.html', {'file': mfile, 'link': link_target})
-                if os.path.isdir(t):
-                    link_target = os.path.relpath(t, start=os.path.join(
-                        _get_abs_virtual_root(), 'archive/'))
-                    yield loader.render_to_string('build/bundle/list_folder.html', {'file': mfile, 'subfiles': _index(os.path.join(inpath, t)), 'link': link_target})
-                    continue
-               
- 
-        return _index(eventual_path)
-   
-    def retrieve_content(inpath):
-        # A bundle whose directory is missing (failed creation, manual cleanup)
-        # should show an empty file list, not a 500.
-        if not os.path.isdir(inpath):
-            print('retrieve_content: directory missing, skipping: {}'.format(inpath))
-            return []
-        contents = os.listdir(inpath)
-        results = []
-        for mfile in contents:
-            t = os.path.join(inpath, mfile)
-            if os.path.isfile(t):
-                # Only XML labels are previewable. Uploaded data files (e.g.
-                # NetCDF binaries) live in the same directory since the June
-                # uploader changes; parsing them as XML crashed every bundle
-                # page load after the first upload.
-                if not mfile.lower().endswith('.xml'):
-                    continue
-                link_target = os.path.relpath(t, start=os.path.join(
-                    _get_abs_virtual_root(), 'archive/'))
-
-                try:
-                    tree = etree.parse(os.path.join(settings.ARCHIVE_DIR, link_target))
-                    xml_content = etree.tostring(tree, pretty_print=True, encoding='unicode')
-                except (OSError, etree.XMLSyntaxError) as e:
-                    print('retrieve_content: unreadable label {}: {}'.format(t, e))
-                    xml_content = ('<!-- This label file could not be read. '
-                                   'Please contact the ELSA team via the Contact page. -->')
-
-                results.append([mfile, xml_content])
-            if os.path.isdir(t):
-                link_target = os.path.relpath(t, start=os.path.join(
-                    _get_abs_virtual_root(), 'archive/'))
-                results.extend(retrieve_content(os.path.join(inpath, t)))
-
-        return results
- 
- 
-    directory_name = os.path.basename(path)
- 
-    eventual_path = _eventual_path(os.path.join(settings.ARCHIVE_DIR, path))
-    if os.path.isfile(eventual_path):
-        print(path)
-        return HttpResponse(open(eventual_path).read(), content_type='text/xml')
- 
-    c = index_maker()
-    file_context = retrieve_content(eventual_path)
-    return directory_name, c, file_context
 
 # NETCDF (Victoria's Code)
 import xarray as xr

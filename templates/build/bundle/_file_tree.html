@@ -1,0 +1,450 @@
+{% comment %}
+Files card body: the bundle's generated XML labels, shown in the shape they have on disk.
+
+Before this, every label was rendered as an identical flat button, so a Product_Observational label
+sat at the same level as the Product_Collection label that contains it and nothing in the UI said
+the two were related. The tree keeps the containment that the flat list threw away: the bundle
+label at the root, one group per collection directory, and each collection's labels nested under it
+with the data file they describe named underneath.
+
+Context: file_tree (built by views._bundle_file_tree) and bundle.
+Label content is NOT in the page. Clicking a row fetches it from build:label_content.
+
+Included by both the Archive and the External branches of bundle.html. Both branches share the
+viewer element ids (#fileName, #fileBreadcrumb, #fileContent, #copyLabelBtn), and only one branch
+renders per request, so the script below owns the wiring for both.
+{% endcomment %}
+
+<style>
+   /* Prefixed eft- (ELSA file tree) so nothing here can reach the rest of the bundle page.
+      Everything visual here defers to what the bundle page already establishes: the per-bundle
+      theme accent set on .archive-theme / .external-theme, the eyebrow-and-rule section header
+      from the Bundle Components card, and Bootstrap's own type scale rather than a second one. */
+
+   .elsa-file-tree {
+      /* Fallback for any context that is neither theme wrapper. */
+      --eft-accent: #008080;
+      --eft-accent-tint: #e6f2f2;
+   }
+   /* The tree takes the accent of whichever bundle it is sitting in, so a selected label matches
+      the buttons beside it instead of introducing a third colour to the page. */
+   .archive-theme .elsa-file-tree  { --eft-accent: #008080; --eft-accent-tint: #e6f2f2; }
+   .external-theme .elsa-file-tree { --eft-accent: #0E76BD; --eft-accent-tint: #e7f1f8; }
+
+   /* Rows are list-group-item-action, as in the Bundle Components card, so hover and focus come
+      from Bootstrap. Only the selected state is ours, because Bootstrap's .active is its own blue. */
+   .elsa-file-tree .eft-item {
+      display: flex;
+      align-items: flex-start;
+      gap: .5rem;
+      width: 100%;
+      padding-left: .5rem;
+      padding-right: .5rem;
+      text-align: left;
+      border-left: 3px solid transparent;
+   }
+   .elsa-file-tree .eft-item.active {
+      background-color: var(--eft-accent-tint);
+      border-left-color: var(--eft-accent);
+      color: inherit;
+   }
+
+   /* Section header, matching "INVESTIGATION AREA ————" in the Bundle Components card. */
+   .elsa-file-tree .eft-folder {
+      display: flex;
+      align-items: center;
+      gap: .4rem;
+      width: 100%;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: inherit;
+   }
+   /* No font-family and no font-size here on purpose. Every element on this page renders in the
+      body face, and Outfit appears exactly once, on the 32px bundle title, so it is a display face
+      rather than a UI face. Headers are set apart from filenames by weight alone, via the same
+      .small / .fw-semibold / .text-muted utilities the Bundle Components card uses.
+
+      Not uppercased, unlike the eyebrow headers in that card: these are the collection's real
+      directory name, and `XML_SCHEMA` named something the user could not go and find. */
+   .elsa-file-tree .eft-folder-name { white-space: nowrap; }
+   .elsa-file-tree .eft-folder:hover .eft-folder-name { color: var(--eft-accent); }
+   .elsa-file-tree .eft-chevron {
+      font-size: .6rem;
+      color: #6c757d;
+      transition: transform .15s ease-in-out;
+   }
+   .elsa-file-tree .eft-folder[aria-expanded="true"] .eft-chevron { transform: rotate(90deg); }
+
+   /* Indent guide: the vertical rule is what makes "these belong to that" readable at a glance. */
+   .elsa-file-tree .eft-children {
+      margin-left: .25rem;
+      padding-left: .35rem;
+      border-left: 1px solid #e4e4e4;
+   }
+
+   .elsa-file-tree .eft-icon { flex-shrink: 0; margin-top: .15rem; }
+   .elsa-file-tree .eft-icon-structure { color: var(--eft-accent); }
+
+   .elsa-file-tree .eft-body { max-height: 720px; overflow-y: auto; }
+   .elsa-file-tree .eft-status { flex-shrink: 0; margin-top: .15rem; }
+
+   /* Filenames sit in the page's body face, not monospace. This card is a list of things to open,
+      like the Bundle Components rows beside it, and it was the only list on the page set in code
+      type. Monospace stays in the XML viewer, where the content genuinely is code. */
+   .elsa-file-tree .eft-name { overflow-wrap: anywhere; }
+   .elsa-file-tree .eft-count { font-size: .7rem; }
+
+   /* Type chips. Deliberately not .btn: the bundle theme repaints every .btn with an !important
+      accent fill, which would make selected and unselected chips identical. */
+   .elsa-file-tree .eft-chip {
+      padding: .15rem .5rem;
+      border: 1px solid #dee2e6;
+      border-radius: 1rem;
+      background: transparent;
+      font-size: .7rem;
+      letter-spacing: .04em;
+      color: #6c757d;
+      line-height: 1.6;
+   }
+   .elsa-file-tree .eft-chip:hover { border-color: var(--eft-accent); color: var(--eft-accent); }
+   .elsa-file-tree .eft-chip.active {
+      background-color: var(--eft-accent);
+      border-color: var(--eft-accent);
+      color: #fff;
+   }
+</style>
+
+<div class="elsa-file-tree" data-label-url="{% url 'build:label_content' bundle.pk %}"
+   data-bundle-name="{{ bundle.name_directory_case }}">
+
+   {% comment %}A collection whose directory exists but holds no labels yet still belongs in the
+   tree: "this collection is empty" is more useful than the bundle-wide empty state.{% endcomment %}
+   {% if file_tree.total or file_tree.folders %}
+
+   {% if file_tree.total %}
+   <input type="search" class="form-control form-control-sm eft-filter"
+      placeholder="Search labels" aria-label="Search labels">
+
+   {% comment %}Chips are offered only for kinds this bundle actually has, and only when there is
+   more than one to choose between (views._bundle_file_tree decides).{% endcomment %}
+   {% if file_tree.filter_kinds %}
+   <div class="d-flex flex-wrap gap-1 mt-2 eft-chips" role="group" aria-label="Filter by label type">
+      <button type="button" class="eft-chip active" data-kind="" aria-pressed="true">All</button>
+      {% for chip in file_tree.filter_kinds %}
+      <button type="button" class="eft-chip" data-kind="{{ chip.kind }}" aria-pressed="false">{{ chip.label }}</button>
+      {% endfor %}
+   </div>
+   {% endif %}
+
+   <hr class="my-3 opacity-25">
+   {% endif %}
+
+   <div class="eft-body">
+
+      {% comment %}The bundle label is the root of the archive, so it is pinned above the groups
+      rather than sorted in among them.{% endcomment %}
+      {% if file_tree.root_labels %}
+      <div class="list-group list-group-flush mb-3 eft-root">
+         {% for label in file_tree.root_labels %}
+         <button type="button" class="list-group-item list-group-item-action py-2 eft-item file-button"
+            data-path="{{ label.path }}" data-filename="{{ label.name }}" data-folder=""
+            data-kind="{{ label.kind }}">
+            <i class="bi bi-box-seam eft-icon eft-icon-structure"></i>
+            <span>
+               <span class="small eft-name">{{ label.name }}</span><br>
+               <span class="small text-muted">{{ label.kind_label }}</span>
+            </span>
+         </button>
+         {% endfor %}
+      </div>
+      {% endif %}
+
+      {% for folder in file_tree.folders %}
+      <div class="eft-group mb-3">
+         {% comment %}Eyebrow-and-rule header, the same treatment the Bundle Components card uses
+         for its section titles.{% endcomment %}
+         <button type="button" class="eft-folder mb-2" data-bs-toggle="collapse"
+            data-bs-target="#eftGroup{{ forloop.counter }}" aria-expanded="true"
+            aria-controls="eftGroup{{ forloop.counter }}">
+            <i class="bi bi-chevron-right eft-chevron"></i>
+            <span class="small fw-semibold text-muted eft-folder-name">{{ folder.name }}</span>
+            {% if folder.collection_type %}
+            <span class="badge rounded-pill bg-light text-muted border fw-normal">{{ folder.collection_type }}</span>
+            {% endif %}
+            <span class="eft-count text-muted">{{ folder.count }}</span>
+            <hr class="flex-grow-1 my-0 opacity-50">
+         </button>
+
+         <div class="collapse show" id="eftGroup{{ forloop.counter }}">
+            <div class="eft-children">
+               {% if folder.labels %}
+               <div class="list-group list-group-flush">
+                  {% for label in folder.labels %}
+                  <button type="button" class="list-group-item list-group-item-action py-2 eft-item file-button"
+                     data-path="{{ label.path }}" data-filename="{{ label.name }}" data-folder="{{ folder.name }}"
+                     data-kind="{{ label.kind }}">
+                     {% comment %}Colour is spent on structure only (the labels that hold other
+                     things) and on the status dot. Everything else stays muted.{% endcomment %}
+                     {% if label.kind == 'collection' %}
+                     <i class="bi bi-folder-symlink eft-icon eft-icon-structure"></i>
+                     {% elif label.kind == 'document' %}
+                     <i class="bi bi-file-earmark-text eft-icon text-muted"></i>
+                     {% else %}
+                     <i class="bi bi-file-earmark-code eft-icon text-muted"></i>
+                     {% endif %}
+
+                     <span class="flex-grow-1" style="min-width: 0;">
+                        <span class="small eft-name">{{ label.name }}</span><br>
+                        {% if label.describes %}
+                        <span class="small text-muted">
+                           describes <span class="eft-name">{{ label.describes }}</span>
+                        </span>
+                        {% else %}
+                        <span class="small text-muted">{{ label.kind_label }}</span>
+                        {% endif %}
+                     </span>
+
+                     {% comment %}processed is None for labels with no NetCDFFile row behind them
+                     (documents, collection labels), so absence of a dot is not a failure.{% endcomment %}
+                     {% if label.processed is True %}
+                     <i class="bi bi-check-circle-fill text-success eft-status"
+                        title="Metadata extracted and label generated."></i>
+                     {% elif label.processed is False %}
+                     <i class="bi bi-exclamation-circle-fill text-danger eft-status"
+                        title="{% if label.processing_error %}{{ label.processing_error }}{% else %}Label generation did not complete for this file.{% endif %}"></i>
+                     {% endif %}
+                  </button>
+                  {% endfor %}
+               </div>
+               {% else %}
+               <p class="small text-muted fst-italic mb-0 py-1">No labels in this collection yet.</p>
+               {% endif %}
+            </div>
+         </div>
+      </div>
+      {% endfor %}
+
+      <p class="eft-no-match text-muted small fst-italic text-center my-3 d-none">
+         No labels match that filter.
+      </p>
+   </div>
+
+   <p class="text-muted small mb-0 pt-2 border-top">
+      {{ file_tree.total }} label{{ file_tree.total|pluralize }} generated
+   </p>
+
+   {% else %}
+   <div class="text-center text-muted py-4">
+      <i class="bi bi-folder2-open" style="font-size: 2rem; opacity: .4;"></i>
+      <p class="small mb-0 mt-2">
+         No labels yet. Labels appear here as you add collections, documents and data files.
+      </p>
+   </div>
+   {% endif %}
+</div>
+
+<script>
+   // Files tree wiring: filtering, selection, and on-demand label loading.
+   //
+   // Content is fetched per label rather than embedded in the page. The old card inlined every
+   // label's full XML into a data-content attribute, which put the entire archive's XML into the
+   // HTML source and made the view parse every label on every page load.
+   //
+   // Deferred to DOMContentLoaded: this script is parsed inside the Files card, which sits above
+   // the XML Viewer card in both page variants, so #fileName and #fileContent do not exist yet at
+   // parse time.
+   (function () {
+      function initFileTree() {
+      var tree = document.querySelector('.elsa-file-tree');
+      if (!tree) return;
+
+      var labelUrl  = tree.getAttribute('data-label-url');
+      var bundleName = tree.getAttribute('data-bundle-name') || '';
+      var nameEl   = document.getElementById('fileName');
+      var crumbEl  = document.getElementById('fileBreadcrumb');
+      var contentEl = document.getElementById('fileContent');
+      var copyBtn  = document.getElementById('copyLabelBtn');
+      if (!nameEl || !contentEl) return;
+
+      // Labels are immutable for the life of the page, so a label re-opened after being viewed
+      // once is served from here rather than refetched.
+      var cache = {};
+      var currentPath = null;
+
+      function setBreadcrumb(folder, filename) {
+         if (!crumbEl) return;
+         var parts = [bundleName];
+         if (folder) parts.push(folder);
+         parts.push(filename);
+         crumbEl.textContent = parts.filter(Boolean).join(' › ');
+      }
+
+      function showFileContent(filename, content) {
+         nameEl.textContent = filename;
+         contentEl.textContent = content;
+      }
+      // Kept global: the older inline handlers on the bundle page call it by name.
+      window.showFileContent = showFileContent;
+
+      function markActive(button) {
+         tree.querySelectorAll('.eft-item.active').forEach(function (el) {
+            el.classList.remove('active');
+            el.removeAttribute('aria-current');
+         });
+         button.classList.add('active');
+         button.setAttribute('aria-current', 'true');
+      }
+
+      function load(button) {
+         var path     = button.getAttribute('data-path');
+         var filename = button.getAttribute('data-filename');
+         var folder   = button.getAttribute('data-folder') || '';
+
+         markActive(button);
+         setBreadcrumb(folder, filename);
+
+         if (cache[path] !== undefined) {
+            currentPath = path;
+            showFileContent(filename, cache[path]);
+            if (copyBtn) copyBtn.disabled = false;
+            return;
+         }
+
+         showFileContent(filename, 'Loading...');
+         if (copyBtn) copyBtn.disabled = true;
+
+         fetch(labelUrl + '?path=' + encodeURIComponent(path), {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            credentials: 'same-origin'
+         })
+            .then(function (response) {
+               return response.json().then(function (data) {
+                  return { ok: response.ok, data: data };
+               });
+            })
+            .then(function (result) {
+               if (!result.ok || !result.data || result.data.error) {
+                  var message = (result.data && result.data.error)
+                     ? result.data.error
+                     : 'This label could not be loaded.';
+                  showFileContent(filename, message);
+                  return;
+               }
+               // Only successful reads are cached, so a transient failure can be retried by
+               // clicking the same label again.
+               cache[path] = result.data.content;
+               currentPath = path;
+               showFileContent(filename, result.data.content);
+               if (copyBtn) copyBtn.disabled = false;
+            })
+            .catch(function () {
+               showFileContent(filename, 'This label could not be loaded. Check your connection and try again.');
+            });
+      }
+
+      tree.querySelectorAll('.eft-item').forEach(function (button) {
+         button.addEventListener('click', function () { load(this); });
+      });
+
+      // navigator.clipboard is undefined outside a secure context, which includes a plain-http
+      // dev server, so the button is hidden rather than left to throw on click.
+      if (copyBtn && !(navigator.clipboard && navigator.clipboard.writeText)) {
+         copyBtn.classList.add('d-none');
+         copyBtn = null;
+      }
+
+      if (copyBtn) {
+         copyBtn.addEventListener('click', function () {
+            if (currentPath === null || cache[currentPath] === undefined) return;
+            var restore = copyBtn.innerHTML;
+            navigator.clipboard.writeText(cache[currentPath]).then(function () {
+               copyBtn.innerHTML = '<i class="bi bi-check2 me-1"></i>Copied';
+               setTimeout(function () { copyBtn.innerHTML = restore; }, 1500);
+            }).catch(function () {});
+         });
+      }
+
+      // Filter. Text and type chip are combined with AND: the chip narrows which kinds can match,
+      // the text narrows by name. A match on a folder name keeps everything in that folder, so a
+      // user can type a collection name and see its contents, but the chip still applies.
+      var filterInput = tree.querySelector('.eft-filter');
+      var chips = tree.querySelectorAll('.eft-chip');
+      var noMatch = tree.querySelector('.eft-no-match');
+      var activeKind = '';
+
+      function applyFilter() {
+         var term = filterInput ? filterInput.value.trim().toLowerCase() : '';
+         var anyVisible = false;
+
+         function keeps(item, folderHit) {
+            if (activeKind && item.getAttribute('data-kind') !== activeKind) return false;
+            if (!term || folderHit) return true;
+            return item.getAttribute('data-filename').toLowerCase().indexOf(term) !== -1;
+         }
+
+         // Root labels carry an empty data-folder; they live in their own list-group wrapper,
+         // which is hidden too once nothing in it matches.
+         var rootShown = 0;
+         tree.querySelectorAll('.eft-item[data-folder=""]').forEach(function (item) {
+            var hit = keeps(item, false);
+            item.classList.toggle('d-none', !hit);
+            if (hit) { rootShown++; anyVisible = true; }
+         });
+         var rootWrap = tree.querySelector('.eft-root');
+         if (rootWrap) rootWrap.classList.toggle('d-none', rootShown === 0);
+
+         tree.querySelectorAll('.eft-group').forEach(function (group) {
+            var folderName = group.querySelector('.eft-folder-name').textContent.toLowerCase();
+            var folderHit = !!term && folderName.indexOf(term) !== -1;
+            var shown = 0;
+
+            group.querySelectorAll('.eft-item').forEach(function (item) {
+               var hit = keeps(item, folderHit);
+               item.classList.toggle('d-none', !hit);
+               if (hit) shown++;
+            });
+
+            // A folder whose name matches but whose contents are all filtered out by the chip is
+            // not a result, so it is only kept when something inside it survived.
+            group.classList.toggle('d-none', shown === 0);
+            if (shown > 0) anyVisible = true;
+
+            // While filtering, matches must be visible without a second click.
+            if ((term || activeKind) && shown > 0) {
+               var panel = group.querySelector('.collapse');
+               if (panel && window.bootstrap && bootstrap.Collapse) {
+                  bootstrap.Collapse.getOrCreateInstance(panel, { toggle: false }).show();
+               }
+            }
+         });
+
+         if (noMatch) noMatch.classList.toggle('d-none', anyVisible);
+      }
+
+      if (filterInput) filterInput.addEventListener('input', applyFilter);
+
+      chips.forEach(function (chip) {
+         chip.addEventListener('click', function () {
+            activeKind = this.getAttribute('data-kind');
+            chips.forEach(function (other) {
+               var on = other === chip;
+               other.classList.toggle('active', on);
+               other.setAttribute('aria-pressed', on ? 'true' : 'false');
+            });
+            applyFilter();
+         });
+      });
+
+      // Open on the bundle label, or on the first label there is, so the viewer is never blank.
+      var first = tree.querySelector('.eft-item');
+      if (first) load(first);
+      }
+
+      if (document.readyState === 'loading') {
+         document.addEventListener('DOMContentLoaded', initFileTree);
+      } else {
+         initFileTree();
+      }
+   })();
+</script>

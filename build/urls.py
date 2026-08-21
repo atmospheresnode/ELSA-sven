@@ -123,6 +123,9 @@ urlpatterns = [
     #delete net cdf file
     re_path(r'^(?P<pk_bundle>\d+)/netcdf/bulk_delete/$', views.bulk_delete_netcdf, name='bulk_delete_netcdf'),
 
+    # One generated label's XML, fetched on demand by the Files tree
+    re_path(r'^(?P<pk_bundle>\d+)/label_content/$', views.label_content, name='label_content'),
+
     # AMA discipline metadata (the parts of the AMA area the NetCDF harvest cannot supply)
     re_path(r'^(?P<pk_bundle>\d+)/ama/collection/(?P<pk_collection>\d+)/$', views.ama_collection_defaults, name='ama_collection_defaults'),
     re_path(r'^(?P<pk_bundle>\d+)/netcdf/(?P<pk_netcdf>\d+)/ama/$', views.netcdf_ama, name='netcdf_ama'),
