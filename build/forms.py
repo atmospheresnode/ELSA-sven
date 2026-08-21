@@ -1575,7 +1575,7 @@ class EditTableFieldsForm(forms.Form):
                     label=field_number_label,
                     widget=forms.TextInput(attrs={'class': 'form-control form-outline'})
                 )
-                self.fields[f'description_{i}'] = forms.IntegerField(
+                self.fields[f'description_{i}'] = forms.CharField(
                     required=False,
                     label=description_label,
                     widget=forms.TextInput(attrs={'class': 'form-control form-outline'})

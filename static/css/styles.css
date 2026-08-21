@@ -121,3 +121,242 @@ a:hover .modal-card {
     padding: 1.25em;
 }
 
+/* =========================================================
+    ADD DATA PRODUCT MODAL
+    ========================================================= */
+
+#data_product_modal .modal-dialog {
+    max-width: 700px;
+}
+
+#data_product_modal .modal-content {
+    overflow: hidden;
+    border: 0;
+    border-radius: 0.6rem;
+    box-shadow: 0 1rem 2.5rem rgba(0, 0, 0, 0.2);
+}
+
+/* Header */
+
+#data_product_modal .modal-header {
+    align-items: flex-start;
+    padding: 1.4rem 1.6rem 1.25rem;
+}
+
+#data_product_modal .modal-title {
+    margin: 0;
+    color: #292f35;
+    font-size: 1.65rem;
+    font-weight: 650;
+    line-height: 1.2;
+}
+
+#data_product_modal .modal-subtitle {
+    margin: 0.3rem 0 0;
+    color: #6c757d;
+    font-size: 0.95rem;
+}
+
+#data_product_modal .btn-close {
+    margin-top: 0.15rem;
+}
+
+/* Body */
+
+#data_product_modal .modal-body {
+    max-height: 68vh;
+    padding: 1.4rem 1.6rem;
+    overflow-y: auto;
+}
+
+#data_product_modal .data-form-group {
+    margin-bottom: 1.25rem;
+}
+
+#data_product_modal .data-form-group:last-child {
+    margin-bottom: 0;
+}
+
+/* Labels */
+
+#data_product_modal .data-form-label {
+    display: block;
+    margin-bottom: 0.4rem;
+    color: #292f35;
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+
+#data_product_modal .required-marker {
+    color: #dc3545;
+    font-weight: 700;
+}
+
+/* Name input and select menus */
+
+#data_product_modal .data-form-group > input[type="text"],
+#data_product_modal .data-form-group > select {
+    display: block;
+    width: 100%;
+    min-height: 2.75rem;
+    padding: 0.55rem 0.75rem;
+    color: #212529;
+    background-color: #fff;
+    border: 1px solid #adb5bd;
+    border-radius: 0.3rem;
+    font-size: 1rem;
+    line-height: 1.5;
+}
+
+#data_product_modal
+    .data-form-group
+    > input[type="text"]:focus,
+#data_product_modal
+    .data-form-group
+    > select:focus {
+    border-color: #59aeb0;
+    outline: 0;
+    box-shadow: 0 0 0 0.2rem rgba(35, 135, 138, 0.18);
+}
+
+/* Processing-level help link */
+
+#data_product_modal .processing-help-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-top: 0.45rem;
+    color: #0d6efd;
+    font-size: 0.85rem;
+    text-decoration: none;
+}
+
+#data_product_modal .processing-help-link:hover {
+    text-decoration: underline;
+}
+
+#data_product_modal .processing-help-link svg {
+    flex-shrink: 0;
+}
+
+/* Processing-level definitions */
+
+#data_product_modal .processing-definitions {
+    margin-top: 0.75rem;
+    padding: 1rem;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 0.4rem;
+}
+
+#data_product_modal .processing-definition {
+    margin-bottom: 0.75rem;
+}
+
+#data_product_modal .processing-definition:last-child {
+    margin-bottom: 0;
+}
+
+#data_product_modal .processing-definition strong {
+    display: block;
+    margin-bottom: 0.15rem;
+    color: #292f35;
+    font-size: 0.85rem;
+}
+
+#data_product_modal .processing-definition p {
+    margin: 0;
+    color: #495057;
+    font-size: 0.8rem;
+    line-height: 1.45;
+}
+
+/* Header checkbox */
+
+#data_product_modal .header-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    margin-top: 0.85rem;
+}
+
+#data_product_modal
+    .header-checkbox
+    input[type="checkbox"] {
+    width: 1.1rem;
+    height: 1.1rem;
+    margin: 0;
+    accent-color: #23878a;
+}
+
+#data_product_modal .header-checkbox label {
+    margin: 0;
+    color: #30373d;
+    font-size: 0.9rem;
+}
+
+/* Form errors */
+
+#data_product_modal .field-errors {
+    margin-top: 0.35rem;
+    color: #b02a37;
+    font-size: 0.85rem;
+}
+
+#data_product_modal .field-errors .errorlist {
+    margin: 0;
+    padding-left: 1.1rem;
+}
+
+/* Footer */
+
+#data_product_modal .modal-footer {
+    padding: 1rem 1.6rem;
+    background-color: #f8f9fa;
+    border-top: 1px solid #dee2e6;
+}
+
+#data_product_modal .modal-footer .btn {
+    min-height: 2.5rem;
+    padding: 0.5rem 1.1rem;
+}
+
+#data_product_modal .add-data-product-button {
+    color: #fff;
+    background-color: #23878a;
+    border-color: #23878a;
+}
+
+#data_product_modal .add-data-product-button:hover,
+#data_product_modal .add-data-product-button:focus {
+    color: #fff;
+    background-color: #1b6d70;
+    border-color: #1b6d70;
+}
+
+#data_product_modal .add-data-product-button:focus {
+    box-shadow: 0 0 0 0.2rem rgba(35, 135, 138, 0.25);
+}
+
+/* Mobile */
+
+@media (max-width: 575.98px) {
+    #data_product_modal .modal-dialog {
+        margin: 0.75rem;
+    }
+
+    #data_product_modal .modal-header,
+    #data_product_modal .modal-body,
+    #data_product_modal .modal-footer {
+        padding-right: 1.1rem;
+        padding-left: 1.1rem;
+    }
+
+    #data_product_modal .modal-title {
+        font-size: 1.35rem;
+    }
+
+    #data_product_modal .modal-footer .btn {
+        flex: 1;
+    }
+}

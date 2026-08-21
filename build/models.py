@@ -3747,7 +3747,7 @@ class Table_Fixed_Width(models.Model):
             data_type = field.find('{}data_type'.format(NAMESPACE)) 
             data_type.text = str(cleaned_form.get(f'data_type_{field_count}'))
             field_number = field.find('{}field_number'.format(NAMESPACE))
-            field_number.text = cleaned_form.get(f'field_number_{field_count}')
+            field_number.text = str(cleaned_form.get(f'field_number_{field_count}'))
             description = field.find('{}description'.format(NAMESPACE)) 
             description.text = str(cleaned_form.get(f'description_{field_count}'))
 
