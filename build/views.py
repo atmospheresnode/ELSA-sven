@@ -734,14 +734,22 @@ def bundle(request, pk_bundle):
         # get set of aliases associated with the bundle
         alias_set = Alias.objects.filter(bundle=bundle)
 
-        additional_collections_set = AdditionalCollections.objects.filter(bundle=bundle)
+        # Each collection carries its own NetCDF list and AMA status; see _collections_with_ama.
+        additional_collections_set = _collections_with_ama(bundle)
 
         # get citation information associated with bundle
         # citation_information_set = Citation_Information.objects.filter(bundle=bundle)
 
         citation_information_set = Citation_Information.objects.filter(bundle=bundle)
 
-        product_bundle = Product_Bundle.objects.get(bundle=bundle)
+        # A bundle whose creation crashed partway (e.g. disk full) has no Product_Bundle; send the
+        # user back to the hub instead of a 500. This has to sit above the first access, not further
+        # down the view: DoesNotExist is raised here long before a check placed lower is reached.
+        try:
+            product_bundle = Product_Bundle.objects.get(bundle=bundle)
+        except Product_Bundle.DoesNotExist:
+            print('Bundle {} has no Product_Bundle (creation likely failed); redirecting.'.format(bundle.pk))
+            return HttpResponseRedirect(reverse('friends:bundle_hub'))
         # A missing or unreadable bundle label must not 500 the whole page;
         # citation author/editor display just falls back to the DB values.
         citation_xml = None
@@ -945,36 +953,6 @@ def bundle(request, pk_bundle):
         product_observational_set = Product_Observational.objects.filter(data__bundle=bundle)
 
 
-        # Following code is to get xml content of bundle xml files
-        # Temporary testing, will be better to add this to chocoloate.py as it's likely we want to do this multiple times
-        # Said Ajo :/
-        # A bundle whose creation crashed partway (e.g. disk full) has no
-        # Product_Bundle; send the user back to the hub instead of a 500.
-        try:
-            prod_bundle = Product_Bundle.objects.get(bundle=bundle)
-        except Product_Bundle.DoesNotExist:
-            print('Bundle {} has no Product_Bundle (creation likely failed); redirecting.'.format(bundle.pk))
-            return HttpResponseRedirect(reverse('friends:bundle_hub'))
-        prod_col_list = Product_Collection.objects.filter(bundle=bundle)
-        labels = []
-        labels.append(prod_bundle)
-        labels.extend(prod_col_list)
-        xml_content_set = []
-        for label in labels:
-        # parser = etree.XMLParser(remove_blank_text=False, remove_comments=False)
-            # A missing or corrupt label (interrupted write, full disk) must not
-            # make the whole bundle page unreachable.
-            try:
-                tree = etree.parse(label.label())
-                xml_content = etree.tostring(tree, pretty_print=True, encoding='unicode')
-            except (OSError, etree.XMLSyntaxError) as e:
-                print('Could not read label {}: {}'.format(label.label(), e))
-                xml_content = ('<!-- This label file could not be read ({}). '
-                               'Please contact the ELSA team via the Contact page. -->'
-                               .format(type(e).__name__))
-            xml_content_set.append(xml_content)
-
-
         instrument_host_investigations = []
         for instrument_host in bundle.instrument_hosts.all():
             instrument_host_investigations.append(instrument_host.investigations.last())      
@@ -991,7 +969,7 @@ def bundle(request, pk_bundle):
         for telescope in bundle.telescopes.all():
             telescope_investigations.append(telescope.investigations.last())
 
-        directory_name, c, file_context = index(request, bundle.relative_dir())
+        file_tree = _bundle_file_tree(bundle)
 
         table_set = []
         print(Table_Binary.objects.filter(bundle=bundle))
@@ -1001,7 +979,6 @@ def bundle(request, pk_bundle):
 
         # Context dictionary for template
         context_dict = {
-            'xml_content_set': xml_content_set,
             'bundle':bundle,
             'alias_set':alias_set,
             'alias_set_count':len(alias_set), 
@@ -1039,6 +1016,8 @@ def bundle(request, pk_bundle):
             'product_observational_set':product_observational_set,
             'documents':Product_Document.objects.filter(bundle=bundle),
             'additional_collections_set': additional_collections_set,
+            # Listed on their own rather than inside a collection: they belong to none.
+            'unassigned_netcdf_files': _unassigned_netcdf_files(bundle),
             'user':request.user,
             'context_products_contact' : context_products_contact,
             'contact_form' : contact_form,
@@ -1048,20 +1027,7 @@ def bundle(request, pk_bundle):
             
             # To handle NetCDF files
             'form_netcdf': form_netcdf,
-            'netcdf_files': _netcdf_files_with_ama_flags(bundle),
 
-            # AMA discipline metadata the NetCDF harvest cannot supply. These are the bundle-wide
-            # defaults; per-file overrides are edited on the netcdf_ama page.
-            'form_ama_model_metadata': ModelMetadataForm(
-                instance=ModelMetadata.objects.filter(bundle=bundle).first(),
-                prefix=AMA_MODEL_METADATA_PREFIX),
-            'form_ama_simulation': SimulationConfigurationForm(
-                instance=SimulationConfiguration.default_for_bundle(bundle), scope='default',
-                prefix=AMA_SIMULATION_PREFIX),
-            'form_ama_file_description': FileDescriptionForm(
-                instance=FileDescription.default_for_bundle(bundle), scope='default',
-                prefix=AMA_FILE_DESCRIPTION_PREFIX),
-            'ama_status': _ama_status(bundle),
         }
 
         # Compute status for bundle progress checklist
@@ -1077,9 +1043,7 @@ def bundle(request, pk_bundle):
         }
 
         context_dict['status_dict'] = status_dict
-        context_dict['directory_name'] = directory_name
-        context_dict['subfiles'] = c 
-        context_dict['file_context'] = file_context
+        context_dict['file_tree'] = file_tree
 
         # To handle NetCDF files
         # if form_netcdf.is_valid():
@@ -1096,9 +1060,28 @@ def bundle(request, pk_bundle):
         #     return HttpResponseRedirect('/elsa/build/' + str(bundle.pk) + '/')
 
         if request.method == 'POST':
-
             if form_netcdf.is_valid():
                 files = form_netcdf.cleaned_data['netcdf_files']
+                collection = form_netcdf.cleaned_data['collection']
+
+                # Scoped to this bundle: collection_name is not unique across the table, so an
+                # unscoped lookup can match another user's collection of the same name and write
+                # the upload into their archive directory.
+                netcdf_collection = AdditionalCollections.objects.filter(
+                    bundle=bundle, collection_name=collection).first()
+
+                if netcdf_collection is None:
+                    return JsonResponse(
+                        {'error': 'Could not tell which collection this upload belongs to. '
+                                  'Please reload the page and try again.'},
+                        status=400
+                    )
+
+                netcdf_collection_directory = netcdf_collection.directory()
+                # The collection directory is created when the collection is built, but an upload
+                # into a collection whose folder is missing would otherwise fail on os.rename.
+                os.makedirs(netcdf_collection_directory, exist_ok=True)
+
 
                 # Refuse the upload up front if the disk can't hold it (plus a
                 # safety margin) - running out of space mid-write corrupts labels
@@ -1116,6 +1099,30 @@ def bundle(request, pk_bundle):
                     )
 
                 created_objs = []
+                # A file is filed under its own name inside the collection directory, and its label
+                # is named after it, so two uploads of the same name into the same collection
+                # collide: the second overwrites the first file AND its label, leaving two database
+                # rows pointing at one path. Their AMA metadata then silently overwrites each
+                # other, because both regenerate the same label. Refuse instead, and say what to do.
+                existing_names = {
+                    os.path.basename(name) for name in
+                    NetCDFFile.objects.filter(collection=netcdf_collection)
+                    .values_list('file', flat=True) if name
+                }
+                seen_in_this_upload = set()
+                for f in files:
+                    incoming = os.path.basename(f.name)
+                    if incoming in existing_names or incoming in seen_in_this_upload:
+                        return JsonResponse(
+                            {'error': 'A file named "{}" is already in the "{}" collection. '
+                                      'Delete it first if you want to replace it, or rename the '
+                                      'file, since two files cannot share a name inside one '
+                                      'collection.'.format(incoming,
+                                                           netcdf_collection.collection_name)},
+                            status=400
+                        )
+                    seen_in_this_upload.add(incoming)
+
                 try:
                     for f in files:
                         if not is_netcdf_file(f):
@@ -1131,8 +1138,9 @@ def bundle(request, pk_bundle):
                         # Create the NetCDFFile object using your model's fields
                         netcdf_obj = NetCDFFile(
                             bundle=bundle,
+                            collection=netcdf_collection,
                             file=f,
-                            title=file_title
+                            title=file_title,
                         )
 
                         netcdf_obj.save()
@@ -1147,10 +1155,8 @@ def bundle(request, pk_bundle):
 
 
                 if created_objs:
-                    print('before call')
                     # Process only the files just uploaded for this bundle.
-                    errors = variable_coord_to_product(bundle, created_objs)
-                    print('after call')
+                    errors = variable_coord_to_product(bundle, created_objs, netcdf_collection_directory)
                     if errors:
                         # Files are saved but metadata extraction failed; tell the user which.
                         return JsonResponse(
@@ -1307,7 +1313,7 @@ def bundle(request, pk_bundle):
             for modification_history in modification_history_set:
                 write_into_label(modification_history, additional_collections, None)
 
-            additional_collections_set = AdditionalCollections.objects.filter(bundle=bundle)
+            additional_collections_set = _collections_with_ama(bundle)
             context_dict['additional_collections_set'] = additional_collections_set
             context_dict['additional_collections_count'] =  len(additional_collections_set)
 
@@ -1493,9 +1499,14 @@ def bulk_delete_netcdf(request, pk_bundle):
                     # append .xml (a bare .replace('.nc', '.xml') misses extensionless
                     # files and mangles names with '.nc' in the middle).
                     nc_filename = os.path.basename(netcdf_file.file.name)
+                    # Captured before the record is deleted, per the project's delete convention.
+                    # Uploads are filed under their collection's directory, so that is where both
+                    # the NetCDF and its label live; NetCDFFile.directory() falls back to the
+                    # bundle root for rows that predate the collection field.
+                    file_directory = netcdf_file.directory()
                     try:
                         nc_name = nc_filename[:-3] if nc_filename.endswith('.nc') else nc_filename
-                        xml_path = os.path.join(bundle.directory(), nc_name + '.xml')
+                        xml_path = os.path.join(file_directory, nc_name + '.xml')
                         if os.path.exists(xml_path):
                             os.remove(xml_path)
                             print('Deleted XML file: {}'.format(xml_path))
@@ -1504,10 +1515,12 @@ def bulk_delete_netcdf(request, pk_bundle):
                     except Exception as e:
                         print('Could not delete XML for {}: {}'.format(netcdf_id, e))
 
-                    # Delete NetCDF file from disk. Processing moves the file from the
-                    # upload location into the bundle directory, so check there first;
-                    # fall back to the original upload path for unprocessed files.
-                    candidates = [os.path.join(bundle.directory(), nc_filename)]
+                    # Delete NetCDF file from disk. Processing moves the file from the upload
+                    # location into the collection directory, so check there first; the bundle
+                    # root covers legacy rows, and the original upload path covers files whose
+                    # processing never completed.
+                    candidates = [os.path.join(file_directory, nc_filename),
+                                  os.path.join(bundle.directory(), nc_filename)]
                     try:
                         if netcdf_file.file:
                             candidates.append(netcdf_file.file.path)
@@ -1538,69 +1551,352 @@ def bulk_delete_netcdf(request, pk_bundle):
 #                                    AMA discipline metadata views
 # ------------------------------------------------------------------------------------------------ #
 # The NetCDF harvest fills ama:Variable and ama:Coordinate. These views collect the rest of the AMA
-# area from the user: Model_Metadata (bundle-wide), and Simulation_Configuration / File_Description
-# (a bundle-wide default that individual files may override).
+# area from the user.
 #
-# Every save re-runs label generation so the XML on disk matches what the user just entered -
-# labels are otherwise only written at upload time, which is before these forms are ever filled in.
+# All three classes share one scoping rule: a per-collection default that every file in the
+# collection inherits (including files uploaded later), plus an optional per-file override. The
+# editor is one panel that renders all three, either for a collection's defaults or for one file.
 #
-# The forms carry prefixes because Simulation Configuration and File Description share three field
-# names (start_time, end_time, time_unit) and both modals live on the bundle page at once. Without
-# prefixes they would emit duplicate element ids, and a <label for> click in one modal would focus
-# the other modal's input.
+# Every save re-runs label generation so the XML on disk matches what was just entered - labels are
+# otherwise only written at upload time, which is before these forms are ever filled in.
+#
+# The forms carry prefixes because the three classes share field names (start_time, end_time and
+# time_unit appear in two of them) and all three render in one panel. Without prefixes they would
+# emit duplicate element ids and a <label for> click would focus the wrong section's input.
 AMA_MODEL_METADATA_PREFIX = 'model'
 AMA_SIMULATION_PREFIX = 'sim'
 AMA_FILE_DESCRIPTION_PREFIX = 'desc'
 
-def _ama_status(bundle):
-    """At-a-glance completeness of the three AMA classes, for the bundle page summary cards.
+# (model class, form class, prefix, human label) for the three sections, in panel order.
+AMA_SECTIONS = (
+    (ModelMetadata, ModelMetadataForm, AMA_MODEL_METADATA_PREFIX, 'Model Metadata'),
+    (SimulationConfiguration, SimulationConfigurationForm, AMA_SIMULATION_PREFIX,
+     'Simulation Configuration'),
+    (FileDescription, FileDescriptionForm, AMA_FILE_DESCRIPTION_PREFIX, 'File Description'),
+)
 
-    Shows how many attributes carry a value out of how many exist, so a user can tell whether a
-    class has been filled in without opening its modal.
-    """
 
-    def summarize(record, model_class):
-        total = len(model_class.ELEMENT_ORDER)
-        filled = len(record.filled_values()) if record else 0
-        return {'filled': filled, 'total': total, 'is_set': filled > 0}
+def _ama_status(collection):
+    """At-a-glance completeness of the three AMA classes for one collection's summary card."""
+    status = {'collection': collection}
 
-    model_metadata = ModelMetadata.objects.filter(bundle=bundle).first()
-    status = {
-        'model_metadata': summarize(model_metadata, ModelMetadata),
-        'simulation': summarize(
-            SimulationConfiguration.default_for_bundle(bundle), SimulationConfiguration),
-        'file_description': summarize(
-            FileDescription.default_for_bundle(bundle), FileDescription),
-        'model_name': model_metadata.name if model_metadata else '',
-    }
+    for model_class, _form_class, prefix, _label in AMA_SECTIONS:
+        record = model_class.default_for_collection(collection)
+        status[prefix] = {
+            'filled': len(record.filled_values()) if record else 0,
+            'total': len(model_class.ELEMENT_ORDER),
+            'is_set': bool(record and record.filled_values()),
+        }
 
-    overridden = set(SimulationConfiguration.objects.filter(
-        bundle=bundle, netcdf_file__isnull=False).values_list('netcdf_file_id', flat=True))
-    overridden.update(FileDescription.objects.filter(
-        bundle=bundle, netcdf_file__isnull=False).values_list('netcdf_file_id', flat=True))
+    model_metadata = ModelMetadata.default_for_collection(collection)
+    status['model_name'] = model_metadata.name if model_metadata else ''
+
+    overridden = set()
+    for model_class, _form_class, _prefix, _label in AMA_SECTIONS:
+        overridden.update(
+            model_class.objects.filter(collection=collection, netcdf_file__isnull=False)
+            .values_list('netcdf_file_id', flat=True))
     status['override_count'] = len(overridden)
 
     return status
 
 
-def _netcdf_files_with_ama_flags(bundle):
-    """NetCDF files for a bundle, each tagged with whether it overrides the bundle AMA defaults.
+def _netcdf_files_for_collection(collection):
+    """Files belonging to one collection, each tagged with whether it overrides the defaults.
 
-    Two queries instead of two per file, so the flag stays cheap on bundles holding many files.
+    Scoped to the collection so a file uploaded into one collection no longer shows up under
+    every other collection's tab. A constant number of queries regardless of file count.
     """
-    netcdf_files = list(NetCDFFile.objects.filter(bundle=bundle))
+    netcdf_files = list(NetCDFFile.objects.filter(collection=collection))
 
-    overridden_ids = set(
-        SimulationConfiguration.objects.filter(bundle=bundle, netcdf_file__isnull=False)
-        .values_list('netcdf_file_id', flat=True))
-    overridden_ids.update(
-        FileDescription.objects.filter(bundle=bundle, netcdf_file__isnull=False)
-        .values_list('netcdf_file_id', flat=True))
+    overridden_ids = set()
+    for model_class, _form_class, _prefix, _label in AMA_SECTIONS:
+        overridden_ids.update(
+            model_class.objects.filter(collection=collection, netcdf_file__isnull=False)
+            .values_list('netcdf_file_id', flat=True))
 
     for netcdf_file in netcdf_files:
         netcdf_file.has_ama_override = netcdf_file.pk in overridden_ids
 
     return netcdf_files
+
+
+def _collections_with_ama(bundle):
+    """The bundle's collections, each carrying its own file list and AMA status.
+
+    The NetCDF card renders inside the loop over collections, so the data is hung on the collection
+    objects the template already iterates. Attributes are named ama_* rather than netcdf_files to
+    avoid shadowing the reverse accessor of the NetCDFFile.collection foreign key.
+    """
+    collections = list(AdditionalCollections.objects.filter(bundle=bundle))
+    for collection in collections:
+        collection.ama_files = _netcdf_files_for_collection(collection)
+        collection.ama_status = _ama_status(collection)
+
+    return collections
+
+
+def _unassigned_netcdf_files(bundle):
+    """Files uploaded before the collection field existed that the backfill could not place.
+
+    They belong to no collection, so they are listed in their own section rather than folded into
+    one. Showing them under whichever collection happened to sort first made them look like they
+    moved between collections whenever a collection was deleted, when in truth their collection
+    was NULL the whole time.
+    """
+    return list(NetCDFFile.objects.filter(bundle=bundle, collection__isnull=True))
+
+
+# ------------------------------------------------------------------------------------------------ #
+#                                       Files tree (XML labels)
+# ------------------------------------------------------------------------------------------------ #
+# The Files card used to render one flat button per label, so a data product's label sat at the same
+# level as the collection label that contains it and there was no way to tell what belonged to what.
+# The bundle directory already encodes the PDS4 hierarchy, so the tree below simply keeps the shape
+# that the flat list was throwing away:
+#
+#   <bundle>_bundle/            bundle_<name>.xml            Product_Bundle
+#   +-- document/               collection_<id>_document.xml Product_Collection
+#   |                           <doc>.xml                    Product_Document
+#   +-- <collection>/           collection_<id>_<coll>.xml   Product_Collection
+#                               <file>.xml                   Product_Observational
+#                               <file>.nc                    the data file that label describes
+#
+# Label CONTENT is deliberately NOT read here. It is fetched one label at a time by label_content(),
+# so a bundle with many products neither parses every label on page load nor ships every label's
+# full XML inside the page HTML.
+
+# Caption shown under each row in the tree. The kind is derived from the filename prefix that the
+# label builders in models.py already guarantee, not by parsing the label.
+LABEL_KIND_CAPTIONS = {
+    'bundle': 'Bundle Label',
+    'collection': 'Collection Label',
+    'document': 'Document Label',
+    'data': 'Data Product Label',
+}
+
+# Directories ELSA creates itself and that have no AdditionalCollections row behind them.
+IMPLIED_COLLECTION_TYPES = {
+    'document': 'Document',
+    'context': 'Context',
+    'xml_schema': 'Schema',
+}
+
+# Order the tree lists directories in, most structural first: the collections ELSA creates for every
+# bundle, then the user's own. Listing directories alphabetically instead put a newly added
+# collection above `document` and split the user's collections around it, which is not the order
+# anything else on the page uses.
+ELSA_MANAGED_DIRS = ('document', 'context', 'xml_schema')
+
+# Kinds the Files card offers as filter chips, in the order they appear, with the plural wording
+# used on the chip itself.
+FILTERABLE_KINDS = (
+    ('collection', 'Collections'),
+    ('data', 'Data'),
+    ('document', 'Documents'),
+)
+
+
+def _label_kind(filename, folder_name):
+    """Which of the four PDS4 label kinds a generated label is."""
+    name = filename.lower()
+    if name.startswith('bundle_') or name.startswith('bundle.'):
+        return 'bundle'
+    if name.startswith('collection_') or name.startswith('collection.'):
+        return 'collection'
+    if folder_name.lower() == 'document':
+        return 'document'
+    return 'data'
+
+
+def _bundle_file_tree(bundle):
+    """The bundle's generated labels, grouped by the directory that gives each one its meaning.
+
+    Returns a dict with 'root_labels' (labels sitting at the bundle root, normally just the
+    Product_Bundle label), 'folders' (one per collection directory, each carrying its own labels),
+    and 'total'. A bundle whose directory is missing (failed creation, manual cleanup) yields an
+    empty tree rather than a 500.
+    """
+    root_dir = bundle.directory()
+    if not os.path.isdir(root_dir):
+        print('_bundle_file_tree: directory missing, skipping: {}'.format(root_dir))
+        return {'root_labels': [], 'folders': [], 'filter_kinds': [], 'total': 0}
+
+    # AdditionalCollections.directory() lowercases collection_name to form the directory name, so
+    # the directory basename is the key back to the collection record and its declared type.
+    # Ordered by pk, i.e. by creation: the model has no Meta.ordering, so this is the same order the
+    # Collections tabs on this page iterate, and the two cards agree on where a new collection goes.
+    collections_in_order = list(
+        AdditionalCollections.objects.filter(bundle=bundle).order_by('pk'))
+    collections_by_dir = {
+        collection.collection_name.lower(): collection
+        for collection in collections_in_order}
+
+    # A data label is matched to the file it describes by stem: 00000.atmos.nc <-> 00000.atmos.xml.
+    # Keyed on file.name, not title: title keeps the name the user uploaded, while Django's storage
+    # sanitises what actually lands on disk ("a - Copy.nc" becomes "a_-_Copy.nc"), and the label is
+    # written next to the file. Matching on title alone silently lost the status of every file whose
+    # name needed sanitising. Both are registered so rows with no stored file still resolve.
+    netcdf_by_stem = {}
+    for netcdf_file in NetCDFFile.objects.filter(bundle=bundle):
+        for candidate in (netcdf_file.file.name, netcdf_file.title):
+            if candidate:
+                netcdf_by_stem.setdefault(
+                    os.path.splitext(os.path.basename(candidate))[0], netcdf_file)
+
+    def describe(dir_path, folder_name, filename, siblings):
+        kind = _label_kind(filename, folder_name)
+        entry = {
+            'name': filename,
+            # Relative to the bundle directory. This is the key label_content() resolves back to
+            # an absolute path, so it must stay a path and not a bare filename: two collections can
+            # each hold a label of the same name.
+            'path': '{}/{}'.format(folder_name, filename) if folder_name else filename,
+            'kind': kind,
+            'kind_label': LABEL_KIND_CAPTIONS[kind],
+            'describes': None,
+            'processed': None,
+            'processing_error': '',
+        }
+
+        if kind != 'data':
+            return entry
+
+        # Naming the data file under its label is the point of the whole exercise: it is what tells
+        # the user this label is not a free-standing thing.
+        stem = os.path.splitext(filename)[0]
+        for sibling in siblings:
+            if sibling != filename and os.path.splitext(sibling)[0] == stem:
+                entry['describes'] = sibling
+                break
+
+        netcdf_file = netcdf_by_stem.get(stem)
+        if netcdf_file is not None:
+            entry['processed'] = netcdf_file.processed
+            entry['processing_error'] = netcdf_file.processing_error
+            if entry['describes'] is None:
+                # The label is on disk but its data file is not; still say what it stands for.
+                entry['describes'] = netcdf_file.title
+
+        return entry
+
+    def labels_in(dir_path, folder_name):
+        try:
+            siblings = sorted(os.listdir(dir_path))
+        except OSError as e:
+            print('_bundle_file_tree: unreadable directory {}: {}'.format(dir_path, e))
+            return []
+
+        labels = [
+            describe(dir_path, folder_name, name, siblings)
+            for name in siblings
+            if name.lower().endswith('.xml') and os.path.isfile(os.path.join(dir_path, name))]
+
+        # The collection label heads its own group: it is the parent of everything under it, so
+        # alphabetical order putting 00000.xml above collection_....xml would read backwards.
+        labels.sort(key=lambda label: (0 if label['kind'] == 'collection' else 1, label['name']))
+        return labels
+
+    root_labels = labels_in(root_dir, '')
+
+    on_disk = {name for name in os.listdir(root_dir)
+               if os.path.isdir(os.path.join(root_dir, name))}
+
+    ordered_names = [name for name in ELSA_MANAGED_DIRS if name in on_disk]
+    for collection in collections_in_order:
+        name = os.path.basename(collection.directory())
+        if name in on_disk and name not in ordered_names:
+            ordered_names.append(name)
+    # Anything on disk with no collection record behind it (hand-made, or a record since deleted)
+    # still belongs in the tree, after the directories whose order is known.
+    ordered_names.extend(sorted(on_disk.difference(ordered_names)))
+
+    folders = []
+    for name in ordered_names:
+        collection = collections_by_dir.get(name.lower())
+        labels = labels_in(os.path.join(root_dir, name), name)
+        folders.append({
+            'name': name,
+            'collection_type': (collection.collection_type if collection is not None
+                                else IMPLIED_COLLECTION_TYPES.get(name.lower(), '')),
+            'labels': labels,
+            'count': len(labels),
+        })
+
+    # Which kinds actually occur, so the filter offers only chips that can match something. The
+    # bundle label is left out: there is exactly one and it is pinned at the top, so a chip for it
+    # would filter the tree down to something already in view. Fewer than two chips is no choice at
+    # all, so the row is dropped entirely in that case.
+    kinds_present = {label['kind'] for label in root_labels}
+    for folder in folders:
+        kinds_present.update(label['kind'] for label in folder['labels'])
+
+    filter_kinds = [{'kind': kind, 'label': plural}
+                    for kind, plural in FILTERABLE_KINDS
+                    if kind in kinds_present]
+
+    return {
+        'root_labels': root_labels,
+        'folders': folders,
+        'filter_kinds': filter_kinds if len(filter_kinds) > 1 else [],
+        'total': len(root_labels) + sum(folder['count'] for folder in folders),
+    }
+
+
+def _resolve_label_path(bundle, relative_path):
+    """The absolute path of a label inside this bundle, or None if it is not one.
+
+    relative_path arrives from the browser, so it is resolved first and then checked to be inside
+    the bundle directory: a crafted '../../secrets.py' must not be readable through this view.
+    """
+    if not relative_path or not relative_path.lower().endswith('.xml'):
+        return None
+
+    root_dir = _eventual_path(bundle.directory())
+    candidate = _eventual_path(os.path.join(root_dir, relative_path))
+
+    if os.path.commonpath([root_dir, candidate]) != root_dir:
+        return None
+    if not os.path.isfile(candidate):
+        return None
+
+    return candidate
+
+
+@login_required
+def label_content(request, pk_bundle):
+    """One generated label's XML, fetched on demand by the Files tree.
+
+    Serving labels one at a time is what lets the bundle page stop embedding every label's full
+    XML in a data-content attribute and stop parsing every label on every page load.
+    """
+    bundle = get_object_or_404(Bundle, pk=pk_bundle)
+
+    if request.user != bundle.user:
+        return redirect('main:restricted_access')
+
+    relative_path = request.GET.get('path', '')
+    label_path = _resolve_label_path(bundle, relative_path)
+    if label_path is None:
+        return JsonResponse({'error': 'That label is not part of this bundle.'}, status=404)
+
+    # A corrupt label (interrupted write, full disk) must report itself in the viewer rather than
+    # break the page, matching how the old inline reader handled it.
+    try:
+        tree = etree.parse(label_path)
+        content = etree.tostring(tree, pretty_print=True, encoding='unicode')
+    except (OSError, etree.XMLSyntaxError) as e:
+        print('label_content: unreadable label {}: {}'.format(label_path, e))
+        return JsonResponse(
+            {'error': 'This label could not be read ({}). Please contact the ELSA team via the '
+                      'Contact page.'.format(type(e).__name__)},
+            status=500)
+
+    return JsonResponse({
+        'name': os.path.basename(label_path),
+        'path': relative_path,
+        'content': content,
+    })
 
 
 def _report_label_refresh(request, errors):
@@ -1613,113 +1909,216 @@ def _report_label_refresh(request, errors):
     messages.success(request, 'Saved. NetCDF labels have been updated.')
 
 
-@login_required
-def ama_model_metadata(request, pk_bundle):
-    """Save the bundle-wide ama:Model_Metadata values."""
-    bundle = get_object_or_404(Bundle, pk=pk_bundle)
+def _is_panel_request(request):
+    """True when the master-detail UI is asking for just the panel, not a whole page."""
+    return request.headers.get('X-Requested-With') == 'XMLHttpRequest'
 
-    if request.user != bundle.user:
-        return redirect('main:restricted_access')
 
-    if request.method == 'POST':
-        instance = ModelMetadata.objects.filter(bundle=bundle).first()
-        form = ModelMetadataForm(request.POST, instance=instance,
-                                 prefix=AMA_MODEL_METADATA_PREFIX)
-        if form.is_valid():
-            model_metadata = form.save(commit=False)
-            model_metadata.bundle = bundle
-            model_metadata.save()
-            _report_label_refresh(request, regenerate_netcdf_labels(bundle))
+def _build_ama_forms(data, collection, netcdf_file, scope):
+    """Bind or prefill the three AMA forms for one scope.
+
+    On GET for a file that has no values of its own, each section is prefilled from the collection
+    default so the user can see what the file will inherit and adjust from there rather than
+    starting from an empty form.
+    """
+    forms_by_prefix = {}
+    for model_class, form_class, prefix, _label in AMA_SECTIONS:
+        if scope == 'file':
+            instance = model_class.override_for_file(netcdf_file)
+            if data is None and instance is None:
+                instance = model_class.default_for_collection(collection)
         else:
-            messages.error(request, 'Model Metadata could not be saved: {}'.format(
-                form.errors.as_text()))
+            instance = model_class.default_for_collection(collection)
 
-    return HttpResponseRedirect('/elsa/build/' + str(pk_bundle) + '/')
+        forms_by_prefix[prefix] = form_class(
+            data, instance=instance, scope=scope, prefix=prefix)
+    return forms_by_prefix
 
 
-def _save_ama_default(request, bundle, form_class, model_class, label, prefix):
-    """Save a bundle-wide default row for one of the two override-capable AMA classes.
+def _save_ama_section(request, collection, netcdf_file, model_class, form, label):
+    """Persist one section of the panel and honour its apply-to-collection checkbox.
 
-    'Apply to all files' is implemented by deleting the per-file override rows rather than by
-    copying the defaults into each of them: with no override present a file resolves to the
-    default, so the resulting labels are identical and later edits to the default keep
-    propagating instead of going stale.
+    Returns True when the values were pushed out to the whole collection, so the caller knows the
+    other files' labels need rebuilding too.
     """
-    instance = model_class.default_for_bundle(bundle)
-    form = form_class(request.POST, instance=instance, scope='default', prefix=prefix)
+    scope_is_file = netcdf_file is not None
 
-    if not form.is_valid():
-        messages.error(request, '{} could not be saved: {}'.format(label, form.errors.as_text()))
-        return
-
-    record = form.save(commit=False)
-    record.bundle = bundle
-    record.netcdf_file = None
-    record.save()
-
-    if form.cleaned_data.get('apply_to_all'):
-        removed = model_class.objects.filter(bundle=bundle, netcdf_file__isnull=False).delete()[0]
-        if removed:
-            messages.info(request, '{} reset on {} file{} that had custom values.'.format(
-                label, removed, '' if removed == 1 else 's'))
-
-    _report_label_refresh(request, regenerate_netcdf_labels(bundle))
-
-
-@login_required
-def ama_simulation_configuration(request, pk_bundle):
-    """Save the bundle-wide ama:Simulation_Configuration default."""
-    bundle = get_object_or_404(Bundle, pk=pk_bundle)
-
-    if request.user != bundle.user:
-        return redirect('main:restricted_access')
-
-    if request.method == 'POST':
-        _save_ama_default(request, bundle, SimulationConfigurationForm, SimulationConfiguration,
-                          'Simulation Configuration', AMA_SIMULATION_PREFIX)
-
-    return HttpResponseRedirect('/elsa/build/' + str(pk_bundle) + '/')
-
-
-@login_required
-def ama_file_description(request, pk_bundle):
-    """Save the bundle-wide ama:File_Description default."""
-    bundle = get_object_or_404(Bundle, pk=pk_bundle)
-
-    if request.user != bundle.user:
-        return redirect('main:restricted_access')
-
-    if request.method == 'POST':
-        _save_ama_default(request, bundle, FileDescriptionForm, FileDescription,
-                          'File Description', AMA_FILE_DESCRIPTION_PREFIX)
-
-    return HttpResponseRedirect('/elsa/build/' + str(pk_bundle) + '/')
-
-
-def _save_ama_override(bundle, netcdf_file, form, model_class):
-    """Store one file's override, or drop it when the user cleared every field.
-
-    Clearing the form has to delete the row rather than save an empty one: an empty override still
-    wins over the bundle default, so keeping it would silently strip values from this file's label
-    and quietly ignore every future edit to the default.
-    """
-    if not form.has_any_value():
+    if scope_is_file and not form.has_any_value():
+        # Clearing every field means "go back to inheriting". An empty override would still
+        # outrank the default, silently stripping values and ignoring every later edit to it.
+        # Ticking apply-to-collection on an empty section is treated as nothing to apply rather
+        # than as an instruction to blank the collection default, which is never what a user who
+        # simply did not fill that section in wants.
         model_class.objects.filter(netcdf_file=netcdf_file).delete()
-        return
+        return False
 
-    record = form.save(commit=False)
-    record.bundle = bundle
+    candidate = form.save(commit=False)
+
+    if scope_is_file and not form.wants_apply_to_collection():
+        # A file's panel is pre-filled from the collection default, so submitting it unchanged
+        # posts those same values straight back. Storing them would fork the file off the default
+        # for good: later edits to the collection would stop reaching it, silently, just because
+        # the user opened the file and pressed Save. Only a genuine difference becomes an override.
+        default = model_class.default_for_collection(collection)
+        default_values = default.filled_values() if default else {}
+        if candidate.filled_values() == default_values:
+            model_class.objects.filter(netcdf_file=netcdf_file).delete()
+            return False
+
+    record = candidate
+    record.bundle = collection.bundle
+    record.collection = collection
     record.netcdf_file = netcdf_file
     record.save()
+
+    if not form.wants_apply_to_collection():
+        return False
+
+    cleared = model_class.apply_to_collection(record, collection)
+    if scope_is_file:
+        # The file's own row has been promoted to the collection default, so it should no longer
+        # carry a private copy of the same values.
+        model_class.objects.filter(netcdf_file=netcdf_file).delete()
+    if cleared:
+        messages.info(request, '{}: {} file{} reset to the collection values.'.format(
+            label, cleared, '' if cleared == 1 else 's'))
+    return True
+
+
+def _ama_panel_context(collection, netcdf_file, forms_by_prefix, saved=False):
+    """Context shared by the collection-defaults panel and the per-file panel."""
+    sections = []
+    for model_class, _form_class, prefix, label in AMA_SECTIONS:
+        override = model_class.override_for_file(netcdf_file) if netcdf_file else None
+        sections.append({
+            'prefix': prefix,
+            'label': label,
+            'form': forms_by_prefix[prefix],
+            'has_override': override is not None,
+        })
+
+    return {
+        'bundle': collection.bundle,
+        'collection': collection,
+        'netcdf_file': netcdf_file,
+        'is_default_scope': netcdf_file is None,
+        'sections': sections,
+        'has_any_override': any(section['has_override'] for section in sections),
+        'panel_saved': saved,
+    }
+
+
+def _render_ama_panel(request, context_dict):
+    """Return the panel alone for the inline editor, or the standalone page for a direct hit.
+
+    The standalone URLs stay usable (bookmarks, and a no-JS fallback), and both paths render the
+    same partial, so the inline panel and the full page cannot drift apart.
+    """
+    if _is_panel_request(request):
+        return render(request, 'build/bundle/_ama_panel.html', context_dict)
+    return render(request, 'build/bundle/netcdf_ama.html', context_dict)
+
+
+def _handle_ama_panel_post(request, collection, netcdf_file):
+    """Validate all three sections, then save them. Returns (saved, forms_by_prefix)."""
+    scope = 'file' if netcdf_file is not None else 'collection'
+    forms_by_prefix = _build_ama_forms(request.POST, collection, netcdf_file, scope)
+
+    # Every section is validated before any is written, so a bad value in one cannot leave the
+    # others half-saved.
+    if not all(form.is_valid() for form in forms_by_prefix.values()):
+        return False, forms_by_prefix
+
+    applied_to_collection = False
+    for model_class, _form_class, prefix, label in AMA_SECTIONS:
+        if _save_ama_section(request, collection, netcdf_file,
+                             model_class, forms_by_prefix[prefix], label):
+            applied_to_collection = True
+
+    # Editing one file only touches that file's label, unless its values were pushed out to the
+    # whole collection.
+    if netcdf_file is not None and not applied_to_collection:
+        targets = [netcdf_file]
+    else:
+        targets = list(NetCDFFile.objects.filter(collection=collection))
+
+    _report_label_refresh(request, regenerate_netcdf_labels(collection.bundle, targets))
+    return True, forms_by_prefix
+
+
+@login_required
+def ama_collection_defaults(request, pk_bundle, pk_collection):
+    """The AMA defaults for one collection: applied to every file that has no values of its own."""
+    bundle = get_object_or_404(Bundle, pk=pk_bundle)
+
+    if request.user != bundle.user:
+        return redirect('main:restricted_access')
+
+    collection = get_object_or_404(AdditionalCollections, pk=pk_collection, bundle=bundle)
+    saved = False
+
+    if request.method == 'POST':
+        saved, forms_by_prefix = _handle_ama_panel_post(request, collection, None)
+        if saved:
+            if not _is_panel_request(request):
+                return HttpResponseRedirect('/elsa/build/' + str(pk_bundle) + '/')
+            # Rebind from what is stored so the panel reflects the save, including any clearing.
+            forms_by_prefix = _build_ama_forms(None, collection, None, 'collection')
+        elif not _is_panel_request(request):
+            messages.error(request, 'AMA defaults could not be saved. Please check the values.')
+            return HttpResponseRedirect('/elsa/build/' + str(pk_bundle) + '/')
+    else:
+        forms_by_prefix = _build_ama_forms(None, collection, None, 'collection')
+
+    return _render_ama_panel(
+        request, _ama_panel_context(collection, None, forms_by_prefix, saved=saved))
 
 
 @login_required
 def netcdf_ama(request, pk_bundle, pk_netcdf):
-    """Per-file AMA editor: Simulation Configuration and File Description for one NetCDF file.
+    """The AMA values for a single NetCDF file, overriding its collection's defaults."""
+    bundle = get_object_or_404(Bundle, pk=pk_bundle)
 
-    This is a dedicated page rather than a modal in bundle.html because a bundle can hold many
-    NetCDF files and these two forms carry 24 fields between them - rendering a pair per file
-    would add hundreds of inputs to a page that is already large.
+    if request.user != bundle.user:
+        return redirect('main:restricted_access')
+
+    netcdf_file = get_object_or_404(NetCDFFile, pk=pk_netcdf, bundle=bundle)
+    collection = netcdf_file.collection
+
+    if collection is None:
+        # Predates the collection field and the backfill could not place it. Editing AMA values
+        # would have nowhere to scope them, so say so rather than failing obscurely.
+        messages.error(
+            request,
+            '"{}" is not attached to a collection, so its AMA metadata cannot be edited. '
+            'Re-upload it into a collection.'.format(netcdf_file.title))
+        return HttpResponseRedirect('/elsa/build/' + str(pk_bundle) + '/')
+
+    saved = False
+
+    if request.method == 'POST':
+        saved, forms_by_prefix = _handle_ama_panel_post(request, collection, netcdf_file)
+        if saved:
+            if not _is_panel_request(request):
+                return HttpResponseRedirect(
+                    reverse('build:netcdf_ama',
+                            kwargs={'pk_bundle': bundle.pk, 'pk_netcdf': netcdf_file.pk}))
+            forms_by_prefix = _build_ama_forms(None, collection, netcdf_file, 'file')
+    else:
+        forms_by_prefix = _build_ama_forms(None, collection, netcdf_file, 'file')
+
+    return _render_ama_panel(
+        request, _ama_panel_context(collection, netcdf_file, forms_by_prefix, saved=saved))
+
+
+@login_required
+def assign_netcdf_collection(request, pk_bundle, pk_netcdf):
+    """Put a collection-less NetCDF file into a collection.
+
+    Legacy files sit in the bundle root with their label beside them. Assigning moves both into
+    the collection's directory and rebuilds the label there, so the file ends up indistinguishable
+    from one uploaded into that collection. The alternative was making the user re-upload, which
+    is unreasonable for multi-gigabyte model output.
     """
     bundle = get_object_or_404(Bundle, pk=pk_bundle)
 
@@ -1728,49 +2127,55 @@ def netcdf_ama(request, pk_bundle, pk_netcdf):
 
     netcdf_file = get_object_or_404(NetCDFFile, pk=pk_netcdf, bundle=bundle)
 
-    simulation_override = SimulationConfiguration.override_for_file(netcdf_file)
-    description_override = FileDescription.override_for_file(netcdf_file)
-
     if request.method == 'POST':
-        # The GET branch pre-fills an unedited file's forms from the bundle defaults, so a submit
-        # after changing one field carries the inherited values through rather than blanking them.
-        form_simulation = SimulationConfigurationForm(
-            request.POST, instance=simulation_override, scope='file', prefix=AMA_SIMULATION_PREFIX)
-        form_description = FileDescriptionForm(
-            request.POST, instance=description_override, scope='file', prefix=AMA_FILE_DESCRIPTION_PREFIX)
+        collection = AdditionalCollections.objects.filter(
+            pk=request.POST.get('collection'), bundle=bundle).first()
 
-        if form_simulation.is_valid() and form_description.is_valid():
-            _save_ama_override(bundle, netcdf_file, form_simulation, SimulationConfiguration)
-            _save_ama_override(bundle, netcdf_file, form_description, FileDescription)
+        if collection is None:
+            messages.error(request, 'Pick a collection to move "{}" into.'.format(
+                netcdf_file.title))
+        elif netcdf_file.collection_id is not None:
+            messages.error(request, '"{}" is already in a collection.'.format(netcdf_file.title))
+        else:
+            source_directory = netcdf_file.directory()
+            basename = os.path.basename(netcdf_file.file.name)
+            label_name = (basename[:-3] if basename.endswith('.nc') else basename) + '.xml'
 
-            _report_label_refresh(request, regenerate_netcdf_labels(bundle, [netcdf_file]))
-            return HttpResponseRedirect(
-                reverse('build:netcdf_ama', kwargs={'pk_bundle': bundle.pk, 'pk_netcdf': netcdf_file.pk}))
-    else:
-        # An unedited file shows the bundle defaults, so the user can see what it will inherit and
-        # adjust from there instead of starting from an empty form.
-        form_simulation = SimulationConfigurationForm(
-            instance=simulation_override or SimulationConfiguration.default_for_bundle(bundle),
-            scope='file', prefix=AMA_SIMULATION_PREFIX)
-        form_description = FileDescriptionForm(
-            instance=description_override or FileDescription.default_for_bundle(bundle),
-            scope='file', prefix=AMA_FILE_DESCRIPTION_PREFIX)
+            netcdf_file.collection = collection
+            netcdf_file.save(update_fields=['collection'])
 
-    context_dict = {
-        'bundle': bundle,
-        'netcdf_file': netcdf_file,
-        'form_simulation': form_simulation,
-        'form_description': form_description,
-        'has_simulation_override': simulation_override is not None,
-        'has_description_override': description_override is not None,
-        'model_metadata': ModelMetadata.objects.filter(bundle=bundle).first(),
-    }
-    return render(request, 'build/bundle/netcdf_ama.html', context_dict)
+            destination_directory = netcdf_file.directory()
+            os.makedirs(destination_directory, exist_ok=True)
+
+            moved = False
+            source_file = os.path.join(source_directory, basename)
+            if os.path.exists(source_file) and source_directory != destination_directory:
+                # shutil.move for the same cross-filesystem reason the upload path uses it.
+                shutil.move(source_file, os.path.join(destination_directory, basename))
+                moved = True
+
+            # The old label describes the file at its old path, and the rebuild writes a fresh one
+            # in the collection directory, so the stale copy has to go.
+            stale_label = os.path.join(source_directory, label_name)
+            if source_directory != destination_directory and os.path.exists(stale_label):
+                os.remove(stale_label)
+
+            errors = regenerate_netcdf_labels(bundle, [netcdf_file]) if moved else []
+            if errors:
+                messages.warning(request, 'Moved "{}" into {}, but its label could not be '
+                                          'rebuilt: {}'.format(netcdf_file.title,
+                                                               collection.collection_name,
+                                                               '; '.join(errors)))
+            else:
+                messages.success(request, 'Moved "{}" into {}.'.format(
+                    netcdf_file.title, collection.collection_name))
+
+    return HttpResponseRedirect('/elsa/build/' + str(pk_bundle) + '/')
 
 
 @login_required
 def netcdf_ama_reset(request, pk_bundle, pk_netcdf):
-    """Drop a file's overrides so it falls back to the bundle-wide defaults."""
+    """Drop a file's overrides so it follows its collection's defaults again."""
     bundle = get_object_or_404(Bundle, pk=pk_bundle)
 
     if request.user != bundle.user:
@@ -1779,9 +2184,15 @@ def netcdf_ama_reset(request, pk_bundle, pk_netcdf):
     netcdf_file = get_object_or_404(NetCDFFile, pk=pk_netcdf, bundle=bundle)
 
     if request.method == 'POST':
-        SimulationConfiguration.objects.filter(netcdf_file=netcdf_file).delete()
-        FileDescription.objects.filter(netcdf_file=netcdf_file).delete()
+        for model_class, _form_class, _prefix, _label in AMA_SECTIONS:
+            model_class.objects.filter(netcdf_file=netcdf_file).delete()
         _report_label_refresh(request, regenerate_netcdf_labels(bundle, [netcdf_file]))
+
+    if _is_panel_request(request) and netcdf_file.collection is not None:
+        forms_by_prefix = _build_ama_forms(None, netcdf_file.collection, netcdf_file, 'file')
+        return render(request, 'build/bundle/_ama_panel.html',
+                      _ama_panel_context(netcdf_file.collection, netcdf_file, forms_by_prefix,
+                                         saved=True))
 
     return HttpResponseRedirect(
         reverse('build:netcdf_ama', kwargs={'pk_bundle': bundle.pk, 'pk_netcdf': netcdf_file.pk}))
@@ -4278,73 +4689,6 @@ def _get_abs_virtual_root():
 def _eventual_path(path):
     return os.path.abspath(os.path.realpath(path))
 
-def index(request, path):
-    def index_maker():
-        def _index(inpath):
-            contents = os.listdir(inpath)
-            for mfile in contents:
-                t = os.path.join(inpath, mfile)
-                if os.path.isfile(t):
-                    link_target = os.path.relpath(t, start=os.path.join(
-                        _get_abs_virtual_root(), 'archive/'))
-                    yield loader.render_to_string('build/bundle/list_file.html', {'file': mfile, 'link': link_target})
-                if os.path.isdir(t):
-                    link_target = os.path.relpath(t, start=os.path.join(
-                        _get_abs_virtual_root(), 'archive/'))
-                    yield loader.render_to_string('build/bundle/list_folder.html', {'file': mfile, 'subfiles': _index(os.path.join(inpath, t)), 'link': link_target})
-                    continue
-               
- 
-        return _index(eventual_path)
-   
-    def retrieve_content(inpath):
-        # A bundle whose directory is missing (failed creation, manual cleanup)
-        # should show an empty file list, not a 500.
-        if not os.path.isdir(inpath):
-            print('retrieve_content: directory missing, skipping: {}'.format(inpath))
-            return []
-        contents = os.listdir(inpath)
-        results = []
-        for mfile in contents:
-            t = os.path.join(inpath, mfile)
-            if os.path.isfile(t):
-                # Only XML labels are previewable. Uploaded data files (e.g.
-                # NetCDF binaries) live in the same directory since the June
-                # uploader changes; parsing them as XML crashed every bundle
-                # page load after the first upload.
-                if not mfile.lower().endswith('.xml'):
-                    continue
-                link_target = os.path.relpath(t, start=os.path.join(
-                    _get_abs_virtual_root(), 'archive/'))
-
-                try:
-                    tree = etree.parse(os.path.join(settings.ARCHIVE_DIR, link_target))
-                    xml_content = etree.tostring(tree, pretty_print=True, encoding='unicode')
-                except (OSError, etree.XMLSyntaxError) as e:
-                    print('retrieve_content: unreadable label {}: {}'.format(t, e))
-                    xml_content = ('<!-- This label file could not be read. '
-                                   'Please contact the ELSA team via the Contact page. -->')
-
-                results.append([mfile, xml_content])
-            if os.path.isdir(t):
-                link_target = os.path.relpath(t, start=os.path.join(
-                    _get_abs_virtual_root(), 'archive/'))
-                results.extend(retrieve_content(os.path.join(inpath, t)))
-
-        return results
- 
- 
-    directory_name = os.path.basename(path)
- 
-    eventual_path = _eventual_path(os.path.join(settings.ARCHIVE_DIR, path))
-    if os.path.isfile(eventual_path):
-        print(path)
-        return HttpResponse(open(eventual_path).read(), content_type='text/xml')
- 
-    c = index_maker()
-    file_context = retrieve_content(eventual_path)
-    return directory_name, c, file_context
-
 # NETCDF (Victoria's Code)
 import xarray as xr
 import pandas as pd
@@ -4546,31 +4890,29 @@ def _fill_ama_container(container, values, NS, unit_attributes=None):
 def write_ama_user_classes(root, NS, bundle, netcdf_obj=None):
     """Write Model_Metadata, Simulation_Configuration and File_Description into a parsed label.
 
-    Simulation_Configuration and File_Description resolve per-file override first, bundle default
-    second. Model_Metadata is bundle-wide by design. Containers themselves are always kept, even
-    when empty, because the LDD declares all three as minOccurs="1" inside ama:AMA.
+    Each class resolves the same way: this file's override if it has one, otherwise its
+    collection's default. The containers themselves are always kept, even when empty, because the
+    LDD declares all three as minOccurs="1" inside ama:AMA.
     """
     ama = root.find('.//pds:Context_Area/pds:Discipline_Area/ama:AMA', namespaces=NS)
     if ama is None:
         print('write_ama_user_classes: no <ama:AMA> in label, nothing to fill.')
         return
 
-    model_metadata = ModelMetadata.objects.filter(bundle=bundle).first()
+    resolved = {}
+    for model_class, _form_class, prefix, _label in AMA_SECTIONS:
+        resolved[prefix] = model_class.resolve_for_file(netcdf_obj)
+
     _fill_ama_container(
         ama.find('ama:Model_Metadata', namespaces=NS),
-        model_metadata.filled_values() if model_metadata else {},
+        resolved[AMA_MODEL_METADATA_PREFIX].filled_values()
+        if resolved[AMA_MODEL_METADATA_PREFIX] else {},
         NS)
-
-    if netcdf_obj is not None:
-        simulation_configuration = SimulationConfiguration.resolve_for_file(netcdf_obj)
-        file_description = FileDescription.resolve_for_file(netcdf_obj)
-    else:
-        simulation_configuration = SimulationConfiguration.default_for_bundle(bundle)
-        file_description = FileDescription.default_for_bundle(bundle)
 
     _fill_ama_container(
         ama.find('ama:Simulation_Configuration', namespaces=NS),
-        simulation_configuration.filled_values() if simulation_configuration else {},
+        resolved[AMA_SIMULATION_PREFIX].filled_values()
+        if resolved[AMA_SIMULATION_PREFIX] else {},
         NS,
         unit_attributes=SimulationConfiguration.BOUNDARY_UNIT_ATTRIBUTE)
 
@@ -4579,7 +4921,8 @@ def write_ama_user_classes(root, NS, bundle, netcdf_obj=None):
     # after it. Filling it in place (rather than removing and re-adding it) preserves that order.
     _fill_ama_container(
         ama.find('ama:Model_Output/ama:File_Description', namespaces=NS),
-        file_description.filled_values() if file_description else {},
+        resolved[AMA_FILE_DESCRIPTION_PREFIX].filled_values()
+        if resolved[AMA_FILE_DESCRIPTION_PREFIX] else {},
         NS)
 
 
@@ -4619,14 +4962,19 @@ def regenerate_netcdf_labels(bundle, netcdf_objs=None):
         try:
             if not nc_obj.file:
                 continue
-            nc_path = os.path.join(bundle.directory(), os.path.basename(nc_obj.file.name))
+            # Uploads are filed under their collection's directory, so that is where the NetCDF
+            # and its label live. NetCDFFile.directory() falls back to the bundle root for rows
+            # that predate the collection field.
+            collection_directory = nc_obj.directory()
+            nc_path = os.path.join(collection_directory, os.path.basename(nc_obj.file.name))
             if not os.path.exists(nc_path):
-                print('regenerate_netcdf_labels: skipping {}, not in bundle directory.'.format(nc_obj.title))
+                print('regenerate_netcdf_labels: skipping {}, not found at {}.'.format(
+                    nc_obj.title, collection_directory))
                 continue
 
             _process_single_netcdf(
-                bundle, nc_path, NS, allowed_variable_fields, allowed_coord_fields,
-                netcdf_obj=nc_obj)
+                bundle, nc_path, collection_directory, NS, allowed_variable_fields,
+                allowed_coord_fields, netcdf_obj=nc_obj)
 
             nc_obj.processed = True
             nc_obj.processing_error = ''
@@ -4641,7 +4989,7 @@ def regenerate_netcdf_labels(bundle, netcdf_objs=None):
     return errors
 
 
-def variable_coord_to_product(bundle, netcdf_objs):
+def variable_coord_to_product(bundle, netcdf_objs, collection_directory):
     """Extract metadata from each uploaded NetCDF file and generate its PDS4 XML label.
 
     Processes ONLY the NetCDFFile objects passed in (scoped to this bundle) rather than
@@ -4670,12 +5018,16 @@ def variable_coord_to_product(bundle, netcdf_objs):
             if not os.path.exists(nc_path):
                 raise FileNotFoundError('Uploaded file is missing from disk.')
 
-            os.rename(nc_path, os.path.join(bundle.directory(), os.path.basename(nc_obj.file.path)))
-            nc_path = os.path.join(bundle.directory(), os.path.basename(nc_obj.file.path))
+            # shutil.move, not os.rename: the upload area and the archive can sit on different
+            # filesystems (a dedicated archive volume is a normal deployment), and os.rename
+            # fails across devices with EXDEV, which would break every upload.
+            destination = os.path.join(collection_directory, os.path.basename(nc_obj.file.path))
+            shutil.move(nc_path, destination)
+            nc_path = destination
             print(nc_path)
 
             _process_single_netcdf(
-                bundle, nc_path, NS, allowed_variable_fields, allowed_coord_fields,
+                bundle, nc_path, collection_directory, NS, allowed_variable_fields, allowed_coord_fields,
                 netcdf_obj=nc_obj)
 
             nc_obj.processed = True
@@ -4691,7 +5043,7 @@ def variable_coord_to_product(bundle, netcdf_objs):
     return errors
 
 
-def _process_single_netcdf(bundle, nc_path, NS, allowed_variable_fields, allowed_coord_fields,
+def _process_single_netcdf(bundle, nc_path, collection_directory, NS, allowed_variable_fields, allowed_coord_fields,
                            netcdf_obj=None):
     """Generate the PDS4 XML label for a single NetCDF file. Raises on failure.
 
@@ -4710,7 +5062,7 @@ def _process_single_netcdf(bundle, nc_path, NS, allowed_variable_fields, allowed
     subdir_name = os.path.basename(os.path.dirname(nc_path))  # e.g., Simulation02
 
     # Write XML to the bundle's archive directory
-    output_dir = bundle.directory()
+    output_dir = collection_directory
     output_path = os.path.join(output_dir, xml_name)
 
     # =====================================================================================
@@ -4905,7 +5257,7 @@ def _process_single_netcdf(bundle, nc_path, NS, allowed_variable_fields, allowed
 
     # Temporary remove netcdf file before figuring out how to move it
     # os.remove(nc_path)
-    print('netcdf_path:' + nc_path)
+    print('netcdf_path:' + nc_path, flush=True)
 
 
 

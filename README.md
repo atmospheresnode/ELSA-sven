@@ -20,13 +20,37 @@ This section provides a timeline of ELSA's release history, highlighting key upd
 
 ### **Current Version** 
 
-> ### **Version 1.37.5 (July 17, 2026)**
+> ### **Version 1.37.8 (August 14, 2026)**
+- External Bundle: AMA metadata is now set per collection, with defaults every file inherits and per-file values where needed.
+- External Bundle: AMA metadata can now be edited directly on the bundle page.
+- NetCDF Files: Fixed bulk delete selecting files from other collections and leaving files behind on disk.
+- AMA Metadata: Fixed accented characters producing labels that fail PDS4 validation.
+- Sign In: Fixed passkey verification failing on the live site.
+
+### **Previous Versions** 
+
+> ### **Version 1.37.7 (August 07, 2026)**
+- Sign In: Passkey sign-in has been introduced, using a fingerprint, face, screen lock, or security key.
+- Sign In: The flow is now identifier-first, with one sign-in method per screen.
+- One-Time Codes: Codes are now stored hashed, expire after 15 minutes, are limited to five attempts, and can be resent.
+- Create an Account: Password strength rules, username validation, and duplicate email checks are now enforced.
+- Security: Sign-in and sign-up attempts are now rate limited.
+- Sign In and Account Pages: Redesigned with a shared ELSA layout, and the one-time code email is now branded.
+- External Bundle: AMA metadata that cannot be read from a NetCDF file can now be entered in ELSA.
+
+> ### **Version 1.37.6 (July 31, 2026)**
+- Targets: The target menu now groups targets under the investigations PDS lists them for.
+- Targets: Adding a target outside that list now shows a caution first.
+- Targets: Add Target is now available whether or not an instrument host has been added.
+- Context Products: Fixed corrupted context identifiers being written into labels.
+- Investigations: Fixed deleting an investigation redirecting to a near-empty page.
+- Create a Bundle: Bundle name and alternate Bundle ID now accept longer names.
+
+> ### **Version 1.37.5 (July 24, 2026)**
 - Archive Bundle: Bundle UI is up to date with the External Bundle UI.
 - Alias: Fixed issue with created Aliases not being deleted from XML files after being updated.
 - Targets: Fixed issue with targets redirecting to Document Collections on the bundle view.
 - Targets: Fixed error when deleting targets.
-
-### **Previous Versions** 
 
 > ### **Version 1.37.4 (July 23, 2026)**
 - External Bundle: Fixed a bug related to XML not populating from uploaded netCDF files.
