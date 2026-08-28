@@ -1647,6 +1647,50 @@ def _unassigned_netcdf_files(bundle):
     return list(NetCDFFile.objects.filter(bundle=bundle, collection__isnull=True))
 
 
+# Every AMA attribute across the three sections. Derived from ELEMENT_ORDER rather than written out,
+# so adding a field to a model moves this number without anyone having to remember to.
+AMA_TOTAL_FIELDS = sum(len(model_class.ELEMENT_ORDER) for model_class, _f, _p, _l in AMA_SECTIONS)
+
+
+def _ama_completeness_by_file(bundle):
+    """How many AMA attributes each file's label will actually carry, keyed by NetCDFFile id.
+
+    Resolution is the same as `resolve_for_file()`: a per-file override wins, otherwise the file
+    inherits its collection's default. It is done here in Python off two bulk queries per section
+    rather than by calling `resolve_for_file()` per file, which would be three queries per file and
+    would put a hundred-odd queries on the page for a forty-file bundle.
+
+    Returns {} for Archive bundles: AMA is External-only, so an Archive bundle must not pay for any
+    of this.
+    """
+    if bundle.bundle_type != 'External':
+        return {}
+
+    netcdf_files = list(NetCDFFile.objects.filter(bundle=bundle))
+    if not netcdf_files:
+        return {}
+
+    filled = {netcdf_file.id: 0 for netcdf_file in netcdf_files}
+
+    for model_class, _form_class, _prefix, _label in AMA_SECTIONS:
+        defaults_by_collection = {}
+        overrides_by_file = {}
+        for record in model_class.objects.filter(bundle=bundle):
+            if record.netcdf_file_id is None:
+                defaults_by_collection[record.collection_id] = record
+            else:
+                overrides_by_file[record.netcdf_file_id] = record
+
+        for netcdf_file in netcdf_files:
+            record = overrides_by_file.get(netcdf_file.id)
+            if record is None:
+                record = defaults_by_collection.get(netcdf_file.collection_id)
+            if record is not None:
+                filled[netcdf_file.id] += len(record.filled_values())
+
+    return filled
+
+
 # ------------------------------------------------------------------------------------------------ #
 #                                       Files tree (XML labels)
 # ------------------------------------------------------------------------------------------------ #
@@ -1675,11 +1719,13 @@ LABEL_KIND_CAPTIONS = {
     'data': 'Data Product Label',
 }
 
-# Directories ELSA creates itself and that have no AdditionalCollections row behind them.
+# Last-resort types for directories ELSA creates itself when the Product_Collection row behind one
+# is missing. The badge is meant to read as the label's own <collection_type>, so it uses the PDS4
+# enumerated spelling ("XML Schema", not "XML_Schema" or "Schema").
 IMPLIED_COLLECTION_TYPES = {
     'document': 'Document',
     'context': 'Context',
-    'xml_schema': 'Schema',
+    'xml_schema': 'XML Schema',
 }
 
 # Order the tree lists directories in, most structural first: the collections ELSA creates for every
@@ -1732,6 +1778,14 @@ def _bundle_file_tree(bundle):
         collection.collection_name.lower(): collection
         for collection in collections_in_order}
 
+    # The collections ELSA creates itself (document, context, xml_schema) are Product_Collection
+    # rows rather than AdditionalCollections, and their declared type is not the stored key:
+    # xml_schema is labelled "XML Schema", and in an External bundle every collection is labelled
+    # "External". Read the type off the record so the badge matches the label on disk.
+    product_collections_by_dir = {
+        collection.collection.lower(): collection
+        for collection in Product_Collection.objects.filter(bundle=bundle)}
+
     # A data label is matched to the file it describes by stem: 00000.atmos.nc <-> 00000.atmos.xml.
     # Keyed on file.name, not title: title keeps the name the user uploaded, while Django's storage
     # sanitises what actually lands on disk ("a - Copy.nc" becomes "a_-_Copy.nc"), and the label is
@@ -1743,6 +1797,10 @@ def _bundle_file_tree(bundle):
             if candidate:
                 netcdf_by_stem.setdefault(
                     os.path.splitext(os.path.basename(candidate))[0], netcdf_file)
+
+    # Empty for Archive bundles, which is what keeps the AMA reading off the Archive Files card:
+    # the template only renders it when the entry carries an ama_total.
+    ama_filled_by_file = _ama_completeness_by_file(bundle)
 
     def describe(dir_path, folder_name, filename, siblings):
         kind = _label_kind(filename, folder_name)
@@ -1757,6 +1815,12 @@ def _bundle_file_tree(bundle):
             'describes': None,
             'processed': None,
             'processing_error': '',
+            # Set only for data labels in an External bundle: the id the AMA editor is opened with,
+            # and how much of the AMA the label currently carries. None everywhere else, which is
+            # what keeps both out of the Archive Files card.
+            'netcdf_id': None,
+            'ama_filled': None,
+            'ama_total': None,
         }
 
         if kind != 'data':
@@ -1777,6 +1841,13 @@ def _bundle_file_tree(bundle):
             if entry['describes'] is None:
                 # The label is on disk but its data file is not; still say what it stands for.
                 entry['describes'] = netcdf_file.title
+
+            # A file with no collection has nowhere to inherit defaults from and no AMA editor to
+            # open, so it is left without a reading rather than shown as 0 of 28.
+            if ama_filled_by_file and netcdf_file.collection_id is not None:
+                entry['netcdf_id'] = netcdf_file.id
+                entry['ama_filled'] = ama_filled_by_file.get(netcdf_file.id, 0)
+                entry['ama_total'] = AMA_TOTAL_FIELDS
 
         return entry
 
@@ -1814,11 +1885,17 @@ def _bundle_file_tree(bundle):
     folders = []
     for name in ordered_names:
         collection = collections_by_dir.get(name.lower())
+        product_collection = product_collections_by_dir.get(name.lower())
+        if collection is not None:
+            collection_type = collection.collection_type
+        elif product_collection is not None:
+            collection_type = product_collection.collection_type()
+        else:
+            collection_type = IMPLIED_COLLECTION_TYPES.get(name.lower(), '')
         labels = labels_in(os.path.join(root_dir, name), name)
         folders.append({
             'name': name,
-            'collection_type': (collection.collection_type if collection is not None
-                                else IMPLIED_COLLECTION_TYPES.get(name.lower(), '')),
+            'collection_type': collection_type,
             'labels': labels,
             'count': len(labels),
         })
@@ -1901,12 +1978,55 @@ def label_content(request, pk_bundle):
 
 def _report_label_refresh(request, errors):
     """Surface label-regeneration problems without pretending the save failed."""
+    _report_ama_save(request, errors)
+
+
+def _report_ama_save(request, errors, summary=''):
+    """Exactly one message per save.
+
+    There used to be one per section plus one for the labels, so sharing two sections stacked
+    three full-width alerts across the top of the page. "NetCDF labels have been updated" also
+    described plumbing the user did not ask about; that the labels get rewritten is ELSA's job,
+    not news. A failure to rewrite them still is.
+    """
     if errors:
         messages.warning(
             request,
             'Saved, but some labels could not be refreshed: {}'.format('; '.join(errors)))
         return
-    messages.success(request, 'Saved. NetCDF labels have been updated.')
+    messages.success(request, 'Saved. {}'.format(summary).strip() if summary else 'Saved.')
+
+
+def _join_readably(items):
+    """'a', 'a and b', 'a, b and c' - for putting section names in a sentence."""
+    items = list(items)
+    if len(items) <= 1:
+        return ''.join(items)
+    return '{} and {}'.format(', '.join(items[:-1]), items[-1])
+
+
+def _describe_ama_save(collection, shared_sections, others_affected):
+    """Say what a save changed beyond the obvious, in the user's terms.
+
+    Only the collection-wide effect is worth a sentence: saving values that stay where they were
+    needs no explanation. Where other files did lose values of their own, say so plainly - that
+    is the one outcome a user might not have intended.
+    """
+    if not shared_sections:
+        return ''
+
+    sections = _join_readably(shared_sections)
+    collection_name = getattr(collection, 'collection_name', 'this collection')
+
+    if others_affected == 1:
+        tail = ', replacing the values 1 other file had of its own'
+    elif others_affected:
+        tail = ', replacing the values {} other files had of their own'.format(others_affected)
+    else:
+        tail = ''
+    verb = 'applies' if len(shared_sections) == 1 else 'apply'
+    return '{} now {} to every file in {}{}.'.format(
+        sections, verb, collection_name, tail)
 
 
 def _is_panel_request(request):
@@ -1923,23 +2043,28 @@ def _build_ama_forms(data, collection, netcdf_file, scope):
     """
     forms_by_prefix = {}
     for model_class, form_class, prefix, _label in AMA_SECTIONS:
+        has_override = False
         if scope == 'file':
             instance = model_class.override_for_file(netcdf_file)
+            # Whether the file holds its own values decides which scope radio starts selected, so
+            # it has to be read before the fallback to the default replaces `instance`.
+            has_override = instance is not None
             if data is None and instance is None:
                 instance = model_class.default_for_collection(collection)
         else:
             instance = model_class.default_for_collection(collection)
 
         forms_by_prefix[prefix] = form_class(
-            data, instance=instance, scope=scope, prefix=prefix)
+            data, instance=instance, scope=scope, prefix=prefix, has_override=has_override)
     return forms_by_prefix
 
 
 def _save_ama_section(request, collection, netcdf_file, model_class, form, label):
     """Persist one section of the panel and honour its apply-to-collection checkbox.
 
-    Returns True when the values were pushed out to the whole collection, so the caller knows the
-    other files' labels need rebuilding too.
+    Returns (applied_to_collection, other_files_affected). The caller needs the first to know
+    whether the other files' labels must be rebuilt, and the second to say something accurate
+    about it afterwards.
     """
     scope_is_file = netcdf_file is not None
 
@@ -1950,20 +2075,26 @@ def _save_ama_section(request, collection, netcdf_file, model_class, form, label
         # than as an instruction to blank the collection default, which is never what a user who
         # simply did not fill that section in wants.
         model_class.objects.filter(netcdf_file=netcdf_file).delete()
-        return False
+        return False, 0
 
     candidate = form.save(commit=False)
 
-    if scope_is_file and not form.wants_apply_to_collection():
+    if scope_is_file and not form.wants_apply_to_collection() and not form.wants_file_scope():
         # A file's panel is pre-filled from the collection default, so submitting it unchanged
         # posts those same values straight back. Storing them would fork the file off the default
         # for good: later edits to the collection would stop reaching it, silently, just because
         # the user opened the file and pressed Save. Only a genuine difference becomes an override.
+        #
+        # `wants_file_scope()` is the exception, and it is why the control is a radio rather than a
+        # checkbox. A user who explicitly picks "just this file" has said what they want, so the
+        # override is stored even when the values match the default. Without this the radio would
+        # spring back to "same for every file" on the next load whenever the two happened to agree,
+        # which reads as the setting not sticking.
         default = model_class.default_for_collection(collection)
         default_values = default.filled_values() if default else {}
         if candidate.filled_values() == default_values:
             model_class.objects.filter(netcdf_file=netcdf_file).delete()
-            return False
+            return False, 0
 
     record = candidate
     record.bundle = collection.bundle
@@ -1972,17 +2103,23 @@ def _save_ama_section(request, collection, netcdf_file, model_class, form, label
     record.save()
 
     if not form.wants_apply_to_collection():
-        return False
+        return False, 0
 
-    cleared = model_class.apply_to_collection(record, collection)
+    # Counted before the push, and excluding the file being edited. apply_to_collection() clears
+    # every per-file row including this one, so its own return value counts the user's own file as
+    # having been "reset" - which produced the alarming and untrue "1 file reset to the collection
+    # values" after a save where nobody else's values had been touched at all.
+    others_cleared = (model_class.objects
+                      .filter(collection=collection, netcdf_file__isnull=False)
+                      .exclude(netcdf_file=netcdf_file)
+                      .count())
+
+    model_class.apply_to_collection(record, collection)
     if scope_is_file:
         # The file's own row has been promoted to the collection default, so it should no longer
         # carry a private copy of the same values.
         model_class.objects.filter(netcdf_file=netcdf_file).delete()
-    if cleared:
-        messages.info(request, '{}: {} file{} reset to the collection values.'.format(
-            label, cleared, '' if cleared == 1 else 's'))
-    return True
+    return True, others_cleared
 
 
 def _ama_panel_context(collection, netcdf_file, forms_by_prefix, saved=False):
@@ -1995,7 +2132,18 @@ def _ama_panel_context(collection, netcdf_file, forms_by_prefix, saved=False):
             'label': label,
             'form': forms_by_prefix[prefix],
             'has_override': override is not None,
+            # Shown on the tab so nobody opens Simulation Configuration expecting four fields and
+            # finds seventeen.
+            'field_count': len(model_class.ELEMENT_ORDER),
         })
+
+    # Offered by the copy-from-another-file control. Empty in collection scope and for a
+    # collection holding only this one file, which is what hides the control in both cases.
+    if netcdf_file is None:
+        siblings = []
+    else:
+        siblings = list(
+            NetCDFFile.objects.filter(collection=collection).exclude(pk=netcdf_file.pk))
 
     return {
         'bundle': collection.bundle,
@@ -2003,6 +2151,7 @@ def _ama_panel_context(collection, netcdf_file, forms_by_prefix, saved=False):
         'netcdf_file': netcdf_file,
         'is_default_scope': netcdf_file is None,
         'sections': sections,
+        'sibling_files': siblings,
         'has_any_override': any(section['has_override'] for section in sections),
         'panel_saved': saved,
     }
@@ -2030,10 +2179,15 @@ def _handle_ama_panel_post(request, collection, netcdf_file):
         return False, forms_by_prefix
 
     applied_to_collection = False
+    shared_sections = []
+    others_affected = 0
     for model_class, _form_class, prefix, label in AMA_SECTIONS:
-        if _save_ama_section(request, collection, netcdf_file,
-                             model_class, forms_by_prefix[prefix], label):
+        applied, others = _save_ama_section(
+            request, collection, netcdf_file, model_class, forms_by_prefix[prefix], label)
+        if applied:
             applied_to_collection = True
+            shared_sections.append(label)
+            others_affected = max(others_affected, others)
 
     # Editing one file only touches that file's label, unless its values were pushed out to the
     # whole collection.
@@ -2042,7 +2196,10 @@ def _handle_ama_panel_post(request, collection, netcdf_file):
     else:
         targets = list(NetCDFFile.objects.filter(collection=collection))
 
-    _report_label_refresh(request, regenerate_netcdf_labels(collection.bundle, targets))
+    _report_ama_save(
+        request,
+        regenerate_netcdf_labels(collection.bundle, targets),
+        _describe_ama_save(collection, shared_sections, others_affected))
     return True, forms_by_prefix
 
 
@@ -2193,6 +2350,74 @@ def netcdf_ama_reset(request, pk_bundle, pk_netcdf):
         return render(request, 'build/bundle/_ama_panel.html',
                       _ama_panel_context(netcdf_file.collection, netcdf_file, forms_by_prefix,
                                          saved=True))
+
+    return HttpResponseRedirect(
+        reverse('build:netcdf_ama', kwargs={'pk_bundle': bundle.pk, 'pk_netcdf': netcdf_file.pk}))
+
+
+@login_required
+def netcdf_ama_copy(request, pk_bundle, pk_netcdf):
+    """Copy one section's values across from a sibling file in the same collection.
+
+    The concrete counterpart to the collection default: inheritance is what keeps a whole
+    collection consistent, including files uploaded later, and this is for the case where one file
+    should look like one other file. It only ever writes a per-file override, never the default.
+
+    The source's *resolved* values are read, not its override, so copying from a file that is
+    itself following the collection default copies what that file's label actually says rather
+    than nothing at all.
+    """
+    bundle = get_object_or_404(Bundle, pk=pk_bundle)
+
+    if request.user != bundle.user:
+        return redirect('main:restricted_access')
+
+    netcdf_file = get_object_or_404(NetCDFFile, pk=pk_netcdf, bundle=bundle)
+    collection = netcdf_file.collection
+
+    if request.method != 'POST' or collection is None:
+        return HttpResponseRedirect(
+            reverse('build:netcdf_ama',
+                    kwargs={'pk_bundle': bundle.pk, 'pk_netcdf': netcdf_file.pk}))
+
+    sections_by_prefix = {
+        prefix: (model_class, label)
+        for model_class, _form_class, prefix, label in AMA_SECTIONS}
+    section = sections_by_prefix.get(request.POST.get('section'))
+
+    # Same collection only: values from another collection would describe a different model run,
+    # which is the one thing the collection scope exists to keep apart.
+    source = NetCDFFile.objects.filter(
+        pk=request.POST.get('source_netcdf'), bundle=bundle, collection=collection).first()
+
+    if section is None or source is None or source.pk == netcdf_file.pk:
+        messages.error(request, 'Pick a different file in this collection to copy from.')
+    else:
+        model_class, label = section
+        resolved = model_class.resolve_for_file(source)
+        if resolved is None or not resolved.filled_values():
+            messages.error(request, '"{}" has no {} to copy.'.format(source.title, label))
+        else:
+            record = model_class.objects.filter(netcdf_file=netcdf_file).first()
+            if record is None:
+                record = model_class(bundle=bundle, collection=collection,
+                                     netcdf_file=netcdf_file)
+            record.copy_values_from(resolved)
+            record.save()
+            # One message, not two: this already says what happened, so it carries the label
+            # outcome itself rather than letting the generic reporter add a second "Saved." alert.
+            errors = regenerate_netcdf_labels(bundle, [netcdf_file])
+            if errors:
+                messages.warning(request, '{} copied from "{}", but the label could not be '
+                                          'refreshed: {}'.format(label, source.title,
+                                                                 '; '.join(errors)))
+            else:
+                messages.success(request, '{} copied from "{}".'.format(label, source.title))
+
+    if _is_panel_request(request):
+        forms_by_prefix = _build_ama_forms(None, collection, netcdf_file, 'file')
+        return render(request, 'build/bundle/_ama_panel.html',
+                      _ama_panel_context(collection, netcdf_file, forms_by_prefix, saved=True))
 
     return HttpResponseRedirect(
         reverse('build:netcdf_ama', kwargs={'pk_bundle': bundle.pk, 'pk_netcdf': netcdf_file.pk}))

@@ -1939,6 +1939,27 @@ def _ama_text_widget(placeholder=''):
     return forms.TextInput(attrs=attrs)
 
 
+# Three AMA attributes are closed vocabularies. The constraint lives ONLY in the Schematron
+# (PDS4_AMA_1O00_1300.sch); the XSD carries no xs:enumeration at all, so a free-text value passes
+# XSD validation and fails later, during Schematron validation at submission. These used to be text
+# inputs whose placeholders suggested values the Schematron rejects - "General Circulation Model"
+# for a field that wants GCM, "lat/lon" for one that wants lat-lon, "sigma" for one that wants
+# Sigma - so following the hint produced an invalid archive.
+AMA_ENUMERATIONS = {
+    'type': ('ASSIMILATION', 'GCM', 'MESOSCALE'),
+    'horizontal_grid_type': ('cube-sphere', 'icosahedral', 'lat-lon'),
+    'vertical_grid_type': ('Altitude', 'Hybrid-Sigma', 'Isentropic', 'Pressure', 'Sigma'),
+}
+
+
+def _ama_choice_field(field_name):
+    """A closed list, offered as a select so an invalid value cannot be typed in the first place."""
+    return forms.ChoiceField(
+        required=False,
+        choices=[('', 'Not specified')] + [(v, v) for v in AMA_ENUMERATIONS[field_name]],
+        widget=forms.Select(attrs={'class': 'form-select form-select-sm'}))
+
+
 def _ama_number_widget(placeholder=''):
     attrs = {'class': 'form-control form-control-sm', 'step': 'any'}
     if placeholder:
@@ -1969,32 +1990,75 @@ class AMAScopedFormMixin(AMAFormGroupsMixin):
     """Shared behaviour for all three AMA classes.
 
     `scope` is 'collection' for the collection-wide default row and 'file' for one file's override.
-    `apply_to_collection` is offered in both scopes but means slightly different things: on the
-    default form it clears the per-file overrides so everything follows the default, and on a file
-    form it promotes that file's values to the collection default and clears the other overrides.
-    Each of the three forms carries its own checkbox, so a user can push Model Metadata out to the
-    whole collection while leaving per-file File Descriptions alone.
+
+    Two scope controls, only ever one of them present, because the question genuinely differs by
+    scope:
+
+    * File scope gets `apply_scope`, a radio reading "same for every file in this collection" or
+      "just this file". It replaced a checkbox that rendered unchecked on every load whatever the
+      values actually were, so it never showed where they lived. Being a radio it always posts an
+      explicit answer, which is what lets the view tell "leave this file following the default"
+      apart from "give this file its own copy of values that happen to match the default" - see
+      `_save_ama_section`.
+    * Collection scope keeps `apply_to_collection`, unchanged in meaning: the row being edited is
+      already the shared value, so the only extra question is whether to discard the per-file
+      overrides as well.
+
+    One control per section either way, so a user can hold Model Metadata at collection level while
+    giving this file its own File Description.
     """
+
+    APPLY_COLLECTION = 'collection'
+    APPLY_FILE = 'file'
+
+    APPLY_SCOPE_CHOICES = (
+        (APPLY_COLLECTION, 'Same for every file in this collection'),
+        (APPLY_FILE, 'Just this file'),
+    )
 
     # Declared on each concrete form rather than here: Django's form metaclass only collects
     # Field attributes from the class being defined and from bases that already have
     # `declared_fields`, which a plain mixin does not.
-    CONTROL_FIELDS = ('apply_to_collection',)
+    CONTROL_FIELDS = ('apply_scope', 'apply_to_collection')
 
     def __init__(self, *args, **kwargs):
         self.scope = kwargs.pop('scope', 'collection')
+        # Whether this file currently holds its own values for this section. Only meaningful in
+        # file scope, where it decides which radio starts selected.
+        has_override = kwargs.pop('has_override', False)
         super().__init__(*args, **kwargs)
         for field in self.fields.values():
             field.required = False
 
-        checkbox = self.fields.get('apply_to_collection')
-        if checkbox is not None:
-            if self.scope == 'file':
-                checkbox.label = 'Apply these values to every file in this collection'
-                checkbox.help_text = (
-                    'Makes this the collection default and clears the other files\' custom '
-                    '{} values.'.format(self.SECTION_LABEL))
-            else:
+        # A value stored while these were free-text boxes is kept and flagged rather than
+        # quietly discarded: an unrecognised value would otherwise leave the select blank, and the
+        # next save would erase what the user had without ever saying so.
+        for enum_name in AMA_ENUMERATIONS:
+            field = self.fields.get(enum_name)
+            if field is None or not hasattr(field, 'choices'):
+                continue
+            current = self.initial.get(enum_name) or getattr(self.instance, enum_name, '')
+            if current and current not in [value for value, _label in field.choices if value]:
+                field.choices = list(field.choices) + [
+                    (current, '{} (not a valid PDS4 value)'.format(current))]
+
+        # Drop whichever control does not belong in this scope, so neither can be posted into a
+        # scope that would not know what to do with it.
+        if self.scope == 'file':
+            self.fields.pop('apply_to_collection', None)
+            radio = self.fields.get('apply_scope')
+            if radio is not None:
+                radio.help_text = (
+                    'Files uploaded into this collection later inherit the collection value. '
+                    '"Just this file" leaves every other file alone.')
+                if not self.is_bound:
+                    self.initial.setdefault(
+                        'apply_scope',
+                        self.APPLY_FILE if has_override else self.APPLY_COLLECTION)
+        else:
+            self.fields.pop('apply_scope', None)
+            checkbox = self.fields.get('apply_to_collection')
+            if checkbox is not None:
                 checkbox.label = 'Reset every file in this collection to these values'
                 checkbox.help_text = (
                     'Clears any per-file {} values so all files follow this '
@@ -2048,7 +2112,27 @@ class AMAScopedFormMixin(AMAFormGroupsMixin):
         return False
 
     def wants_apply_to_collection(self):
-        return bool(self.is_valid() and self.cleaned_data.get('apply_to_collection'))
+        """True when this save should reach the whole collection rather than one file.
+
+        Both scopes answer the same question through their own control: the file form's radio set
+        to 'collection', or the collection form's reset checkbox.
+        """
+        if not self.is_valid():
+            return False
+        if self.scope == 'file':
+            return self.cleaned_data.get('apply_scope') == self.APPLY_COLLECTION
+        return bool(self.cleaned_data.get('apply_to_collection'))
+
+    def wants_file_scope(self):
+        """True when the user explicitly asked for this file to hold its own values.
+
+        Distinct from "did not tick anything": the radio always posts, so this is a positive
+        instruction and `_save_ama_section` may store an override even where the values match the
+        collection default.
+        """
+        if self.scope != 'file' or not self.is_valid():
+            return False
+        return self.cleaned_data.get('apply_scope') == self.APPLY_FILE
 
 
 class ModelMetadataForm(AMAScopedFormMixin, forms.ModelForm):
@@ -2065,6 +2149,13 @@ class ModelMetadataForm(AMAScopedFormMixin, forms.ModelForm):
         required=False,
         widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}))
 
+    apply_scope = forms.ChoiceField(
+        required=False,
+        choices=AMAScopedFormMixin.APPLY_SCOPE_CHOICES,
+        widget=forms.RadioSelect(attrs={'class': 'form-check-input'}))
+
+    type = _ama_choice_field('type')
+
     FIELD_GROUPS = (
         ('', ('type', 'name', 'version', 'institution')),
     )
@@ -2079,7 +2170,6 @@ class ModelMetadataForm(AMAScopedFormMixin, forms.ModelForm):
             'institution': 'Institution',
         }
         widgets = {
-            'type': _ama_text_widget('e.g. General Circulation Model'),
             'name': _ama_text_widget('e.g. MarsWRF'),
             'version': _ama_text_widget('e.g. 3.2.1'),
             'institution': _ama_text_widget('e.g. NASA Ames Research Center'),
@@ -2088,6 +2178,9 @@ class ModelMetadataForm(AMAScopedFormMixin, forms.ModelForm):
 
 class SimulationConfigurationForm(AMAScopedFormMixin, forms.ModelForm):
     """ama:Simulation_Configuration."""
+
+    horizontal_grid_type = _ama_choice_field('horizontal_grid_type')
+    vertical_grid_type = _ama_choice_field('vertical_grid_type')
 
     FIELD_GROUPS = (
         ('Grid and Resolution', ('horizontal_grid_type', 'model_resolution',
@@ -2105,6 +2198,11 @@ class SimulationConfigurationForm(AMAScopedFormMixin, forms.ModelForm):
     apply_to_collection = forms.BooleanField(
         required=False,
         widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}))
+
+    apply_scope = forms.ChoiceField(
+        required=False,
+        choices=AMAScopedFormMixin.APPLY_SCOPE_CHOICES,
+        widget=forms.RadioSelect(attrs={'class': 'form-check-input'}))
 
     class Meta(object):
         model = SimulationConfiguration
@@ -2129,10 +2227,8 @@ class SimulationConfigurationForm(AMAScopedFormMixin, forms.ModelForm):
             'description': 'Description',
         }
         widgets = {
-            'horizontal_grid_type': _ama_text_widget('e.g. lat/lon'),
             'model_resolution': _ama_text_widget('e.g. 5x5'),
             'model_resolution_unit': _ama_text_widget('e.g. deg'),
-            'vertical_grid_type': _ama_text_widget('e.g. sigma'),
             'vertical_grid_unit': _ama_text_widget('e.g. Pa'),
             'model_timestep': _ama_number_widget(),
             'model_timestep_unit': _ama_text_widget('e.g. s'),
@@ -2165,6 +2261,11 @@ class FileDescriptionForm(AMAScopedFormMixin, forms.ModelForm):
     apply_to_collection = forms.BooleanField(
         required=False,
         widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}))
+
+    apply_scope = forms.ChoiceField(
+        required=False,
+        choices=AMAScopedFormMixin.APPLY_SCOPE_CHOICES,
+        widget=forms.RadioSelect(attrs={'class': 'form-check-input'}))
 
     class Meta(object):
         model = FileDescription

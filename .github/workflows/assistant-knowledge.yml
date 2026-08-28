@@ -1,13 +1,16 @@
 name: Assistant knowledge freshness
 
-# Fails when ELSA source files changed after the assistant knowledge chunk
-# that describes them, so a release can't ship with stale assistant answers.
-# See assistant/knowledge_check.py.
+# Fails when the source a knowledge chunk describes no longer matches the
+# fingerprint recorded the last time someone reviewed that chunk, so a release
+# can't ship with stale assistant answers. See assistant/knowledge_check.py.
+#
+# Pull requests only. It used to run on pushes to main as well, where it could
+# only report after the fact on work already merged, and where the remedy was a
+# commit that changed nothing but a date. Reviewing a chunk belongs with the
+# change that made it stale, which is the pull request.
 
 on:
   pull_request:
-  push:
-    branches: [main, LLM-pilot]
 
 jobs:
   knowledge-check:
@@ -15,8 +18,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          # Full history: the check compares commit timestamps of knowledge
-          # files against the source files they describe.
+          # History so the check can show the diff of each watched region since the
+          # commit the chunk was last baselined against. Without it the check still
+          # works, it just reports "content changed" with no diff.
           fetch-depth: 0
 
       - name: Check assistant knowledge freshness

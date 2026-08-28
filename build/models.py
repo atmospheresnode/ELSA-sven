@@ -2854,11 +2854,11 @@ class Product_Bundle(models.Model):
         member_status.text = 'Primary'
 
 
+        # The reference type has to agree with the collection's declared <collection_type>, so it
+        # comes from the collection itself rather than from the stored key: an External bundle's
+        # document collection is bundle_has_external_collection, not bundle_has_document_collection.
         reference_type = etree.SubElement(Bundle_Member_Entry, 'reference_type')
-        if collection.collection.lower() == 'xml_schema':
-            reference_type.text = 'bundle_has_schema_collection'  
-        else:
-            reference_type.text = 'bundle_has_{}_collection'.format(collection.collection.lower())   
+        reference_type.text = collection.reference_type()
 
         return root
 
@@ -2933,21 +2933,61 @@ Referenced from        none
 
 # @python_2_unicode_compatible
 class Product_Collection(models.Model):
+    # Stored key on the left, what a human reads on the right. The key stays underscored because
+    # it names the directory, the LID segment and the label filename; only the admin dropdown reads
+    # the right-hand side.
     COLLECTION_CHOICES = (
 
         ('Document', 'Document'),
         ('Context', 'Context'),
-        ('XML_Schema', 'XML_Schema'),
+        ('XML_Schema', 'XML Schema'),
         ('Data', 'Data'),
         ('Browse', 'Browse'),
         ('Geometry', 'Geometry'),
         ('Calibration', 'Calibration'),
-        ('Not_Set', 'Not_Set'),
+        ('Not_Set', 'Not Set'),
 
     )
     bundle = models.ForeignKey(Bundle, on_delete=models.CASCADE)
 
     collection = models.CharField(max_length=MAX_CHAR_FIELD, choices=COLLECTION_CHOICES)
+
+    # The stored `collection` value is ELSA's internal key: it names the directory on disk, the
+    # last segment of the collection LID, and the label filename, so it stays underscored and
+    # safe to lowercase. What PDS4 wants in <collection_type> is an enumerated value from
+    # Collection/type, and the two are not always the same string. IM v1.24.0.0 (1O00) accepts:
+    # Browse, Calibration, Context, Data, Document, External, Geometry, Miscellaneous,
+    # SPICE Kernel, XML Schema.
+    PDS4_COLLECTION_TYPES = {
+        'XML_Schema': 'XML Schema',
+    }
+
+    # Bundle_Member_Entry/reference_type is derived from the collection type, but two of the
+    # enumerated types do not spell out to a valid reference_type on their own.
+    PDS4_REFERENCE_TYPES = {
+        'XML Schema': 'bundle_has_schema_collection',
+        'SPICE Kernel': 'bundle_has_spice_kernel_collection',
+    }
+
+    def collection_type(self):
+        """The PDS4 enumerated Collection/type that belongs in this collection's label.
+
+        External (AMA) bundles carry LIDs in the urn:nasa:pds-ama namespace, which the Document
+        collection type does not admit. Every collection in an External bundle is therefore of
+        type External, the document collection included: the directory is still called `document`
+        and the LID still ends in `:document`, only the declared type differs. This matches the
+        External type already forced on the AdditionalCollections of an External bundle.
+        """
+        if self.bundle.bundle_type == 'External':
+            return 'External'
+        return self.PDS4_COLLECTION_TYPES.get(self.collection, self.collection)
+
+    def reference_type(self):
+        """The Bundle_Member_Entry/reference_type naming this collection from the bundle label."""
+        collection_type = self.collection_type()
+        return self.PDS4_REFERENCE_TYPES.get(
+            collection_type,
+            'bundle_has_{}_collection'.format(collection_type.lower()))
     
 #    def __str__(self):
 
@@ -3106,7 +3146,7 @@ class Product_Collection(models.Model):
 
         collection = Product_Collection.find('{}Collection'.format(NAMESPACE))
         col_type = collection.find('{}collection_type'.format(NAMESPACE))
-        col_type.text = self.collection
+        col_type.text = self.collection_type()
 
         #     information_model_version
         #information_model_version = Identification_Area.find('{}information_model_version'.format(NAMESPACE))

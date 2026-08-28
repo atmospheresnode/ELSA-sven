@@ -1,5 +1,13 @@
-<!-- watches: build/models.py, templates/build/bundle/bundle.html -->
-<!-- reviewed: 2026-07-24 -->
+<!-- watches: build/models.py#Modification_History, build/views.py#modification_history, build/views.py#delete_modification_history, build/forms.py#ModificationHistoryForm, templates/build/modification_history -->
+<!-- fingerprint:
+     build/models.py#Modification_History       = 0545a217dd04
+     build/views.py#modification_history        = 23c81c748c43
+     build/views.py#delete_modification_history = 7601dc6d4ebe
+     build/forms.py#ModificationHistoryForm     = 47264907c620
+     templates/build/modification_history       = e6020ba6a6d7
+-->
+<!-- reviewed: 2026-08-28 -->
+<!-- baseline: d8df4b96320a4636b7a95ac426bec7ff1a1fa839 -->
 # Modification History
 
 PDS4 Information Model (v1.24 / 1O00): the Modification_History class tracks the

@@ -68,6 +68,17 @@ a:hover .modal-card {
     overflow: hidden;
 }
 
+/* A card nested inside another card. The shadow above is heavy on purpose at the top level, but it
+   is applied to every .card, so a card inside a card inside a card stacked three of them and the
+   nesting read as noise rather than as hierarchy. Sections nested inside a card use this instead:
+   the containment is carried by a hairline and by spacing, and only the outermost card casts a
+   shadow. Deliberately not a change to .card itself, which the whole project relies on. */
+.card .elsa-subsection {
+    box-shadow: none;
+    border: 1px solid #dee2e6;
+    border-radius: .5rem;
+}
+
 .card-header {
     border-top-left-radius: inherit;
     border-top-right-radius: inherit;

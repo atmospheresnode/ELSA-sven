@@ -13,7 +13,15 @@ from assistant.knowledge_check import parse_watches, run_check  # noqa: F401 (pa
 class Command(BaseCommand):
     help = 'Warn when source files described by assistant knowledge changed after the knowledge did.'
 
+    def add_arguments(self, parser):
+        parser.add_argument(
+            '--update', action='store_true',
+            help='Re-baseline the fingerprints after reviewing the chunks.')
+
     def handle(self, *args, **options):
-        stale, _ = run_check(out=self.stdout.write)
+        stale, _unwatched, broken = run_check(
+            out=self.stdout.write, update=options['update'])
+        if broken:
+            raise CommandError(f'{len(broken)} knowledge chunk(s) watch a path that no longer resolves.')
         if stale:
             raise CommandError(f'{len(stale)} knowledge chunk(s) may be stale.')

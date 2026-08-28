@@ -86,6 +86,11 @@ renders per request, so the script below owns the wiring for both.
    .elsa-file-tree .eft-icon { flex-shrink: 0; margin-top: .15rem; }
    .elsa-file-tree .eft-icon-structure { color: var(--eft-accent); }
 
+   /* Amber, deliberately not Bootstrap's .text-warning on white, which is unreadable. This is a
+      nudge about optional content, so it must not compete with the red dot that means the file
+      could not be read at all. */
+   .elsa-file-tree .eft-ama-none { color: #997404; }
+
    .elsa-file-tree .eft-body { max-height: 720px; overflow-y: auto; }
    .elsa-file-tree .eft-status { flex-shrink: 0; margin-top: .15rem; }
 
@@ -183,7 +188,8 @@ renders per request, so the script below owns the wiring for both.
                   {% for label in folder.labels %}
                   <button type="button" class="list-group-item list-group-item-action py-2 eft-item file-button"
                      data-path="{{ label.path }}" data-filename="{{ label.name }}" data-folder="{{ folder.name }}"
-                     data-kind="{{ label.kind }}">
+                     data-kind="{{ label.kind }}"{% if label.netcdf_id %} data-netcdf-id="{{ label.netcdf_id }}"
+                     data-ama-url="{% url 'build:netcdf_ama' pk_bundle=bundle.id pk_netcdf=label.netcdf_id %}"{% endif %}>
                      {% comment %}Colour is spent on structure only (the labels that hold other
                      things) and on the status dot. Everything else stays muted.{% endcomment %}
                      {% if label.kind == 'collection' %}
@@ -203,13 +209,38 @@ renders per request, so the script below owns the wiring for both.
                         {% else %}
                         <span class="small text-muted">{{ label.kind_label }}</span>
                         {% endif %}
+                        {% comment %}Set only for data labels in an External bundle. Deliberately
+                        NOT a warning: every AMA attribute is optional and a label carrying none of
+                        them is valid PDS4, so this is a reading of what the label says, not a
+                        fault. The red dot beside it stays reserved for real failures.{% endcomment %}
+                        {% if label.ama_total %}
+                        {% comment %}Amber, never red: all 28 attributes are minOccurs="0" in the
+                           LDD, so a label with none of them is valid PDS4 and this is a nudge, not
+                           a fault. It is shown only at zero - once anything is filled the count
+                           itself is the signal, and because the collection default is inherited,
+                           filling one file clears this for every file in the collection.{% endcomment %}
+                        {% if label.ama_filled %}
+                        <span class="small text-muted eft-ama d-block"
+                           title="Optional AMA metadata written into this label. Blank fields are left out; a label with none of them is still valid PDS4.">
+                           {{ label.ama_filled }} of {{ label.ama_total }} described
+                        </span>
+                        {% else %}
+                        <span class="small eft-ama eft-ama-none d-block"
+                           title="No AMA metadata yet. It is optional, so the label is still valid PDS4, but nothing here describes the model run that produced this file.">
+                           <i class="bi bi-exclamation-circle me-1"></i>No AMA metadata yet
+                        </span>
+                        {% endif %}
+                        {% endif %}
                      </span>
 
                      {% comment %}processed is None for labels with no NetCDFFile row behind them
                      (documents, collection labels), so absence of a dot is not a failure.{% endcomment %}
                      {% if label.processed is True %}
+                     {% comment %}This dot is about READING the file, not about how described it
+                        is. "Metadata extracted" read as "metadata done" and sat beside a
+                        "0 of 28 described" line saying the opposite.{% endcomment %}
                      <i class="bi bi-check-circle-fill text-success eft-status"
-                        title="Metadata extracted and label generated."></i>
+                        title="ELSA read this file and generated its label. Variables and coordinates were taken from the netCDF itself."></i>
                      {% elif label.processed is False %}
                      <i class="bi bi-exclamation-circle-fill text-danger eft-status"
                         title="{% if label.processing_error %}{{ label.processing_error }}{% else %}Label generation did not complete for this file.{% endif %}"></i>
@@ -265,6 +296,8 @@ renders per request, so the script below owns the wiring for both.
       var crumbEl  = document.getElementById('fileBreadcrumb');
       var contentEl = document.getElementById('fileContent');
       var copyBtn  = document.getElementById('copyLabelBtn');
+      // External bundles only. Absent on the Archive branch, so everything touching it is guarded.
+      var metaBtn  = document.getElementById('editMetadataBtn');
       if (!nameEl || !contentEl) return;
 
       // Labels are immutable for the life of the page, so a label re-opened after being viewed
@@ -303,6 +336,24 @@ renders per request, so the script below owns the wiring for both.
 
          markActive(button);
          setBreadcrumb(folder, filename);
+
+         // Only a data label in an External bundle has AMA metadata to edit. Collection, bundle
+         // and document labels hide the button entirely, as does a data file with no collection:
+         // there is nothing there to edit, so a dead control would only raise a question it
+         // cannot answer. Independent of whether the label content loads - the metadata lives in
+         // the database, so it stays editable even if reading the label off disk fails.
+         if (metaBtn) {
+            var amaUrl = button.getAttribute('data-ama-url');
+            metaBtn.classList.toggle('d-none', !amaUrl);
+            metaBtn.disabled = !amaUrl;
+            if (amaUrl) {
+               metaBtn.setAttribute('data-ama-url', amaUrl);
+               metaBtn.setAttribute('data-ama-key', 'file-' + button.getAttribute('data-netcdf-id'));
+            } else {
+               metaBtn.removeAttribute('data-ama-url');
+               metaBtn.removeAttribute('data-ama-key');
+            }
+         }
 
          if (cache[path] !== undefined) {
             currentPath = path;

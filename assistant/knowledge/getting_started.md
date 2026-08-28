@@ -1,5 +1,15 @@
-<!-- watches: friends/views.py, build/forms.py, templates/friends -->
-<!-- reviewed: 2026-08-05 -->
+<!-- watches: friends/views.py#register, friends/views.py#login_*, friends/views.py#friend_login, friends/views.py#otp_*, build/forms.py#BundleForm, templates/friends/register.html, templates/friends/registration -->
+<!-- fingerprint:
+     friends/views.py#register       = a2f2c17c829e
+     friends/views.py#login_*        = 858be622daa7
+     friends/views.py#friend_login   = 153e557000da
+     friends/views.py#otp_*          = 772a06512da4
+     build/forms.py#BundleForm       = 89db5879e013
+     templates/friends/register.html = 3cbdb9e6cf98
+     templates/friends/registration  = 627fda119d56
+-->
+<!-- reviewed: 2026-08-28 -->
+<!-- baseline: d8df4b96320a4636b7a95ac426bec7ff1a1fa839 -->
 # Getting Started: Registration, Login, and Your First Bundle
 
 Registering: create an account from the ELSA registration page with your name,

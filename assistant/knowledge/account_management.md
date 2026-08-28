@@ -1,5 +1,16 @@
-<!-- watches: friends/views.py, friends/urls.py, friends/forms.py -->
-<!-- reviewed: 2026-08-05 -->
+<!-- watches: friends/views.py#profile, friends/views.py#friend_settings, friends/views.py#friend_useraccount, friends/views.py#passkey_*, friends/forms.py, friends/urls.py, templates/friends/settings.html, templates/friends/useraccount.html -->
+<!-- fingerprint:
+     friends/views.py#profile            = 16f043d6b859
+     friends/views.py#friend_settings    = 73e9ddd8970c
+     friends/views.py#friend_useraccount = c8e3dcd86bc3
+     friends/views.py#passkey_*          = f9649702c506
+     friends/forms.py                    = e23a74c3ff95
+     friends/urls.py                     = 324191f7496f
+     templates/friends/settings.html     = 649d9c461488
+     templates/friends/useraccount.html  = 31f90ec7b0bb
+-->
+<!-- reviewed: 2026-08-28 -->
+<!-- baseline: d8df4b96320a4636b7a95ac426bec7ff1a1fa839 -->
 # Account Settings: Update Your Name, Email, Agency, Password, or Passkeys
 
 To update your name (first or last name), email address, agency, or password
