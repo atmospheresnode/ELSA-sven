@@ -2292,7 +2292,7 @@
                   <div class="tab-pane fade" id="additional_collection_{{ add_collection.id }}" role="tabpanel">
                      <br>
                      <div class="col-md-12">
-                        <div class="card mb-3 border-0 bg-light">
+                        <div class="card elsa-subsection mb-3 border-0 bg-light">
                            <div class="card-body p-3">
                               <p class="mb-3 small text-muted">
                                  <i class="bi bi-info-circle me-1"></i>
@@ -2361,7 +2361,7 @@
                         {% endfor %}
                      </div>
                      
-                     <div class="card mt-3 mb-3 border">
+                     <div class="card elsa-subsection mt-3 mb-3 border">
                         <h5 class="card-header bg-secondary text-light text-center">NetCDF Files</h5>
                         <div class="card-body">
                            <div class="row">
@@ -2436,7 +2436,11 @@
                                  </div>
                                  {% if add_collection.ama_files %}
                                  <div class="d-flex align-items-center gap-2">
-                                    <button type="button" class="btn btn-sm btn-outline-secondary" id="selectAllWrapper" style="display: none;" onclick="toggleSelectAll(this)">
+                                    {% comment %}Was rendered with style="display: none;" and never
+                                       unhidden by anything, so the control shipped invisible.
+                                       toggleSelectAll() was wired and correct all along.{% endcomment %}
+                                    <button type="button" class="btn btn-sm btn-outline-secondary"
+                                       id="selectAllWrapper" onclick="toggleSelectAll(this)">
                                        Select All
                                     </button>
                                     <button type="button" class="btn btn-sm btn-outline-danger btn-keep-bg"
@@ -2480,25 +2484,15 @@
                               {% endif %}
                                  {% if nc_file.has_ama_override %}
                                  <span class="badge bg-info text-dark ms-2"
-                                 title="This file has AMA values of its own instead of the collection defaults.">
-                                 Custom AMA
+                                 title="This file has metadata of its own instead of the collection defaults.">
+                                 Own metadata
                               </span>
                               {% endif %}
                            </div>
                            <div class="d-flex align-items-center gap-2 flex-shrink-0">
-                              <!-- type="button" matters: this list sits inside the bulk-delete form and a
-                                   default-type button would submit it. The row itself is deliberately not
-                                   the click target - it already carries a checkbox and a download link. -->
-                              {% if not nc_file.is_unassigned %}
-                              <button type="button"
-                                 class="btn btn-sm btn-outline-secondary py-0 ama-select"
-                                 data-ama-url="{% url 'build:netcdf_ama' pk_bundle=bundle.id pk_netcdf=nc_file.id %}"
-                                 data-ama-key="file-{{ nc_file.id }}"
-                                 data-ama-panel="amaPanel{{ add_collection.id }}"
-                                 title="Edit this file's AMA metadata">
-                                 <i class="bi bi-sliders me-1"></i>AMA
-                              </button>
-                              {% endif %}
+                              {% comment %}No metadata button here any more. Metadata is edited from
+                                 the label it belongs to, in the Files card below: this card is for
+                                 managing the files themselves.{% endcomment %}
                            <span class="text-muted small">{{ nc_file.uploaded_at|date:"M d, H:i" }}</span>
                         </div>
                      </li>
@@ -2515,104 +2509,6 @@
          </div>
       </div>
       
-      <!-- AMA metadata the NetCDF harvest cannot supply. Variables and Coordinates are read
-           from the files; Model Metadata, Simulation Configuration and File Description are not.
-           All three are scoped to this collection: a default every file inherits, which any
-           single file can override. -->
-      <hr class="my-4">
-      <div class="d-flex justify-content-between align-items-end flex-wrap gap-2 mb-3 px-1">
-         <div>
-            <h6 class="mb-1">AMA Metadata</h6>
-            <p class="text-muted small mb-0">
-               Applies to every file in <strong>{{ add_collection.collection_name }}</strong>,
-               including files uploaded later. Pick a file above to give it its own values.
-            </p>
-         </div>
-         <div class="d-flex align-items-center gap-2">
-            {% if add_collection.ama_status.override_count %}
-            <span class="badge rounded-pill bg-info text-dark">
-               {{ add_collection.ama_status.override_count }} file{{ add_collection.ama_status.override_count|pluralize }} customized
-            </span>
-            {% endif %}
-            <button type="button" class="btn btn-sm btn-outline-secondary ama-select"
-               data-ama-url="{% url 'build:ama_collection_defaults' pk_bundle=bundle.id pk_collection=add_collection.id %}"
-               data-ama-key="defaults-{{ add_collection.id }}"
-               data-ama-panel="amaPanel{{ add_collection.id }}">
-               <i class="bi bi-layers me-1"></i>Collection Defaults
-            </button>
-         </div>
-      </div>
-
-      <div class="row g-3 row-cols-1 row-cols-md-3 px-1">
-         <div class="col">
-            <div class="card border h-100">
-               <div class="card-body p-3">
-                  <div class="d-flex justify-content-between align-items-start mb-1">
-                     <h6 class="mb-0 small fw-bold">Model Metadata</h6>
-                     {% if add_collection.ama_status.model.is_set %}
-                     <span class="badge bg-success">{{ add_collection.ama_status.model.filled }} of {{ add_collection.ama_status.model.total }}</span>
-                     {% else %}
-                     <span class="badge bg-light text-muted border">Not set</span>
-                     {% endif %}
-                  </div>
-                  <p class="text-muted small mb-0">
-                     {% if add_collection.ama_status.model_name %}
-                     {{ add_collection.ama_status.model_name }}
-                     {% else %}
-                     Which model produced these files, and who ran it.
-                     {% endif %}
-                  </p>
-               </div>
-            </div>
-         </div>
-         <div class="col">
-            <div class="card border h-100">
-               <div class="card-body p-3">
-                  <div class="d-flex justify-content-between align-items-start mb-1">
-                     <h6 class="mb-0 small fw-bold">Simulation Configuration</h6>
-                     {% if add_collection.ama_status.sim.is_set %}
-                     <span class="badge bg-success">{{ add_collection.ama_status.sim.filled }} of {{ add_collection.ama_status.sim.total }}</span>
-                     {% else %}
-                     <span class="badge bg-light text-muted border">Not set</span>
-                     {% endif %}
-                  </div>
-                  <p class="text-muted small mb-0">Grid, timing and spatial extent of the run.</p>
-               </div>
-            </div>
-         </div>
-         <div class="col">
-            <div class="card border h-100">
-               <div class="card-body p-3">
-                  <div class="d-flex justify-content-between align-items-start mb-1">
-                     <h6 class="mb-0 small fw-bold">File Description</h6>
-                     {% if add_collection.ama_status.desc.is_set %}
-                     <span class="badge bg-success">{{ add_collection.ama_status.desc.filled }} of {{ add_collection.ama_status.desc.total }}</span>
-                     {% else %}
-                     <span class="badge bg-light text-muted border">Not set</span>
-                     {% endif %}
-                  </div>
-                  <p class="text-muted small mb-0">What each output file covers. Usually differs per file.</p>
-               </div>
-            </div>
-         </div>
-      </div>
-
-      <!-- Master-detail target: the files and the Collection Defaults button are the master, this
-           is the detail. Content is fetched on demand so the page carries one panel per collection
-           rather than one per file. One wrapper per collection, since the card is inside the
-           collection loop and ids must stay unique. -->
-      <div id="amaPanel{{ add_collection.id }}" class="ama-panel-wrapper mt-3 px-1" style="display: none;">
-         <div class="card border">
-            <div class="card-body">
-               <div class="ama-panel-loading text-center text-muted py-4" style="display: none;">
-                  <div class="spinner-border spinner-border-sm me-2" role="status"></div>
-                  Loading...
-               </div>
-               <div class="ama-panel-error alert alert-danger py-2 small" style="display: none;"></div>
-               <div class="ama-panel-content"></div>
-            </div>
-         </div>
-      </div>
          </div>
       </div>
    </div>
@@ -2762,10 +2658,24 @@ when in fact their collection was NULL the whole time.
                <div class="small text-muted text-truncate" id="fileBreadcrumb"></div>
                <h5 class="mb-0 text-truncate" id="fileName">File Content</h5>
             </div>
-            <button type="button" class="btn btn-sm btn-outline-secondary flex-shrink-0"
-               id="copyLabelBtn" disabled>
-               <i class="bi bi-clipboard me-1"></i>Copy XML
-            </button>
+            <div class="d-flex align-items-center gap-2 flex-shrink-0">
+               {% comment %}External only: AMA metadata does not exist in an Archive bundle, and the
+               Archive branch renders its own copy of this toolbar without this button. Enabled by
+               the file tree's load() when the selected row carries a data-netcdf-id.{% endcomment %}
+               {% comment %}Hidden, not merely disabled, for a label with no AMA behind it: a
+                  greyed-out button invites the question "why can't I click this?" and a disabled
+                  element cannot even show a tooltip to answer it. Metadata editing is not
+                  temporarily unavailable for a collection or bundle label, it is meaningless
+                  there. Kept disabled as well so it can never be reached while hidden.{% endcomment %}
+               <button type="button" class="btn btn-sm btn-outline-secondary d-none"
+                  id="editMetadataBtn" disabled>
+                  <i class="bi bi-sliders me-1"></i>Edit AMA metadata
+               </button>
+               <button type="button" class="btn btn-sm btn-outline-secondary"
+                  id="copyLabelBtn" disabled>
+                  <i class="bi bi-clipboard me-1"></i>Copy XML
+               </button>
+            </div>
          </div>
          <pre style="max-height: 800px; overflow-y: auto; overflow-x: auto;"><code id="fileContent"></code></pre>
       </div>
@@ -4504,31 +4414,61 @@ Has its own form; JS populates hidden inputs with the selected IDs on show. -->
    </div>
 </div>
 
+{% if bundle_type == "External" %}
+{% comment %}AMA is an External-bundle concept: the models, the forms and the Files
+   card affordance all exist only there. The Archive branch shares this template, so
+   without this guard an Archive page carried an empty drawer and its script.
+{% endcomment %}
 <!-- ===================== AMA metadata =====================
-     All three AMA classes are edited in the inline panel under each collection's Files card, so
-     there are no AMA modals any more: 28 fields across three sections is far too much for a modal,
-     and the values are per collection and per file rather than per bundle. -->
+     Metadata is edited from the label it belongs to: pick a data label in the Files card, then
+     "Edit metadata" opens this modal. A modal rather than a side drawer, to match every other
+     editor in ELSA (document, data product, context) - and modal-xl is 1140px, wider than the
+     drawer was, so the 17-field Simulation Configuration section keeps three columns. Not inline
+     under the Collections card either, which is where it used to be: the panel opened hundreds of
+     pixels away from the button that opened it. -->
 <style>
    .ama-scope-note {
       background-color: rgba(13, 202, 240, .07);
       border: 1px solid rgba(13, 202, 240, .35);
       border-radius: .5rem;
    }
-   .ama-select.ama-active {
-      background-color: teal;
-      border-color: teal;
-      color: #fff;
-   }
-   .ama-panel-wrapper .accordion-button {
-      padding-top: .6rem;
-      padding-bottom: .6rem;
-   }
-   .ama-panel-wrapper .form-control {
+   .ama-panel-wrapper .form-control,
+   .ama-panel-wrapper .form-select {
       font-size: .875rem;
    }
+   /* The guard has to sit above the editor it is guarding. Both are .modal, so without this the
+      two share Bootstrap's 1055 and the confirm can end up behind the panel it is asking about. */
+   #amaUnsavedModal { z-index: 1065; }
 </style>
 
-<!-- Unsaved-changes guard for the inline panel. Bootstrap modal rather than confirm(), per
+<!-- The editor. Outside every card and collapse wrapper, per project convention. One per page
+     rather than one per collection: it is filled on demand from whichever label is selected, so a
+     bundle with many files still carries exactly one of these.
+     modal-dialog-scrollable keeps the title and the close button fixed while 17 fields scroll. -->
+<div class="modal fade" id="amaMetadataModal" tabindex="-1" aria-labelledby="amaMetadataModalLabel"
+   aria-hidden="true">
+   <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content">
+         <div class="modal-header">
+            <div style="min-width: 0;">
+               <h5 class="modal-title mb-0" id="amaMetadataModalLabel">AMA Metadata</h5>
+               <div class="small text-muted text-truncate" id="amaMetadataSubtitle"></div>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+         </div>
+         <div class="modal-body ama-panel-wrapper" id="amaMetadataPanel">
+            <div class="ama-panel-loading text-center text-muted py-4" style="display: none;">
+               <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+               Loading...
+            </div>
+            <div class="ama-panel-error alert alert-danger py-2 small" style="display: none;"></div>
+            <div class="ama-panel-content"></div>
+         </div>
+      </div>
+   </div>
+</div>
+
+<!-- Unsaved-changes guard for the editor. Bootstrap modal rather than confirm(), per
      project convention. -->
 <div class="modal fade" id="amaUnsavedModal" tabindex="-1" aria-hidden="true">
    <div class="modal-dialog modal-dialog-centered">
@@ -4538,11 +4478,11 @@ Has its own form; JS populates hidden inputs with the selected IDs on show. -->
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
          </div>
          <div class="modal-body">
-            You have edited this panel without saving. Switching now discards those changes.
+            You have edited this metadata without saving. Closing now discards those changes.
          </div>
          <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Keep Editing</button>
-            <button type="button" class="btn btn-danger btn-keep-bg" id="amaDiscardConfirm">Discard and Switch</button>
+            <button type="button" class="btn btn-danger btn-keep-bg" id="amaDiscardConfirm">Discard and Close</button>
          </div>
       </div>
    </div>
@@ -4550,29 +4490,38 @@ Has its own form; JS populates hidden inputs with the selected IDs on show. -->
 
 <script>
 (function () {
-   // Inline AMA editor. Each collection tab has its own master-detail pair: the Files list and the
-   // Collection Defaults button are the master, .ama-panel-wrapper is the detail. Panels are
-   // fetched on demand rather than server-rendered per file, which keeps a collection with many
-   // NetCDF files from carrying hundreds of hidden inputs.
+   // AMA editor. The Files card is the master, this modal is the detail. The panel is fetched on
+   // demand rather than server-rendered per file, which keeps a collection with many NetCDF files
+   // from carrying hundreds of hidden inputs in the page.
+   var wrapper = document.getElementById('amaMetadataPanel');
+   if (!wrapper) return;
+
+   var editorEl = document.getElementById('amaMetadataModal');
+   var subtitleEl = document.getElementById('amaMetadataSubtitle');
    var activeKey = null;
    var dirty = false;
-   var pendingSwitch = null;
    var unsavedModal = null;
+   // Set while the unsaved-changes modal is deciding, so hide.bs.modal knows the close was
+   // sanctioned and does not re-open the guard in a loop.
+   var closeConfirmed = false;
 
    function csrfToken() {
       var input = document.querySelector('input[name="csrfmiddlewaretoken"]');
       return input ? input.value : '';
    }
 
-   // A save reloads the page so the badges and summary counts resync, but the collection tab bar
-   // always reopens on the hardcoded "document" tab - which would drop the user out of the
-   // collection they were working in and close the panel after every single save. Remember the
-   // place before reloading and put them back afterwards.
+   function editor() {
+      return window.bootstrap ? bootstrap.Modal.getOrCreateInstance(editorEl) : null;
+   }
+
+   // A save reloads the page so the tree's "n of 28 described" readings and the Collections card
+   // badges resync against the labels just rewritten on disk. Remember which file was open so the
+   // user lands back on it instead of on an empty viewer after every save.
    var PLACE_KEY = 'elsaAmaPlace';
 
-   function rememberPlace(collectionId, key) {
-      if (!collectionId || !key) return;
-      try { sessionStorage.setItem(PLACE_KEY, collectionId + '|' + key); } catch (err) {}
+   function rememberPlace(netcdfId) {
+      if (!netcdfId) return;
+      try { sessionStorage.setItem(PLACE_KEY, String(netcdfId)); } catch (err) {}
    }
 
    function restorePlace() {
@@ -4583,14 +4532,15 @@ Has its own form; JS populates hidden inputs with the selected IDs on show. -->
       } catch (err) { return; }
       if (!stored) return;
 
-      var parts = stored.split('|');
-      var tab = document.querySelector(
-         '[data-bs-target="#additional_collection_' + parts[0] + '"]');
-      if (tab && window.bootstrap) {
-         bootstrap.Tab.getOrCreateInstance(tab).show();
-      }
-      var trigger = document.querySelector('.ama-select[data-ama-key="' + parts[1] + '"]');
-      if (trigger) trigger.click();
+      // Reselect the label so the viewer still shows what the user was working on and the
+      // refreshed "n of 28 described" reading is in front of them.
+      //
+      // Deliberately does NOT reopen the editor. A save is finished business: reopening it made
+      // pressing Save look like the dialog had merely reloaded itself, with no sign the save had
+      // worked and an extra click needed to get out. Closing is the confirmation - the success
+      // message is at the top of the page and the reading in the tree has gone up.
+      var row = document.querySelector('.eft-item[data-netcdf-id="' + stored + '"]');
+      if (row) row.click();
    }
 
    if (document.readyState === 'loading') {
@@ -4599,37 +4549,27 @@ Has its own form; JS populates hidden inputs with the selected IDs on show. -->
       restorePlace();
    }
 
-   function parts(wrapper) {
-      return {
-         wrapper: wrapper,
-         content: wrapper.querySelector('.ama-panel-content'),
-         loading: wrapper.querySelector('.ama-panel-loading'),
-         error: wrapper.querySelector('.ama-panel-error')
-      };
-   }
+   var ui = {
+      wrapper: wrapper,
+      content: wrapper.querySelector('.ama-panel-content'),
+      loading: wrapper.querySelector('.ama-panel-loading'),
+      error: wrapper.querySelector('.ama-panel-error')
+   };
 
-   function setActive(key) {
-      activeKey = key;
-      document.querySelectorAll('.ama-select').forEach(function (btn) {
-         btn.classList.toggle('ama-active', btn.dataset.amaKey === key);
-      });
-   }
-
-   function showError(ui, message) {
+   function showError(message) {
       if (!ui.error) return;
       ui.error.textContent = message;
       ui.error.style.display = 'block';
    }
 
-   function loadPanel(url, key, wrapperId) {
-      var wrapper = document.getElementById(wrapperId);
-      if (!wrapper) return;
-      var ui = parts(wrapper);
-
-      wrapper.style.display = 'block';
+   function loadPanel(url, key, subtitle) {
       if (ui.error) ui.error.style.display = 'none';
       ui.content.innerHTML = '';
       if (ui.loading) ui.loading.style.display = 'block';
+      if (subtitleEl && subtitle !== undefined) subtitleEl.textContent = subtitle || '';
+
+      var dialog = editor();
+      if (dialog) dialog.show();
 
       fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' })
          .then(function (response) {
@@ -4640,45 +4580,67 @@ Has its own form; JS populates hidden inputs with the selected IDs on show. -->
             if (ui.loading) ui.loading.style.display = 'none';
             ui.content.innerHTML = html;
             dirty = false;
-            setActive(key);
-            wrapper.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            activeKey = key;
          })
          .catch(function (err) {
             if (ui.loading) ui.loading.style.display = 'none';
-            showError(ui, 'Could not load the AMA panel: ' + err.message);
+            showError('Could not load the metadata panel: ' + err.message);
          });
    }
 
-   function requestSwitch(url, key, wrapperId) {
-      if (dirty && key !== activeKey) {
-         pendingSwitch = { url: url, key: key, wrapperId: wrapperId };
-         if (!unsavedModal && window.bootstrap) {
-            unsavedModal = new bootstrap.Modal(document.getElementById('amaUnsavedModal'));
-         }
-         if (unsavedModal) { unsavedModal.show(); return; }
+   function guard() {
+      if (!unsavedModal && window.bootstrap) {
+         unsavedModal = new bootstrap.Modal(document.getElementById('amaUnsavedModal'));
       }
-      loadPanel(url, key, wrapperId);
+      if (unsavedModal) { unsavedModal.show(); return true; }
+      return false;
    }
 
    document.addEventListener('click', function (e) {
-      var trigger = e.target.closest ? e.target.closest('.ama-select') : null;
-      if (trigger) {
+      var trigger = e.target.closest ? e.target.closest('#editMetadataBtn') : null;
+      if (trigger && !trigger.disabled && trigger.dataset.amaUrl) {
          e.preventDefault();
-         requestSwitch(trigger.dataset.amaUrl, trigger.dataset.amaKey, trigger.dataset.amaPanel);
+         // Re-opening the drawer on the file already loaded is a no-op rather than a discard, so
+         // the guard only fires when the user is actually switching to a different file.
+         if (dirty && trigger.dataset.amaKey !== activeKey && guard()) return;
+         var nameEl = document.getElementById('fileName');
+         loadPanel(trigger.dataset.amaUrl, trigger.dataset.amaKey,
+                   nameEl ? nameEl.textContent : '');
          return;
       }
       if (e.target.closest && e.target.closest('#amaDiscardConfirm')) {
          if (unsavedModal) unsavedModal.hide();
-         if (pendingSwitch) {
-            var next = pendingSwitch;
-            pendingSwitch = null;
-            dirty = false;
-            loadPanel(next.url, next.key, next.wrapperId);
-         }
+         dirty = false;
+         // The only thing the guard ever interrupts now is a close, since switching files means
+         // clicking a tree row first and that cannot happen behind the open drawer.
+         closeConfirmed = true;
+         var dialog = editor();
+         if (dialog) dialog.hide();
+         return;
       }
    });
 
-   // Any edit inside a panel marks it dirty, so switching away warns first.
+   // Closing the editor with unsaved edits is the one place the guard fires. Bootstrap's hide is
+   // cancellable, so preventDefault keeps the editor open until the user answers the guard.
+   if (editorEl) {
+      editorEl.addEventListener('hide.bs.modal', function (e) {
+         if (closeConfirmed) { closeConfirmed = false; return; }
+         if (!dirty) return;
+         e.preventDefault();
+         guard();
+      });
+      // Nothing is retained between openings: the next open refetches, so a stale panel can never
+      // be shown against the wrong file.
+      editorEl.addEventListener('hidden.bs.modal', function () {
+         ui.content.innerHTML = '';
+         if (ui.error) ui.error.style.display = 'none';
+         if (subtitleEl) subtitleEl.textContent = '';
+         activeKey = null;
+         dirty = false;
+      });
+   }
+
+   // Any edit inside a panel marks it dirty, so closing warns first.
    document.addEventListener('input', function (e) {
       if (e.target.closest && e.target.closest('.ama-panel-content')) dirty = true;
    });
@@ -4686,15 +4648,14 @@ Has its own form; JS populates hidden inputs with the selected IDs on show. -->
       if (e.target.closest && e.target.closest('.ama-panel-content')) dirty = true;
    });
 
-   // Saving and reverting both post from inside a panel and both return a fresh panel.
+   // Saving, reverting and copying all post from inside the panel and all return a fresh panel.
    document.addEventListener('submit', function (e) {
       var form = e.target;
-      if (!form || (form.id !== 'amaPanelForm' && form.id !== 'amaRevertForm')) return;
-      var wrapper = form.closest('.ama-panel-wrapper');
-      if (!wrapper) return;
+      if (!form || (form.id !== 'amaPanelForm' && form.id !== 'amaRevertForm'
+                    && form.id !== 'amaCopyForm')) return;
+      if (!form.closest('.ama-panel-wrapper')) return;
       e.preventDefault();
 
-      var ui = parts(wrapper);
       var submitBtn = form.querySelector('button[type="submit"]');
       if (submitBtn) submitBtn.disabled = true;
       if (ui.error) ui.error.style.display = 'none';
@@ -4714,21 +4675,27 @@ Has its own form; JS populates hidden inputs with the selected IDs on show. -->
 
             var inner = ui.content.querySelector('#amaPanelInner');
             // Only a successful save clears the dirty flag. A rejected save comes back with the
-            // user's values and the validation errors still in the form, so switching away would
+            // user's values and the validation errors still in the form, so closing would
             // otherwise discard them without warning.
             dirty = !(inner && inner.dataset.saved === 'true');
 
             if (inner && inner.dataset.saved === 'true') {
-               // Labels on disk have been rewritten, so the file list badges and the summary
-               // counts on this page are now stale. Reloading is the honest way to resync them;
-               // rememberPlace puts the user back where they were afterwards.
-               rememberPlace(inner.dataset.collectionId, activeKey);
+               // Labels on disk have been rewritten, so the tree's "n of 28 described" readings
+               // and the Collections card badges are now stale. Reloading is the honest way to
+               // resync them; rememberPlace reselects the label afterwards.
+               rememberPlace(inner.dataset.netcdfId);
+               // Close first, or the dialog sits over the page for the length of the reload and
+               // the save looks like it did nothing. closeConfirmed skips the unsaved-changes
+               // guard, which has nothing left to protect once the save has succeeded.
+               closeConfirmed = true;
+               var dialog = editor();
+               if (dialog) dialog.hide();
                window.location.reload();
             }
          })
          .catch(function (err) {
             if (submitBtn) submitBtn.disabled = false;
-            showError(ui, 'Could not save: ' + err.message);
+            showError('Could not save: ' + err.message);
          });
    });
 
@@ -4740,5 +4707,6 @@ Has its own form; JS populates hidden inputs with the selected IDs on show. -->
 
 })();
 </script>
+{% endif %}
 
    {% endblock %}

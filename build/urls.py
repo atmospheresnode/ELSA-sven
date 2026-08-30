@@ -130,6 +130,7 @@ urlpatterns = [
     re_path(r'^(?P<pk_bundle>\d+)/ama/collection/(?P<pk_collection>\d+)/$', views.ama_collection_defaults, name='ama_collection_defaults'),
     re_path(r'^(?P<pk_bundle>\d+)/netcdf/(?P<pk_netcdf>\d+)/ama/$', views.netcdf_ama, name='netcdf_ama'),
     re_path(r'^(?P<pk_bundle>\d+)/netcdf/(?P<pk_netcdf>\d+)/ama/reset/$', views.netcdf_ama_reset, name='netcdf_ama_reset'),
+    re_path(r'^(?P<pk_bundle>\d+)/netcdf/(?P<pk_netcdf>\d+)/ama/copy/$', views.netcdf_ama_copy, name='netcdf_ama_copy'),
     re_path(r'^(?P<pk_bundle>\d+)/netcdf/(?P<pk_netcdf>\d+)/assign_collection/$', views.assign_netcdf_collection, name='assign_netcdf_collection'),
     
     # Submit Bundle for Review

@@ -358,26 +358,30 @@ class RenderedDomAudit(AMATestCaseMixin, TestCase):
                     offenders.append((form.get('id'), (button.text or '').strip()[:40]))
         self.assertEqual(offenders, [], 'typeless buttons inside forms')
 
-    def test_the_accordion_sections_are_all_addressable(self):
+    def test_the_section_tabs_are_all_addressable(self):
         panel = self.panel_get(self.file_url()).content.decode('utf-8')
-        targets = set(re.findall(r'data-bs-target="#(amaSection\w+)"', panel))
-        ids = set(re.findall(r'id="(amaSection\w+)"', panel)) - {'amaSections'}
-        self.assertEqual(targets, ids, 'accordion toggles and panes do not line up')
+        targets = set(re.findall(r'data-bs-target="#(amaTab\w+)"', panel))
+        ids = set(re.findall(r'id="(amaTab\w+)"', panel))
+        self.assertEqual(targets, ids, 'tab toggles and panes do not line up')
+        self.assertEqual(len(ids), 3, 'expected one pane per AMA section')
 
-    def test_each_collection_panel_wrapper_is_unique(self):
+    def test_there_is_exactly_one_metadata_editor(self):
+        """It used to be one wrapper per collection, each carrying its own copy of the panel
+        plumbing. One editor, filled on demand, cannot drift between collections."""
         html = self.bundle_html()
-        wrappers = re.findall(r'id="(amaPanel\d+)"', html)
-        self.assertEqual(len(wrappers), len(set(wrappers)))
-        self.assertEqual(len(wrappers), 2, 'expected one panel wrapper per collection')
+        self.assertEqual(len(re.findall(r'id="amaMetadataPanel"', html)), 1)
+        self.assertEqual(re.findall(r'id="(amaPanel\d+)"', html), [])
 
-    def test_the_ama_buttons_target_their_own_collection_panel(self):
+    def test_every_label_row_that_offers_metadata_carries_a_url_for_it(self):
+        # The Files card walks the bundle directory, so a file with no label on disk has no row.
+        for netcdf_file in (self.nc_one, self.nc_two, self.nc_beta):
+            self.write_label(netcdf_file)
         html = self.bundle_html()
-        for match in re.finditer(
-                r'data-ama-url="([^"]+)"[^>]*data-ama-key="([^"]+)"[^>]*data-ama-panel="([^"]+)"',
-                html, re.S):
-            url, key, panel = match.groups()
-            with self.subTest(key=key):
-                self.assertIn(panel, html)
+        rows = re.findall(r'data-netcdf-id="(\d+)"\s*\n?\s*data-ama-url="([^"]+)"', html)
+        self.assertNotEqual(rows, [], 'no data label offered a metadata url')
+        for netcdf_id, url in rows:
+            with self.subTest(netcdf_id=netcdf_id):
+                self.assertIn('/netcdf/{}/ama/'.format(netcdf_id), url)
 
     def test_the_panel_form_posts_to_the_scope_it_is_showing(self):
         panel = self.panel_get(self.file_url()).content.decode('utf-8')
@@ -414,22 +418,22 @@ class AwkwardStateAudit(AMATestCaseMixin, TestCase):
         self.assertEqual(twin.directory(), self.alpha.directory(),
                          'two same-named collections share a directory')
 
-    def test_apply_to_collection_works_when_no_default_exists_yet(self):
+    def test_sharing_a_section_works_when_no_default_exists_yet(self):
         self.panel_post(self.file_url(), {
-            'sim-horizontal_grid_type': 'cubed sphere', 'sim-apply_to_collection': 'on'})
+            'sim-horizontal_grid_type': 'cube-sphere', 'sim-apply_scope': 'collection'})
 
         default = SimulationConfiguration.default_for_collection(self.alpha)
         self.assertIsNotNone(default, 'apply-to-collection did not create the default')
-        self.assertEqual(default.horizontal_grid_type, 'cubed sphere')
+        self.assertEqual(default.horizontal_grid_type, 'cube-sphere')
 
-    def test_apply_to_collection_with_an_empty_form_does_not_wipe_the_default(self):
-        self.make_default_simulation(horizontal_grid_type='lat/lon')
+    def test_sharing_an_empty_section_does_not_wipe_the_default(self):
+        self.make_default_simulation(horizontal_grid_type='lat-lon')
 
-        self.panel_post(self.file_url(), {'sim-apply_to_collection': 'on'})
+        self.panel_post(self.file_url(), {'sim-apply_scope': 'collection'})
 
         default = SimulationConfiguration.default_for_collection(self.alpha)
         self.assertIsNotNone(default)
-        self.assertEqual(default.horizontal_grid_type, 'lat/lon',
+        self.assertEqual(default.horizontal_grid_type, 'lat-lon',
                          'ticking apply on an empty form blanked the collection default')
 
     def test_the_panel_for_a_file_whose_collection_was_deleted(self):
@@ -460,7 +464,7 @@ class AwkwardStateAudit(AMATestCaseMixin, TestCase):
                              'a whitespace-only value would emit an empty element')
 
     def test_saving_a_file_panel_does_not_create_rows_for_untouched_sections(self):
-        self.panel_post(self.file_url(), {'sim-horizontal_grid_type': 'cubed sphere'})
+        self.panel_post(self.file_url(), {'sim-horizontal_grid_type': 'cube-sphere'})
 
         self.assertEqual(SimulationConfiguration.objects.filter(
             netcdf_file=self.nc_one).count(), 1)
@@ -475,12 +479,18 @@ class AwkwardStateAudit(AMATestCaseMixin, TestCase):
         back. If that stores an override, every file the user merely looked at would silently
         stop following the collection.
         """
-        self.make_default_simulation(horizontal_grid_type='lat/lon')
+        self.make_default_simulation(horizontal_grid_type='lat-lon')
         panel = self.panel_get(self.file_url()).content.decode('utf-8')
 
         payload = {}
-        for name, value in re.findall(r'name="(sim-[^"]+)"[^>]*value="([^"]*)"', panel):
-            payload[name] = value
+        for tag in re.findall(r'<input[^>]*name="sim-[^"]+"[^>]*>', panel):
+            name = re.search(r'name="([^"]+)"', tag).group(1)
+            value = re.search(r'value="([^"]*)"', tag)
+            # A browser posts only the checked radio. Keeping the last of a group would post
+            # "just this file", the opposite instruction to the one this probe is named for.
+            if 'type="radio"' in tag and 'checked' not in tag:
+                continue
+            payload[name] = value.group(1) if value else ''
         # Textareas carry their content between the tags, not in a value attribute. A browser
         # submits them, so leaving them out would make this probe unrealistic.
         for name, value in re.findall(

@@ -1,5 +1,12 @@
-<!-- watches: templates/base-derk.html, templates/friends/bundle_hub.html, build/urls.py -->
-<!-- reviewed: 2026-07-24 -->
+<!-- watches: templates/base-derk.html#nav, friends/views.py#bundle_hub, templates/friends/bundle_hub.html, build/urls.py -->
+<!-- fingerprint:
+     templates/base-derk.html#nav      = 568cd6ce6baa
+     friends/views.py#bundle_hub       = 02a643915c11
+     templates/friends/bundle_hub.html = 1769e80d5787
+     build/urls.py                     = 735cfb905d8b
+-->
+<!-- reviewed: 2026-08-28 -->
+<!-- baseline: d8df4b96320a4636b7a95ac426bec7ff1a1fa839 -->
 # Navigating ELSA
 
 Key pages:

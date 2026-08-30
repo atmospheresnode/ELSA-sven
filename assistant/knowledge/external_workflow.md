@@ -1,5 +1,13 @@
-<!-- watches: build/views.py, templates/build/bundle/bundle.html, build/models.py -->
-<!-- reviewed: 2026-07-24 -->
+<!-- watches: build/views.py#build, build/models.py#Bundle, build/models.py#AdditionalCollections, build/models.py#NetCDFFile, templates/build/bundle/bundle.html -->
+<!-- fingerprint:
+     build/views.py#build                  = 91b23b4f25cb
+     build/models.py#Bundle                = 81fb6e671b24
+     build/models.py#AdditionalCollections = e7d4fb297ed3
+     build/models.py#NetCDFFile            = 0259cb4196cf
+     templates/build/bundle/bundle.html    = f64ff9bdee83
+-->
+<!-- reviewed: 2026-08-28 -->
+<!-- baseline: d8df4b96320a4636b7a95ac426bec7ff1a1fa839 -->
 # External Bundle Workflow (AMA)
 
 External bundles are ELSA's lighter-weight bundle type, used for the Atmospheres

@@ -1,5 +1,14 @@
-<!-- watches: build/views.py, review/views.py, submit/views.py, tutorial/urls.py -->
-<!-- reviewed: 2026-07-24 -->
+<!-- watches: build/views.py#submit_bundle_internal, review/views.py, submit/views.py#submit_main, submit/views.py#upload_archive, submit/views.py#upload_external, tutorial/urls.py -->
+<!-- fingerprint:
+     build/views.py#submit_bundle_internal = 38fb2abcb00a
+     review/views.py                       = b7483ad97eb6
+     submit/views.py#submit_main           = 32904e6f1c1e
+     submit/views.py#upload_archive        = d4b10fbe4906
+     submit/views.py#upload_external       = 1f663bead378
+     tutorial/urls.py                      = 7fdbf2eaa074
+-->
+<!-- reviewed: 2026-08-28 -->
+<!-- baseline: d8df4b96320a4636b7a95ac426bec7ff1a1fa839 -->
 # Review, Submission, and Getting Help
 
 Submitting a bundle: on the bundle page, the **Review & Submit** button opens a

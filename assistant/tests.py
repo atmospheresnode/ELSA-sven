@@ -685,6 +685,9 @@ class OpsCommandTests(TestCase):
 
 
 class KnowledgeCheckTests(SimpleTestCase):
+    """The staleness check is content-based: a chunk goes stale when the source it
+    describes changes, not when anything gets committed. The tests that matter are the
+    ones separating those two, since conflating them is what made the check useless."""
 
     def test_parse_watches(self):
         from .management.commands.assistant_knowledge_check import parse_watches
@@ -692,12 +695,110 @@ class KnowledgeCheckTests(SimpleTestCase):
         self.assertEqual(parse_watches(text), ['build/views.py', 'templates/build'])
         self.assertEqual(parse_watches('# No declaration'), [])
 
-    def test_parse_reviewed_marker(self):
-        import datetime
-        from assistant.knowledge_check import parse_reviewed_ts
-        ts = parse_reviewed_ts('<!-- watches: a -->\n<!-- reviewed: 2026-07-10 -->\n# T')
-        self.assertIsNotNone(ts)
-        # counts as end of that day, so it clears same-day commits to watched files
-        eod = datetime.datetime.combine(datetime.date(2026, 7, 10), datetime.time(23, 59, 59))
-        self.assertEqual(ts, int(eod.timestamp()))
-        self.assertIsNone(parse_reviewed_ts('<!-- watches: a -->\n# no marker'))
+    def test_parse_watches_keeps_anchors(self):
+        from assistant.knowledge_check import parse_watches, split_spec
+        specs = parse_watches('<!-- watches: build/models.py#Bundle, build/views.py -->')
+        self.assertEqual(specs, ['build/models.py#Bundle', 'build/views.py'])
+        self.assertEqual(split_spec('build/models.py#Bundle'), ('build/models.py', 'Bundle'))
+        self.assertEqual(split_spec('build/views.py'), ('build/views.py', None))
+
+    def test_parse_fingerprints(self):
+        from assistant.knowledge_check import parse_fingerprints
+        text = ('<!-- watches: a, b -->\n'
+                '<!-- fingerprint:\n     a = 1111aaaa\n     b = 2222bbbb\n-->\n# T')
+        self.assertEqual(parse_fingerprints(text), {'a': '1111aaaa', 'b': '2222bbbb'})
+        self.assertEqual(parse_fingerprints('# nothing here'), {})
+
+    def test_reviewed_marker_is_informational_only(self):
+        """It used to decide staleness, which is what made every merge trip the check."""
+        from assistant.knowledge_check import parse_reviewed
+        self.assertEqual(parse_reviewed('<!-- reviewed: 2026-07-10 -->'), '2026-07-10')
+        self.assertIsNone(parse_reviewed('<!-- watches: a -->\n# no marker'))
+
+    def test_normalize_ignores_formatting_but_not_content(self):
+        from assistant.knowledge_check import normalize
+        self.assertEqual(normalize('a = 1   \n\n\nb = 2\n'), normalize('a = 1\nb = 2'))
+        self.assertNotEqual(normalize('a = 1'), normalize('a = 2'))
+
+    def test_extract_anchor_takes_the_whole_block_and_stops(self):
+        from assistant.knowledge_check import extract_anchor
+        source = ('import os\n\n'
+                  'class Wanted:\n'
+                  '    def method(self):\n'
+                  '        return 1\n\n'
+                  'class Other:\n'
+                  '    pass\n')
+        block = extract_anchor(source, 'Wanted', 'x#Wanted')
+        self.assertIn('def method', block)
+        self.assertNotIn('class Other', block)
+        self.assertNotIn('import os', block)
+
+    def test_extract_anchor_covers_every_definition_of_a_name(self):
+        """models.py defines several names twice; hashing only the first would leave
+        the definition that actually runs unwatched."""
+        from assistant.knowledge_check import extract_anchor
+        source = ('class Dup:\n    first = 1\n\n\nclass Dup:\n    second = 2\n')
+        block = extract_anchor(source, 'Dup', 'x#Dup')
+        self.assertIn('first = 1', block)
+        self.assertIn('second = 2', block)
+
+    def test_prefix_anchor_covers_a_family_of_definitions(self):
+        from assistant.knowledge_check import extract_anchor
+        source = ('def search(self):\n    a = 1\n\n'
+                  'def search_target(self):\n    b = 2\n\n'
+                  'def unrelated(self):\n    c = 3\n')
+        block = extract_anchor(source, 'search*', 'x#search*')
+        self.assertIn('a = 1', block)
+        self.assertIn('b = 2', block)
+        self.assertNotIn('c = 3', block)
+
+    def test_plain_anchor_does_not_match_a_longer_name(self):
+        from assistant.knowledge_check import WatchError, extract_anchor
+        with self.assertRaises(WatchError):
+            extract_anchor('def search_target(self):\n    pass\n', 'search', 'x#search')
+
+    def test_extract_anchor_reports_a_name_that_is_not_there(self):
+        from assistant.knowledge_check import WatchError, extract_anchor
+        with self.assertRaises(WatchError):
+            extract_anchor('class Real:\n    pass\n', 'Missing', 'x#Missing')
+
+    def test_a_watch_that_resolves_to_nothing_is_reported(self):
+        """The old check silently skipped these, so a renamed file left a chunk unguarded."""
+        from assistant.knowledge_check import WatchError, fingerprint
+        with self.assertRaises(WatchError):
+            fingerprint('build/no_such_file_here.py')
+        with self.assertRaises(WatchError):
+            fingerprint('build/models.py#NoSuchClassAnywhere')
+
+    def test_fingerprint_is_stable_and_region_scoped(self):
+        from assistant.knowledge_check import fingerprint
+        self.assertEqual(fingerprint('build/models.py#Bundle'),
+                         fingerprint('build/models.py#Bundle'))
+        self.assertNotEqual(fingerprint('build/models.py#Bundle'),
+                            fingerprint('build/models.py#Product_Collection'))
+
+    def test_parse_baseline(self):
+        from assistant.knowledge_check import parse_baseline
+        self.assertEqual(parse_baseline('<!-- baseline: d8df4b96320a -->'), 'd8df4b96320a')
+        self.assertIsNone(parse_baseline('<!-- reviewed: 2026-08-28 -->'))
+
+    def test_every_chunk_records_a_baseline_to_diff_against(self):
+        from assistant.knowledge_check import KNOWLEDGE_DIR, parse_baseline
+        missing = [c.name for c in sorted(KNOWLEDGE_DIR.glob('*.md'))
+                   if not parse_baseline(c.read_text())]
+        self.assertEqual(missing, [], 'run knowledge_check.py --update to record baselines')
+
+    def test_region_diff_degrades_without_a_baseline(self):
+        """A shallow clone or an unknown commit costs the diff, never the check itself."""
+        from assistant.knowledge_check import region_diff
+        self.assertEqual(region_diff(None, 'build/models.py#Alias'), [])
+        self.assertEqual(region_diff('0' * 40, 'build/models.py#Alias'), [])
+
+    def test_every_shipped_chunk_is_currently_in_sync(self):
+        """Guards the committed fingerprints: if this fails, a chunk needs review and
+        a re-baseline via `manage.py assistant_knowledge_check --update`."""
+        from assistant.knowledge_check import run_check
+        stale, unwatched, broken = run_check(out=lambda *a, **k: None)
+        self.assertEqual(broken, [], 'knowledge chunks watch paths that no longer resolve')
+        self.assertEqual(unwatched, [], 'knowledge chunks with no watches declared')
+        self.assertEqual([chunk for chunk, _ in stale], [])

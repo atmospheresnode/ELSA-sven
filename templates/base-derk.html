@@ -48,6 +48,7 @@
     <div class="container-fluid sticky-footer-page">
         <!-- Header -->
         {% if user.is_authenticated %}
+        {# knowledge:nav - watched by assistant/knowledge/elsa_navigation.md #}
         <header class="row">
             <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
                 <!-- ELSA Logo -->
@@ -128,6 +129,7 @@
             </nav>
         </header>
         {% endif %}
+        {# /knowledge:nav #}
 
         <!-- Main Content -->
         <main class="row py-4">
@@ -157,7 +159,7 @@
                     </a>
                 </li>
             </ul>
-            <p class="footer-copyright text-center pt-2"><a>Version 1.37.9</a> © 2026 New Mexico State University</p>
+            <p class="footer-copyright text-center pt-2"><a>Version 1.37.10</a> © 2026 New Mexico State University</p>
         </footer>
         {% endif %}
     </div>

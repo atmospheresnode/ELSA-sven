@@ -13,19 +13,24 @@ import re
 import shutil
 import tempfile
 
+from io import StringIO
+
 from django.conf import settings
 from django.contrib.auth.models import User
+from django.core.management import call_command
+from django.core.management.base import CommandError
+from django.contrib.messages import get_messages
 from django.core.cache import cache
 from django.template.loader import get_template
-from django.test import TestCase, override_settings
+from django.test import SimpleTestCase, TestCase, override_settings
 from django.urls import reverse
 
 from build import views
-from build.forms import (FileDescriptionForm, ModelMetadataForm,
+from build.forms import (AMA_ENUMERATIONS, FileDescriptionForm, ModelMetadataForm,
                          SimulationConfigurationForm)
 from build.models import (AdditionalCollections, Bundle, FileDescription,
                           ModelMetadata, NetCDFFile, Product_Bundle,
-                          SimulationConfiguration)
+                          Product_Collection, SimulationConfiguration)
 
 # views.py binds ET to lxml at the top of the file and then rebinds it to the stdlib ElementTree
 # further down, in the NetCDF section. The stdlib one is what actually runs, and the two libraries
@@ -116,6 +121,18 @@ class AMATestCaseMixin(object):
         return NetCDFFile.objects.create(
             title=title, file=title, bundle=self.bundle, collection=collection, processed=True)
 
+    def write_label(self, netcdf_file):
+        """Put a stub .xml beside the data file.
+
+        _bundle_file_tree walks the bundle directory rather than the database, so a file with no
+        label on disk produces no tree row at all.
+        """
+        stem = os.path.splitext(os.path.basename(netcdf_file.file.name))[0]
+        path = os.path.join(netcdf_file.directory(), stem + '.xml')
+        with open(path, 'w', encoding='utf-8') as handle:
+            handle.write('<?xml version="1.0"?><Product_Observational/>')
+        return path
+
     def login(self):
         self.client.login(username='ama_tester', password='pw-for-tests')
 
@@ -136,7 +153,7 @@ class AMATestCaseMixin(object):
 
     def make_default_simulation(self, collection=None, **overrides):
         values = {
-            'horizontal_grid_type': 'lat/lon',
+            'horizontal_grid_type': 'lat-lon',
             'model_resolution': '5x5',
             'northern_boundary': 90.0,
             'southern_boundary': -90.0,
@@ -183,13 +200,13 @@ class AMACollectionScopeTests(AMATestCaseMixin, TestCase):
 
     def test_collections_do_not_share_values(self):
         alpha_default = self.make_default_simulation(
-            collection=self.alpha, horizontal_grid_type='lat/lon')
-        self.make_default_simulation(collection=self.beta, horizontal_grid_type='cubed sphere')
+            collection=self.alpha, horizontal_grid_type='lat-lon')
+        self.make_default_simulation(collection=self.beta, horizontal_grid_type='cube-sphere')
 
         self.assertEqual(SimulationConfiguration.resolve_for_file(self.nc_one), alpha_default)
         self.assertEqual(
             SimulationConfiguration.resolve_for_file(self.nc_beta).horizontal_grid_type,
-            'cubed sphere')
+            'cube-sphere')
 
     def test_a_collection_with_no_default_gets_nothing_from_a_sibling(self):
         self.make_default_simulation(collection=self.alpha)
@@ -199,7 +216,7 @@ class AMACollectionScopeTests(AMATestCaseMixin, TestCase):
         self.make_default_simulation()
         override = SimulationConfiguration.objects.create(
             bundle=self.bundle, collection=self.alpha, netcdf_file=self.nc_one,
-            horizontal_grid_type='cubed sphere')
+            horizontal_grid_type='cube-sphere')
 
         self.assertEqual(SimulationConfiguration.resolve_for_file(self.nc_one), override)
         self.assertTrue(SimulationConfiguration.resolve_for_file(self.nc_two).is_default())
@@ -217,7 +234,7 @@ class AMACollectionScopeTests(AMATestCaseMixin, TestCase):
     def test_default_lookup_ignores_per_file_rows(self):
         SimulationConfiguration.objects.create(
             bundle=self.bundle, collection=self.alpha, netcdf_file=self.nc_one,
-            horizontal_grid_type='cubed sphere')
+            horizontal_grid_type='cube-sphere')
         self.assertIsNone(SimulationConfiguration.default_for_collection(self.alpha))
 
     def test_a_file_with_no_collection_resolves_to_nothing(self):
@@ -230,7 +247,7 @@ class AMACollectionScopeTests(AMATestCaseMixin, TestCase):
         default = self.make_default_simulation()
         SimulationConfiguration.objects.create(
             bundle=self.bundle, collection=self.alpha, netcdf_file=self.nc_one,
-            horizontal_grid_type='cubed sphere')
+            horizontal_grid_type='cube-sphere')
 
         self.nc_one.delete()
 
@@ -249,16 +266,16 @@ class AMAApplyToCollectionTests(AMATestCaseMixin, TestCase):
     """apply_to_collection is the 'use the same info for the other files' action."""
 
     def test_promoting_a_file_makes_its_values_the_collection_default(self):
-        self.make_default_simulation(horizontal_grid_type='lat/lon')
+        self.make_default_simulation(horizontal_grid_type='lat-lon')
         source = SimulationConfiguration.objects.create(
             bundle=self.bundle, collection=self.alpha, netcdf_file=self.nc_one,
-            horizontal_grid_type='cubed sphere')
+            horizontal_grid_type='cube-sphere')
 
         SimulationConfiguration.apply_to_collection(source, self.alpha)
 
         self.assertEqual(
             SimulationConfiguration.default_for_collection(self.alpha).horizontal_grid_type,
-            'cubed sphere')
+            'cube-sphere')
 
     def test_it_clears_the_other_files_overrides(self):
         SimulationConfiguration.objects.create(
@@ -266,25 +283,25 @@ class AMAApplyToCollectionTests(AMATestCaseMixin, TestCase):
             horizontal_grid_type='icosahedral')
         source = SimulationConfiguration.objects.create(
             bundle=self.bundle, collection=self.alpha, netcdf_file=self.nc_one,
-            horizontal_grid_type='cubed sphere')
+            horizontal_grid_type='cube-sphere')
 
         cleared = SimulationConfiguration.apply_to_collection(source, self.alpha)
 
         self.assertTrue(cleared >= 1)
         self.assertEqual(
             SimulationConfiguration.resolve_for_file(self.nc_two).horizontal_grid_type,
-            'cubed sphere')
+            'cube-sphere')
 
     def test_it_does_not_touch_another_collection(self):
         beta_default = self.make_default_simulation(
-            collection=self.beta, horizontal_grid_type='cubed sphere')
+            collection=self.beta, horizontal_grid_type='cube-sphere')
         source = self.make_default_simulation(
-            collection=self.alpha, horizontal_grid_type='lat/lon')
+            collection=self.alpha, horizontal_grid_type='lat-lon')
 
         SimulationConfiguration.apply_to_collection(source, self.alpha)
 
         beta_default.refresh_from_db()
-        self.assertEqual(beta_default.horizontal_grid_type, 'cubed sphere')
+        self.assertEqual(beta_default.horizontal_grid_type, 'cube-sphere')
 
 
 class AMAFilledValuesTests(AMATestCaseMixin, TestCase):
@@ -292,9 +309,9 @@ class AMAFilledValuesTests(AMATestCaseMixin, TestCase):
 
     def test_blank_and_null_fields_are_dropped(self):
         record = self.make_default_simulation(
-            horizontal_grid_type='lat/lon', model_resolution='', vertical_grid_type='   ',
+            horizontal_grid_type='lat-lon', model_resolution='', vertical_grid_type='   ',
             northern_boundary=None, southern_boundary=None, description='')
-        self.assertEqual(record.filled_values(), {'horizontal_grid_type': 'lat/lon'})
+        self.assertEqual(record.filled_values(), {'horizontal_grid_type': 'lat-lon'})
 
     def test_zero_is_kept_because_it_is_a_real_measurement(self):
         record = SimulationConfiguration.objects.create(
@@ -305,7 +322,7 @@ class AMAFilledValuesTests(AMATestCaseMixin, TestCase):
     def test_values_come_back_in_ldd_sequence_order(self):
         record = SimulationConfiguration.objects.create(
             bundle=self.bundle, collection=self.alpha, description='last in the sequence',
-            time_unit='sols', horizontal_grid_type='lat/lon')
+            time_unit='sols', horizontal_grid_type='lat-lon')
         self.assertEqual(list(record.filled_values().keys()),
                          ['horizontal_grid_type', 'time_unit', 'description'])
 
@@ -393,7 +410,7 @@ class AMALabelWritingTests(AMATestCaseMixin, TestCase):
 
     def test_simulation_elements_follow_ldd_sequence(self):
         self.make_default_simulation(
-            time_unit='sols', model_timestep=30.0, horizontal_grid_type='lat/lon')
+            time_unit='sols', model_timestep=30.0, horizontal_grid_type='lat-lon')
 
         root = self.parsed_template()
         views.write_ama_user_classes(root, NS, self.bundle, netcdf_obj=self.nc_one)
@@ -404,10 +421,10 @@ class AMALabelWritingTests(AMATestCaseMixin, TestCase):
              'southern_boundary', 'time_unit', 'description'])
 
     def test_per_file_override_beats_the_collection_default_in_the_label(self):
-        self.make_default_simulation(horizontal_grid_type='lat/lon')
+        self.make_default_simulation(horizontal_grid_type='lat-lon')
         SimulationConfiguration.objects.create(
             bundle=self.bundle, collection=self.alpha, netcdf_file=self.nc_one,
-            horizontal_grid_type='cubed sphere')
+            horizontal_grid_type='cube-sphere')
 
         root_one = self.parsed_template()
         views.write_ama_user_classes(root_one, NS, self.bundle, netcdf_obj=self.nc_one)
@@ -416,10 +433,10 @@ class AMALabelWritingTests(AMATestCaseMixin, TestCase):
 
         self.assertEqual(
             self.ama_element(root_one, 'ama:Simulation_Configuration').find(
-                'ama:horizontal_grid_type', namespaces=NS).text, 'cubed sphere')
+                'ama:horizontal_grid_type', namespaces=NS).text, 'cube-sphere')
         self.assertEqual(
             self.ama_element(root_two, 'ama:Simulation_Configuration').find(
-                'ama:horizontal_grid_type', namespaces=NS).text, 'lat/lon')
+                'ama:horizontal_grid_type', namespaces=NS).text, 'lat-lon')
 
     def test_file_description_stays_first_child_of_model_output(self):
         """The LDD sequence is File_Description, Variable*, Coordinate*. The harvest appends
@@ -467,20 +484,43 @@ class AMAFormTests(AMATestCaseMixin, TestCase):
         self.assertFalse(SimulationConfigurationForm(
             data={'eastern_boundary': '361'}, scope='collection').is_valid())
 
-    def test_apply_to_collection_is_offered_in_both_scopes(self):
-        """It means 'reset the files to this' on the default form and 'promote this' on a file."""
+    def test_each_scope_gets_only_its_own_control(self):
+        """The question genuinely differs: a file asks where its values live, the collection form
+        asks whether to discard the per-file ones. Neither control may be posted into the other
+        scope, so only one is present at a time."""
         for form_class in self.all_form_classes():
-            for scope in ('collection', 'file'):
-                with self.subTest(form=form_class.__name__, scope=scope):
-                    self.assertIn('apply_to_collection', form_class(scope=scope).fields)
+            with self.subTest(form=form_class.__name__, scope='file'):
+                fields = form_class(scope='file').fields
+                self.assertIn('apply_scope', fields)
+                self.assertNotIn('apply_to_collection', fields)
+            with self.subTest(form=form_class.__name__, scope='collection'):
+                fields = form_class(scope='collection').fields
+                self.assertIn('apply_to_collection', fields)
+                self.assertNotIn('apply_scope', fields)
 
-    def test_apply_to_collection_wording_depends_on_scope(self):
-        collection_label = SimulationConfigurationForm(
-            scope='collection').fields['apply_to_collection'].label
-        file_label = SimulationConfigurationForm(
-            scope='file').fields['apply_to_collection'].label
-        self.assertNotEqual(collection_label, file_label)
-        self.assertIn('every file in this collection', file_label)
+    def test_the_file_scope_radio_starts_on_where_the_values_actually_live(self):
+        """The old checkbox rendered unchecked however the values were stored, so it never showed
+        the current state. The radio has to."""
+        following = SimulationConfigurationForm(scope='file', has_override=False)
+        self.assertEqual(following.initial['apply_scope'],
+                         SimulationConfigurationForm.APPLY_COLLECTION)
+
+        own = SimulationConfigurationForm(scope='file', has_override=True)
+        self.assertEqual(own.initial['apply_scope'], SimulationConfigurationForm.APPLY_FILE)
+
+    def test_wants_apply_to_collection_reads_whichever_control_is_present(self):
+        collection_form = SimulationConfigurationForm(
+            data={'apply_to_collection': 'on'}, scope='collection')
+        self.assertTrue(collection_form.wants_apply_to_collection())
+
+        shared = SimulationConfigurationForm(
+            data={'apply_scope': 'collection'}, scope='file')
+        self.assertTrue(shared.wants_apply_to_collection())
+        self.assertFalse(shared.wants_file_scope())
+
+        own = SimulationConfigurationForm(data={'apply_scope': 'file'}, scope='file')
+        self.assertFalse(own.wants_apply_to_collection())
+        self.assertTrue(own.wants_file_scope())
 
     def test_start_time_accepts_free_text_model_time(self):
         form = SimulationConfigurationForm(data={'start_time': 'sol 120'}, scope='collection')
@@ -501,17 +541,26 @@ class AMAFormTests(AMATestCaseMixin, TestCase):
                 self.assertEqual(sorted(grouped), sorted(model_class.ELEMENT_ORDER))
                 self.assertEqual(len(grouped), len(set(grouped)), 'a field is grouped twice')
 
-    def test_the_control_checkbox_is_not_rendered_as_a_content_field(self):
-        form = SimulationConfigurationForm(scope='collection')
-        grouped = [field.name for group in form.groups() for field in group['fields']]
-        self.assertNotIn('apply_to_collection', grouped)
+    def test_the_control_fields_are_not_rendered_as_content_fields(self):
+        for scope in ('collection', 'file'):
+            with self.subTest(scope=scope):
+                form = SimulationConfigurationForm(scope=scope)
+                grouped = [field.name for group in form.groups() for field in group['fields']]
+                self.assertNotIn('apply_to_collection', grouped)
+                self.assertNotIn('apply_scope', grouped)
 
-    def test_has_any_value_ignores_the_control_checkbox(self):
+    def test_has_any_value_ignores_the_control_fields(self):
         form = SimulationConfigurationForm(
             data={'apply_to_collection': 'on'}, scope='collection')
         self.assertTrue(form.is_valid())
         self.assertFalse(form.has_any_value())
         self.assertTrue(form.wants_apply_to_collection())
+
+        # A scope radio on its own is not content either: picking "just this file" and filling
+        # nothing in still means "inherit", not "store an empty override".
+        radio_only = SimulationConfigurationForm(data={'apply_scope': 'file'}, scope='file')
+        self.assertTrue(radio_only.is_valid())
+        self.assertFalse(radio_only.has_any_value())
 
 
 @override_settings(ALLOWED_HOSTS=['testserver', 'localhost'])
@@ -577,16 +626,18 @@ class AMAPanelViewTests(AMATestCaseMixin, TestCase):
                 self.assertIn('id="id_desc-{}"'.format(shared), content)
 
     def test_a_file_panel_prefills_from_its_collection_default(self):
-        self.make_default_simulation(horizontal_grid_type='lat/lon')
+        self.make_default_simulation(horizontal_grid_type='lat-lon')
         content = self.panel_get(self.file_url()).content.decode('utf-8')
 
         self.assertIn('data-has-override="false"', content)
-        self.assertIn('value="lat/lon"', content)
+        # A select, so "prefilled" means that option is the selected one. The option itself is
+        # always present - it is one of the LDD's three - so its mere presence proves nothing.
+        self.assertIn('value="lat-lon" selected', content)
 
     def test_a_file_panel_does_not_prefill_from_another_collection(self):
-        self.make_default_simulation(collection=self.alpha, horizontal_grid_type='lat/lon')
+        self.make_default_simulation(collection=self.alpha, horizontal_grid_type='lat-lon')
         content = self.panel_get(self.file_url(self.nc_beta)).content.decode('utf-8')
-        self.assertNotIn('value="lat/lon"', content)
+        self.assertNotIn('value="lat-lon" selected', content)
 
     def test_revert_is_offered_only_when_the_file_has_its_own_values(self):
         self.assertNotIn('id="amaRevertForm"',
@@ -602,7 +653,7 @@ class AMAPanelViewTests(AMATestCaseMixin, TestCase):
     def test_saving_collection_defaults_stores_all_three_sections(self):
         response = self.panel_post(self.defaults_url(), {
             'model-name': 'MarsWRF',
-            'sim-horizontal_grid_type': 'lat/lon',
+            'sim-horizontal_grid_type': 'lat-lon',
             'desc-level_unit': 'Pa',
         })
 
@@ -611,7 +662,7 @@ class AMAPanelViewTests(AMATestCaseMixin, TestCase):
         self.assertEqual(ModelMetadata.default_for_collection(self.alpha).name, 'MarsWRF')
         self.assertEqual(
             SimulationConfiguration.default_for_collection(self.alpha).horizontal_grid_type,
-            'lat/lon')
+            'lat-lon')
         self.assertEqual(FileDescription.default_for_collection(self.alpha).level_unit, 'Pa')
 
     def test_saving_defaults_regenerates_every_file_in_that_collection_only(self):
@@ -619,18 +670,18 @@ class AMAPanelViewTests(AMATestCaseMixin, TestCase):
         self.assertEqual(self.regenerated, [sorted([self.nc_one.pk, self.nc_two.pk])])
 
     def test_saving_a_file_creates_an_override_and_regenerates_only_that_file(self):
-        self.make_default_simulation(horizontal_grid_type='lat/lon')
+        self.make_default_simulation(horizontal_grid_type='lat-lon')
 
-        self.panel_post(self.file_url(), {'sim-horizontal_grid_type': 'cubed sphere'})
+        self.panel_post(self.file_url(), {'sim-horizontal_grid_type': 'cube-sphere'})
 
         override = SimulationConfiguration.objects.get(netcdf_file=self.nc_one)
-        self.assertEqual(override.horizontal_grid_type, 'cubed sphere')
+        self.assertEqual(override.horizontal_grid_type, 'cube-sphere')
         self.assertEqual(override.collection, self.alpha)
         self.assertEqual(self.regenerated, [[self.nc_one.pk]])
         self.assertTrue(SimulationConfiguration.resolve_for_file(self.nc_two).is_default())
 
     def test_saving_a_file_twice_updates_the_same_override(self):
-        self.panel_post(self.file_url(), {'sim-horizontal_grid_type': 'cubed sphere'})
+        self.panel_post(self.file_url(), {'sim-horizontal_grid_type': 'cube-sphere'})
         self.panel_post(self.file_url(), {'sim-horizontal_grid_type': 'icosahedral'})
 
         overrides = SimulationConfiguration.objects.filter(netcdf_file=self.nc_one)
@@ -639,10 +690,10 @@ class AMAPanelViewTests(AMATestCaseMixin, TestCase):
 
     def test_clearing_a_file_panel_falls_back_to_the_collection_default(self):
         """An empty override would outrank the default forever, so clearing must delete it."""
-        default = self.make_default_simulation(horizontal_grid_type='lat/lon')
+        default = self.make_default_simulation(horizontal_grid_type='lat-lon')
         SimulationConfiguration.objects.create(
             bundle=self.bundle, collection=self.alpha, netcdf_file=self.nc_one,
-            horizontal_grid_type='cubed sphere')
+            horizontal_grid_type='cube-sphere')
 
         content = self.panel_post(
             self.file_url(), {'sim-horizontal_grid_type': ''}).content.decode('utf-8')
@@ -676,8 +727,8 @@ class AMAPanelViewTests(AMATestCaseMixin, TestCase):
             bundle=self.bundle, collection=self.alpha, netcdf_file=self.nc_two, level_unit='hPa')
 
         self.panel_post(self.file_url(), {
-            'model-name': 'LMD', 'model-apply_to_collection': 'on',
-            'desc-level_unit': 'Pa',
+            'model-name': 'LMD', 'model-apply_scope': 'collection',
+            'desc-level_unit': 'Pa', 'desc-apply_scope': 'file',
         })
 
         # Model Metadata was pushed out to the collection...
@@ -688,49 +739,49 @@ class AMAPanelViewTests(AMATestCaseMixin, TestCase):
 
     def test_applying_from_a_file_regenerates_the_whole_collection(self):
         self.panel_post(self.file_url(), {
-            'model-name': 'LMD', 'model-apply_to_collection': 'on'})
+            'model-name': 'LMD', 'model-apply_scope': 'collection'})
         self.assertEqual(self.regenerated, [sorted([self.nc_one.pk, self.nc_two.pk])])
 
     def test_applying_from_the_defaults_panel_clears_per_file_overrides(self):
         self.make_default_simulation()
         SimulationConfiguration.objects.create(
             bundle=self.bundle, collection=self.alpha, netcdf_file=self.nc_one,
-            horizontal_grid_type='cubed sphere')
+            horizontal_grid_type='cube-sphere')
 
         self.panel_post(self.defaults_url(), {
-            'sim-horizontal_grid_type': 'lat/lon', 'sim-apply_to_collection': 'on'})
+            'sim-horizontal_grid_type': 'lat-lon', 'sim-apply_to_collection': 'on'})
 
         self.assertEqual(
             SimulationConfiguration.objects.filter(netcdf_file__isnull=False).count(), 0)
         self.assertEqual(
-            SimulationConfiguration.resolve_for_file(self.nc_one).horizontal_grid_type, 'lat/lon')
+            SimulationConfiguration.resolve_for_file(self.nc_one).horizontal_grid_type, 'lat-lon')
 
     def test_apply_to_collection_never_reaches_another_collection(self):
         beta_default = self.make_default_simulation(
-            collection=self.beta, horizontal_grid_type='cubed sphere')
+            collection=self.beta, horizontal_grid_type='cube-sphere')
         beta_override = SimulationConfiguration.objects.create(
             bundle=self.bundle, collection=self.beta, netcdf_file=self.nc_beta,
             horizontal_grid_type='icosahedral')
 
         self.panel_post(self.defaults_url(self.alpha), {
-            'sim-horizontal_grid_type': 'lat/lon', 'sim-apply_to_collection': 'on'})
+            'sim-horizontal_grid_type': 'lat-lon', 'sim-apply_to_collection': 'on'})
 
         beta_default.refresh_from_db()
         beta_override.refresh_from_db()
-        self.assertEqual(beta_default.horizontal_grid_type, 'cubed sphere')
+        self.assertEqual(beta_default.horizontal_grid_type, 'cube-sphere')
         self.assertEqual(beta_override.horizontal_grid_type, 'icosahedral')
 
     def test_saving_without_apply_leaves_other_overrides_alone(self):
         self.make_default_simulation()
         SimulationConfiguration.objects.create(
             bundle=self.bundle, collection=self.alpha, netcdf_file=self.nc_one,
-            horizontal_grid_type='cubed sphere')
+            horizontal_grid_type='cube-sphere')
 
-        self.panel_post(self.defaults_url(), {'sim-horizontal_grid_type': 'lat/lon'})
+        self.panel_post(self.defaults_url(), {'sim-horizontal_grid_type': 'lat-lon'})
 
         self.assertEqual(
             SimulationConfiguration.resolve_for_file(self.nc_one).horizontal_grid_type,
-            'cubed sphere')
+            'cube-sphere')
 
     # --- revert ------------------------------------------------------------------------------
 
@@ -826,7 +877,7 @@ class AMAStatusAndFileListTests(AMATestCaseMixin, TestCase):
     def test_override_count_counts_each_file_once(self):
         SimulationConfiguration.objects.create(
             bundle=self.bundle, collection=self.alpha, netcdf_file=self.nc_one,
-            horizontal_grid_type='cubed sphere')
+            horizontal_grid_type='cube-sphere')
         FileDescription.objects.create(
             bundle=self.bundle, collection=self.alpha, netcdf_file=self.nc_one, level_unit='hPa')
         FileDescription.objects.create(
@@ -991,7 +1042,7 @@ class AMAEndToEndLabelTests(AMATestCaseMixin, TestCase):
 
     def test_collection_values_reach_the_label_alongside_harvested_variables(self):
         self.make_default_model_metadata(name='MarsWRF', institution='NMSU')
-        self.make_default_simulation(horizontal_grid_type='lat/lon', northern_boundary=45.0)
+        self.make_default_simulation(horizontal_grid_type='lat-lon', northern_boundary=45.0)
         self.make_default_description(level_unit='Pa')
 
         self.assertEqual(views.regenerate_netcdf_labels(self.bundle, [self.nc_one]), [])
@@ -1000,7 +1051,7 @@ class AMAEndToEndLabelTests(AMATestCaseMixin, TestCase):
         metadata = self.ama_element(root, 'ama:Model_Metadata')
         self.assertEqual(ama_child_names(metadata), ['name', 'institution'])
         simulation = self.ama_element(root, 'ama:Simulation_Configuration')
-        self.assertEqual(simulation.find('ama:horizontal_grid_type', namespaces=NS).text, 'lat/lon')
+        self.assertEqual(simulation.find('ama:horizontal_grid_type', namespaces=NS).text, 'lat-lon')
         self.assertEqual(simulation.find('ama:northern_boundary', namespaces=NS).get('unit'), 'deg')
 
         model_output = self.ama_element(root, 'ama:Model_Output')
@@ -1016,15 +1067,15 @@ class AMAEndToEndLabelTests(AMATestCaseMixin, TestCase):
         views.regenerate_netcdf_labels(self.bundle, [self.nc_one])
         self.assertEqual(len(self.ama_element(self.read_label(), 'ama:Simulation_Configuration')), 0)
 
-        self.make_default_simulation(horizontal_grid_type='lat/lon')
+        self.make_default_simulation(horizontal_grid_type='lat-lon')
         views.regenerate_netcdf_labels(self.bundle, [self.nc_one])
 
         self.assertEqual(
             self.ama_element(self.read_label(), 'ama:Simulation_Configuration').find(
-                'ama:horizontal_grid_type', namespaces=NS).text, 'lat/lon')
+                'ama:horizontal_grid_type', namespaces=NS).text, 'lat-lon')
 
     def test_regeneration_is_idempotent(self):
-        self.make_default_simulation(horizontal_grid_type='lat/lon')
+        self.make_default_simulation(horizontal_grid_type='lat-lon')
 
         views.regenerate_netcdf_labels(self.bundle, [self.nc_one])
         first = open(self.label_path(), encoding='utf-8').read()
@@ -1038,7 +1089,7 @@ class AMAEndToEndLabelTests(AMATestCaseMixin, TestCase):
 
     def test_no_empty_ama_elements_are_written(self):
         """Every AMA attribute is minLength=1, so an empty element fails schema validation."""
-        self.make_default_simulation(horizontal_grid_type='lat/lon')
+        self.make_default_simulation(horizontal_grid_type='lat-lon')
         views.regenerate_netcdf_labels(self.bundle, [self.nc_one])
 
         root = self.read_label()
@@ -1154,14 +1205,29 @@ class AMATemplateTests(AMATestCaseMixin, TestCase):
         self.assertEqual(content.count('value="{}" id="nc_{}"'.format(
             self.nc_beta.pk, self.nc_beta.pk)), 1)
 
-    def test_each_collection_gets_its_own_panel_and_defaults_button(self):
+    def test_there_is_exactly_one_metadata_editor_for_the_whole_page(self):
+        """Metadata used to be edited in a panel per collection, hundreds of pixels below the
+        button that opened it. It is now one modal, filled from whichever label is selected, so a
+        bundle with many collections still carries exactly one."""
         content = self.bundle_page()
 
+        self.assertEqual(content.count('id="amaMetadataModal"'), 1)
+        self.assertEqual(content.count('id="amaMetadataPanel"'), 1)
         for collection in (self.alpha, self.beta):
             with self.subTest(collection=collection.collection_name):
-                self.assertIn('id="amaPanel{}"'.format(collection.pk), content)
-                self.assertIn(reverse('build:ama_collection_defaults', kwargs={
-                    'pk_bundle': self.bundle.pk, 'pk_collection': collection.pk}), content)
+                self.assertNotIn('id="amaPanel{}"'.format(collection.pk), content)
+
+    def test_the_files_card_is_where_metadata_is_opened_from(self):
+        for netcdf_file in (self.nc_one, self.nc_beta):
+            self.write_label(netcdf_file)
+        content = self.bundle_page()
+
+        self.assertIn('id="editMetadataBtn"', content)
+        for netcdf_file in (self.nc_one, self.nc_beta):
+            with self.subTest(netcdf_file=netcdf_file.title):
+                self.assertIn('data-netcdf-id="{}"'.format(netcdf_file.pk), content)
+                self.assertIn(reverse('build:netcdf_ama', kwargs={
+                    'pk_bundle': self.bundle.pk, 'pk_netcdf': netcdf_file.pk}), content)
 
     def test_the_bundle_page_does_not_carry_the_heavy_forms(self):
         """All 28 fields load on demand; rendering them per file is what this layout avoids."""
@@ -1179,28 +1245,1142 @@ class AMATemplateTests(AMATestCaseMixin, TestCase):
         end = content.index('</form>', start)
         file_list = content[start:end]
 
-        self.assertIn('ama-select', file_list)
         self.assertNotIn('<form', file_list)
         self.assertNotIn('<button type="submit"', file_list)
 
-    def test_custom_ama_badge_only_shows_for_files_with_an_override(self):
+    def test_own_metadata_badge_only_shows_for_files_with_an_override(self):
         SimulationConfiguration.objects.create(
             bundle=self.bundle, collection=self.alpha, netcdf_file=self.nc_one,
-            horizontal_grid_type='cubed sphere')
+            horizontal_grid_type='cube-sphere')
 
-        self.assertEqual(self.bundle_page().count('Custom AMA'), 1)
-
-    def test_status_cards_report_completeness_per_collection(self):
-        self.make_default_model_metadata(collection=self.alpha, name='MarsWRF', institution='NMSU')
-        content = self.bundle_page()
-
-        self.assertIn('2 of 4', content)
-        self.assertIn('MarsWRF', content)
+        self.assertEqual(self.bundle_page().count('Own metadata'), 1)
 
     def test_upload_cancel_button_is_present_and_wired(self):
         content = self.bundle_page()
         self.assertIn('id="uploadCancelBtn"', content)
         self.assertIn('_netcdfUploadXhr', content)
+
+
+@override_settings(ALLOWED_HOSTS=['testserver', 'localhost'])
+class AMAFormRoundTripTests(AMATestCaseMixin, TestCase):
+    """Every AMA attribute, posted through the real panel view and read back.
+
+    The per-section tests elsewhere check behaviour; these check coverage. A field that is declared
+    on the model but missing from FIELD_GROUPS, mis-prefixed, or dropped by clean() would still
+    pass every other test in this file while silently never reaching a label.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.login()
+        real = views.regenerate_netcdf_labels
+        views.regenerate_netcdf_labels = lambda bundle, netcdf_objs=None: []
+        self.addCleanup(setattr, views, 'regenerate_netcdf_labels', real)
+
+    def sample_for(self, model_class, field_name, index):
+        """A valid value for one field, respecting whatever the LDD imposes on it.
+
+        Three attributes are closed vocabularies in the Schematron, so a generated string would be
+        rejected - correctly. Pick from the list for those.
+        """
+        if field_name in AMA_ENUMERATIONS:
+            options = AMA_ENUMERATIONS[field_name]
+            return options[index % len(options)]
+        field = model_class._meta.get_field(field_name)
+        if field.get_internal_type() in ('FloatField', 'IntegerField', 'PositiveIntegerField'):
+            low, high = None, None
+            for validator in field.validators:
+                name = type(validator).__name__
+                if name == 'MinValueValidator':
+                    low = validator.limit_value
+                elif name == 'MaxValueValidator':
+                    high = validator.limit_value
+            value = float(index + 1)
+            if low is not None:
+                value = max(value, float(low))
+            if high is not None:
+                value = min(value, float(high))
+            return value
+        return 'value {}'.format(index)
+
+    def full_payload(self, scope_value=None):
+        """One value for all 28 attributes, correctly prefixed."""
+        payload = {}
+        expected = {}
+        index = 0
+        for model_class, _form_class, prefix, _label in views.AMA_SECTIONS:
+            for field_name in model_class.ELEMENT_ORDER:
+                value = self.sample_for(model_class, field_name, index)
+                payload['{}-{}'.format(prefix, field_name)] = value
+                expected[(model_class, field_name)] = value
+                index += 1
+            if scope_value is not None:
+                payload['{}-apply_scope'.format(prefix)] = scope_value
+        return payload, expected
+
+    def assert_all_stored(self, expected, lookup):
+        for (model_class, field_name), value in expected.items():
+            record = lookup(model_class)
+            self.assertIsNotNone(
+                record, 'no {} row was stored at all'.format(model_class.__name__))
+            stored = getattr(record, field_name)
+            with self.subTest(model=model_class.__name__, field=field_name):
+                if isinstance(value, float):
+                    self.assertAlmostEqual(float(stored), value)
+                else:
+                    self.assertEqual(stored, value)
+
+    def test_every_attribute_round_trips_in_collection_scope(self):
+        payload, expected = self.full_payload()
+        response = self.panel_post(self.defaults_url(), payload)
+        self.assertEqual(response.status_code, 200)
+
+        self.assert_all_stored(
+            expected, lambda model_class: model_class.default_for_collection(self.alpha))
+
+    def test_every_attribute_round_trips_in_file_scope(self):
+        payload, expected = self.full_payload(scope_value='file')
+        response = self.panel_post(self.file_url(), payload)
+        self.assertEqual(response.status_code, 200)
+
+        self.assert_all_stored(
+            expected, lambda model_class: model_class.override_for_file(self.nc_one))
+
+    def test_every_attribute_comes_back_in_the_rendered_panel(self):
+        """Stored is not the same as shown: a field missing from FIELD_GROUPS would save and then
+        never appear again, because the panel renders groups rather than iterating the form."""
+        payload, _expected = self.full_payload()
+        self.panel_post(self.defaults_url(), payload)
+
+        panel = self.panel_get(self.defaults_url()).content.decode('utf-8')
+        for model_class, _form_class, prefix, _label in views.AMA_SECTIONS:
+            for field_name in model_class.ELEMENT_ORDER:
+                with self.subTest(prefix=prefix, field=field_name):
+                    self.assertIn('name="{}-{}"'.format(prefix, field_name), panel)
+
+    def test_the_three_names_that_appear_in_two_sections_do_not_cross_over(self):
+        """start_time, end_time and time_unit are attributes of BOTH Simulation Configuration and
+        File Description. Without per-section prefixes one would overwrite the other."""
+        shared = ('start_time', 'end_time', 'time_unit')
+        for name in shared:
+            self.assertIn(name, SimulationConfiguration.ELEMENT_ORDER)
+            self.assertIn(name, FileDescription.ELEMENT_ORDER)
+
+        self.panel_post(self.defaults_url(), {
+            'sim-start_time': 'sim start', 'sim-end_time': 'sim end', 'sim-time_unit': 'sols',
+            'desc-start_time': 'desc start', 'desc-end_time': 'desc end', 'desc-time_unit': 'hours',
+        })
+
+        sim = SimulationConfiguration.default_for_collection(self.alpha)
+        desc = FileDescription.default_for_collection(self.alpha)
+        self.assertEqual((sim.start_time, sim.end_time, sim.time_unit),
+                         ('sim start', 'sim end', 'sols'))
+        self.assertEqual((desc.start_time, desc.end_time, desc.time_unit),
+                         ('desc start', 'desc end', 'hours'))
+
+    def test_the_sections_can_be_held_at_different_scopes_in_one_save(self):
+        """The whole point of a control per section: shared model, per-file description."""
+        self.make_default_model_metadata(name='MarsWRF')
+
+        self.panel_post(self.file_url(), {
+            'model-name': 'LMD', 'model-apply_scope': 'collection',
+            'desc-level_unit': 'Pa', 'desc-apply_scope': 'file',
+        })
+
+        # Model Metadata went out to the collection and left no per-file row behind...
+        self.assertEqual(ModelMetadata.default_for_collection(self.alpha).name, 'LMD')
+        self.assertIsNone(ModelMetadata.override_for_file(self.nc_one))
+        # ...while File Description stayed on this file alone.
+        self.assertIsNone(FileDescription.default_for_collection(self.alpha))
+        self.assertEqual(FileDescription.override_for_file(self.nc_one).level_unit, 'Pa')
+
+
+class AMAScopeControlEdgeCaseTests(AMATestCaseMixin, TestCase):
+    """What the scope control does when the POST is not what the panel would have sent."""
+
+    def setUp(self):
+        super().setUp()
+        self.login()
+        real = views.regenerate_netcdf_labels
+        views.regenerate_netcdf_labels = lambda bundle, netcdf_objs=None: []
+        self.addCleanup(setattr, views, 'regenerate_netcdf_labels', real)
+
+    def test_an_omitted_scope_falls_back_to_inheriting(self):
+        """A client that posts no radio at all must not be treated as asking for either action.
+        The safe reading is the one that changes nothing about where the values live."""
+        self.make_default_model_metadata(name='MarsWRF', institution='NMSU')
+
+        self.panel_post(self.file_url(), {
+            'model-name': 'MarsWRF', 'model-institution': 'NMSU'})
+
+        # Same values as the default and no explicit instruction, so nothing was forked.
+        self.assertIsNone(ModelMetadata.override_for_file(self.nc_one))
+        self.assertEqual(ModelMetadata.default_for_collection(self.alpha).name, 'MarsWRF')
+
+    def test_an_omitted_scope_still_stores_a_genuine_difference(self):
+        self.make_default_model_metadata(name='MarsWRF')
+
+        self.panel_post(self.file_url(), {'model-name': 'LMD'})
+
+        self.assertEqual(ModelMetadata.override_for_file(self.nc_one).name, 'LMD')
+        self.assertEqual(ModelMetadata.default_for_collection(self.alpha).name, 'MarsWRF')
+
+    def test_a_scope_value_outside_the_choices_is_rejected_and_saves_nothing(self):
+        """It must fail the section rather than being read as one of the two real instructions."""
+        self.make_default_model_metadata(name='MarsWRF')
+
+        form = ModelMetadataForm(data={'name': 'LMD', 'apply_scope': 'everything'}, scope='file')
+        self.assertFalse(form.is_valid())
+        self.assertIn('apply_scope', form.errors)
+
+        self.panel_post(self.file_url(), {'model-name': 'LMD', 'model-apply_scope': 'everything'})
+        self.assertIsNone(ModelMetadata.override_for_file(self.nc_one))
+        self.assertEqual(ModelMetadata.default_for_collection(self.alpha).name, 'MarsWRF')
+
+    def test_a_bad_scope_in_one_section_does_not_save_the_others(self):
+        """All three are validated before any is written, so one bad value cannot leave a
+        half-saved panel."""
+        self.panel_post(self.file_url(), {
+            'model-name': 'LMD',
+            'sim-horizontal_grid_type': 'lat-lon', 'sim-apply_scope': 'nonsense',
+        })
+
+        self.assertIsNone(ModelMetadata.override_for_file(self.nc_one))
+        self.assertIsNone(SimulationConfiguration.override_for_file(self.nc_one))
+
+
+class AMACopyValidationTests(AMATestCaseMixin, TestCase):
+    """The copy view's rejections. Each one would otherwise write the wrong thing silently."""
+
+    def setUp(self):
+        super().setUp()
+        self.login()
+        real = views.regenerate_netcdf_labels
+        views.regenerate_netcdf_labels = lambda bundle, netcdf_objs=None: []
+        self.addCleanup(setattr, views, 'regenerate_netcdf_labels', real)
+        FileDescription.objects.create(
+            bundle=self.bundle, collection=self.alpha, netcdf_file=self.nc_two, level_unit='hPa')
+
+    def copy_url(self, netcdf_file=None):
+        return reverse('build:netcdf_ama_copy', kwargs={
+            'pk_bundle': self.bundle.pk, 'pk_netcdf': (netcdf_file or self.nc_one).pk})
+
+    def test_an_unknown_section_name_writes_nothing(self):
+        self.panel_post(self.copy_url(), {
+            'section': 'not_a_section', 'source_netcdf': self.nc_two.pk})
+
+        for model_class, _f, _p, _l in views.AMA_SECTIONS:
+            self.assertIsNone(model_class.override_for_file(self.nc_one))
+
+    def test_a_missing_source_writes_nothing(self):
+        self.panel_post(self.copy_url(), {'section': 'desc'})
+        self.assertIsNone(FileDescription.override_for_file(self.nc_one))
+
+    def test_a_source_id_that_does_not_exist_writes_nothing(self):
+        self.panel_post(self.copy_url(), {'section': 'desc', 'source_netcdf': 999999})
+        self.assertIsNone(FileDescription.override_for_file(self.nc_one))
+
+    def test_copying_an_empty_section_writes_nothing(self):
+        """Copying nothing onto a file would look like a successful copy and quietly do harm if it
+        replaced values the file already had."""
+        FileDescription.objects.create(
+            bundle=self.bundle, collection=self.alpha, netcdf_file=self.nc_one, level_unit='Pa')
+
+        self.panel_post(self.copy_url(), {
+            'section': 'model', 'source_netcdf': self.nc_two.pk})
+
+        self.assertIsNone(ModelMetadata.override_for_file(self.nc_one))
+        self.assertEqual(FileDescription.override_for_file(self.nc_one).level_unit, 'Pa')
+
+    def test_a_get_does_not_copy(self):
+        self.client.get(self.copy_url())
+        self.assertIsNone(FileDescription.override_for_file(self.nc_one))
+
+    def test_copying_replaces_the_target_section_rather_than_merging_into_it(self):
+        FileDescription.objects.create(
+            bundle=self.bundle, collection=self.alpha, netcdf_file=self.nc_one,
+            level_unit='Pa', top_level=9.0)
+
+        self.panel_post(self.copy_url(), {
+            'section': 'desc', 'source_netcdf': self.nc_two.pk})
+
+        copied = FileDescription.override_for_file(self.nc_one)
+        self.assertEqual(copied.level_unit, 'hPa')
+        # The source has no top_level, so the target must not keep its old one.
+        self.assertIsNone(copied.top_level)
+
+
+
+class AMAEveryFieldReachesTheLabelTests(AMATestCaseMixin, TestCase):
+    """The last link in the chain: a value entered in the form ends up in the XML.
+
+    The round-trip tests prove a value is stored and shown again. This proves it is written into
+    the label, which is the only thing the archive ever sees. A field that is stored but never
+    serialised would pass everything else in this file.
+    """
+
+    def sample_for(self, model_class, field_name, index):
+        if field_name in AMA_ENUMERATIONS:
+            options = AMA_ENUMERATIONS[field_name]
+            return options[index % len(options)]
+        field = model_class._meta.get_field(field_name)
+        if field.get_internal_type() in ('FloatField', 'IntegerField', 'PositiveIntegerField'):
+            low, high = None, None
+            for validator in field.validators:
+                name = type(validator).__name__
+                if name == 'MinValueValidator':
+                    low = validator.limit_value
+                elif name == 'MaxValueValidator':
+                    high = validator.limit_value
+            value = float(index + 1)
+            if low is not None:
+                value = max(value, float(low))
+            if high is not None:
+                value = min(value, float(high))
+            return value
+        return 'value {}'.format(index)
+
+    def written_label(self):
+        root = ET.parse(TEMPLATE_PE).getroot()
+        views.write_ama_user_classes(root, NS, self.bundle, netcdf_obj=self.nc_one)
+        return root
+
+    def container(self, root, path):
+        return root.find(
+            './/pds:Context_Area/pds:Discipline_Area/ama:AMA/' + path, namespaces=NS)
+
+    CONTAINERS = {
+        'model': 'ama:Model_Metadata',
+        'sim': 'ama:Simulation_Configuration',
+        'desc': 'ama:Model_Output/ama:File_Description',
+    }
+
+    def fill_everything(self, netcdf_file=None):
+        """One value per attribute, written straight to the models."""
+        expected = {}
+        index = 0
+        for model_class, _form_class, prefix, _label in views.AMA_SECTIONS:
+            values = {}
+            for field_name in model_class.ELEMENT_ORDER:
+                value = self.sample_for(model_class, field_name, index)
+                values[field_name] = value
+                expected[(prefix, field_name)] = value
+                index += 1
+            model_class.objects.create(
+                bundle=self.bundle, collection=self.alpha, netcdf_file=netcdf_file, **values)
+        return expected
+
+    def test_every_attribute_is_written_into_the_label(self):
+        expected = self.fill_everything()
+        root = self.written_label()
+
+        for (prefix, field_name), value in expected.items():
+            container = self.container(root, self.CONTAINERS[prefix])
+            element = container.find('ama:' + field_name, namespaces=NS)
+            with self.subTest(section=prefix, field=field_name):
+                self.assertIsNotNone(
+                    element, '{} never reached the label'.format(field_name))
+                text = (element.text or '').strip()
+                self.assertNotEqual(text, '', '{} was written empty'.format(field_name))
+                if isinstance(value, float):
+                    self.assertAlmostEqual(float(text), value)
+                else:
+                    self.assertEqual(text, value)
+
+    def test_the_label_carries_no_attribute_the_models_do_not_declare(self):
+        """A stray element would be schema-invalid, and the LDD is the authority on the set."""
+        self.fill_everything()
+        root = self.written_label()
+
+        for model_class, _form_class, prefix, _label in views.AMA_SECTIONS:
+            container = self.container(root, self.CONTAINERS[prefix])
+            written = [child.tag.split('}')[-1] for child in container]
+            with self.subTest(section=prefix):
+                self.assertEqual(sorted(written), sorted(model_class.ELEMENT_ORDER))
+
+    def test_element_order_follows_the_ldd_sequence(self):
+        """The AMA classes are xs:sequence, so order is part of validity, not presentation."""
+        self.fill_everything()
+        root = self.written_label()
+
+        for model_class, _form_class, prefix, _label in views.AMA_SECTIONS:
+            container = self.container(root, self.CONTAINERS[prefix])
+            written = [child.tag.split('}')[-1] for child in container]
+            with self.subTest(section=prefix):
+                self.assertEqual(written, list(model_class.ELEMENT_ORDER))
+
+    def test_a_per_file_value_beats_the_default_for_every_attribute(self):
+        self.fill_everything()
+        overrides = {}
+        index = 500
+        for model_class, _form_class, prefix, _label in views.AMA_SECTIONS:
+            values = {}
+            for field_name in model_class.ELEMENT_ORDER:
+                value = self.sample_for(model_class, field_name, index)
+                values[field_name] = value
+                overrides[(prefix, field_name)] = value
+                index += 1
+            model_class.objects.filter(netcdf_file=self.nc_one).delete()
+            model_class.objects.create(
+                bundle=self.bundle, collection=self.alpha, netcdf_file=self.nc_one, **values)
+
+        root = self.written_label()
+        for (prefix, field_name), value in overrides.items():
+            container = self.container(root, self.CONTAINERS[prefix])
+            element = container.find('ama:' + field_name, namespaces=NS)
+            with self.subTest(section=prefix, field=field_name):
+                text = (element.text or '').strip()
+                if isinstance(value, float):
+                    self.assertAlmostEqual(float(text), value)
+                else:
+                    self.assertEqual(text, value)
+
+
+
+class AMAEnumeratedFieldTests(AMATestCaseMixin, TestCase):
+    """The three attributes the AMA Schematron restricts to a closed vocabulary.
+
+    The constraint is NOT in the XSD - PDS4_AMA_1O00_1300.xsd contains no xs:enumeration at all -
+    so lxml schema validation cannot catch a wrong value. It surfaces only when the archive is
+    validated with the Schematron, long after the user has moved on. Offering the list is the only
+    place the error can be prevented.
+    """
+
+    EXPECTED = {
+        'type': ('ASSIMILATION', 'GCM', 'MESOSCALE'),
+        'horizontal_grid_type': ('cube-sphere', 'icosahedral', 'lat-lon'),
+        'vertical_grid_type': ('Altitude', 'Hybrid-Sigma', 'Isentropic', 'Pressure', 'Sigma'),
+    }
+
+    def test_the_vocabularies_match_the_ldd(self):
+        """Transcribed from PDS4_AMA_1O00_1300.sch. If the LDD is upgraded these must be rechecked,
+        and this test is what will say so."""
+        self.assertEqual({k: tuple(v) for k, v in AMA_ENUMERATIONS.items()}, self.EXPECTED)
+
+    def test_each_one_is_a_select_not_a_free_text_box(self):
+        cases = [(ModelMetadataForm, 'type'),
+                 (SimulationConfigurationForm, 'horizontal_grid_type'),
+                 (SimulationConfigurationForm, 'vertical_grid_type')]
+        for form_class, field_name in cases:
+            with self.subTest(field=field_name):
+                field = form_class(scope='collection').fields[field_name]
+                self.assertTrue(hasattr(field, 'choices'), '{} is still free text'.format(field_name))
+                offered = [value for value, _label in field.choices if value]
+                self.assertEqual(offered, list(self.EXPECTED[field_name]))
+
+    def test_a_value_outside_the_vocabulary_is_refused(self):
+        """These are exactly the values the old placeholders told users to type."""
+        cases = [
+            (ModelMetadataForm, 'type', 'General Circulation Model'),
+            (SimulationConfigurationForm, 'horizontal_grid_type', 'lat/lon'),
+            (SimulationConfigurationForm, 'vertical_grid_type', 'sigma'),
+        ]
+        for form_class, field_name, bad_value in cases:
+            with self.subTest(field=field_name, value=bad_value):
+                form = form_class(data={field_name: bad_value}, scope='collection')
+                self.assertFalse(form.is_valid(), '{} accepted {!r}'.format(field_name, bad_value))
+                self.assertIn(field_name, form.errors)
+
+    def test_the_valid_spellings_are_accepted(self):
+        cases = [(ModelMetadataForm, 'type', 'GCM'),
+                 (SimulationConfigurationForm, 'horizontal_grid_type', 'lat-lon'),
+                 (SimulationConfigurationForm, 'vertical_grid_type', 'Sigma')]
+        for form_class, field_name, good in cases:
+            with self.subTest(field=field_name, value=good):
+                form = form_class(data={field_name: good}, scope='collection')
+                self.assertTrue(form.is_valid(), form.errors.as_text())
+                self.assertEqual(form.cleaned_data[field_name], good)
+
+    def test_blank_is_still_allowed(self):
+        """They are minOccurs=0 in the XSD, so leaving one unset stays valid."""
+        form = ModelMetadataForm(data={'name': 'MarsWRF'}, scope='collection')
+        self.assertTrue(form.is_valid(), form.errors.as_text())
+        self.assertEqual(form.cleaned_data['type'], '')
+
+    def test_a_value_stored_before_the_list_existed_is_kept_and_flagged(self):
+        """Rows written while these were text boxes may hold anything. Dropping such a value on
+        the next save would destroy the user's data without telling them."""
+        legacy = ModelMetadata.objects.create(
+            bundle=self.bundle, collection=self.alpha, netcdf_file=None,
+            type='General Circulation Model')
+
+        form = ModelMetadataForm(instance=legacy, scope='collection')
+        labels = dict(form.fields['type'].choices)
+        self.assertIn('General Circulation Model', labels)
+        self.assertIn('not a valid PDS4 value', labels['General Circulation Model'])
+
+    def test_the_flagged_legacy_value_can_still_be_replaced_with_a_valid_one(self):
+        legacy = ModelMetadata.objects.create(
+            bundle=self.bundle, collection=self.alpha, netcdf_file=None,
+            type='General Circulation Model')
+
+        form = ModelMetadataForm(data={'type': 'GCM'}, instance=legacy, scope='collection')
+        self.assertTrue(form.is_valid(), form.errors.as_text())
+        self.assertEqual(form.save(commit=False).type, 'GCM')
+
+
+
+def parse_schematron_enumerations(sch_text):
+    """Pull the "value must be one of" rules out of a PDS4 Schematron file.
+
+    This is NOT a Schematron engine. The AMA dictionary's .sch declares queryBinding="xslt2" and
+    lxml's isoschematron refuses those outright ("does not work with schemas using the xslt2 query
+    language"), libxslt being XSLT 1.0 only; there is no Saxon on this machine either. So rather
+    than transcribing the vocabularies into the test - which would only prove the transcription
+    matches itself - this reads them back out of the live file.
+
+    It understands the two assertion shapes the AMA dictionary actually uses:
+
+        <sch:assert test=". = ('A', 'B')">          the element's own text
+        <sch:assert test="@unit = ('deg', 'rad')">  the element's unit attribute
+
+    Everything else in the file is ignored, which the tests using it say out loud.
+
+    Returns (namespaces, rules) where each rule is (context_path, 'text'|'unit', frozenset).
+    """
+    import re as _re
+
+    namespaces = dict(_re.findall(
+        r'<sch:ns\s+uri="([^"]+)"\s+prefix="([^"]+)"\s*/>', sch_text))
+    namespaces = {prefix: uri for uri, prefix in namespaces.items()}
+
+    rules = []
+    for context, body in _re.findall(
+            r'<sch:rule\s+context="([^"]+)">(.*?)</sch:rule>', sch_text, _re.S):
+        for test in _re.findall(r'<sch:assert\s+test="([^"]+)"', body):
+            match = _re.match(r"^(\.|@unit)\s*=\s*\((.*)\)$", test.strip())
+            if not match:
+                continue
+            target = 'text' if match.group(1) == '.' else 'unit'
+            allowed = frozenset(_re.findall(r"'([^']*)'", match.group(2)))
+            if allowed:
+                rules.append((context, target, allowed))
+    return namespaces, rules
+
+
+class AMASchematronTests(AMATestCaseMixin, TestCase):
+    """Checks ELSA's generated labels against the LDD's Schematron, not just its XSD.
+
+    This is the gap that let three fields ship wrong. PDS4 validates in two layers, and the AMA
+    XSD contains no xs:enumeration at all - every closed vocabulary lives only in the .sch. The
+    existing XSD test uses lxml XMLSchema and therefore cannot see this class of error at any
+    severity.
+
+    The .sch is fetched at run time, like the XSD test beside it, and these skip when
+    pds.nasa.gov is unreachable.
+    """
+
+    def schematron(self):
+        import urllib.request
+
+        # Derived from AMA_LDD_URL by convention: PDS publishes the Schematron beside the schema
+        # under the same stem. The codebase only names the .xsd.
+        sch_url = views.AMA_LDD_URL.rsplit('.', 1)[0] + '.sch'
+        try:
+            with urllib.request.urlopen(sch_url, timeout=30) as response:
+                return response.read().decode('utf-8')
+        except Exception as exc:  # pragma: no cover - network dependent
+            self.skipTest('AMA Schematron unreachable at {}: {}'.format(sch_url, exc))
+
+    def written_label(self):
+        root = ET.parse(TEMPLATE_PE).getroot()
+        views.write_ama_user_classes(root, NS, self.bundle, netcdf_obj=self.nc_one)
+        return root
+
+    def violations(self, root, namespaces, rules):
+        """Every place the generated label breaks one of the enumeration rules."""
+        from lxml import etree as lxml_etree
+
+        tree = lxml_etree.fromstring(ET.tostring(root))
+        found = []
+        for context, target, allowed in rules:
+            for node in tree.xpath('//' + context, namespaces=namespaces):
+                value = (node.text or '').strip() if target == 'text' else node.get('unit')
+                if value in (None, ''):
+                    continue
+                if value not in allowed:
+                    found.append((context, target, value, sorted(allowed)))
+        return found
+
+    def test_the_form_vocabularies_match_the_published_schematron(self):
+        """The one that matters: ELSA's lists are checked against the LDD, not against a copy of
+        themselves. If PDS revises the dictionary, this is what will say so."""
+        namespaces, rules = parse_schematron_enumerations(self.schematron())
+        del namespaces
+
+        published = {}
+        for context, target, allowed in rules:
+            if target != 'text':
+                continue
+            attribute = context.rsplit('/', 1)[-1].split(':')[-1]
+            published[attribute] = allowed
+
+        for field_name, offered in AMA_ENUMERATIONS.items():
+            with self.subTest(field=field_name):
+                self.assertIn(field_name, published,
+                              '{} is no longer an enumerated attribute in the LDD'.format(field_name))
+                self.assertEqual(
+                    set(offered), set(published[field_name]),
+                    'the form offers {} but the LDD allows {}'.format(
+                        sorted(offered), sorted(published[field_name])))
+
+    def test_a_label_built_from_the_forms_offered_values_passes(self):
+        namespaces, rules = parse_schematron_enumerations(self.schematron())
+
+        ModelMetadata.objects.create(
+            bundle=self.bundle, collection=self.alpha, netcdf_file=None,
+            type='GCM', name='MarsWRF', institution='NMSU')
+        SimulationConfiguration.objects.create(
+            bundle=self.bundle, collection=self.alpha, netcdf_file=None,
+            horizontal_grid_type='lat-lon', vertical_grid_type='Sigma',
+            northern_boundary=45.0, southern_boundary=-45.0,
+            eastern_boundary=180.0, western_boundary=0.0)
+
+        self.assertEqual(self.violations(self.written_label(), namespaces, rules), [])
+
+    def test_the_old_free_text_placeholders_would_have_failed(self):
+        """The values the removed placeholders told users to type. This is the regression: they
+        passed XSD validation and would only have failed at submission."""
+        namespaces, rules = parse_schematron_enumerations(self.schematron())
+
+        ModelMetadata.objects.create(
+            bundle=self.bundle, collection=self.alpha, netcdf_file=None,
+            type='General Circulation Model')
+        SimulationConfiguration.objects.create(
+            bundle=self.bundle, collection=self.alpha, netcdf_file=None,
+            horizontal_grid_type='lat/lon', vertical_grid_type='sigma')
+
+        broken = {value for _c, _t, value, _a in
+                  self.violations(self.written_label(), namespaces, rules)}
+        self.assertEqual(broken, {'General Circulation Model', 'lat/lon', 'sigma'})
+
+    def test_the_boundary_units_elsa_writes_are_accepted(self):
+        """ELSA hardcodes unit="deg" on the four compass boundaries; the Schematron restricts it."""
+        namespaces, rules = parse_schematron_enumerations(self.schematron())
+
+        SimulationConfiguration.objects.create(
+            bundle=self.bundle, collection=self.alpha, netcdf_file=None,
+            northern_boundary=90.0, southern_boundary=-90.0,
+            eastern_boundary=360.0, western_boundary=-180.0)
+
+        unit_problems = [v for v in self.violations(self.written_label(), namespaces, rules)
+                         if v[1] == 'unit']
+        self.assertEqual(unit_problems, [])
+
+    def test_an_empty_label_breaks_no_enumeration_rule(self):
+        """All 28 attributes are minOccurs="0", so a label carrying none of them is valid."""
+        namespaces, rules = parse_schematron_enumerations(self.schematron())
+        self.assertEqual(self.violations(self.written_label(), namespaces, rules), [])
+
+    def test_the_checker_reads_real_rules_rather_than_finding_none(self):
+        """Guards the premise. If the .sch format changed and the parse silently returned nothing,
+        every test above would pass while checking absolutely nothing."""
+        namespaces, rules = parse_schematron_enumerations(self.schematron())
+
+        self.assertIn('ama', namespaces)
+        self.assertGreaterEqual(len(rules), 10, 'the Schematron parse found almost no rules')
+        contexts = {context for context, _t, _a in rules}
+        for expected in ('ama:Model_Metadata/ama:type',
+                         'ama:Simulation_Configuration/ama:horizontal_grid_type',
+                         'ama:Simulation_Configuration/ama:vertical_grid_type'):
+            self.assertIn(expected, contexts)
+
+
+
+class AMAVocabularyCheckCommandTests(AMATestCaseMixin, TestCase):
+    """The scan that says how far the bad-vocabulary problem spreads in existing data."""
+
+    def setUp(self):
+        super().setUp()
+        self.regenerated = []
+
+        def fake_regenerate(bundle, netcdf_objs=None):
+            self.regenerated.append(
+                None if netcdf_objs is None else sorted(n.pk for n in netcdf_objs))
+            return []
+
+        real = views.regenerate_netcdf_labels
+        views.regenerate_netcdf_labels = fake_regenerate
+        self.addCleanup(setattr, views, 'regenerate_netcdf_labels', real)
+        # The command imports the name directly, so the module attribute has to be swapped too.
+        import build.management.commands.ama_vocabulary_check as command_module
+        self.command_module = command_module
+        real_cmd = command_module.regenerate_netcdf_labels
+        command_module.regenerate_netcdf_labels = fake_regenerate
+        self.addCleanup(setattr, command_module, 'regenerate_netcdf_labels', real_cmd)
+
+    def run_command(self, *args):
+        out = StringIO()
+        err = StringIO()
+        call_command('ama_vocabulary_check', *args, stdout=out, stderr=err)
+        return out.getvalue()
+
+    def test_a_clean_database_reports_nothing(self):
+        self.make_default_model_metadata(type='GCM')
+        self.assertIn('No non-conforming AMA values found', self.run_command())
+
+    def test_a_conforming_value_is_not_reported(self):
+        SimulationConfiguration.objects.create(
+            bundle=self.bundle, collection=self.alpha, netcdf_file=None,
+            horizontal_grid_type='lat-lon', vertical_grid_type='Sigma')
+        self.assertIn('No non-conforming AMA values found', self.run_command())
+
+    def test_it_names_the_bundle_the_collection_and_the_bad_value(self):
+        SimulationConfiguration.objects.create(
+            bundle=self.bundle, collection=self.alpha, netcdf_file=None,
+            horizontal_grid_type='lat/lon')
+
+        output = self.run_command()
+        self.assertIn(self.bundle.name, output)
+        self.assertIn('alpha', output)
+        self.assertIn("'lat/lon'", output)
+        self.assertIn('collection default', output)
+        self.assertIn('cube-sphere', output)  # the allowed list is shown
+
+    def test_it_distinguishes_a_per_file_value_from_a_collection_default(self):
+        SimulationConfiguration.objects.create(
+            bundle=self.bundle, collection=self.alpha, netcdf_file=self.nc_one,
+            vertical_grid_type='sigma')
+
+        self.assertIn('file {}'.format(self.nc_one.title), self.run_command())
+
+    def test_a_spelling_only_difference_is_offered_as_a_fix(self):
+        SimulationConfiguration.objects.create(
+            bundle=self.bundle, collection=self.alpha, netcdf_file=None,
+            horizontal_grid_type='lat/lon')
+
+        output = self.run_command()
+        self.assertIn('spelling only', output)
+        self.assertIn('use --fix', output)
+
+    def test_a_value_needing_judgement_is_suggested_but_never_auto_applied(self):
+        ModelMetadata.objects.create(
+            bundle=self.bundle, collection=self.alpha, netcdf_file=None,
+            type='General Circulation Model')
+
+        output = self.run_command('--fix')
+        self.assertIn('NOT applied', output)
+        self.assertIn("'GCM'", output)
+        # Still exactly as the user left it.
+        self.assertEqual(
+            ModelMetadata.default_for_collection(self.alpha).type,
+            'General Circulation Model')
+
+    def test_a_value_with_no_match_at_all_says_it_needs_a_person(self):
+        ModelMetadata.objects.create(
+            bundle=self.bundle, collection=self.alpha, netcdf_file=None, type='whatever')
+        self.assertIn('needs a person', self.run_command())
+
+    def test_fix_normalises_case_and_separators(self):
+        SimulationConfiguration.objects.create(
+            bundle=self.bundle, collection=self.alpha, netcdf_file=None,
+            horizontal_grid_type='lat/lon', vertical_grid_type='sigma')
+
+        self.run_command('--fix')
+
+        record = SimulationConfiguration.default_for_collection(self.alpha)
+        self.assertEqual(record.horizontal_grid_type, 'lat-lon')
+        self.assertEqual(record.vertical_grid_type, 'Sigma')
+
+    def test_fix_rebuilds_every_label_a_collection_default_reaches(self):
+        """A default is inherited, so correcting it makes every file's label in that collection
+        stale - not only the row that changed."""
+        SimulationConfiguration.objects.create(
+            bundle=self.bundle, collection=self.alpha, netcdf_file=None,
+            horizontal_grid_type='lat/lon')
+
+        self.run_command('--fix')
+
+        self.assertEqual(self.regenerated, [sorted([self.nc_one.pk, self.nc_two.pk])])
+
+    def test_fix_of_a_per_file_value_rebuilds_only_that_file(self):
+        SimulationConfiguration.objects.create(
+            bundle=self.bundle, collection=self.alpha, netcdf_file=self.nc_one,
+            horizontal_grid_type='lat/lon')
+
+        self.run_command('--fix')
+
+        self.assertEqual(self.regenerated, [[self.nc_one.pk]])
+
+    def test_a_report_without_fix_changes_nothing_and_rebuilds_nothing(self):
+        SimulationConfiguration.objects.create(
+            bundle=self.bundle, collection=self.alpha, netcdf_file=None,
+            horizontal_grid_type='lat/lon')
+
+        self.run_command()
+
+        self.assertEqual(
+            SimulationConfiguration.default_for_collection(self.alpha).horizontal_grid_type,
+            'lat/lon')
+        self.assertEqual(self.regenerated, [])
+
+    def test_strict_exits_non_zero_while_anything_remains(self):
+        ModelMetadata.objects.create(
+            bundle=self.bundle, collection=self.alpha, netcdf_file=None,
+            type='General Circulation Model')
+
+        with self.assertRaises(CommandError):
+            self.run_command('--strict')
+
+    def test_strict_is_quiet_once_fix_has_cleared_everything(self):
+        SimulationConfiguration.objects.create(
+            bundle=self.bundle, collection=self.alpha, netcdf_file=None,
+            horizontal_grid_type='lat/lon')
+
+        self.run_command('--fix', '--strict')
+
+    def test_a_blank_value_is_not_a_violation(self):
+        """All three are minOccurs="0", so unset is valid and must not be reported."""
+        ModelMetadata.objects.create(
+            bundle=self.bundle, collection=self.alpha, netcdf_file=None, type='', name='MarsWRF')
+        self.assertIn('No non-conforming AMA values found', self.run_command())
+
+
+
+class AMASaveMessageTests(AMATestCaseMixin, TestCase):
+    """What a save tells the user afterwards.
+
+    A save used to emit one message per section plus one for the labels, so sharing two sections
+    stacked three full-width alerts across the top of the page - and the per-section one counted
+    the file being edited, announcing "1 file reset to the collection values" when nobody else's
+    values had been touched.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.login()
+        real = views.regenerate_netcdf_labels
+        views.regenerate_netcdf_labels = lambda bundle, netcdf_objs=None: []
+        self.addCleanup(setattr, views, 'regenerate_netcdf_labels', real)
+
+    def messages_from(self, response):
+        return [str(m) for m in get_messages(response.wsgi_request)]
+
+    def test_a_plain_save_says_one_thing(self):
+        response = self.panel_post(self.file_url(), {'model-name': 'MarsWRF'})
+        self.assertEqual(self.messages_from(response), ['Saved.'])
+
+    def test_sharing_two_sections_still_says_one_thing(self):
+        response = self.panel_post(self.file_url(), {
+            'model-name': 'MarsWRF', 'model-apply_scope': 'collection',
+            'sim-horizontal_grid_type': 'lat-lon', 'sim-apply_scope': 'collection',
+        })
+        self.assertEqual(len(self.messages_from(response)), 1)
+
+    def test_it_does_not_count_the_file_being_edited_as_a_file_it_reset(self):
+        """The bug: promoting your own file's values reported your own file as having been reset."""
+        ModelMetadata.objects.create(
+            bundle=self.bundle, collection=self.alpha, netcdf_file=self.nc_one, name='LMD')
+
+        response = self.panel_post(self.file_url(), {
+            'model-name': 'LMD', 'model-apply_scope': 'collection'})
+
+        message = self.messages_from(response)[0]
+        self.assertNotIn('replacing', message)
+        self.assertEqual(
+            message, 'Saved. Model Metadata now applies to every file in alpha.')
+
+    def test_it_does_say_so_when_another_file_loses_its_own_values(self):
+        """The one outcome a user might not have intended is worth stating plainly."""
+        ModelMetadata.objects.create(
+            bundle=self.bundle, collection=self.alpha, netcdf_file=self.nc_two, name='other')
+
+        response = self.panel_post(self.file_url(), {
+            'model-name': 'LMD', 'model-apply_scope': 'collection'})
+
+        self.assertEqual(
+            self.messages_from(response)[0],
+            'Saved. Model Metadata now applies to every file in alpha, replacing the values '
+            '1 other file had of its own.')
+
+    def test_the_sentence_agrees_with_itself_for_several_sections_and_files(self):
+        for netcdf_file in (self.nc_two,):
+            ModelMetadata.objects.create(
+                bundle=self.bundle, collection=self.alpha, netcdf_file=netcdf_file, name='a')
+            SimulationConfiguration.objects.create(
+                bundle=self.bundle, collection=self.alpha, netcdf_file=netcdf_file,
+                horizontal_grid_type='lat-lon')
+
+        response = self.panel_post(self.file_url(), {
+            'model-name': 'LMD', 'model-apply_scope': 'collection',
+            'sim-horizontal_grid_type': 'icosahedral', 'sim-apply_scope': 'collection'})
+
+        message = self.messages_from(response)[0]
+        self.assertIn('Model Metadata and Simulation Configuration now apply', message)
+        self.assertIn('1 other file had of its own', message)
+
+    def test_a_save_that_shares_nothing_explains_nothing(self):
+        """Values staying where they already were needs no sentence."""
+        response = self.panel_post(self.file_url(), {
+            'model-name': 'LMD', 'model-apply_scope': 'file'})
+        self.assertEqual(self.messages_from(response), ['Saved.'])
+
+    def test_a_label_failure_is_still_reported(self):
+        views.regenerate_netcdf_labels = lambda bundle, netcdf_objs=None: ['disk full']
+
+        response = self.panel_post(self.file_url(), {'model-name': 'MarsWRF'})
+
+        message = self.messages_from(response)[0]
+        self.assertIn('could not be refreshed', message)
+        self.assertIn('disk full', message)
+
+    def test_a_copy_says_one_thing_too(self):
+        FileDescription.objects.create(
+            bundle=self.bundle, collection=self.alpha, netcdf_file=self.nc_two, level_unit='hPa')
+
+        response = self.panel_post(
+            reverse('build:netcdf_ama_copy', kwargs={
+                'pk_bundle': self.bundle.pk, 'pk_netcdf': self.nc_one.pk}),
+            {'section': 'desc', 'source_netcdf': self.nc_two.pk})
+
+        self.assertEqual(
+            self.messages_from(response),
+            ['File Description copied from "{}".'.format(self.nc_two.title)])
+
+
+
+class AMAFileTreeTests(AMATestCaseMixin, TestCase):
+    """The Files card's per-label metadata reading, which is how a user sees that a label is thin."""
+
+    def entry_for(self, netcdf_file, bundle=None):
+        tree = views._bundle_file_tree(bundle or self.bundle)
+        stem = os.path.splitext(os.path.basename(netcdf_file.file.name))[0]
+        for folder in tree['folders']:
+            for label in folder['labels']:
+                if label['name'] == stem + '.xml':
+                    return label
+        return None
+
+    def test_a_label_with_no_ama_reads_zero_of_the_full_field_count(self):
+        self.write_label(self.nc_one)
+        entry = self.entry_for(self.nc_one)
+
+        self.assertEqual(entry['netcdf_id'], self.nc_one.pk)
+        self.assertEqual(entry['ama_filled'], 0)
+        # 4 + 17 + 7. Asserted against the models rather than the literal so adding a field to an
+        # AMA class moves both sides together.
+        self.assertEqual(entry['ama_total'], sum(
+            len(model_class.ELEMENT_ORDER)
+            for model_class, _f, _p, _l in views.AMA_SECTIONS))
+
+    def test_a_file_with_no_values_of_its_own_counts_what_it_inherits(self):
+        self.make_default_model_metadata(name='MarsWRF', institution='NMSU')
+        self.write_label(self.nc_one)
+
+        self.assertEqual(self.entry_for(self.nc_one)['ama_filled'], 2)
+
+    def test_an_override_is_counted_instead_of_the_default_not_as_well_as(self):
+        self.make_default_model_metadata(name='MarsWRF', institution='NMSU')
+        ModelMetadata.objects.create(
+            bundle=self.bundle, collection=self.alpha, netcdf_file=self.nc_one, name='LMD')
+        self.write_label(self.nc_one)
+
+        # The override supplies one value, so the inherited two must not be added on top.
+        self.assertEqual(self.entry_for(self.nc_one)['ama_filled'], 1)
+
+    def test_counts_are_summed_across_all_three_sections(self):
+        self.make_default_model_metadata(name='MarsWRF', institution='NMSU')
+        self.make_default_description(level_unit='Pa', top_level=0.01, bottom_level=700.0,
+                                      postprocessing_methods='')
+        self.write_label(self.nc_one)
+
+        self.assertEqual(self.entry_for(self.nc_one)['ama_filled'], 5)
+
+    def test_an_archive_bundle_gets_no_reading_and_no_extra_queries(self):
+        """AMA is External-only. An Archive bundle must not pay for the lookup, and must not show
+        a metadata reading the user has no way to act on."""
+        archive = Bundle.objects.create(
+            name='archive_bundle', user=self.user, version='1800', bundle_type='Archive')
+        os.makedirs(archive.directory(), exist_ok=True)
+        collection = AdditionalCollections.objects.create(
+            bundle=archive, collection_name='data', collection_type='Data')
+        os.makedirs(collection.directory(), exist_ok=True)
+        netcdf_file = NetCDFFile.objects.create(
+            title='00000.atmos_average.nc', file='00000.atmos_average.nc',
+            bundle=archive, collection=collection, processed=True)
+        self.write_label(netcdf_file)
+
+        entry = self.entry_for(netcdf_file, bundle=archive)
+        self.assertIsNotNone(entry)
+        self.assertIsNone(entry['ama_total'])
+        self.assertIsNone(entry['netcdf_id'])
+
+    def test_a_file_with_no_collection_gets_no_reading(self):
+        """It has nothing to inherit from and no editor to open, so "0 of 28" would be a lie."""
+        orphan = NetCDFFile.objects.create(
+            title='99999.atmos_average.nc', file='99999.atmos_average.nc',
+            bundle=self.bundle, collection=None, processed=True)
+        stem = '99999.atmos_average'
+        with open(os.path.join(self.bundle.directory(), stem + '.xml'), 'w') as handle:
+            handle.write('<?xml version="1.0"?><Product_Observational/>')
+
+        tree = views._bundle_file_tree(self.bundle)
+        entry = next(
+            (label for label in tree['root_labels'] if label['name'] == stem + '.xml'), None)
+        self.assertIsNotNone(entry)
+        self.assertIsNone(entry['ama_total'])
+        self.assertIsNone(entry['netcdf_id'])
+        del orphan
+
+
+@override_settings(ALLOWED_HOSTS=['testserver', 'localhost'])
+class AMAScopeRadioTests(AMATestCaseMixin, TestCase):
+    """The per-section scope control, and the one save rule that only it makes possible."""
+
+    def setUp(self):
+        super().setUp()
+        self.login()
+        self.regenerated = []
+
+        def fake_regenerate(bundle, netcdf_objs=None):
+            self.regenerated.append(
+                None if netcdf_objs is None else sorted(n.pk for n in netcdf_objs))
+            return []
+
+        real = views.regenerate_netcdf_labels
+        views.regenerate_netcdf_labels = fake_regenerate
+        self.addCleanup(setattr, views, 'regenerate_netcdf_labels', real)
+
+    def test_choosing_just_this_file_stores_an_override_even_when_it_matches_the_default(self):
+        """Without this the radio springs back to "same for every file" whenever the values happen
+        to agree, which reads as the setting not sticking."""
+        self.make_default_model_metadata(name='MarsWRF', institution='NMSU')
+
+        self.panel_post(self.file_url(), {
+            'model-name': 'MarsWRF', 'model-institution': 'NMSU',
+            'model-apply_scope': 'file',
+        })
+
+        override = ModelMetadata.override_for_file(self.nc_one)
+        self.assertIsNotNone(override)
+        self.assertEqual(override.name, 'MarsWRF')
+
+    def test_leaving_it_shared_does_not_fork_the_file_off_the_default(self):
+        """The panel is pre-filled from the default, so submitting it unchanged posts the same
+        values back. That must stay inheritance, not a silent fork."""
+        self.make_default_model_metadata(name='MarsWRF', institution='NMSU')
+
+        self.panel_post(self.file_url(), {
+            'model-name': 'MarsWRF', 'model-institution': 'NMSU',
+            'model-apply_scope': 'collection',
+        })
+
+        self.assertIsNone(ModelMetadata.override_for_file(self.nc_one))
+
+    def test_an_empty_section_still_inherits_whatever_the_radio_says(self):
+        self.make_default_model_metadata(name='MarsWRF', institution='NMSU')
+        ModelMetadata.objects.create(
+            bundle=self.bundle, collection=self.alpha, netcdf_file=self.nc_one, name='LMD')
+
+        self.panel_post(self.file_url(), {'model-apply_scope': 'file'})
+
+        self.assertIsNone(ModelMetadata.override_for_file(self.nc_one))
+        self.assertEqual(ModelMetadata.resolve_for_file(self.nc_one).name, 'MarsWRF')
+
+    def test_the_radio_comes_back_selected_on_where_the_values_live(self):
+        self.make_default_model_metadata(name='MarsWRF')
+        ModelMetadata.objects.create(
+            bundle=self.bundle, collection=self.alpha, netcdf_file=self.nc_one, name='LMD')
+
+        content = self.panel_get(self.file_url()).content.decode('utf-8')
+
+        # Model Metadata is stored on the file, so its radio sits on "just this file"; the two
+        # sections the file has no values for sit on "same for every file".
+        self.assertRegex(content, r'name="model-apply_scope" value="file"[^>]*checked')
+        self.assertRegex(content, r'name="sim-apply_scope" value="collection"[^>]*checked')
+        self.assertRegex(content, r'name="desc-apply_scope" value="collection"[^>]*checked')
+
+
+@override_settings(ALLOWED_HOSTS=['testserver', 'localhost'])
+class AMACopyFromFileTests(AMATestCaseMixin, TestCase):
+    """Copy-from-another-file: the concrete counterpart to collection inheritance."""
+
+    def setUp(self):
+        super().setUp()
+        self.login()
+
+        real = views.regenerate_netcdf_labels
+        views.regenerate_netcdf_labels = lambda bundle, netcdf_objs=None: []
+        self.addCleanup(setattr, views, 'regenerate_netcdf_labels', real)
+
+    def copy_url(self, netcdf_file=None):
+        return reverse('build:netcdf_ama_copy', kwargs={
+            'pk_bundle': self.bundle.pk, 'pk_netcdf': (netcdf_file or self.nc_one).pk})
+
+    def test_it_copies_one_section_from_a_sibling(self):
+        FileDescription.objects.create(
+            bundle=self.bundle, collection=self.alpha, netcdf_file=self.nc_two,
+            level_unit='hPa', top_level=0.5)
+
+        self.panel_post(self.copy_url(), {
+            'section': 'desc', 'source_netcdf': self.nc_two.pk})
+
+        copied = FileDescription.override_for_file(self.nc_one)
+        self.assertIsNotNone(copied)
+        self.assertEqual(copied.level_unit, 'hPa')
+
+    def test_it_leaves_the_other_sections_alone(self):
+        self.make_default_model_metadata(name='MarsWRF')
+        FileDescription.objects.create(
+            bundle=self.bundle, collection=self.alpha, netcdf_file=self.nc_two, level_unit='hPa')
+
+        self.panel_post(self.copy_url(), {
+            'section': 'desc', 'source_netcdf': self.nc_two.pk})
+
+        self.assertIsNone(ModelMetadata.override_for_file(self.nc_one))
+        self.assertIsNone(SimulationConfiguration.override_for_file(self.nc_one))
+
+    def test_it_copies_what_the_source_label_says_not_only_its_overrides(self):
+        """Copying from a file that is itself following the collection default must copy the
+        values that file's label actually carries, not nothing."""
+        self.make_default_model_metadata(name='MarsWRF', institution='NMSU')
+
+        self.panel_post(self.copy_url(), {
+            'section': 'model', 'source_netcdf': self.nc_two.pk})
+
+        copied = ModelMetadata.override_for_file(self.nc_one)
+        self.assertIsNotNone(copied)
+        self.assertEqual(copied.name, 'MarsWRF')
+
+    def test_it_never_writes_the_collection_default(self):
+        FileDescription.objects.create(
+            bundle=self.bundle, collection=self.alpha, netcdf_file=self.nc_two, level_unit='hPa')
+
+        self.panel_post(self.copy_url(), {
+            'section': 'desc', 'source_netcdf': self.nc_two.pk})
+
+        self.assertIsNone(FileDescription.default_for_collection(self.alpha))
+
+    def test_it_refuses_a_source_in_another_collection(self):
+        """Values from another collection describe a different model run, which is the one thing
+        the collection scope exists to keep apart."""
+        FileDescription.objects.create(
+            bundle=self.bundle, collection=self.beta, netcdf_file=self.nc_beta, level_unit='hPa')
+
+        self.panel_post(self.copy_url(), {
+            'section': 'desc', 'source_netcdf': self.nc_beta.pk})
+
+        self.assertIsNone(FileDescription.override_for_file(self.nc_one))
+
+    def test_it_refuses_to_copy_a_file_onto_itself(self):
+        FileDescription.objects.create(
+            bundle=self.bundle, collection=self.alpha, netcdf_file=self.nc_one, level_unit='hPa')
+
+        self.panel_post(self.copy_url(), {
+            'section': 'desc', 'source_netcdf': self.nc_one.pk})
+
+        self.assertEqual(FileDescription.override_for_file(self.nc_one).level_unit, 'hPa')
+
+    def test_another_users_bundle_is_not_reachable(self):
+        self.client.logout()
+        self.client.login(username='ama_intruder', password='pw-for-tests')
+        FileDescription.objects.create(
+            bundle=self.bundle, collection=self.alpha, netcdf_file=self.nc_two, level_unit='hPa')
+
+        self.panel_post(self.copy_url(), {
+            'section': 'desc', 'source_netcdf': self.nc_two.pk})
+
+        self.assertIsNone(FileDescription.override_for_file(self.nc_one))
 
 
 class AMARegressionTests(AMATestCaseMixin, TestCase):
@@ -1271,21 +2451,21 @@ class AMARegressionTests(AMATestCaseMixin, TestCase):
         self.assertTrue(form.is_valid(), form.errors.as_text())
         self.assertEqual(form.cleaned_data['name'], 'Mars WRF model')
 
-    def test_ticking_apply_on_an_empty_section_does_not_blank_the_default(self):
-        """A user who fills one section and ticks its box should not wipe a section they never
-        touched."""
-        self.make_default_simulation(horizontal_grid_type='lat/lon')
+    def test_sharing_an_empty_section_does_not_blank_the_default(self):
+        """A user who fills one section and leaves another on "same for every file" should not
+        wipe the section they never touched."""
+        self.make_default_simulation(horizontal_grid_type='lat-lon')
 
-        self.panel_post(self.file_url(), {'sim-apply_to_collection': 'on'})
+        self.panel_post(self.file_url(), {'sim-apply_scope': 'collection'})
 
         default = SimulationConfiguration.default_for_collection(self.alpha)
         self.assertIsNotNone(default)
-        self.assertEqual(default.horizontal_grid_type, 'lat/lon')
+        self.assertEqual(default.horizontal_grid_type, 'lat-lon')
 
     def test_saving_a_file_unchanged_leaves_it_following_the_collection(self):
         """The file panel is pre-filled from the collection default, so a blind save posts those
         values back. Storing them would fork the file off the default for good."""
-        self.make_default_simulation(horizontal_grid_type='lat/lon', description='shared')
+        self.make_default_simulation(horizontal_grid_type='lat-lon', description='shared')
 
         default = SimulationConfiguration.default_for_collection(self.alpha)
         payload = {'sim-{}'.format(name): value
@@ -1296,17 +2476,17 @@ class AMARegressionTests(AMATestCaseMixin, TestCase):
             SimulationConfiguration.objects.filter(netcdf_file=self.nc_one).count(), 0)
 
     def test_a_genuine_edit_still_creates_an_override(self):
-        self.make_default_simulation(horizontal_grid_type='lat/lon', description='shared')
+        self.make_default_simulation(horizontal_grid_type='lat-lon', description='shared')
 
         default = SimulationConfiguration.default_for_collection(self.alpha)
         payload = {'sim-{}'.format(name): value
                    for name, value in default.filled_values().items()}
-        payload['sim-horizontal_grid_type'] = 'cubed sphere'
+        payload['sim-horizontal_grid_type'] = 'cube-sphere'
         self.panel_post(self.file_url(), payload)
 
         self.assertEqual(
             SimulationConfiguration.objects.get(netcdf_file=self.nc_one).horizontal_grid_type,
-            'cubed sphere')
+            'cube-sphere')
 
     def test_uploads_move_across_filesystems(self):
         """os.rename raises EXDEV when the upload area and the archive are separate mounts, which
@@ -1476,3 +2656,41 @@ class AMAUnassignedFileTests(AMATestCaseMixin, TestCase):
             reverse('build:bulk_delete_netcdf', kwargs={'pk_bundle': self.bundle.pk}),
             {'selected_netcdf': [self.orphan.pk]})
         self.assertEqual(NetCDFFile.objects.filter(pk=self.orphan.pk).count(), 0)
+
+
+class PDS4CollectionTypeTests(SimpleTestCase):
+    """The enumerated Collection/type each collection declares, and the reference type that pairs.
+
+    The stored Product_Collection.collection is ELSA's internal key (directory name, LID segment,
+    label filename); the label has to carry a value from the PDS4 Collection/type enumeration, and
+    the two differ in two places: XML_Schema is spelled "XML Schema", and every collection in an
+    External bundle is of type External because AMA LIDs (urn:nasa:pds-ama) are not admissible in
+    a Document collection.
+
+    Nothing here touches the database, so the objects are left unsaved.
+    """
+
+    def collection(self, key, bundle_type='Archive'):
+        return Product_Collection(
+            bundle=Bundle(name='Test', bundleID='test', bundle_type=bundle_type),
+            collection=key)
+
+    def test_archive_types_are_the_stored_key(self):
+        for key in ('Document', 'Context', 'Data'):
+            self.assertEqual(self.collection(key).collection_type(), key)
+
+    def test_xml_schema_loses_its_underscore(self):
+        self.assertEqual(self.collection('XML_Schema').collection_type(), 'XML Schema')
+
+    def test_every_external_collection_is_typed_external(self):
+        for key in ('Document', 'Context', 'XML_Schema'):
+            self.assertEqual(
+                self.collection(key, bundle_type='External').collection_type(), 'External')
+
+    def test_reference_type_follows_the_collection_type(self):
+        self.assertEqual(self.collection('Document').reference_type(),
+                         'bundle_has_document_collection')
+        self.assertEqual(self.collection('XML_Schema').reference_type(),
+                         'bundle_has_schema_collection')
+        self.assertEqual(self.collection('Document', bundle_type='External').reference_type(),
+                         'bundle_has_external_collection')

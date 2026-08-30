@@ -1,5 +1,15 @@
-<!-- watches: build/forms.py, build/models.py, templates/build/citation_information -->
-<!-- reviewed: 2026-07-24 -->
+<!-- watches: build/models.py#Citation_Information, build/views.py#citation_information, build/views.py#edit_citation_information, build/views.py#delete_citation_information, build/forms.py#CitationInformationForm, build/forms.py#EditCitationInformationForm, templates/build/citation_information -->
+<!-- fingerprint:
+     build/models.py#Citation_Information       = 05817726b126
+     build/views.py#citation_information        = 32aee4d1289b
+     build/views.py#edit_citation_information   = 63be364bc808
+     build/views.py#delete_citation_information = 443c8dbcd846
+     build/forms.py#CitationInformationForm     = e8db3aa1ac79
+     build/forms.py#EditCitationInformationForm = 01577ec8a08f
+     templates/build/citation_information       = b26336432488
+-->
+<!-- reviewed: 2026-08-28 -->
+<!-- baseline: d8df4b96320a4636b7a95ac426bec7ff1a1fa839 -->
 # Citation Information
 
 PDS4 Information Model (v1.24 / 1O00): the Citation_Information class provides the
