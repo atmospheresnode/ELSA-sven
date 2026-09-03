@@ -20,6 +20,21 @@ This section provides a timeline of ELSA's release history, highlighting key upd
 
 ### **Current Version** 
 
+> ### **Version 1.37.10 (August 28, 2026)**
+- AMA Metadata: Metadata is now edited from the Files card. Open a data label and use the new "Edit AMA metadata" button.
+- AMA Metadata: The three sections are now tabs rather than an accordion, and each tab shows how many fields it holds.
+- AMA Metadata: Each section now says whether its values are shared with every file in the collection or belong to just this file, and that choice is now shown correctly when the section is reopened.
+- AMA Metadata: Values can now be copied across from another file in the same collection.
+- AMA Metadata: Model type, horizontal grid type, and vertical grid type are now picked from a list of the values PDS4 accepts, instead of being typed in. Values saved earlier that PDS4 does not accept are flagged when the section is opened.
+- Files Card: Data labels now show how much of the AMA metadata they carry, and point out labels that carry none.
+- AMA Metadata: Saving now shows a single message describing what changed, instead of one message per section.
+- AMA Metadata: Fixed a save reporting that other files had been reset to the collection values when none had been.
+- External and Archive Bundles: Fixed the collection type written into labels. Schema collections are now written as "XML Schema", and every collection in an External bundle is now typed External, including the document collection. Labels already on disk have been corrected.
+- ELSA Assistant: Corrected the answers about collection types.
+
+
+### **Previous Versions** 
+
 > ### **Version 1.37.9 (August 21, 2026)**
 - Files Card: Labels are now grouped under the collection they belong to, instead of being listed flat, on both External and Archive bundles.
 - Files Card: Data labels now name the NetCDF file they describe, and show whether that file was processed successfully.
@@ -29,9 +44,6 @@ This section provides a timeline of ELSA's release history, highlighting key upd
 - External and Archive Bundles: The bundle page now loads faster, as labels are opened on demand rather than all being loaded up front.
 - Review & Submit: Fixed every collection reporting zero NetCDF files.
 - Bundle: Fixed an error page appearing when opening a bundle whose creation did not finish.
-
-
-### **Previous Versions** 
 
 > ### **Version 1.37.8 (August 14, 2026)**
 - External Bundle: AMA metadata is now set per collection, with defaults every file inherits and per-file values where needed.
