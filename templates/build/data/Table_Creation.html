@@ -13,622 +13,1018 @@ Specify Some Data
 
 <script src="{% static 'js/build_a_bundle.js' %}" type="text/javascript"></script>
 
-<!-- Custom Styles -->
-<style>
-    .page-background {
-        position: relative;
-    }
-
-    .page-background::before {
-        content: "";
-        position: fixed;
-        inset: 0;
-        background-image: url("/static/images/thumbnail_ELSA_Logo-black.png");
-        background-repeat: no-repeat;
-        background-position: left center;
-        background-size: 700px;
-        opacity: 0.25;
-        pointer-events: none;
-        z-index: 0;
-    }
-
-    .page-background > * {
-        position: relative;
-        z-index: 1;
-    }
-
-    /* Back Button */
-    .btn-custom {
-        display: inline-flex;
-        align-items: center; 
-        justify-content: center; 
-        color: white;
-        padding: 8px 16px;
-        background-color: #008B8B; /* Cadet Blue */
-        border: none;
-        border-radius: 5px;
-        text-decoration: none; 
-        cursor: pointer;
-        transition: background-color 0.3s;
-    }
-    
-    .btn-custom:hover {
-        background-color: #006d6d;
-    }
-    
-    .btn-custom i {
-        font-size: 18px;
-        margin-right: 5px;
-    }
-    
-    /* Header Styles */
-    /* .header-gradient {
-        background: linear-gradient(135deg, #008B8B, #004d4d);
-        color: white;
-        padding: 8px;
-        border-radius: 12px 12px 12px 12px;
-        text-align: center;
-    }
-    
-    .card-custom {
-        background-color: #ffffff;
-        border-radius: 12px;
-        border: none;
-    }
-    
-    .card-custom .card-header {
-        background-color: #2F4F4F;
-        color: white;
-        border-radius: 12px 12px 0 0;
-    } */
-    
-    /* Submit Button */
-    .btn-submit {
-        color: white;
-        padding: 7px 10px;
-        border: none;
-        border-radius: 5px;
-        transition: background-color 0.3s;
-    }
-    
-    .btn-submit:hover {
-        background-color: #004d4d;
-    }
-    
-    .form-label {
-        font-weight: 600;
-    }
-</style>
 <div class="page-background">
-<div class="container-fluid">
-    <div class="row justify-content-center align-items-center py-4">
-        <div class="col-12 col-lg-7 col-xl-8">
-            <div class="card">
-                <h3 class="card-header bg-secondary text-light text-center position-relative">
-                    Fill Data Tables
-                </h3>
-                <div class="card-body m-4">                        
-                    <form id="data_form" method="post" action="{% url 'build:table_creation' bundle.pk data.pk %}">
+    <div class="container-fluid">
+
+        <div class="row justify-content-center py-5">
+            <div class="col-12 col-xl-10">
+
+                <!-- Data Table Form Card -->
+                <div class="data-table-card">
+
+                    <!-- Card Header -->
+                    <div class="data-table-card-header">
+                        <h3>Fill Data Tables</h3>
+                    </div>
+
+                    <form
+                        id="data_form"
+                        method="post"
+                        action="{% url 'build:table_creation' bundle.pk data.pk %}"
+                    >
                         {% csrf_token %}
-                        {% if data.data_type == 'Table Delimited' %}
-                            <div class="row gx-2">
-                                {% if data.header %}
-                                    <div class="col-md-4">
-                                        <h4 class="mb-3">Header Information</h4>
-                                        <div class="mb-4 form-outline">
-                                            <label for="{{ data_form.local_identifier.id_for_label }}" class="form-label fw-semibold">
-                                                {{ data_form.local_identifier.label }}
-                                            </label>                                              
-                                            {{ data_form.local_identifier }}
-                                        </div>
-                                            
-                                        <div class="mb-4 form-outline">
-                                            <label for="{{ data_form.header_object_length.id_for_label }}" class="form-label fw-semibold">
-                                                {{ data_form.header_object_length.label }}
-                                            </label>                                             
-                                            {{ data_form.header_object_length }}
-                                        </div>
-                                    </div>
-                                
-                                    <!-- Column 2: Partial Table Info -->
-                                    <div class="col-md-4">
-                                        <h4 class="mb-3">Table Information</h4>
-                                        <div class="mb-4 form-outline">
-                                            <label for="{{ data_form.name.id_for_label }}" class="form-label fw-semibold">
-                                                {{ data_form.name.label }}
-                                            </label>                                             
-                                            {{ data_form.name }}
-                                        </div>
-                                        
-                                        <div class="mb-4 form-outline">
-                                            <label for="{{ data_form.object_length.id_for_label }}" class="form-label fw-semibold">
-                                                {{ data_form.object_length.label }}
-                                            </label>                                             
-                                            {{ data_form.object_length }}
-                                        </div>
-                                        
-                                        <div class="mb-4 form-outline">
-                                            <label for="{{ data_form.description.id_for_label }}" class="form-label fw-semibold">
-                                                {{ data_form.description.label }}
-                                            </label>                                             
-                                            {{ data_form.description }}
-                                        </div>
-                                        
-                                        <div class="mb-4 form-outline">
-                                            <label for="{{ data_form.records.id_for_label }}" class="form-label fw-semibold">
-                                                {{ data_form.records.label }}
-                                            </label>                                             
-                                            {{ data_form.records }}
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- Column 3: Remaining Table Info -->
-                                    <div class="col-md-4">
-                                        <div class="mb-4 form-outline">
-                                            <label for="{{ data_form.field_delimiter.id_for_label }}" class="form-label fw-semibold">
-                                                {{ data_form.field_delimiter.label }}
-                                            </label>                                             
-                                            {{ data_form.field_delimiter }}
-                                        </div>
-                                        
-                                        <div class="mb-4 form-outline">
-                                            <label for="{{ data_form.fields.id_for_label }}" class="form-label fw-semibold">
-                                                {{ data_form.fields.label }}
-                                            </label>                                             
-                                            {{ data_form.fields }}
-                                        </div>
-                                        
-                                        <div class="mb-4 form-outline">
-                                            <label for="{{ data_form.facet1.id_for_label }}" class="form-label fw-semibold">
-                                                {{ data_form.facet1.label }}
-                                            </label>                                             
-                                            {{ data_form.facet1 }}
-                                        </div>
-                                        
-                                        <div class="mb-4 form-outline">
-                                            <label for="{{ data_form.data.id_for_label }}" class="form-label fw-semibold">
-                                                {{ data_form.data.label }}
-                                            </label>                                             
-                                            {{ data_form.data }}
-                                        </div>
-                                        
-                                        <div class="mb-4 form-outline">
-                                            <label for="{{ data_form.collection.id_for_label }}" class="form-label fw-semibold">
-                                                {{ data_form.collection.label }}
-                                            </label>                                             
-                                            {{ data_form.collection }}
-                                        </div>
-                                    </div>
-                                {% else %}
-                                    <div class="col-md-6">
-                                        <h4 class="mb-3">Table Information</h4>
-                                        <div class="mb-4 form-outline">
-                                            <label for="{{ data_form.name.id_for_label }}" class="form-label fw-semibold">
-                                                {{ data_form.name.label }}
-                                            </label>
-                                            {{ data_form.name }}
-                                        </div>
-                                        
-                                        <div class="mb-4 form-outline">
-                                            <label for="{{ data_form.object_length.id_for_label }}" class="form-label fw-semibold">
-                                                {{ data_form.object_length.label }}
-                                            </label>
-                                            {{ data_form.object_length }}
-                                        </div>
-                                        
-                                        <div class="mb-4 form-outline">
-                                            <label for="{{ data_form.description.id_for_label }}" class="form-label fw-semibold">
-                                                {{ data_form.description.label }}
-                                            </label>                                              
-                                            {{ data_form.description }}
-                                        </div>
-                                        
-                                        <div class="mb-4 form-outline">
-                                            <label for="{{ data_form.records.id_for_label }}" class="form-label fw-semibold">
-                                                {{ data_form.records.label }}
-                                            </label>                                              
-                                            {{ data_form.records }}
-                                        </div>
-                                    </div>
-                                            
-                                    <div class="col-md-6">
-                                        <div class="mb-4 form-outline">
-                                            <label for="{{ data_form.field_delimiter.id_for_label }}" class="form-label fw-semibold">
-                                                {{ data_form.field_delimiter.label }}
-                                            </label>                                              
-                                            {{ data_form.field_delimiter }}
-                                        </div>
-                                        
-                                        <div class="mb-4 form-outline">
-                                            <label for="{{ data_form.fields.id_for_label }}" class="form-label fw-semibold">
-                                                {{ data_form.fields.label }}
-                                            </label>                                              
-                                            {{ data_form.fields }}
-                                        </div>
-                                        
-                                        <div class="mb-4 form-outline">
-                                            <label for="{{ data_form.facet1.id_for_label }}" class="form-label fw-semibold">
-                                                {{ data_form.facet1.label }}
-                                            </label>                                              
-                                            {{ data_form.facet1 }}
-                                        </div>
-                                        
-                                        <div class="mb-4 form-outline">
-                                            <label for="{{ data_form.data.id_for_label }}" class="form-label fw-semibold">
-                                                {{ data_form.data.label }}
-                                            </label>                                              
-                                            {{ data_form.data }}
-                                        </div>
-                                        
-                                        <div class="mb-4 form-outline">
-                                            <label for="{{ data_form.collection.id_for_label }}" class="form-label fw-semibold">
-                                                {{ data_form.collection.label }}
-                                            </label>                                              
-                                            {{ data_form.collection }}
-                                        </div>
-                                    </div>
-                                {% endif %}
-                            </div>
-                            
-                        {% elif data.data_type == 'Table Binary' %}
-                            <div class="row gx-2">
-                                {% if data.header %}
-                                    <div class="col-md-4">
-                                        <h4 class="mb-3">Header Information</h4>
-                                        <div class="mb-4 form-outline">
-                                            <label for="{{ data_form.local_identifier.id_for_label }}" class="form-label fw-semibold">
-                                                {{ data_form.local_identifier.label }}
-                                            </label>                                              
-                                            {{ data_form.local_identifier }}
-                                        </div>
-                                        
-                                        <div class="mb-4 form-outline">
-                                            <label for="{{ data_form.header_object_length.id_for_label }}" class="form-label fw-semibold">
-                                                {{ data_form.header_object_length.label }}
-                                            </label>                                                
-                                            {{ data_form.header_object_length }}
-                                        </div>
-                                    </div>
-                                        
-                                    <!-- Column 2: Partial Table Info -->
-                                    <div class="col-md-4">
-                                        <h4 class="mb-3">Table Information</h4>
-                                        <div class="mb-4 form-outline">  
-                                            <label for="{{ data_form.name.id_for_label }}" class="form-label fw-semibold">
-                                                {{ data_form.name.label }}
-                                            </label>                                                  
-                                            {{ data_form.name }}
-                                        </div>
-                                        <div class="mb-4 form-outline">
-                                            <label for="{{ data_form.records.id_for_label }}" class="form-label fw-semibold">
-                                                {{ data_form.records.label }}
-                                            </label>                                                
-                                            {{ data_form.records }}
-                                        </div>
-                                        <div class="mb-4 form-outline">
-                                            <label for="{{ data_form.fields.id_for_label }}" class="form-label fw-semibold">
-                                                {{ data_form.fields.label }}
-                                            </label>                                                
-                                            {{ data_form.fields }}
-                                        </div>
-                                    </div>
 
-                                    <div class="col-md-4">
-                                        <div class="mb-4 form-outline">
-                                            <label for="{{ data_form.facet1.id_for_label }}" class="form-label fw-semibold">
-                                                {{ data_form.facet1.label }}
-                                            </label>                                                
-                                            {{ data_form.facet1 }}
-                                        </div>
-                                        
-                                        <div class="mb-4 form-outline">
-                                            <label for="{{ data_form.data.id_for_label }}" class="form-label fw-semibold">
-                                                {{ data_form.data.label }}
-                                            </label>                                                
-                                            {{ data_form.data }}
-                                        </div>
-                                        
-                                        <div class="mb-4 form-outline">
-                                            <label for="{{ data_form.collection.id_for_label }}" class="form-label fw-semibold">
-                                                {{ data_form.collection.label }}
-                                            </label>                                                
-                                            {{ data_form.collection }}
-                                        </div>
-                                    </div>
+                        <div class="data-table-card-body">
 
-                                    
-                                {% else %}
-                                    <div class="mb-4 form-outline">
-                                        <div class="row">
-                                            <div class="col-md-10">
-                                                <label for="{{ data_form.name.id_for_label }}" class="form-label fw-semibold">
+                            <!-- ===================================================== -->
+                            <!-- TABLE DELIMITED -->
+                            <!-- ===================================================== -->
+                            {% if data.data_type == 'Table Delimited' %}
+
+                                {% if data.header %}
+
+                                    <div class="row g-0">
+
+                                        <!-- Header Information -->
+                                        <div class="col-md-4 data-form-column data-form-column-first">
+
+                                            <div class="data-form-section-header">
+                                                <h4>Header Information</h4>
+                                                <p>Provide details about the table header structure.</p>
+                                            </div>
+
+                                            <div class="data-form-section-divider"></div>
+
+                                            <div class="data-form-field">
+                                                <label for="{{ data_form.local_identifier.id_for_label }}">
+                                                    {{ data_form.local_identifier.label }}
+
+                                                    {% if data_form.local_identifier.field.required %}
+                                                        <span class="required-badge">Required</span>
+                                                    {% endif %}
+                                                </label>
+
+                                                {{ data_form.local_identifier }}
+
+                                                {% if data_form.local_identifier.help_text %}
+                                                    <small class="form-help-text">
+                                                        {{ data_form.local_identifier.help_text }}
+                                                    </small>
+                                                {% endif %}
+                                            </div>
+
+                                            <div class="data-form-field">
+                                                <label for="{{ data_form.header_object_length.id_for_label }}">
+                                                    {{ data_form.header_object_length.label }}
+
+                                                    {% if data_form.header_object_length.field.required %}
+                                                        <span class="required-badge">
+                                                            Required
+                                                        </span>
+                                                    {% endif %}
+                                                </label>
+
+                                                {{ data_form.header_object_length }}
+
+                                                <small class="form-help-text">
+                                                    Total length of the header in bytes.
+                                                </small>
+                                            </div>
+
+                                        </div>
+
+
+                                        <!-- Table Information -->
+                                        <div class="col-md-4 data-form-column">
+
+                                            <div class="data-form-section-header">
+                                                <h4>Table Information</h4>
+                                                <p>
+                                                    Provide details about the data
+                                                    table structure and content.
+                                                </p>
+                                            </div>
+
+                                            <div class="data-form-section-divider"></div>
+
+                                            <div class="data-form-field">
+                                                <label for="{{ data_form.name.id_for_label }}">
                                                     {{ data_form.name.label }}
-                                                </label>
-                                                
-                                                {{ data_form.name }}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- <div class="mb-4 form-outline">
-                                        <div class="row">
-                                            <div class="col-md-2 mt-2">
-                                                <h6>Offset</h6>
-                                            </div>
-                                            
-                                            <div class="col-md-10">
-                                                {{ data_form.offset }}
-                                            </div>
-                                        </div>
-                                    </div> -->
-                                    
-                                    <div class="mb-4 form-outline">
-                                        <div class="row">
-                                            <div class="col-md-10">
-                                                <label for="{{ data_form.records.id_for_label }}" class="form-label fw-semibold">
-                                                    {{ data_form.records.label }}
-                                                </label>
-                                                {{ data_form.records }}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="mb-4 form-outline">
-                                        <div class="row">
-                                            <div class="col-md-10">
-                                                <label for="{{ data_form.fields.id_for_label }}" class="form-label fw-semibold">
-                                                    {{ data_form.fields.label }}
-                                                </label>                                                
-                                                {{ data_form.fields }}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="mb-4 form-outline">
-                                        <div class="row">  
-                                            <div class="col-md-10">
-                                                <label for="{{ data_form.facet1.id_for_label }}" class="form-label fw-semibold">
-                                                    {{ data_form.facet1.label }}
-                                                </label>
-                                                {{ data_form.facet1 }}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="mb-4 form-outline">
-                                        <div class="row">   
-                                            <div class="col-md-10">
-                                                <label for="{{ data_form.data.id_for_label }}" class="form-label fw-semibold">
-                                                    {{ data_form.data.label }}
-                                                </label>                                                
-                                                {{ data_form.data }}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="mb-4 form-outline">
-                                        <div class="row">
-                                            <div class="col-md-10">
-                                                <label for="{{ data_form.collection.id_for_label }}" class="form-label fw-semibold">
-                                                    {{ data_form.collection.label }}
-                                                </label>
-                                                {{ data_form.collection }}
-                                            </div>
-                                        </div>
-                                    </div>
-                                {% endif %}
-                            </div>
-                        {% elif data.data_type == 'Table Character' %}
-                            <div class="row gx-2">
-                                {% if data.header %}
-                                    <div class="col-md-4">
-                                        <h4 class="mb-3">Header Information</h4>
-                                        <div class="mb-4 form-outline">
-                                            <label for="{{ data_form.local_identifier.id_for_label }}" class="form-label fw-semibold">
-                                                {{ data_form.local_identifier.label }}
-                                            </label>
-                                            {{ data_form.local_identifier }}
-                                        </div>
-                                        
-                                        <div class="mb-4 form-outline">
-                                            <label for="{{ data_form.header_object_length.id_for_label }}" class="form-label fw-semibold">
-                                                {{ data_form.header_object_length.label }}
-                                            </label>                                                
-                                            {{ data_form.header_object_length }}
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- Column 2: Partial Table Info -->
-                                    <div class="col-md-4">
-                                        <h4 class="mb-3">Table Information</h4>
-                                        <div class="mb-4 form-outline">
-                                            <label for="{{ data_form.name.id_for_label }}" class="form-label fw-semibold">
-                                                {{ data_form.name.label }}
-                                            </label>                                                
-                                                {{ data_form.name }}
-                                        </div>
-                                        
-                                        <div class="mb-4 form-outline">
-                                            <label for="{{ data_form.object_length.id_for_label }}" class="form-label fw-semibold">
-                                                {{ data_form.object_length.label }}
-                                            </label>                                                
-                                                {{ data_form.object_length }}
-                                        </div>
-                                        
-                                        <div class="mb-4 form-outline">
-                                            <label for="{{ data_form.description.id_for_label }}" class="form-label fw-semibold">
-                                                {{ data_form.description.label }}
-                                            </label>                                                
-                                                {{ data_form.description }}
-                                        </div>
-                                        
-                                        <div class="mb-4 form-outline">
-                                            <label for="{{ data_form.records.id_for_label }}" class="form-label fw-semibold">
-                                                {{ data_form.records.label }}
-                                            </label>                                                
-                                                {{ data_form.records }}
-                                        </div>
-                                    </div>
 
-                                    <div class="col-md-4">
-                                        
-                                        <div class="mb-4 form-outline">
-                                            <label for="{{ data_form.fields.id_for_label }}" class="form-label fw-semibold">
-                                                {{ data_form.fields.label }}
-                                            </label>                                                
-                                                {{ data_form.fields }}
-                                        </div>
-                                        
-                                        <div class="mb-4 form-outline">
-                                            <label for="{{ data_form.facet1.id_for_label }}" class="form-label fw-semibold">
-                                                {{ data_form.facet1.label }}
-                                            </label>                                                
-                                                {{ data_form.facet1 }}
-                                        </div>
-                                        
-                                        <div class="mb-4 form-outline">
-                                            <label for="{{ data_form.data.id_for_label }}" class="form-label fw-semibold">
-                                                {{ data_form.data.label }}
-                                            </label>                                                
-                                                {{ data_form.data }}
-                                        </div>
-                                        
-                                        <div class="mb-4 form-outline">
-                                            <label for="{{ data_form.collection.id_for_label }}" class="form-label fw-semibold">
-                                                {{ data_form.collection.label }}
-                                            </label>                                                
-                                                {{ data_form.collection }}
-                                        </div>
-                                    </div>
-                                {% else %}
-                                    <div class="mb-4 form-outline">
-                                        <div class="row">
-                                            <div class="col-md-10">
-                                                <label for="{{ data_form.name.id_for_label }}" class="form-label fw-semibold">
-                                                    {{ data_form.name.label }}
-                                                </label>                                                    
+                                                    {% if data_form.name.field.required %}
+                                                        <span class="required-badge">
+                                                            Required
+                                                        </span>
+                                                    {% endif %}
+                                                </label>
+
                                                 {{ data_form.name }}
                                             </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- <div class="mb-4 form-outline">
-                                        <div class="row">
-                                            <div class="col-md-2 mt-2">
-                                                <h6>Offset</h6>
-                                            </div>
-                                            
-                                            <div class="col-md-10">
-                                                {{ data_form.offset }}
-                                            </div>
-                                        </div>
-                                    </div> -->
-                                    
-                                    <div class="mb-4 form-outline">
-                                        <div class="row">
-                                            <div class="col-md-10">
-                                                <label for="{{ data_form.object_length.id_for_label }}" class="form-label fw-semibold">
+
+                                            <div class="data-form-field">
+                                                <label for="{{ data_form.object_length.id_for_label }}">
                                                     {{ data_form.object_length.label }}
-                                                </label>                                                    
+
+                                                    {% if data_form.object_length.field.required %}
+                                                        <span class="required-badge">
+                                                            Required
+                                                        </span>
+                                                    {% endif %}
+                                                </label>
+
                                                 {{ data_form.object_length }}
+
+                                                <small class="form-help-text">
+                                                    Total length of one table object in bytes.
+                                                </small>
                                             </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="mb-4 form-outline">
-                                        <div class="row">
-                                            <div class="col-md-10">
-                                                <label for="{{ data_form.description.id_for_label }}" class="form-label fw-semibold">
+
+                                            <div class="data-form-field">
+                                                <label for="{{ data_form.description.id_for_label }}">
                                                     {{ data_form.description.label }}
-                                                </label>                                                  
+
+                                                    {% if data_form.description.field.required %}
+                                                        <span class="required-badge">
+                                                            Required
+                                                        </span>
+                                                    {% endif %}
+                                                </label>
+
                                                 {{ data_form.description }}
+
+                                                <small class="form-help-text">
+                                                    Brief description of the table.
+                                                </small>
                                             </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="mb-4 form-outline">
-                                        <div class="row">
-                                            <div class="col-md-10">
-                                                <label for="{{ data_form.records.id_for_label }}" class="form-label fw-semibold">
+
+                                            <div class="data-form-field">
+                                                <label for="{{ data_form.records.id_for_label }}">
                                                     {{ data_form.records.label }}
-                                                </label>                                                  
+
+                                                    {% if data_form.records.field.required %}
+                                                        <span class="required-badge">
+                                                            Required
+                                                        </span>
+                                                    {% endif %}
+                                                </label>
+
                                                 {{ data_form.records }}
+
+                                                <small class="form-help-text">
+                                                    Number of records (rows) in the table.
+                                                </small>
                                             </div>
+
                                         </div>
-                                    </div>
-                                    
-                                    <div class="mb-4 form-outline">
-                                        <div class="row">
-                                            <div class="col-md-10">
-                                                <label for="{{ data_form.fields.id_for_label }}" class="form-label fw-semibold">
+
+
+                                        <!-- Remaining Information -->
+                                        <div class="col-md-4 data-form-column data-form-column-last">
+
+                                            <div class="data-form-field">
+                                                <label for="{{ data_form.field_delimiter.id_for_label }}">
+                                                    {{ data_form.field_delimiter.label }}
+
+                                                    {% if data_form.field_delimiter.field.required %}
+                                                        <span class="required-badge">
+                                                            Required
+                                                        </span>
+                                                    {% endif %}
+                                                </label>
+
+                                                {{ data_form.field_delimiter }}
+                                            </div>
+
+                                            <div class="data-form-field">
+                                                <label for="{{ data_form.fields.id_for_label }}">
                                                     {{ data_form.fields.label }}
-                                                </label>                                                  
+
+                                                    {% if data_form.fields.field.required %}
+                                                        <span class="required-badge">
+                                                            Required
+                                                        </span>
+                                                    {% endif %}
+                                                </label>
+
                                                 {{ data_form.fields }}
+
+                                                <small class="form-help-text">
+                                                    Number of fields (columns) in the table.
+                                                </small>
                                             </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="mb-4 form-outline">
-                                        <div class="row">                                            
-                                            <div class="col-md-10">
-                                                <label for="{{ data_form.facet1.id_for_label }}" class="form-label fw-semibold">
+
+                                            <div class="data-form-field">
+                                                <label for="{{ data_form.facet1.id_for_label }}">
                                                     {{ data_form.facet1.label }}
-                                                </label>                                                  
+
+                                                    {% if data_form.facet1.field.required %}
+                                                        <span class="required-badge">
+                                                            Required
+                                                        </span>
+                                                    {% endif %}
+                                                </label>
+
+                                                {{ data_form.facet1 }}
+
+                                                <small class="form-help-text">
+                                                    Primary results summary facet.
+                                                </small>
+                                            </div>
+
+                                            <div class="data-form-field">
+                                                <label for="{{ data_form.data.id_for_label }}">
+                                                    {{ data_form.data.label }}
+
+                                                    {% if data_form.data.field.required %}
+                                                        <span class="required-badge">
+                                                            Required
+                                                        </span>
+                                                    {% endif %}
+                                                </label>
+
+                                                {{ data_form.data }}
+
+                                                <small class="form-help-text">
+                                                    Associated data product.
+                                                </small>
+                                            </div>
+
+                                            <div class="data-form-field">
+                                                <label for="{{ data_form.collection.id_for_label }}">
+                                                    {{ data_form.collection.label }}
+
+                                                    {% if data_form.collection.field.required %}
+                                                        <span class="required-badge">
+                                                            Required
+                                                        </span>
+                                                    {% endif %}
+                                                </label>
+
+                                                {{ data_form.collection }}
+
+                                                <small class="form-help-text">
+                                                    Collection this table belongs to.
+                                                </small>
+                                            </div>
+
+                                        </div>
+
+                                    </div>
+
+
+                                {% else %}
+
+                                    <!-- Delimited Table Without Header -->
+                                    <div class="row g-0">
+
+                                        <div class="col-md-6 data-form-column data-form-column-first">
+
+                                            <div class="data-form-section-header">
+                                                <h4>Table Information</h4>
+                                                <p>
+                                                    Provide details about the data
+                                                    table structure and content.
+                                                </p>
+                                            </div>
+
+                                            <div class="data-form-section-divider"></div>
+
+                                            <div class="data-form-field">
+                                                <label for="{{ data_form.name.id_for_label }}">
+                                                    {{ data_form.name.label }}
+
+                                                    {% if data_form.name.field.required %}
+                                                        <span class="required-badge">Required</span>
+                                                    {% endif %}
+                                                </label>
+
+                                                {{ data_form.name }}
+                                            </div>
+
+                                            <div class="data-form-field">
+                                                <label for="{{ data_form.object_length.id_for_label }}">
+                                                    {{ data_form.object_length.label }}
+
+                                                    {% if data_form.object_length.field.required %}
+                                                        <span class="required-badge">Required</span>
+                                                    {% endif %}
+                                                </label>
+
+                                                {{ data_form.object_length }}
+
+                                                <small class="form-help-text">
+                                                    Total length of one table object in bytes.
+                                                </small>
+                                            </div>
+
+                                            <div class="data-form-field">
+                                                <label for="{{ data_form.description.id_for_label }}">
+                                                    {{ data_form.description.label }}
+
+                                                    {% if data_form.description.field.required %}
+                                                        <span class="required-badge">Required</span>
+                                                    {% endif %}
+                                                </label>
+
+                                                {{ data_form.description }}
+
+                                                <small class="form-help-text">
+                                                    Brief description of the table.
+                                                </small>
+                                            </div>
+
+                                            <div class="data-form-field">
+                                                <label for="{{ data_form.records.id_for_label }}">
+                                                    {{ data_form.records.label }}
+
+                                                    {% if data_form.records.field.required %}
+                                                        <span class="required-badge">Required</span>
+                                                    {% endif %}
+                                                </label>
+
+                                                {{ data_form.records }}
+
+                                                <small class="form-help-text">
+                                                    Number of records (rows) in the table.
+                                                </small>
+                                            </div>
+
+                                        </div>
+
+
+                                        <div class="col-md-6 data-form-column data-form-column-last">
+
+                                            <div class="data-form-field">
+                                                <label for="{{ data_form.field_delimiter.id_for_label }}">
+                                                    {{ data_form.field_delimiter.label }}
+
+                                                    {% if data_form.field_delimiter.field.required %}
+                                                        <span class="required-badge">Required</span>
+                                                    {% endif %}
+                                                </label>
+
+                                                {{ data_form.field_delimiter }}
+                                            </div>
+
+                                            <div class="data-form-field">
+                                                <label for="{{ data_form.fields.id_for_label }}">
+                                                    {{ data_form.fields.label }}
+
+                                                    {% if data_form.fields.field.required %}
+                                                        <span class="required-badge">Required</span>
+                                                    {% endif %}
+                                                </label>
+
+                                                {{ data_form.fields }}
+
+                                                <small class="form-help-text">
+                                                    Number of fields (columns) in the table.
+                                                </small>
+                                            </div>
+
+                                            <div class="data-form-field">
+                                                <label for="{{ data_form.facet1.id_for_label }}">
+                                                    {{ data_form.facet1.label }}
+
+                                                    {% if data_form.facet1.field.required %}
+                                                        <span class="required-badge">Required</span>
+                                                    {% endif %}
+                                                </label>
+
                                                 {{ data_form.facet1 }}
                                             </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="mb-4 form-outline">
-                                        <div class="row">
-                                            <div class="col-md-10">
-                                                <label for="{{ data_form.data.id_for_label }}" class="form-label fw-semibold">
+
+                                            <div class="data-form-field">
+                                                <label for="{{ data_form.data.id_for_label }}">
                                                     {{ data_form.data.label }}
-                                                </label>                                                  
+
+                                                    {% if data_form.data.field.required %}
+                                                        <span class="required-badge">Required</span>
+                                                    {% endif %}
+                                                </label>
+
                                                 {{ data_form.data }}
                                             </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="mb-4 form-outline">
-                                        <div class="row">
-                                            <div class="col-md-10">
-                                                <label for="{{ data_form.collection.id_for_label }}" class="form-label fw-semibold">
+
+                                            <div class="data-form-field">
+                                                <label for="{{ data_form.collection.id_for_label }}">
                                                     {{ data_form.collection.label }}
-                                                </label>                                                  
+
+                                                    {% if data_form.collection.field.required %}
+                                                        <span class="required-badge">Required</span>
+                                                    {% endif %}
+                                                </label>
+
                                                 {{ data_form.collection }}
                                             </div>
+
                                         </div>
+
                                     </div>
+
                                 {% endif %}
-                            </div>
-                        {% endif %}
-                        <!-- {{ data_form.as_p }} -->
-                        <!-- <div class="card-body m-4">   
-                            <div class="row">
-                                <div class="col-md-2 mt-2">
-                                    <button type="submit" class="btn btn-success btn-md">Submit</button>
-                                </div>
-                            </div>    
-                        </div> -->
-                        <div class="px-4 pb-3">
-                            <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
-                                <button type="submit" class="btn btn-success px-4">Submit</button>
-                            </div>
+
+
+                            <!-- ===================================================== -->
+                            <!-- TABLE BINARY -->
+                            <!-- ===================================================== -->
+                            {% elif data.data_type == 'Table Binary' %}
+
+                                {% if data.header %}
+
+                                    <div class="row g-0">
+
+                                        <!-- Header Information -->
+                                        <div class="col-md-4 data-form-column data-form-column-first">
+
+                                            <div class="data-form-section-header">
+                                                <h4>Header Information</h4>
+                                                <p>
+                                                    Provide details about the table
+                                                    header structure.
+                                                </p>
+                                            </div>
+
+                                            <div class="data-form-section-divider"></div>
+
+                                            <div class="data-form-field">
+                                                <label for="{{ data_form.local_identifier.id_for_label }}">
+                                                    {{ data_form.local_identifier.label }}
+
+                                                    {% if data_form.local_identifier.field.required %}
+                                                        <span class="required-badge">Required</span>
+                                                    {% endif %}
+                                                </label>
+
+                                                {{ data_form.local_identifier }}
+                                            </div>
+
+                                            <div class="data-form-field">
+                                                <label for="{{ data_form.header_object_length.id_for_label }}">
+                                                    {{ data_form.header_object_length.label }}
+
+                                                    {% if data_form.header_object_length.field.required %}
+                                                        <span class="required-badge">Required</span>
+                                                    {% endif %}
+                                                </label>
+
+                                                {{ data_form.header_object_length }}
+
+                                                <small class="form-help-text">
+                                                    Total length of the header in bytes.
+                                                </small>
+                                            </div>
+
+                                        </div>
+
+
+                                        <!-- Table Information -->
+                                        <div class="col-md-4 data-form-column">
+
+                                            <div class="data-form-section-header">
+                                                <h4>Table Information</h4>
+                                                <p>
+                                                    Provide details about the binary
+                                                    table structure and content.
+                                                </p>
+                                            </div>
+
+                                            <div class="data-form-section-divider"></div>
+
+                                            <div class="data-form-field">
+                                                <label for="{{ data_form.name.id_for_label }}">
+                                                    {{ data_form.name.label }}
+
+                                                    {% if data_form.name.field.required %}
+                                                        <span class="required-badge">Required</span>
+                                                    {% endif %}
+                                                </label>
+
+                                                {{ data_form.name }}
+                                            </div>
+
+                                            <div class="data-form-field">
+                                                <label for="{{ data_form.records.id_for_label }}">
+                                                    {{ data_form.records.label }}
+
+                                                    {% if data_form.records.field.required %}
+                                                        <span class="required-badge">Required</span>
+                                                    {% endif %}
+                                                </label>
+
+                                                {{ data_form.records }}
+
+                                                <small class="form-help-text">
+                                                    Number of records (rows) in the table.
+                                                </small>
+                                            </div>
+
+                                            <div class="data-form-field">
+                                                <label for="{{ data_form.fields.id_for_label }}">
+                                                    {{ data_form.fields.label }}
+
+                                                    {% if data_form.fields.field.required %}
+                                                        <span class="required-badge">Required</span>
+                                                    {% endif %}
+                                                </label>
+
+                                                {{ data_form.fields }}
+
+                                                <small class="form-help-text">
+                                                    Number of fields in each record.
+                                                </small>
+                                            </div>
+
+                                        </div>
+
+
+                                        <!-- Remaining Information -->
+                                        <div class="col-md-4 data-form-column data-form-column-last">
+
+                                            <div class="data-form-field">
+                                                <label for="{{ data_form.facet1.id_for_label }}">
+                                                    {{ data_form.facet1.label }}
+
+                                                    {% if data_form.facet1.field.required %}
+                                                        <span class="required-badge">Required</span>
+                                                    {% endif %}
+                                                </label>
+
+                                                {{ data_form.facet1 }}
+                                            </div>
+
+                                            <div class="data-form-field">
+                                                <label for="{{ data_form.data.id_for_label }}">
+                                                    {{ data_form.data.label }}
+
+                                                    {% if data_form.data.field.required %}
+                                                        <span class="required-badge">Required</span>
+                                                    {% endif %}
+                                                </label>
+
+                                                {{ data_form.data }}
+                                            </div>
+
+                                            <div class="data-form-field">
+                                                <label for="{{ data_form.collection.id_for_label }}">
+                                                    {{ data_form.collection.label }}
+
+                                                    {% if data_form.collection.field.required %}
+                                                        <span class="required-badge">Required</span>
+                                                    {% endif %}
+                                                </label>
+
+                                                {{ data_form.collection }}
+                                            </div>
+
+                                        </div>
+
+                                    </div>
+
+
+                                {% else %}
+
+                                    <!-- Binary Table Without Header -->
+                                    <div class="row justify-content-center">
+
+                                        <div class="col-md-8">
+
+                                            <div class="data-form-section-header">
+                                                <h4>Table Information</h4>
+                                                <p>
+                                                    Provide details about the binary
+                                                    table structure and content.
+                                                </p>
+                                            </div>
+
+                                            <div class="data-form-section-divider"></div>
+
+                                            <div class="data-form-field">
+                                                <label for="{{ data_form.name.id_for_label }}">
+                                                    {{ data_form.name.label }}
+
+                                                    {% if data_form.name.field.required %}
+                                                        <span class="required-badge">Required</span>
+                                                    {% endif %}
+                                                </label>
+
+                                                {{ data_form.name }}
+                                            </div>
+
+                                            <div class="data-form-field">
+                                                <label for="{{ data_form.records.id_for_label }}">
+                                                    {{ data_form.records.label }}
+
+                                                    {% if data_form.records.field.required %}
+                                                        <span class="required-badge">Required</span>
+                                                    {% endif %}
+                                                </label>
+
+                                                {{ data_form.records }}
+                                            </div>
+
+                                            <div class="data-form-field">
+                                                <label for="{{ data_form.fields.id_for_label }}">
+                                                    {{ data_form.fields.label }}
+
+                                                    {% if data_form.fields.field.required %}
+                                                        <span class="required-badge">Required</span>
+                                                    {% endif %}
+                                                </label>
+
+                                                {{ data_form.fields }}
+                                            </div>
+
+                                            <div class="data-form-field">
+                                                <label for="{{ data_form.facet1.id_for_label }}">
+                                                    {{ data_form.facet1.label }}
+
+                                                    {% if data_form.facet1.field.required %}
+                                                        <span class="required-badge">Required</span>
+                                                    {% endif %}
+                                                </label>
+
+                                                {{ data_form.facet1 }}
+                                            </div>
+
+                                            <div class="data-form-field">
+                                                <label for="{{ data_form.data.id_for_label }}">
+                                                    {{ data_form.data.label }}
+
+                                                    {% if data_form.data.field.required %}
+                                                        <span class="required-badge">Required</span>
+                                                    {% endif %}
+                                                </label>
+
+                                                {{ data_form.data }}
+                                            </div>
+
+                                            <div class="data-form-field">
+                                                <label for="{{ data_form.collection.id_for_label }}">
+                                                    {{ data_form.collection.label }}
+
+                                                    {% if data_form.collection.field.required %}
+                                                        <span class="required-badge">Required</span>
+                                                    {% endif %}
+                                                </label>
+
+                                                {{ data_form.collection }}
+                                            </div>
+
+                                        </div>
+
+                                    </div>
+
+                                {% endif %}
+
+
+                            <!-- ===================================================== -->
+                            <!-- TABLE CHARACTER -->
+                            <!-- ===================================================== -->
+                            {% elif data.data_type == 'Table Character' %}
+
+                                {% if data.header %}
+
+                                    <div class="row g-0">
+
+                                        <!-- Header Information -->
+                                        <div class="col-md-4 data-form-column data-form-column-first">
+
+                                            <div class="data-form-section-header">
+                                                <h4>Header Information</h4>
+                                                <p>
+                                                    Provide details about the table
+                                                    header structure.
+                                                </p>
+                                            </div>
+
+                                            <div class="data-form-section-divider"></div>
+
+                                            <div class="data-form-field">
+                                                <label for="{{ data_form.local_identifier.id_for_label }}">
+                                                    {{ data_form.local_identifier.label }}
+
+                                                    {% if data_form.local_identifier.field.required %}
+                                                        <span class="required-badge">Required</span>
+                                                    {% endif %}
+                                                </label>
+
+                                                {{ data_form.local_identifier }}
+                                            </div>
+
+                                            <div class="data-form-field">
+                                                <label for="{{ data_form.header_object_length.id_for_label }}">
+                                                    {{ data_form.header_object_length.label }}
+
+                                                    {% if data_form.header_object_length.field.required %}
+                                                        <span class="required-badge">Required</span>
+                                                    {% endif %}
+                                                </label>
+
+                                                {{ data_form.header_object_length }}
+
+                                                <small class="form-help-text">
+                                                    Total length of the header in bytes.
+                                                </small>
+                                            </div>
+
+                                        </div>
+
+
+                                        <!-- Table Information -->
+                                        <div class="col-md-4 data-form-column">
+
+                                            <div class="data-form-section-header">
+                                                <h4>Table Information</h4>
+                                                <p>
+                                                    Provide details about the character
+                                                    table structure and content.
+                                                </p>
+                                            </div>
+
+                                            <div class="data-form-section-divider"></div>
+
+                                            <div class="data-form-field">
+                                                <label for="{{ data_form.name.id_for_label }}">
+                                                    {{ data_form.name.label }}
+
+                                                    {% if data_form.name.field.required %}
+                                                        <span class="required-badge">Required</span>
+                                                    {% endif %}
+                                                </label>
+
+                                                {{ data_form.name }}
+                                            </div>
+
+                                            <div class="data-form-field">
+                                                <label for="{{ data_form.object_length.id_for_label }}">
+                                                    {{ data_form.object_length.label }}
+
+                                                    {% if data_form.object_length.field.required %}
+                                                        <span class="required-badge">Required</span>
+                                                    {% endif %}
+                                                </label>
+
+                                                {{ data_form.object_length }}
+
+                                                <small class="form-help-text">
+                                                    Total length of one table object in bytes.
+                                                </small>
+                                            </div>
+
+                                            <div class="data-form-field">
+                                                <label for="{{ data_form.description.id_for_label }}">
+                                                    {{ data_form.description.label }}
+
+                                                    {% if data_form.description.field.required %}
+                                                        <span class="required-badge">Required</span>
+                                                    {% endif %}
+                                                </label>
+
+                                                {{ data_form.description }}
+
+                                                <small class="form-help-text">
+                                                    Brief description of the table.
+                                                </small>
+                                            </div>
+
+                                            <div class="data-form-field">
+                                                <label for="{{ data_form.records.id_for_label }}">
+                                                    {{ data_form.records.label }}
+
+                                                    {% if data_form.records.field.required %}
+                                                        <span class="required-badge">Required</span>
+                                                    {% endif %}
+                                                </label>
+
+                                                {{ data_form.records }}
+
+                                                <small class="form-help-text">
+                                                    Number of records (rows) in the table.
+                                                </small>
+                                            </div>
+
+                                        </div>
+
+
+                                        <!-- Remaining Information -->
+                                        <div class="col-md-4 data-form-column data-form-column-last">
+
+                                            <div class="data-form-field">
+                                                <label for="{{ data_form.fields.id_for_label }}">
+                                                    {{ data_form.fields.label }}
+
+                                                    {% if data_form.fields.field.required %}
+                                                        <span class="required-badge">Required</span>
+                                                    {% endif %}
+                                                </label>
+
+                                                {{ data_form.fields }}
+
+                                                <small class="form-help-text">
+                                                    Number of fields in the table.
+                                                </small>
+                                            </div>
+
+                                            <div class="data-form-field">
+                                                <label for="{{ data_form.facet1.id_for_label }}">
+                                                    {{ data_form.facet1.label }}
+
+                                                    {% if data_form.facet1.field.required %}
+                                                        <span class="required-badge">Required</span>
+                                                    {% endif %}
+                                                </label>
+
+                                                {{ data_form.facet1 }}
+                                            </div>
+
+                                            <div class="data-form-field">
+                                                <label for="{{ data_form.data.id_for_label }}">
+                                                    {{ data_form.data.label }}
+
+                                                    {% if data_form.data.field.required %}
+                                                        <span class="required-badge">Required</span>
+                                                    {% endif %}
+                                                </label>
+
+                                                {{ data_form.data }}
+                                            </div>
+
+                                            <div class="data-form-field">
+                                                <label for="{{ data_form.collection.id_for_label }}">
+                                                    {{ data_form.collection.label }}
+
+                                                    {% if data_form.collection.field.required %}
+                                                        <span class="required-badge">Required</span>
+                                                    {% endif %}
+                                                </label>
+
+                                                {{ data_form.collection }}
+                                            </div>
+
+                                        </div>
+
+                                    </div>
+
+
+                                {% else %}
+
+                                    <!-- Character Table Without Header -->
+                                    <div class="row justify-content-center">
+
+                                        <div class="col-md-8">
+
+                                            <div class="data-form-section-header">
+                                                <h4>Table Information</h4>
+                                                <p>
+                                                    Provide details about the character
+                                                    table structure and content.
+                                                </p>
+                                            </div>
+
+                                            <div class="data-form-section-divider"></div>
+
+                                            <div class="data-form-field">
+                                                <label for="{{ data_form.name.id_for_label }}">
+                                                    {{ data_form.name.label }}
+
+                                                    {% if data_form.name.field.required %}
+                                                        <span class="required-badge">Required</span>
+                                                    {% endif %}
+                                                </label>
+
+                                                {{ data_form.name }}
+                                            </div>
+
+                                            <div class="data-form-field">
+                                                <label for="{{ data_form.object_length.id_for_label }}">
+                                                    {{ data_form.object_length.label }}
+
+                                                    {% if data_form.object_length.field.required %}
+                                                        <span class="required-badge">Required</span>
+                                                    {% endif %}
+                                                </label>
+
+                                                {{ data_form.object_length }}
+                                            </div>
+
+                                            <div class="data-form-field">
+                                                <label for="{{ data_form.description.id_for_label }}">
+                                                    {{ data_form.description.label }}
+
+                                                    {% if data_form.description.field.required %}
+                                                        <span class="required-badge">Required</span>
+                                                    {% endif %}
+                                                </label>
+
+                                                {{ data_form.description }}
+                                            </div>
+
+                                            <div class="data-form-field">
+                                                <label for="{{ data_form.records.id_for_label }}">
+                                                    {{ data_form.records.label }}
+
+                                                    {% if data_form.records.field.required %}
+                                                        <span class="required-badge">Required</span>
+                                                    {% endif %}
+                                                </label>
+
+                                                {{ data_form.records }}
+                                            </div>
+
+                                            <div class="data-form-field">
+                                                <label for="{{ data_form.fields.id_for_label }}">
+                                                    {{ data_form.fields.label }}
+
+                                                    {% if data_form.fields.field.required %}
+                                                        <span class="required-badge">Required</span>
+                                                    {% endif %}
+                                                </label>
+
+                                                {{ data_form.fields }}
+                                            </div>
+
+                                            <div class="data-form-field">
+                                                <label for="{{ data_form.facet1.id_for_label }}">
+                                                    {{ data_form.facet1.label }}
+
+                                                    {% if data_form.facet1.field.required %}
+                                                        <span class="required-badge">Required</span>
+                                                    {% endif %}
+                                                </label>
+
+                                                {{ data_form.facet1 }}
+                                            </div>
+
+                                            <div class="data-form-field">
+                                                <label for="{{ data_form.data.id_for_label }}">
+                                                    {{ data_form.data.label }}
+
+                                                    {% if data_form.data.field.required %}
+                                                        <span class="required-badge">Required</span>
+                                                    {% endif %}
+                                                </label>
+
+                                                {{ data_form.data }}
+                                            </div>
+
+                                            <div class="data-form-field">
+                                                <label for="{{ data_form.collection.id_for_label }}">
+                                                    {{ data_form.collection.label }}
+
+                                                    {% if data_form.collection.field.required %}
+                                                        <span class="required-badge">Required</span>
+                                                    {% endif %}
+                                                </label>
+
+                                                {{ data_form.collection }}
+                                            </div>
+
+                                        </div>
+
+                                    </div>
+
+                                {% endif %}
+
+                            {% endif %}
+
                         </div>
+
+
+                        <!-- Form Footer -->
+                        <div class="data-table-card-footer">
+
+                            <button
+                                type="submit"
+                                class="btn btn-success data-table-submit"
+                            >
+                                Submit
+                            </button>
+
+                        </div>
+
                     </form>
-                </div>                                                   
-            </div>
-            <!-- Back Button -->
-            <div class="row mt-3">
-                <div class="col-md-12 d-flex align-items-center justify-content-center">
-                    <a href="{% url 'build:bundle' bundle.pk %}" class="btn-custom">
-                        <i class="fa fa-arrow-circle-left" style="margin-right: 5px;"></i> Bundle Details
-                    </a>
+
                 </div>
-            </div>  
+
+
+                <!-- Bundle Details Button -->
+                <div class="text-center mt-3">
+
+                    <a
+                        href="{% url 'build:bundle' bundle.pk %}"
+                        class="btn-custom"
+                    >
+                        <i class="fa fa-arrow-circle-left"></i>
+                        Bundle Details
+                    </a>
+
+                </div>
+
+            </div>
         </div>
+
     </div>
 </div>
-</div>
+
 {% endblock %}
