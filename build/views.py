@@ -1104,20 +1104,30 @@ def bundle(request, pk_bundle):
                 # collide: the second overwrites the first file AND its label, leaving two database
                 # rows pointing at one path. Their AMA metadata then silently overwrites each
                 # other, because both regenerate the same label. Refuse instead, and say what to do.
+                #
+                # Compared after sanitising, on both sides, because the sanitised name is what
+                # actually lands on disk: the storage turns "a - Copy.nc" into "a_-_Copy.nc".
+                # Comparing the raw upload name against stored names let a second copy of any such
+                # file straight through, and storage did not catch it either: by then the first
+                # copy has been moved out of MEDIA_ROOT into the collection, so there was no name
+                # there to uniquify against. The second upload overwrote the first file and its
+                # label, and the two rows left pointing at that one path overwrote each other's
+                # AMA metadata. The message quotes the name the user chose, not the sanitised one.
+                storage = NetCDFFile._meta.get_field('file').storage
                 existing_names = {
-                    os.path.basename(name) for name in
+                    storage.get_valid_name(os.path.basename(name)) for name in
                     NetCDFFile.objects.filter(collection=netcdf_collection)
                     .values_list('file', flat=True) if name
                 }
                 seen_in_this_upload = set()
                 for f in files:
-                    incoming = os.path.basename(f.name)
+                    incoming = storage.get_valid_name(os.path.basename(f.name))
                     if incoming in existing_names or incoming in seen_in_this_upload:
                         return JsonResponse(
                             {'error': 'A file named "{}" is already in the "{}" collection. '
                                       'Delete it first if you want to replace it, or rename the '
                                       'file, since two files cannot share a name inside one '
-                                      'collection.'.format(incoming,
+                                      'collection.'.format(os.path.basename(f.name),
                                                            netcdf_collection.collection_name)},
                             status=400
                         )
@@ -1164,6 +1174,34 @@ def bundle(request, pk_bundle):
                                       + '; '.join(errors)},
                             status=400
                         )
+
+                # The upload posts over XHR and the page reloads itself afterwards, so the reply
+                # has to carry enough for the reloaded page to land the user back on the collection
+                # they uploaded into and name the files that just arrived. A redirect says none of
+                # that, and messages.success() cannot fill the gap either: XHR follows the 302
+                # silently and the message is consumed rendering a response that is thrown away.
+                # The plain-form path (no JS) keeps the redirect it has always had.
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    # The AMA reading travels with the reply rather than being read back off the
+                    # Files tree once the page reloads. The tree is a view of the labels on disk,
+                    # so a file it cannot place leaves the notice with nothing to say and no offer
+                    # to make; these numbers come from the same resolution the tree uses and are
+                    # true whether or not a row turns up. ama_url is the standalone editor, which
+                    # is where the offer leads when there is no label row to open the drawer from.
+                    ama_filled = _ama_completeness_by_file(bundle)
+                    return JsonResponse({
+                        'collection_id': netcdf_collection.id,
+                        'collection_name': netcdf_collection.collection_name,
+                        'tab_target': '#additional_collection_{}'.format(netcdf_collection.id),
+                        'files': [{
+                            'id': obj.id,
+                            'title': obj.title,
+                            'ama_filled': ama_filled.get(obj.id, 0),
+                            'ama_total': AMA_TOTAL_FIELDS,
+                            'ama_url': reverse('build:netcdf_ama', kwargs={
+                                'pk_bundle': bundle.id, 'pk_netcdf': obj.id}),
+                        } for obj in created_objs],
+                    })
 
                 return HttpResponseRedirect('/elsa/build/' + str(bundle.pk) + '/')
 
@@ -1791,12 +1829,28 @@ def _bundle_file_tree(bundle):
     # sanitises what actually lands on disk ("a - Copy.nc" becomes "a_-_Copy.nc"), and the label is
     # written next to the file. Matching on title alone silently lost the status of every file whose
     # name needed sanitising. Both are registered so rows with no stored file still resolve.
+    #
+    # Keyed on the collection directory as well, because a stem is only unique inside one
+    # collection. Two collections may hold a file of the same name, and an old row left unassigned
+    # keeps its stem for the whole bundle; a stem-only lookup handed the label to whichever row had
+    # the lower pk. When that row was the unassigned one, the label came out with no netcdf_id at
+    # all, which took the AMA reading and the Edit AMA metadata button off a file that had both.
+    # The directory the label sits in is what says which collection it belongs to, so that is what
+    # decides. The stem-only map stays as a fallback for labels whose directory matches no
+    # collection record, and for files with nothing stored on disk.
+    collection_dir_by_id = {
+        collection.id: os.path.basename(collection.directory())
+        for collection in collections_in_order}
+
+    netcdf_by_dir_stem = {}
     netcdf_by_stem = {}
     for netcdf_file in NetCDFFile.objects.filter(bundle=bundle):
+        directory = collection_dir_by_id.get(netcdf_file.collection_id, '')
         for candidate in (netcdf_file.file.name, netcdf_file.title):
             if candidate:
-                netcdf_by_stem.setdefault(
-                    os.path.splitext(os.path.basename(candidate))[0], netcdf_file)
+                stem = os.path.splitext(os.path.basename(candidate))[0]
+                netcdf_by_dir_stem.setdefault((directory, stem), netcdf_file)
+                netcdf_by_stem.setdefault(stem, netcdf_file)
 
     # Empty for Archive bundles, which is what keeps the AMA reading off the Archive Files card:
     # the template only renders it when the entry carries an ama_total.
@@ -1834,7 +1888,7 @@ def _bundle_file_tree(bundle):
                 entry['describes'] = sibling
                 break
 
-        netcdf_file = netcdf_by_stem.get(stem)
+        netcdf_file = netcdf_by_dir_stem.get((folder_name, stem)) or netcdf_by_stem.get(stem)
         if netcdf_file is not None:
             entry['processed'] = netcdf_file.processed
             entry['processing_error'] = netcdf_file.processing_error
@@ -5084,7 +5138,12 @@ def _ama_namespaces():
         'ama': 'http://pds.nasa.gov/pds4/ama/v1',
     }
     ET.register_namespace('ama', NS['ama'])  # Needed to preserve ama prefix in output
-    ET.register_namespace('pds', NS['pds'])  # Add this alongside ama
+    # The PDS namespace is registered under the EMPTY prefix, not 'pds'. PDS4 labels carry the
+    # pds namespace as the default one (xmlns="...", bare <Identification_Area>), which is what
+    # Template_PE.xml and every other label ELSA writes look like. Registering it as 'pds' here
+    # made the stdlib serializer prefix every pds element on output (<pds:Identification_Area>),
+    # so the NetCDF labels came out looking unlike the rest of the archive.
+    ET.register_namespace('', NS['pds'])
     return NS
 
 

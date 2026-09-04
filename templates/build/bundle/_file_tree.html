@@ -88,8 +88,9 @@ renders per request, so the script below owns the wiring for both.
 
    /* Amber, deliberately not Bootstrap's .text-warning on white, which is unreadable. This is a
       nudge about optional content, so it must not compete with the red dot that means the file
-      could not be read at all. */
-   .elsa-file-tree .eft-ama-none { color: #997404; }
+      could not be read at all. Named -incomplete rather than -none: it covers everything from an
+      empty label to one field short of the full set. */
+   .elsa-file-tree .eft-ama-incomplete { color: #997404; }
 
    .elsa-file-tree .eft-body { max-height: 720px; overflow-y: auto; }
    .elsa-file-tree .eft-status { flex-shrink: 0; margin-top: .15rem; }
@@ -215,35 +216,64 @@ renders per request, so the script below owns the wiring for both.
                         fault. The red dot beside it stays reserved for real failures.{% endcomment %}
                         {% if label.ama_total %}
                         {% comment %}Amber, never red: all 28 attributes are minOccurs="0" in the
-                           LDD, so a label with none of them is valid PDS4 and this is a nudge, not
-                           a fault. It is shown only at zero - once anything is filled the count
-                           itself is the signal, and because the collection default is inherited,
-                           filling one file clears this for every file in the collection.{% endcomment %}
-                        {% if label.ama_filled %}
+                           LDD, so a label short of the full set is valid PDS4 and this is a nudge,
+                           not a fault. Amber runs the whole way from nothing to nearly everything,
+                           because a file at 1 of 28 is far closer to undescribed than to described
+                           and used to be shown exactly like a file at 28 of 28.
+
+                           No icon of its own: the status slot on the right of this row carries the
+                           same signal, and two icons on one row read as two problems.{% endcomment %}
+                        {% if label.ama_filled == label.ama_total %}
                         <span class="small text-muted eft-ama d-block"
-                           title="Optional AMA metadata written into this label. Blank fields are left out; a label with none of them is still valid PDS4.">
+                           title="Every AMA field this label can carry is filled in.">
+                           {{ label.ama_filled }} of {{ label.ama_total }} described
+                        </span>
+                        {% elif label.ama_filled %}
+                        <span class="small eft-ama eft-ama-incomplete d-block"
+                           title="{{ label.ama_filled }} of {{ label.ama_total }} AMA fields are filled in. They are all optional, so the label is valid PDS4 as it stands and nothing is broken; the rest are things nothing in the archive says about this model run yet.">
                            {{ label.ama_filled }} of {{ label.ama_total }} described
                         </span>
                         {% else %}
-                        <span class="small eft-ama eft-ama-none d-block"
-                           title="No AMA metadata yet. It is optional, so the label is still valid PDS4, but nothing here describes the model run that produced this file.">
-                           <i class="bi bi-exclamation-circle me-1"></i>No AMA metadata yet
+                        <span class="small eft-ama eft-ama-incomplete d-block"
+                           title="No AMA metadata yet. These fields are optional, so the label is still valid PDS4 and nothing is broken, but nothing here describes the model run that produced this file.">
+                           No AMA metadata yet
                         </span>
                         {% endif %}
                         {% endif %}
                      </span>
 
-                     {% comment %}processed is None for labels with no NetCDFFile row behind them
-                     (documents, collection labels), so absence of a dot is not a failure.{% endcomment %}
-                     {% if label.processed is True %}
-                     {% comment %}This dot is about READING the file, not about how described it
-                        is. "Metadata extracted" read as "metadata done" and sat beside a
-                        "0 of 28 described" line saying the opposite.{% endcomment %}
-                     <i class="bi bi-check-circle-fill text-success eft-status"
-                        title="ELSA read this file and generated its label. Variables and coordinates were taken from the netCDF itself."></i>
-                     {% elif label.processed is False %}
+                     {% comment %}The slot reads how described the label is, not whether the file
+                     was read. The tick that used to sit here meant the latter, which was true of
+                     every row it could ever appear on: a file only reaches this tree once its
+                     label has been written, and a label that was never written produces no row.
+
+                     Every data label gets one of the three, so no row is left saying nothing. The
+                     earlier version showed the caution only at zero, which gave a file at 1 of 28
+                     the same blank slot as a file at 28 of 28 even though one of them is as good
+                     as undescribed.
+
+                     Amber covers everything short of the full set. All 28 attributes are optional,
+                     so this is never an error, and both the icon and its tooltip say so: a label
+                     is publishable at any count. The green tick is reserved for the one state
+                     where there is genuinely nothing left to add.
+
+                     Red means the label on disk is stale: regeneration after an AMA save can fail
+                     on a file whose label was written successfully earlier, and that row does stay
+                     in the tree. It takes precedence, because a label that failed to rebuild is a
+                     fault and an incomplete one is not.
+
+                     processed is None for labels with no NetCDFFile row behind them (documents,
+                     collection labels), and ama_total is None outside an External bundle, so no
+                     icon appears on rows where none of this means anything.{% endcomment %}
+                     {% if label.processed is False %}
                      <i class="bi bi-exclamation-circle-fill text-danger eft-status"
                         title="{% if label.processing_error %}{{ label.processing_error }}{% else %}Label generation did not complete for this file.{% endif %}"></i>
+                     {% elif label.ama_total and label.ama_filled == label.ama_total %}
+                     <i class="bi bi-check-circle-fill text-success eft-status"
+                        title="Fully described: all {{ label.ama_total }} AMA fields are filled in."></i>
+                     {% elif label.ama_total %}
+                     <i class="bi bi-exclamation-triangle-fill eft-status eft-ama-incomplete"
+                        title="{% if label.ama_filled %}{{ label.ama_filled }} of {{ label.ama_total }} AMA fields are filled in.{% else %}No AMA metadata yet.{% endif %} They are all optional, so this label is valid PDS4 as it stands and nothing is broken. Open it to describe more of the model run behind the data."></i>
                      {% endif %}
                   </button>
                   {% endfor %}

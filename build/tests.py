@@ -461,6 +461,96 @@ class AMALabelWritingTests(AMATestCaseMixin, TestCase):
         views.write_ama_user_classes(root, NS, self.bundle, netcdf_obj=self.nc_one)
         self.assertEqual(len(root), 1)
 
+class NetCDFLabelNamespaceTests(AMATestCaseMixin, TestCase):
+    """The generated NetCDF labels must look like every other label in the bundle.
+
+    PDS4 puts the pds namespace on the root as the default one, so elements are written bare
+    (<Identification_Area>). The NetCDF path went through the stdlib serializer with the pds
+    namespace registered under a 'pds' prefix, which stamped <pds:...> on every element of the
+    only labels ELSA generates that way.
+    """
+
+    def setUp(self):
+        super().setUp()
+        try:
+            import numpy  # noqa: F401
+            import xarray  # noqa: F401
+        except ImportError as exc:
+            self.skipTest('xarray unavailable: {}'.format(exc))
+        cache.clear()
+        cache.set('ldd_schema:' + views.AMA_LDD_URL, MINIMAL_LDD.encode('utf-8'), 300)
+        self.addCleanup(cache.clear)
+
+    def write_netcdf(self, netcdf_file):
+        """Put a real (tiny) NetCDF file where the label generator expects to find it."""
+        import numpy as np
+        import xarray as xr
+
+        dataset = xr.Dataset(
+            {'temp': (('lat', 'lon'), np.zeros((2, 2), dtype='float32'), {'units': 'K'})},
+            coords={'lat': ('lat', np.array([-45.0, 45.0]), {'units': 'degrees_north'}),
+                    'lon': ('lon', np.array([0.0, 180.0]), {'units': 'degrees_east'})})
+        path = os.path.join(
+            netcdf_file.directory(), os.path.basename(netcdf_file.file.name))
+        dataset.to_netcdf(path)
+        dataset.close()
+        return path
+
+    def build_label(self, netcdf_file=None):
+        netcdf_file = netcdf_file or self.nc_one
+        self.write_netcdf(netcdf_file)
+        errors = views.regenerate_netcdf_labels(self.bundle, [netcdf_file])
+        self.assertEqual(errors, [], 'label generation failed')
+        path = os.path.join(
+            netcdf_file.directory(),
+            os.path.splitext(os.path.basename(netcdf_file.file.name))[0] + '.xml')
+        self.assertTrue(os.path.exists(path), 'no label written')
+        with open(path, encoding='utf-8') as handle:
+            return path, handle.read()
+
+    def test_no_line_of_a_netcdf_label_starts_with_a_pds_prefix(self):
+        path, text = self.build_label()
+        offenders = [line.strip() for line in text.splitlines()
+                     if line.lstrip().startswith('<pds:') or line.lstrip().startswith('</pds:')]
+        self.assertEqual(offenders, [], 'pds-prefixed elements in {}'.format(path))
+
+    def test_the_pds_namespace_is_the_default_one_on_the_root(self):
+        _, text = self.build_label()
+        self.assertIn('xmlns="{}"'.format(PDS), text)
+        self.assertNotIn('xmlns:pds=', text)
+        self.assertTrue(text.lstrip().startswith('<?xml') or text.startswith('<Product_External'))
+
+    def test_the_label_still_parses_into_the_pds_namespace(self):
+        """Dropping the prefix must change the serialisation only, not what the elements are."""
+        path, _ = self.build_label()
+        root = ET.parse(path).getroot()
+        self.assertEqual(root.tag, '{{{}}}Product_External'.format(PDS))
+        self.assertIsNotNone(root.find('pds:Identification_Area/pds:title', namespaces=NS))
+
+    def test_the_ama_prefix_is_still_written(self):
+        """ama is a secondary namespace and has to keep its prefix; only pds goes bare."""
+        _, text = self.build_label()
+        self.assertIn('xmlns:ama="{}"'.format(AMA), text)
+        self.assertIn('<ama:', text)
+
+    def test_no_xml_file_anywhere_in_an_external_bundle_uses_the_prefix(self):
+        """The whole external bundle directory, not just the one label under test."""
+        for netcdf_file in (self.nc_one, self.nc_two, self.nc_beta):
+            self.build_label(netcdf_file)
+
+        checked = []
+        for directory, _dirs, filenames in os.walk(self.bundle.directory()):
+            for filename in filenames:
+                if not filename.endswith('.xml'):
+                    continue
+                full = os.path.join(directory, filename)
+                with open(full, encoding='utf-8') as handle:
+                    contents = handle.read()
+                checked.append(full)
+                self.assertNotIn('<pds:', contents, 'pds prefix in {}'.format(full))
+                self.assertNotIn('xmlns:pds=', contents, 'pds prefix declared in {}'.format(full))
+        self.assertEqual(len(checked), 3, 'expected one label per NetCDF file')
+
 
 class AMAFormTests(AMATestCaseMixin, TestCase):
 
@@ -1248,17 +1338,168 @@ class AMATemplateTests(AMATestCaseMixin, TestCase):
         self.assertNotIn('<form', file_list)
         self.assertNotIn('<button type="submit"', file_list)
 
-    def test_own_metadata_badge_only_shows_for_files_with_an_override(self):
+    def test_the_file_list_spends_its_width_on_the_filename(self):
+        """The row used to carry an "Own metadata" badge and cap the name at a fixed 150px, so
+        most filenames were cut well short of the space the row actually had. The badge said
+        something this card cannot act on; the Files card reports what each label carries, per
+        file, in the place where it can be edited."""
         SimulationConfiguration.objects.create(
             bundle=self.bundle, collection=self.alpha, netcdf_file=self.nc_one,
             horizontal_grid_type='cube-sphere')
+        content = self.bundle_page()
 
-        self.assertEqual(self.bundle_page().count('Own metadata'), 1)
+        self.assertNotIn('Own metadata', content)
+        self.assertNotIn('max-width: 150px', content)
+        # Still named in full in the title attribute, for the names too long for any row.
+        self.assertIn('title="{}"'.format(self.nc_one.title), content)
+
+    def test_the_tree_cautions_every_label_short_of_the_full_set(self):
+        """Not only the empty ones. A file at 2 of 28 has nearly nothing in it, and the tick that
+        used to sit here meant "ELSA read the file", which was true of every row it could ever
+        appear on. Amber runs from empty to nearly full; the tick is kept for 28 of 28.
+        """
+        self.make_default_model_metadata(collection=self.beta, name='LMD', institution='NMSU')
+        for netcdf_file in (self.nc_one, self.nc_two, self.nc_beta):
+            self.write_label(netcdf_file)
+        content = self.bundle_page()
+
+        # All three: alpha's two are empty, and nc_beta inherits two of its collection's fields,
+        # which is still a long way short of the full set.
+        self.assertEqual(content.count('bi-exclamation-triangle-fill eft-status'), 3)
+        self.assertNotIn('bi-check-circle-fill text-success eft-status', content)
+        self.assertIn('2 of 28 described', content)
+        # The caution has to say it is a nudge: every AMA field is optional and a label carrying
+        # none of them is valid PDS4.
+        start = content.index('bi-exclamation-triangle-fill eft-status')
+        self.assertIn('optional', content[start:start + 400])
+
+    def test_each_collection_tab_carries_its_own_delete(self):
+        """The card that used to hold this was a paragraph identical on every collection above a
+        Delete button given a full row. Delete belongs beside the name of the thing it deletes,
+        and the paragraph belongs in the tooltip the card header already has."""
+        content = self.bundle_page()
+
+        for collection in (self.alpha, self.beta):
+            with self.subTest(collection=collection.collection_name):
+                self.assertIn(
+                    'data-bs-target="#deleteCollectionModal{}"'.format(collection.pk), content)
+                self.assertIn(
+                    'aria-label="Delete the {} collection"'.format(collection.collection_name),
+                    content)
+
+        # Gone from the panes: the boilerplate, and the delete that had a row to itself. The
+        # words "Delete Collection" still appear, in the modal, which is the point of it.
+        self.assertNotIn('This is a model output', content)
+        pane_at = content.index('id="additional_collection_{}"'.format(self.alpha.pk))
+        panes = content[pane_at:content.index('id="add_a_collection"', pane_at)]
+        self.assertNotIn('deleteCollectionModal', panes,
+                         'a delete trigger is still inside a collection pane')
+        # The paragraph's one unique sentence lives on in the card header's tooltip instead.
+        self.assertIn('writes them into that product', content)
+
+    def test_a_collections_delete_modal_is_not_trapped_in_its_tab(self):
+        """Bootstrap gives an inactive .tab-pane display:none. Left inside one, the modal could not
+        be opened from any tab but its own, and the trigger is on every tab now."""
+        content = self.bundle_page()
+
+        panes_end = content.index('<!-- The Rest -->')
+        modal_at = content.index('id="deleteCollectionModal{}"'.format(self.alpha.pk))
+        # The trigger is up in the nav, the modal is down past everything the tabs contain.
+        self.assertGreater(modal_at, panes_end - len(content),
+                           'sanity: the modal has to be somewhere')
+        self.assertLess(content.index('data-bs-target="#deleteCollectionModal{}"'.format(
+            self.alpha.pk)), modal_at)
+        pane_at = content.index('id="additional_collection_{}"'.format(self.alpha.pk))
+        pane_close = content.index('id="add_a_collection"', pane_at)
+        self.assertGreater(modal_at, pane_close,
+                           'the modal is still inside the tab content')
+
+    def test_the_upload_area_is_not_a_card_inside_a_card(self):
+        """It was a bordered card with its own grey header inside the Collections card, announcing
+        "NetCDF Files" directly under a tab already naming the collection. The two columns keep
+        their own headings, so the frame around them was saying nothing twice."""
+        content = self.bundle_page()
+
+        # The card and its grey header, not the words: the file type moved up into the column's
+        # own heading, which is the one place the pane still needs to say it.
+        self.assertNotIn('card-header bg-secondary text-light text-center">NetCDF Files', content)
+        self.assertNotIn('elsa-subsection', content)
+        # The inside of it is untouched: upload on the left, the file list on the right.
+        self.assertIn('Add NetCDF files', content)
+        self.assertIn('Uploaded files', content)
+        self.assertIn('id="netcdfUploadForm"', content)
+        self.assertIn('id="bulkDeleteNetCDFForm"', content)
+
+    def test_no_empty_modal_footer_rules_across_a_collection_pane(self):
+        """.modal-footer outside a modal still draws its border-top and padding, so the wrapper for
+        legacy table products put a stray rule across every collection tab, above the upload area,
+        for content an External bundle never has."""
+        content = self.bundle_page()
+
+        pane_at = content.index('id="additional_collection_{}"'.format(self.alpha.pk))
+        panes = content[pane_at:content.index('id="add_a_collection"', pane_at)]
+        self.assertNotIn('modal-footer', panes)
+
+    def test_the_collection_tabs_are_laid_out_and_coloured_as_one_set(self):
+        """Half the tabs were flex items and half were not, so they sat at different heights and
+        `document` rode up above the rest wherever the row wrapped. And the nav took Bootstrap's
+        default link blue, which is a different blue from this theme's and the wrong colour
+        entirely in a teal Archive bundle."""
+        content = self.bundle_page()
+
+        self.assertIn('nav-justified ect-nav', content)
+        # Every item, not only the ones carrying a delete icon.
+        self.assertNotIn('nav-item ect-item', content)
+        self.assertIn('--bs-nav-underline-link-active-color: var(--external)', content)
+
+    def test_the_two_upload_columns_share_one_alignment(self):
+        """One heading centred and one left put the two halves of the same row on different axes,
+        and .border-end kept drawing a divider after the columns had stacked. Both columns now
+        open with the eyebrow-and-rule the Bundle Components card and the Files tree use."""
+        content = self.bundle_page()
+
+        self.assertNotIn('card-title text-center mb-3', content)
+        self.assertEqual(content.count('ecu-eyebrow">Add NetCDF files</span>'), 2)
+        self.assertEqual(content.count('ecu-eyebrow">Uploaded files</span>'), 2)
+        # The divider is a media query now, not a class that applies at every width.
+        self.assertIn('class="col-md-6 ecu-divider"', content)
+        self.assertIn('@media (min-width: 768px)', content)
+
+    def test_the_upload_column_says_each_thing_once(self):
+        """A heading, a label and a help line all said "NetCDF files", and the heading said "New
+        File" over an input that takes several. The label is kept for screen readers and hidden,
+        and the help line is down to the two things the control does not show by itself."""
+        content = self.bundle_page()
+
+        self.assertNotIn('Upload New File', content)
+        self.assertNotIn('You can select multiple NetCDF files', content)
+        # The drop area is the label, so clicking it opens the picker without any JS, and the
+        # control keeps a name for anything reading the page aloud.
+        self.assertIn('<label class="ecu-drop" for="id_netcdf_files_{}">'.format(self.alpha.pk),
+                      content)
+        self.assertIn('aria-describedby="uploadHint{}"'.format(self.alpha.pk), content)
+        self.assertIn('Select NetCDF files', content)
+        self.assertIn('no extension are accepted', content)
 
     def test_upload_cancel_button_is_present_and_wired(self):
         content = self.bundle_page()
         self.assertIn('id="uploadCancelBtn"', content)
         self.assertIn('_netcdfUploadXhr', content)
+
+    def test_the_upload_survives_its_own_reload(self):
+        """A successful upload reloads the page, which used to throw away everything it had said
+        and land the user on the document tab rather than the collection they uploaded into. The
+        two sessionStorage keys are what carries the result and the tab across that reload, and
+        the header is what makes the view answer with the JSON the notice is built from."""
+        content = self.bundle_page()
+
+        self.assertIn("'X-Requested-With', 'XMLHttpRequest'", content)
+        self.assertIn("elsaNetcdfUpload:{}".format(self.bundle.pk), content)
+        self.assertIn("elsaCollectionTab:{}".format(self.bundle.pk), content)
+        # The notice comes up as a dialog, and opens the editor on a label row by the id the tree
+        # puts on it.
+        self.assertIn('id="netcdfUploadModal"', content)
+        self.assertIn('.eft-item[data-netcdf-id=', content)
 
 
 @override_settings(ALLOWED_HOSTS=['testserver', 'localhost'])
@@ -2151,6 +2392,23 @@ class AMAFileTreeTests(AMATestCaseMixin, TestCase):
                     return label
         return None
 
+    def entry_in(self, collection, netcdf_file):
+        """The label's entry inside one collection's folder.
+
+        entry_for() searches every folder and answers with the first name that matches, which
+        cannot tell two collections holding a file of the same name apart.
+        """
+        tree = views._bundle_file_tree(self.bundle)
+        wanted = os.path.basename(collection.directory())
+        stem = os.path.splitext(os.path.basename(netcdf_file.file.name))[0]
+        for folder in tree['folders']:
+            if folder['name'] != wanted:
+                continue
+            for label in folder['labels']:
+                if label['name'] == stem + '.xml':
+                    return label
+        return None
+
     def test_a_label_with_no_ama_reads_zero_of_the_full_field_count(self):
         self.write_label(self.nc_one)
         entry = self.entry_for(self.nc_one)
@@ -2204,6 +2462,114 @@ class AMAFileTreeTests(AMATestCaseMixin, TestCase):
         self.assertIsNotNone(entry)
         self.assertIsNone(entry['ama_total'])
         self.assertIsNone(entry['netcdf_id'])
+
+    def test_a_label_is_matched_to_the_file_in_its_own_collection(self):
+        """A stem is only unique inside one collection.
+
+        Two collections may each hold a file of the same name. The lookup used to be stem-only and
+        resolved to whichever row had the lower pk, so the second collection's label was handed a
+        file from the first.
+        """
+        twin = self.make_netcdf(self.nc_one.title, self.beta)
+        self.write_label(self.nc_one)
+        self.write_label(twin)
+
+        # Looked up per folder, not by name: with the same label name in both collections,
+        # entry_for() would answer with whichever folder came first either way.
+        self.assertEqual(self.entry_in(self.alpha, self.nc_one)['netcdf_id'], self.nc_one.pk)
+        self.assertEqual(self.entry_in(self.beta, twin)['netcdf_id'], twin.pk,
+                         'the label was handed to a file from another collection')
+
+    def test_an_older_unassigned_row_does_not_claim_a_collections_label(self):
+        """This is what took the AMA reading and the editor button off a real upload.
+
+        An unassigned row keeps its stem for the whole bundle, and being older it won the
+        stem-only lookup. A file with no collection gets no netcdf_id by design, so the label came
+        out with none either: no reading in the tree, and no Edit AMA metadata button in the
+        viewer, for a file that had both.
+        """
+        stale = NetCDFFile.objects.create(
+            title='00009.atmos_average.nc', file='00009.atmos_average.nc',
+            bundle=self.bundle, collection=None, processed=True)
+        fresh = self.make_netcdf('00009.atmos_average.nc', self.beta)
+        self.assertLess(stale.pk, fresh.pk, 'the unassigned row must be the older one')
+        self.write_label(fresh)
+
+        entry = self.entry_for(fresh)
+        self.assertIsNotNone(entry, 'no tree row for the label at all')
+        self.assertEqual(entry['netcdf_id'], fresh.pk)
+        self.assertEqual(entry['ama_total'], views.AMA_TOTAL_FIELDS)
+
+    def render_tree(self, labels):
+        """Render the Files card against fabricated label entries.
+
+        The three states turn on ama_filled against ama_total, and reaching 28 of 28 through the
+        real forms means filling every attribute of all three AMA classes. That is a fixture the
+        assertion does not need: _bundle_file_tree's output is the contract between the view and
+        this template, so the states are built directly and the template is asked what it draws.
+        """
+        from django.template.loader import render_to_string
+        return render_to_string('build/bundle/_file_tree.html', {
+            'bundle': self.bundle,
+            'file_tree': {
+                'root_labels': [],
+                'folders': [{'name': 'alpha', 'collection_type': 'External',
+                             'count': len(labels), 'labels': labels}],
+                'filter_kinds': [],
+                'total': len(labels),
+            },
+        })
+
+    def label_entry(self, name, filled, total=28, processed=True):
+        return {'name': name, 'path': 'alpha/' + name, 'kind': 'data',
+                'kind_label': 'Data Product Label', 'describes': name[:-4] + '.nc',
+                'processed': processed, 'processing_error': '',
+                'netcdf_id': self.nc_one.pk, 'ama_filled': filled, 'ama_total': total}
+
+    def test_every_data_label_gets_a_reading_not_only_the_empty_ones(self):
+        """A label one field short is nearly undescribed and used to look exactly like a full one.
+
+        Amber runs the whole way from nothing to nearly everything, because every AMA field is
+        optional and none of those states is a fault. Green is kept for the one state with nothing
+        left to add, so no row is left saying nothing at all.
+        """
+        cases = {'empty': 0, 'barely': 1, 'most': 27, 'full': 28}
+        rendered = {
+            key: self.render_tree([self.label_entry('x.xml', filled)])
+            for key, filled in cases.items()}
+
+        for key in ('empty', 'barely', 'most'):
+            with self.subTest(state=key):
+                self.assertIn('bi-exclamation-triangle-fill', rendered[key])
+                self.assertNotIn('bi-check-circle-fill', rendered[key])
+                # Never an error: the tooltip has to say the label is publishable as it stands.
+                self.assertIn('valid PDS4', rendered[key])
+
+        self.assertIn('bi-check-circle-fill', rendered['full'])
+        self.assertNotIn('bi-exclamation-triangle-fill', rendered['full'])
+
+        # The count itself, once there is one to give.
+        self.assertIn('1 of 28 described', rendered['barely'])
+        self.assertIn('No AMA metadata yet', rendered['empty'])
+
+    def test_a_stale_label_outranks_an_incomplete_one(self):
+        """Failing to rebuild is a fault; being short of optional fields is not."""
+        rendered = self.render_tree([self.label_entry('x.xml', 0, processed=False)])
+
+        self.assertIn('bi-exclamation-circle-fill', rendered)
+        self.assertNotIn('bi-exclamation-triangle-fill', rendered)
+
+    def test_a_label_with_no_ama_behind_it_gets_no_icon_at_all(self):
+        """Document and collection labels, and every label in an Archive bundle: ama_total is None
+        there, so completeness is not a thing that can be said about them."""
+        entry = self.label_entry('collection_1_alpha.xml', None, total=None)
+        entry.update(kind='collection', kind_label='Collection Label', describes=None,
+                     processed=None, netcdf_id=None)
+
+        rendered = self.render_tree([entry])
+
+        self.assertNotIn('bi-check-circle-fill', rendered)
+        self.assertNotIn('bi-exclamation-triangle-fill', rendered)
 
     def test_a_file_with_no_collection_gets_no_reading(self):
         """It has nothing to inherit from and no editor to open, so "0 of 28" would be a lie."""

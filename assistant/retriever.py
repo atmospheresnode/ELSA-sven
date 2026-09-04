@@ -52,14 +52,11 @@ _CHUNKS = _load_chunks()
 def _refresh_release_notes():
     """Fetch and cache the release notes; runs in a background thread."""
     try:
-        import requests
         from django.core.cache import cache
-        from main.views import parse_release_notes
-        resp = requests.get(
-            'https://raw.githubusercontent.com/atmospheresnode/ELSA-sven/main/README.md',
-            timeout=5)
-        resp.raise_for_status()
-        releases = parse_release_notes(resp.text)
+        # Same source as the About page. These notes used to be scraped out of README.md; they now
+        # come from GitHub Releases, which is where they are written.
+        from main.views import fetch_releases
+        releases = fetch_releases()
         # Data kept for a day (stale is better than absent); freshness marker
         # controls how often the background refresh actually runs.
         cache.set('elsa_release_notes', releases, 60 * 60 * 24)
@@ -75,7 +72,7 @@ def _refresh_release_notes():
 
 
 def _release_notes_chunk():
-    """Live chunk built from the GitHub README release notes.
+    """Live chunk built from the GitHub Releases notes.
 
     Never blocks the chat request: cached notes are used even when stale, and
     a background thread refreshes them at most once an hour. Returns None

@@ -30,7 +30,11 @@ from django.urls import reverse
 from build import views
 from build.models import (AdditionalCollections, Bundle, ModelMetadata, NetCDFFile,
                           Product_Bundle, SimulationConfiguration)
-from build.tests import MINIMAL_LDD
+from build.tests import NS, MINIMAL_LDD
+
+# Taken from views rather than imported directly, the way test_ama_audit does: views binds ET
+# twice and the tests have to read labels with whatever it ended up with.
+ET = views.ET
 
 try:
     from playwright.sync_api import sync_playwright
@@ -538,6 +542,90 @@ class AMABrowserTestCase(StaticLiveServerTestCase):
         self.open_bundle()
         self.assertFalse(self.pane(self.alpha).locator('#uploadCancelBtn').is_visible())
 
+    def test_a_collection_can_be_deleted_from_a_tab_you_are_not_standing_on(self):
+        """The reason the modals had to leave the panes.
+
+        Bootstrap gives an inactive .tab-pane display:none, so a modal inside beta's pane could
+        not be shown while alpha was the open tab. The trigger is on every tab now, so that is a
+        thing a user can ask for, and it has to work.
+        """
+        self.open_bundle(self.alpha)
+
+        self.page.locator(
+            '.ect-delete[data-bs-target="#deleteCollectionModal{}"]'.format(self.beta.pk)).click()
+
+        modal = self.page.locator('#deleteCollectionModal{}'.format(self.beta.pk))
+        modal.wait_for(state='visible', timeout=10000)
+        self.assertIn(self.beta.collection_name, modal.inner_text())
+
+    def test_the_collection_panes_open_on_the_files_not_on_boilerplate(self):
+        self.open_bundle(self.alpha)
+        pane = self.pane(self.alpha)
+
+        self.assertNotIn('This is a model output', pane.inner_text())
+        self.assertEqual(pane.locator('[data-bs-target^="#deleteCollectionModal"]').count(), 0)
+
+    def test_dropping_files_on_the_upload_area_arms_the_real_input(self):
+        """The drop area is scenery; the input is still the control.
+
+        A drop has to write into the input and fire the same change event the picker fires, or the
+        summary, the validation and the submit path all miss it.
+        """
+        self.open_bundle(self.alpha)
+        pane = self.pane(self.alpha)
+
+        # Build a real DataTransfer in the page and drop it on the area, which is what a browser
+        # hands over on a genuine drag from the desktop.
+        pane.locator('.ecu-drop').evaluate("""
+            zone => {
+                const data = new DataTransfer();
+                data.items.add(new File(['CDF\\x01'], 'dropped.nc',
+                                        {type: 'application/x-netcdf'}));
+                zone.dispatchEvent(new DragEvent('drop',
+                    {bubbles: true, cancelable: true, dataTransfer: data}));
+            }
+        """)
+
+        picked = pane.locator('.ecu-drop-picked')
+        picked.wait_for(state='visible', timeout=10000)
+        self.assertIn('dropped.nc', picked.inner_text())
+        self.assertEqual(
+            pane.locator('input[name="netcdf_files"]').evaluate('el => el.files.length'), 1)
+        # The invitation stands down once the well is holding something.
+        self.assertFalse(pane.locator('.ecu-drop-idle').is_visible())
+
+    def test_clearing_a_selection_puts_the_well_back_to_its_invitation(self):
+        self.open_bundle(self.alpha)
+        pane = self.pane(self.alpha)
+        pane.locator('.ecu-drop').evaluate("""
+            zone => {
+                const data = new DataTransfer();
+                data.items.add(new File(['CDF'], 'dropped.nc'));
+                zone.dispatchEvent(new DragEvent('drop',
+                    {bubbles: true, cancelable: true, dataTransfer: data}));
+            }
+        """)
+        pane.locator('.ecu-drop-picked').wait_for(state='visible', timeout=10000)
+
+        pane.locator('.ecu-clear').click()
+
+        pane.locator('.ecu-drop-idle').wait_for(state='visible', timeout=10000)
+        self.assertEqual(
+            pane.locator('input[name="netcdf_files"]').evaluate('el => el.files.length'), 0)
+        # Clear sits outside the label, or clicking it would open the file picker.
+        self.assertEqual(
+            pane.locator('.ecu-clear').evaluate('el => !!el.closest("label")'), False)
+
+    def test_the_drop_area_opens_the_picker_without_any_script(self):
+        """It is a <label for>, so the click-to-browse path is the browser's, not ours."""
+        self.open_bundle(self.alpha)
+        zone = self.pane(self.alpha).locator('.ecu-drop')
+
+        self.assertEqual(zone.evaluate('el => el.tagName'), 'LABEL')
+        self.assertEqual(
+            zone.get_attribute('for'),
+            self.pane(self.alpha).locator('input[name="netcdf_files"]').get_attribute('id'))
+
     def test_each_collection_tab_can_be_opened(self):
         """Collection tab targets used to embed the collection name, which broke on odd names."""
         self.open_bundle()
@@ -546,3 +634,331 @@ class AMABrowserTestCase(StaticLiveServerTestCase):
                 tab = self.page.locator(
                     'button[data-bs-target="#additional_collection_{}"]'.format(collection.pk))
                 self.assertTrue(tab.count() >= 1)
+
+    # -- post-upload notice ---------------------------------------------------------------------
+
+    def seed_upload(self, collection, netcdf_files):
+        """Park the view's JSON reply where the reload will find it, then reload.
+
+        This is exactly what the upload's own success handler does on its way into
+        window.location.reload(). Pushing a real netCDF through the browser is covered
+        server-side; what these tests are about is what the reloaded page does with the reply.
+        """
+        import json
+        tab = '#additional_collection_{}'.format(collection.pk)
+        # Built the way the upload view builds it, readings included: the notice reports what the
+        # reply tells it, not what it can find in the Files tree.
+        filled = views._ama_completeness_by_file(self.bundle)
+        self.page.evaluate(
+            'args => { sessionStorage.setItem(args.key, args.payload);'
+            ' sessionStorage.setItem(args.tabKey, args.tab); }',
+            {
+                'key': 'elsaNetcdfUpload:{}'.format(self.bundle.pk),
+                'tabKey': 'elsaCollectionTab:{}'.format(self.bundle.pk),
+                'tab': tab,
+                'payload': json.dumps({
+                    'collection_id': collection.pk,
+                    'collection_name': collection.collection_name,
+                    'tab_target': tab,
+                    'files': [{
+                        'id': f.pk,
+                        'title': f.title,
+                        'ama_filled': filled.get(f.pk, 0),
+                        'ama_total': views.AMA_TOTAL_FIELDS,
+                        'ama_url': reverse('build:netcdf_ama', kwargs={
+                            'pk_bundle': self.bundle.pk, 'pk_netcdf': f.pk}),
+                    } for f in netcdf_files],
+                }),
+            })
+        self.page.reload()
+        self.page.wait_for_load_state('domcontentloaded')
+
+    def notice(self):
+        """The post-upload dialog's content. Its shell is always in the page, so tests that care
+        whether it is being shown ask about visibility, never about presence."""
+        return self.page.locator('#netcdfUploadModal .enu-notice')
+
+    def wait_for_notice(self):
+        self.page.locator('#netcdfUploadModal').wait_for(state='visible', timeout=10000)
+        # Bootstrap slides the dialog in over ~300ms and animates .modal-dialog, not .modal, so
+        # that is what has to settle before a click will land where it looks like it will.
+        self.page.wait_for_function(
+            'getComputedStyle(document.querySelector("#netcdfUploadModal .modal-dialog"))'
+            '.transform === "none"', timeout=10000)
+
+    def test_the_reload_comes_back_on_the_collection_that_was_uploaded_into(self):
+        """The upload ends in a full reload, which used to drop the user on the document tab: the
+        last thing a successful upload did was move them somewhere they had not asked to be."""
+        self.open_bundle(self.alpha)
+        self.seed_upload(self.beta, [self.nc_beta])
+
+        self.pane(self.beta).wait_for(state='visible', timeout=10000)
+        self.assertFalse(self.page.locator('#doc_collection').is_visible(),
+                         'the reload landed on the document tab instead of the collection')
+
+    def test_the_notice_names_the_file_and_what_it_still_needs(self):
+        self.open_bundle(self.alpha)
+        self.seed_upload(self.beta, [self.nc_beta])
+
+        self.wait_for_notice()
+        notice = self.notice()
+        text = notice.inner_text()
+        self.assertIn(self.nc_beta.title, text)
+        self.assertIn(self.beta.collection_name, text)
+        # Quoted from the tree's row, not recomputed here.
+        self.assertIn('No AMA metadata yet', text)
+        # The one place the page says out loud where the editor lives.
+        self.assertIn('Edit AMA metadata', text)
+
+    def test_the_notice_comes_up_as_a_dialog_over_the_page(self):
+        """As a card in the collection pane it read as more page furniture and went unnoticed,
+        which was the one thing it existed not to do."""
+        self.open_bundle(self.alpha)
+        self.seed_upload(self.beta, [self.nc_beta])
+
+        self.wait_for_notice()
+        self.assertTrue(self.page.locator('#netcdfUploadModal.show').is_visible())
+        self.assertEqual(self.page.locator('.modal-backdrop').count(), 1)
+
+    def test_the_notice_opens_the_editor_on_the_file_it_names(self):
+        self.open_bundle(self.alpha)
+        self.seed_upload(self.beta, [self.nc_beta])
+
+        self.wait_for_notice()
+        self.notice().locator('button', has_text='Add AMA metadata').click()
+
+        self.panel().wait_for(state='visible', timeout=10000)
+        self.assertEqual(self.panel().get_attribute('data-netcdf-id'), str(self.nc_beta.pk))
+        # The handoff closes this dialog before opening the editor. Two open at once leaves a
+        # second backdrop stacked over the first, and the first is never cleaned up.
+        self.assertFalse(self.page.locator('#netcdfUploadModal').is_visible())
+        self.assertEqual(self.page.locator('.modal-backdrop').count(), 1)
+
+    def test_the_notice_says_what_a_file_inherited_and_offers_to_finish_it(self):
+        """A file that inherits its collection's defaults did not arrive with nothing, and the
+        dialog says so rather than reporting a blank. It is still short of the full set, though,
+        so the offer is to finish it, not merely to look at it."""
+        ModelMetadata.objects.create(
+            bundle=self.bundle, collection=self.beta, netcdf_file=None, name='LMD')
+
+        self.open_bundle(self.alpha)
+        self.seed_upload(self.beta, [self.nc_beta])
+
+        self.wait_for_notice()
+        notice = self.notice()
+        text = notice.inner_text()
+        self.assertIn('inherits', text)
+        self.assertIn('1 of 28 described', text)
+        self.assertEqual(notice.locator('button', has_text='Add AMA metadata').count(), 0)
+        self.assertEqual(notice.locator('button', has_text='Complete AMA metadata').count(), 1)
+        # Amber, because it is not complete. Review and a grey pill are for 28 of 28 only.
+        self.assertEqual(notice.locator('.enu-status.enu-pending').count(), 1)
+
+    def test_the_notice_lists_every_file_when_several_were_uploaded(self):
+        self.open_bundle(self.beta)
+        self.seed_upload(self.alpha, [self.nc_one, self.nc_two])
+
+        self.wait_for_notice()
+        notice = self.notice()
+        text = notice.inner_text()
+        self.assertIn('2 files', text)
+        self.assertIn(self.nc_one.title, text)
+        self.assertIn(self.nc_two.title, text)
+        self.assertEqual(notice.locator('button', has_text='Describe').count(), 2)
+
+    def test_the_notice_still_offers_a_way_in_for_a_file_the_tree_cannot_place(self):
+        """The offer must not depend on the Files tree finding a row.
+
+        A label the tree cannot place leaves the file with no row, and the notice used to fall
+        back to a line of text with nothing to click. The standalone editor renders the same three
+        forms, so that is where it goes instead.
+        """
+        ghost = self.make_netcdf('ghost.nc', self.beta)  # deliberately no label on disk
+        self.open_bundle(self.alpha)
+        self.seed_upload(self.beta, [ghost])
+
+        self.wait_for_notice()
+        self.assertEqual(self.tree_row(ghost).count(), 0, 'the file was not meant to have a row')
+
+        self.notice().locator('button', has_text='Add AMA metadata').click()
+        self.page.wait_for_url('**/netcdf/{}/ama/'.format(ghost.pk), timeout=10000)
+        self.page.locator('#amaPanelInner').wait_for(state='visible', timeout=10000)
+
+    def test_the_notice_is_shown_once_and_not_on_every_later_reload(self):
+        """It reports one upload. Coming back on a later reload would make it wallpaper."""
+        self.open_bundle(self.alpha)
+        self.seed_upload(self.beta, [self.nc_beta])
+        self.wait_for_notice()
+
+        self.page.reload()
+        self.page.wait_for_load_state('domcontentloaded')
+        self.pane(self.beta).wait_for(state='visible', timeout=10000)
+
+        self.assertFalse(self.notice().is_visible())
+
+    def test_dismissing_the_notice_leaves_the_page_alone(self):
+        self.open_bundle(self.alpha)
+        self.seed_upload(self.beta, [self.nc_beta])
+        self.wait_for_notice()
+
+        self.notice().locator('button', has_text='Not now').click()
+        self.page.locator('#netcdfUploadModal').wait_for(state='hidden', timeout=10000)
+
+        # No orphan backdrop: it would sit invisibly over the page and swallow every later click.
+        self.page.wait_for_function(
+            '!document.querySelector(".modal-backdrop")', timeout=10000)
+        self.assertTrue(self.pane(self.beta).is_visible())
+
+    # -- end to end: a real upload, all the way to the label on disk ----------------------------
+
+    def upload_through_the_form(self, collection, names, expect_notice=True):
+        """A real upload: real files, the real input, the real Upload button.
+
+        Everything else in this section seeds the upload's reply by hand, which is the right trade
+        for testing one behaviour at a time but never exercises the join between them. This walks
+        the whole path: the view writes the files and their labels, answers with JSON, the page
+        reloads itself, and the reloaded page reads that reply back out.
+        """
+        import shutil
+        import tempfile
+        from build.test_ama_audit import real_netcdf_bytes
+
+        payload = real_netcdf_bytes()
+        folder = tempfile.mkdtemp(prefix='elsa-e2e-')
+        self.addCleanup(shutil.rmtree, folder, True)
+        paths = []
+        for name in names:
+            path = os.path.join(folder, name)
+            with open(path, 'wb') as handle:
+                handle.write(payload)
+            paths.append(path)
+
+        pane = self.pane(collection)
+        pane.locator('input[name="netcdf_files"]').set_input_files(paths)
+        pane.locator('#uploadBtn').click()
+        if expect_notice:
+            # The post finishes, then the page reloads itself 1.5s later. The dialog exists only on
+            # the far side of that reload, so waiting for it waits for the whole round trip.
+            self.wait_for_notice()
+
+    def label_path(self, netcdf_file):
+        stem = os.path.splitext(os.path.basename(netcdf_file.file.name))[0]
+        return os.path.join(netcdf_file.directory(), stem + '.xml')
+
+    def test_end_to_end_upload_to_metadata_in_the_label_on_disk(self):
+        """Upload, notice, editor, save, and the value in the XML, in one pass.
+
+        The filename is one the storage has to sanitise ("a - Copy.nc" is stored "a_-_Copy.nc"),
+        because that is the case that broke every join in this chain at once: the tree could not
+        match the label to its file, so the row carried no id, so the notice had nothing to offer
+        and the viewer had no editor button.
+        """
+        self.page.set_viewport_size({'width': 1440, 'height': 1000})
+        self.open_bundle(self.beta)
+
+        name = '00000.atmos_average_pstd - Copy.nc'
+        self.upload_through_the_form(self.beta, [name])
+
+        uploaded = NetCDFFile.objects.get(title=name)
+        self.assertTrue(uploaded.processed, 'the upload did not process')
+        self.assertTrue(os.path.exists(self.label_path(uploaded)), 'no label was written')
+
+        # 1. The reload came back on the collection that was uploaded into, not the document tab.
+        self.assertTrue(self.pane(self.beta).is_visible())
+        self.assertFalse(self.page.locator('#doc_collection').is_visible())
+
+        # 2. The dialog names the file, the collection, and what is still missing.
+        notice = self.notice().inner_text()
+        self.assertIn(name, notice)
+        self.assertIn(self.beta.collection_name, notice)
+        self.assertIn('No AMA metadata yet', notice)
+
+        # 3. The uploaded files list names it in full and spends its width on the name.
+        listing = self.pane(self.beta).locator('#bulkDeleteNetCDFForm')
+        self.assertIn(name, listing.inner_text())
+        self.assertNotIn('Own metadata', listing.inner_text())
+        width = listing.locator('a[title="{}"]'.format(name)).evaluate(
+            'el => el.getBoundingClientRect().width')
+        self.assertGreater(width, 150, 'the filename is still capped at the old fixed width')
+
+        # 4. The tree row flags the gap and does not tick anything.
+        row = self.tree_row(uploaded)
+        self.assertEqual(row.count(), 1, 'the tree could not match the label to its file')
+        self.assertEqual(row.locator('.bi-exclamation-triangle-fill').count(), 1)
+        self.assertEqual(row.locator('.bi-check-circle-fill').count(), 0)
+
+        # 5. The dialog's offer opens the editor on that file, and hands over cleanly.
+        self.notice().locator('button', has_text='Add AMA metadata').click()
+        self.panel().wait_for(state='visible', timeout=10000)
+        self.assertEqual(self.panel().get_attribute('data-netcdf-id'), str(uploaded.pk))
+        self.assertFalse(self.page.locator('#netcdfUploadModal').is_visible())
+        self.assertEqual(self.page.locator('.modal-backdrop').count(), 1)
+
+        # 6. A value saved in the editor reaches the label on disk.
+        self.page.wait_for_function(
+            'getComputedStyle(document.querySelector("#amaMetadataModal .modal-dialog"))'
+            '.transform === "none"', timeout=10000)
+        self.panel().locator('#id_model-name').fill('MarsWRF')
+        self.panel().locator('#amaPanelForm button[type="submit"]').click()
+
+        self.page.wait_for_function(
+            'document.querySelector(\'.eft-item[data-netcdf-id="{0}"]\') && '
+            'document.querySelector(\'.eft-item[data-netcdf-id="{0}"]\')'
+            '.innerText.includes("1 of 28")'.format(uploaded.pk), timeout=20000)
+
+        # 7. The row reports the new count and keeps cautioning: one field of 28 is a long way
+        #    short, and it must not be shown the way a fully described label is.
+        row = self.tree_row(uploaded)
+        self.assertIn('1 of 28 described', row.inner_text())
+        self.assertEqual(row.locator('.bi-exclamation-triangle-fill').count(), 1)
+        self.assertEqual(row.locator('.bi-check-circle-fill').count(), 0)
+
+        # 8. And the value is really in the XML, not only in the database.
+        root = ET.parse(self.label_path(uploaded)).getroot()
+        written = root.find(
+            './/pds:Context_Area/pds:Discipline_Area/ama:AMA/ama:Model_Metadata/ama:name',
+            namespaces=NS)
+        self.assertIsNotNone(written, 'no Model_Metadata name in the label')
+        self.assertEqual(written.text, 'MarsWRF')
+
+    def test_end_to_end_several_files_in_one_upload(self):
+        self.page.set_viewport_size({'width': 1440, 'height': 1000})
+        self.open_bundle(self.beta)
+
+        names = ['e2e_one.nc', 'e2e_two.nc']
+        self.upload_through_the_form(self.beta, names)
+
+        notice = self.notice()
+        text = notice.inner_text()
+        self.assertIn('2 files', text)
+        for name in names:
+            self.assertIn(name, text)
+        self.assertEqual(notice.locator('button', has_text='Describe').count(), 2)
+
+        # Each row opens the editor on its own file, not on whichever came first.
+        second = NetCDFFile.objects.get(title=names[1])
+        notice.locator('.enu-file', has_text=names[1]).locator(
+            'button', has_text='Describe').click()
+        self.panel().wait_for(state='visible', timeout=10000)
+        self.assertEqual(self.panel().get_attribute('data-netcdf-id'), str(second.pk))
+
+    def test_end_to_end_a_second_copy_of_the_same_file_is_refused(self):
+        """The name needs sanitising, which is exactly the case the check used to miss: the second
+        upload overwrote the first file and its label and left two rows pointing at one path."""
+        self.page.set_viewport_size({'width': 1440, 'height': 1000})
+        self.open_bundle(self.beta)
+
+        name = 'a - Copy.nc'
+        self.upload_through_the_form(self.beta, [name])
+        self.notice().locator('button', has_text='Not now').click()
+        self.page.locator('#netcdfUploadModal').wait_for(state='hidden', timeout=10000)
+
+        self.upload_through_the_form(self.beta, [name], expect_notice=False)
+
+        error = self.pane(self.beta).locator('.netcdf-upload-error')
+        error.wait_for(state='visible', timeout=20000)
+        self.assertIn('already in', error.inner_text())
+        # Refused means refused: no second row, and the first file is untouched.
+        self.assertEqual(NetCDFFile.objects.filter(title=name).count(), 1)
+        self.assertFalse(self.page.locator('#netcdfUploadModal').is_visible(),
+                         'a refused upload announced itself as a success')

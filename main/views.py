@@ -37,7 +37,7 @@ from django.contrib import messages
 import random
 import os
 import logging  # This document logs errors and is currently not in use in ELSA.  Feel free to develop this (k).
-from datetime import date
+from datetime import date, datetime
 
 import re
 import requests
@@ -98,48 +98,77 @@ def contact_from_login(request):
 
     return render(request, 'main/index.html', context_dict)
 
-def parse_release_notes(markdown_text):
+# GitHub Releases is the canonical record of what shipped when. It used to be README.md, parsed
+# out of the markdown, but the notes lived in two places at once and drifted: a release would be
+# published while the README still ended at the version before it. The notes are now written once,
+# where they are published, and both the About page and the assistant read them from here.
+GITHUB_RELEASES_API = (
+    'https://api.github.com/repos/atmospheresnode/ELSA-sven/releases?per_page=6')
+
+
+def format_release_bullets(body):
+    """Turn a release body's markdown bullets into the strings about.html renders.
+
+    Unchanged from when these were parsed out of README.md: a release body is the same
+    "- Area: what changed." list, so the area name is still bolded up to the first colon.
+    """
+    bullets = []
+    for line in re.findall(r'^-\s+(.+)$', body or '', re.MULTILINE):
+        if ':' in line:
+            area, rest = line.split(':', 1)
+            bullets.append('<strong>{}:</strong>{}'.format(area, rest))
+        else:
+            bullets.append(line)
+    return bullets
+
+
+def parse_releases(payload):
+    """Shape GitHub's /releases JSON into what the About page and the assistant expect.
+
+    The date comes from `created_at`, never `published_at`. GitHub documents created_at as the
+    date of the commit the release was cut from, while published_at is when the release was
+    created on GitHub. The 34 releases backfilled in September 2026 all carry that one afternoon
+    as their published_at, so using it would date two years of history to a single day.
+    """
     releases = []
-
-    release_section_match = re.search(
-        r'## \*\*Release Notes\*\*(.*?)(?=\n## |\Z)',
-        markdown_text,
-        re.DOTALL
-    )
-    if not release_section_match:
-        return releases
-
-    release_section = release_section_match.group(1)
-    version_blocks = re.split(r'(?=>\s*###\s*\*\*Version)', release_section)
-
-    for block in version_blocks:
-        header_match = re.search(
-            r'>\s*###\s*\*\*Version\s+([\d\.]+(?:\s*-\s*[\d\.]+)?)\s*\(([^)]+)\)\*\*',
-            block
-        )
-        if not header_match:
+    for item in payload:
+        if item.get('draft') or item.get('prerelease'):
             continue
-
-        version = header_match.group(1).strip()
-        date = header_match.group(2).strip()
-
-        raw_bullets = re.findall(r'^-\s+(.+)$', block, re.MULTILINE)
-
-        bullets = []
-        for b in raw_bullets:
-            if ':' in b:
-                parts = b.split(':', 1)
-                bullets.append('<strong>{}:</strong>{}'.format(parts[0], parts[1]))
-            else:
-                bullets.append(b)
-
+        try:
+            stamp = datetime.strptime(item['created_at'], '%Y-%m-%dT%H:%M:%SZ')
+            released_on = stamp.strftime('%B %d, %Y')
+        except (KeyError, TypeError, ValueError):
+            # A release with an unreadable timestamp is still worth showing; only its date is lost.
+            stamp, released_on = None, ''
         releases.append({
-            'version': version,
-            'date': date,
-            'bullets': bullets,
+            'version': (item.get('tag_name') or '').lstrip('v'),
+            'date': released_on,
+            'bullets': format_release_bullets(item.get('body')),
+            '_sort': stamp or datetime.min,
         })
 
+    # GitHub returns these newest first already. Sorting the page we were given costs nothing and
+    # means the About page does not depend on that staying true.
+    releases.sort(key=lambda release: release['_sort'], reverse=True)
+    for release in releases:
+        del release['_sort']
     return releases
+
+
+def fetch_releases():
+    """Fetch and parse the published releases, or raise.
+
+    Shared by the About page and the assistant's background refresh so the URL, the date handling
+    and the bullet formatting have exactly one definition. The repository is public, so this is
+    unauthenticated: the limit is 60 requests an hour per IP and both callers cache for at least
+    an hour, which puts normal use around one request in sixty.
+    """
+    response = requests.get(
+        GITHUB_RELEASES_API,
+        timeout=5,
+        headers={'Accept': 'application/vnd.github+json'})
+    response.raise_for_status()
+    return parse_releases(response.json())
 
 
 def about(request):
@@ -147,17 +176,12 @@ def about(request):
 
     if not releases:
         try:
-            response = requests.get(
-                'https://raw.githubusercontent.com/atmospheresnode/ELSA-sven/main/README.md',
-                timeout=5
-            )
-            response.raise_for_status()
-            releases = parse_release_notes(response.text)
+            releases = fetch_releases()
             cache.set('elsa_release_notes', releases, 60 * 60)  # cache for 1 hour
-            print('README fetched and parsed successfully. {} versions found.'.format(len(releases)))
+            print('Releases fetched and parsed successfully. {} versions found.'.format(len(releases)))
         except Exception as e:
             releases = None
-            print('Could not fetch README: {}'.format(e))
+            print('Could not fetch releases: {}'.format(e))
 
     current = releases[0] if releases else None
     previous = releases[1:6] if releases else []

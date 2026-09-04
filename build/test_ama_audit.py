@@ -159,6 +159,58 @@ class UploadPathAudit(AMATestCaseMixin, TestCase):
             './/pds:Context_Area/pds:Discipline_Area/ama:AMA/ama:Model_Metadata', namespaces=NS)
         self.assertEqual(len(metadata), 0, 'collection defaults leaked across collections')
 
+    def test_a_scripted_upload_is_answered_with_what_the_reloaded_page_needs(self):
+        """The upload page reloads itself, so the reply has to carry what survives the reload.
+
+        A redirect carried nothing, and messages.success() cannot stand in for this: the XHR
+        follows the 302 silently and consumes the message rendering a response nobody sees.
+        """
+        response = self.client.post(
+            reverse('build:bundle', kwargs={'pk_bundle': self.bundle.pk}),
+            {
+                'collection': self.beta.collection_name,
+                'netcdf_files': SimpleUploadedFile('fresh.nc', real_netcdf_bytes()),
+            },
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest')
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload['collection_id'], self.beta.pk)
+        self.assertEqual(payload['collection_name'], self.beta.collection_name)
+        self.assertEqual(payload['tab_target'],
+                         '#additional_collection_{}'.format(self.beta.pk))
+        self.assertEqual([entry['title'] for entry in payload['files']], ['fresh.nc'])
+        fresh = NetCDFFile.objects.get(title='fresh.nc')
+        self.assertEqual([entry['id'] for entry in payload['files']], [fresh.pk])
+
+        # The AMA reading travels with the reply rather than being read back off the Files tree,
+        # which cannot say anything about a file whose label it fails to place.
+        entry = payload['files'][0]
+        self.assertEqual(entry['ama_filled'], 0)
+        self.assertEqual(entry['ama_total'], views.AMA_TOTAL_FIELDS)
+        self.assertEqual(entry['ama_url'], reverse('build:netcdf_ama', kwargs={
+            'pk_bundle': self.bundle.pk, 'pk_netcdf': fresh.pk}))
+
+    def test_a_scripted_upload_reports_what_the_new_file_already_inherits(self):
+        self.make_default_model_metadata(collection=self.beta, name='LMD')
+
+        response = self.client.post(
+            reverse('build:bundle', kwargs={'pk_bundle': self.bundle.pk}),
+            {
+                'collection': self.beta.collection_name,
+                'netcdf_files': SimpleUploadedFile('fresh.nc', real_netcdf_bytes()),
+            },
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest')
+
+        # The helper's defaults fill name and institution.
+        self.assertEqual(response.json()['files'][0]['ama_filled'], 2)
+
+    def test_an_upload_without_javascript_still_redirects(self):
+        """The plain form post is the fallback for a browser that never runs the upload script."""
+        response = self.upload('fresh.nc', self.beta)
+
+        self.assertEqual(response.status_code, 302)
+
     def test_an_upload_naming_a_collection_of_another_bundle_is_refused(self):
         other = Bundle.objects.create(name='other_bundle', user=self.user, version='1800')
         AdditionalCollections.objects.create(
@@ -324,7 +376,7 @@ class RenderedDomAudit(AMATestCaseMixin, TestCase):
         the ids are invalid HTML and should be made unique when that card is next touched.
         """
         expected = {
-            'bulkDeleteBtn', 'bulkDeleteNetCDFForm', 'collection', 'fileSummary',
+            'bulkDeleteBtn', 'bulkDeleteNetCDFForm', 'collection',
             'netcdfUploadForm', 'selectAllWrapper', 'uploadBtn', 'uploadCancelBtn',
             'uploadPercent', 'uploadProgressBar', 'uploadProgressWrapper', 'uploadStatusText',
             'uploadSuccessMsg',
@@ -627,6 +679,31 @@ class DuplicateUploadAudit(AMATestCaseMixin, TestCase):
         self.assertIn('already in', response.json()['error'])
         self.assertEqual(NetCDFFile.objects.count(), 1,
                          'a duplicate row was created for a name that already exists')
+
+    def test_re_uploading_a_name_the_storage_sanitises_is_refused(self):
+        """The check compared the raw upload name against the sanitised names on disk.
+
+        "a - Copy.nc" is stored as "a_-_Copy.nc", so the two never matched and a second copy went
+        straight through. Storage did not catch it either: the first copy has already been moved
+        out of MEDIA_ROOT into the collection by then, so there was no name left to uniquify
+        against, and the second upload overwrote the first file and its label.
+        """
+        self.upload(['a - Copy.nc'])
+
+        response = self.upload(['a - Copy.nc'])
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(NetCDFFile.objects.count(), 1,
+                         'a second row was created over the top of the first file')
+        # The user is told the name they chose, not the one the storage made of it.
+        self.assertIn('a - Copy.nc', response.json()['error'])
+
+    def test_two_names_that_sanitise_to_the_same_thing_are_refused(self):
+        """They would land on one path on disk, which is the collision the check exists for."""
+        response = self.upload(['a - Copy.nc', 'a_-_Copy.nc'])
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(NetCDFFile.objects.count(), 0)
 
     def test_the_same_name_twice_in_one_upload_is_refused(self):
         response = self.upload(['one.nc', 'one.nc'])

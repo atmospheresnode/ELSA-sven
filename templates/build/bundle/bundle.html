@@ -186,6 +186,23 @@
          border-color: var(--archive-hover) !important;
       }
       
+      /* The collections nav, matching the External branch: every item centred so the tabs sit on
+         one line however the row wraps, links at content width so the active underline tracks the
+         name, and the colour taken from the bundle instead of Bootstrap's default link blue,
+         which in a teal bundle is simply the wrong colour. */
+      .archive-theme .ect-nav { align-items: center; row-gap: .25rem; }
+      .archive-theme .ect-nav .nav-item {
+         display: flex;
+         align-items: center;
+         justify-content: center;
+      }
+      .archive-theme .ect-nav .nav-link { width: auto; }
+      .archive-theme .ect-nav {
+         --bs-nav-link-color: var(--archive);
+         --bs-nav-link-hover-color: var(--archive-hover);
+         --bs-nav-underline-link-active-color: var(--archive);
+      }
+
       /* Legacy custom button classes in header */
       .archive-theme .btn-teal:not(.btn-keep-bg),
       .archive-theme .btn-cyan:not(.btn-keep-bg),
@@ -336,7 +353,7 @@
             
             <div class="card-body">
                <!-- Tabs -->
-               <ul class="nav nav-fill nav-underline nav-justified" role="tablist">
+               <ul class="nav nav-fill nav-underline nav-justified ect-nav" role="tablist">
                   <li class="nav-item" role="presentation">
                      <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#doc_collection" type="button" role="tab" aria-selected="true">document</button>
                   </li>
@@ -2042,6 +2059,166 @@
          border-color: var(--external-hover) !important;
       }
       
+      /* Delete on a collection tab. Deliberately not a .btn: the rule above repaints every button
+         in here solid blue, which on a tab would read as the selected one. Quiet grey until it is
+         pointed at, because it sits on every tab and only ever needs to be found once. */
+      /* The collections nav. Every item gets the same treatment, not only the ones carrying a
+         delete icon: mixing d-flex items with plain ones left the tabs sitting at different
+         heights, most visibly on a narrow screen where the row wraps and `document` rode up
+         above the rest. Centring each item's content is what puts them all on one line. */
+      .external-theme .ect-nav { align-items: center; row-gap: .25rem; }
+      .external-theme .ect-nav .nav-item {
+         display: flex;
+         align-items: center;
+         justify-content: center;
+      }
+      /* nav-justified gives .nav-link width:100%, which stretches the link across its whole cell
+         and shoves the delete icon to the far edge, looking like it belongs to nothing. Content
+         width instead, so the name and its icon sit together and the active underline tracks the
+         name rather than the cell. */
+      .external-theme .ect-nav .nav-link { width: auto; }
+      /* Colour comes from the bundle, not from Bootstrap's default link blue, which is a
+         different blue from this theme's and would be flatly wrong in a teal Archive bundle.
+         Set as Bootstrap's own custom properties so no !important is needed. */
+      .external-theme .ect-nav {
+         --bs-nav-link-color: var(--external);
+         --bs-nav-link-hover-color: var(--external-hover);
+         --bs-nav-underline-link-active-color: var(--external);
+      }
+
+      /* Both columns open with one of these. The fixed height is the point: the right column's
+         header carries buttons and the left one does not, so without it the two labels sat at
+         different heights and the columns read as unaligned. */
+      .external-theme .ecu-head {
+         display: flex;
+         align-items: center;
+         gap: .5rem;
+         min-height: 2rem;
+         margin-bottom: .75rem;
+      }
+
+      /* Section label, the same one the Bundle Components card and the Files tree use. */
+      .external-theme .ecu-eyebrow {
+         font-size: .7rem;
+         letter-spacing: .07em;
+         text-transform: uppercase;
+      }
+
+      /* The drop area. A dashed well rather than a bare file input sitting on the card: it gives
+         the column a shape, says what it wants, and is a target big enough to drop onto. */
+      .external-theme .ecu-drop {
+         display: flex;
+         flex-direction: column;
+         align-items: center;
+         justify-content: center;
+         gap: .15rem;
+         width: 100%;
+         margin: 0;
+         padding: 1.75rem 1rem;
+         border: 2px dashed #d3dce3;
+         border-radius: .5rem;
+         background-color: #f8fafc;
+         text-align: center;
+         cursor: pointer;
+         transition: border-color .15s ease-in-out, background-color .15s ease-in-out;
+      }
+      /* focus-within, because the control itself is visually hidden: keyboard focus has to be
+         visible on the thing standing in for it. */
+      .external-theme .ecu-drop:hover,
+      .external-theme .ecu-drop:focus-within,
+      .external-theme .ecu-drop.ecu-drop-over {
+         border-color: var(--external);
+         background-color: #eef5fb;
+      }
+      .external-theme .ecu-drop-icon { font-size: 1.6rem; color: var(--external); line-height: 1; }
+      .external-theme .ecu-drop-title { font-weight: 600; }
+      .external-theme .ecu-drop-hint { font-size: .8rem; color: #6c757d; }
+
+      .external-theme .ecu-file-meta { font-size: .75rem; }
+
+      /* The invitation stacks its own icon, title and hint: the column direction on .ecu-drop
+         governs its two states, not what is inside either of them. */
+      .external-theme .ecu-drop-idle {
+         display: flex;
+         flex-direction: column;
+         align-items: center;
+         gap: .15rem;
+      }
+
+      /* The well's second state: what it is currently holding. */
+      .external-theme .ecu-drop-picked {
+         display: flex;
+         flex-direction: column;
+         gap: .25rem;
+         width: 100%;
+      }
+      .external-theme .ecu-picked-head {
+         margin-bottom: .25rem;
+         color: var(--external);
+         font-weight: 600;
+      }
+      .external-theme .ecu-picked-row {
+         display: flex;
+         align-items: center;
+         gap: .5rem;
+         padding: .25rem .5rem;
+         border-radius: .375rem;
+         background-color: #fff;
+         border: 1px solid #e4ecf2;
+         font-size: .8rem;
+         text-align: left;
+      }
+      /* The name is the only thing allowed to shrink, so a long one truncates instead of pushing
+         the size off the end of the row. */
+      .external-theme .ecu-picked-name {
+         flex-grow: 1;
+         min-width: 0;
+         overflow: hidden;
+         text-overflow: ellipsis;
+         white-space: nowrap;
+      }
+      .external-theme .ecu-picked-size { flex-shrink: 0; color: #6c757d; }
+      .external-theme .ecu-picked-more { font-size: .8rem; color: #6c757d; }
+
+      .external-theme .ecu-drop-actions {
+         display: flex;
+         align-items: center;
+         gap: .5rem;
+         margin-top: .5rem;
+         font-size: .8rem;
+      }
+
+      /* Outline pills, the same vocabulary as the readings in the Files tree and the post-upload
+         dialog, so state looks like state wherever it appears on this page. */
+      .external-theme .ecu-pill {
+         display: inline-block;
+         padding: .1rem .55rem;
+         border: 1px solid currentColor;
+         border-radius: 1rem;
+         font-size: .72rem;
+         white-space: nowrap;
+      }
+      .external-theme .ecu-ok { color: #198754; }
+      .external-theme .ecu-bad { color: #dc3545; }
+      .external-theme .ecu-warn { color: #997404; }
+
+      /* Only a divider when there is something to divide. As a plain .border-end it stayed on at
+         every width, so once the columns stacked it drew a vertical rule down the right of a
+         full-width block with nothing on the other side of it. */
+      @media (min-width: 768px) {
+         .external-theme .ecu-divider { border-right: 1px solid #dee2e6; }
+      }
+
+      .external-theme .ect-delete {
+         border: 0;
+         background: none;
+         padding: 0 .35rem;
+         line-height: 1;
+         color: #adb5bd;
+      }
+      .external-theme .ect-delete:hover,
+      .external-theme .ect-delete:focus-visible { color: #dc3545; }
+
       /* Legacy custom button classes in header */
       .external-theme .btn-teal:not(.btn-keep-bg),
       .external-theme .btn-cyan:not(.btn-keep-bg),
@@ -2163,19 +2340,33 @@
                <span class="ms-1 d-inline-flex align-items-center">
                   <i class="bi bi-info-circle text-light opacity-75" style="cursor: help;" role="button" tabindex="0"
                   data-bs-toggle="tooltip" data-bs-placement="left"
-                  title="This section allows you to interact with the collections in your bundle. You can add new collections and/or add files to your collections. Adding a file to your collection allows you to edit the template for the type of file. Using the file uploader will use that template and generate a label for that uploaded file. Documents are limited to PDF/A or 7-bit ASCII Text. Data files are limited to netCDF files for model output."></i>
+                  title="This section allows you to interact with the collections in your bundle. You can add new collections and/or add files to your collections. Adding a file to your collection allows you to edit the template for the type of file. Using the file uploader will use that template and generate a label for that uploaded file. Documents are limited to PDF/A or 7-bit ASCII Text. Data files are limited to netCDF files for model output. ELSA reads the variables and coordinates out of each netCDF you upload and writes them into that product's label for you."></i>
                </span>
             </h5>
             <div class="card-body">
                <!-- Tabs -->
-               <ul class="nav nav-fill nav-underline nav-justified" role="tablist">
+               <ul class="nav nav-fill nav-underline nav-justified ect-nav" role="tablist">
                   <li class="nav-item" role="presentation">
                      <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#doc_collection" type="button" role="tab" aria-selected="true">document</button>
                   </li>
                   
+                  {% comment %}Delete sits on the tab, beside the name of the thing it deletes,
+                  instead of taking a row of its own inside the pane. Two sibling buttons and never
+                  nested: a button inside a button is invalid HTML and browsers take it apart.
+
+                  Its modal is rendered after the whole Collections card rather than in the pane.
+                  Bootstrap gives an inactive .tab-pane display:none, so a modal left inside one
+                  could not be opened from a tab that was not already the open one, which is
+                  exactly what this trigger makes possible.{% endcomment %}
                   {% for add_collection in additional_collections_set %}
                   <li class="nav-item" role="presentation">
                      <button class="nav-link" data-bs-toggle="tab" data-bs-target="#additional_collection_{{ add_collection.id }}" type="button" role="tab" aria-selected="false">{{ add_collection.collection_name }}</button>
+                     <button type="button" class="ect-delete" data-bs-toggle="modal"
+                        data-bs-target="#deleteCollectionModal{{ add_collection.id }}"
+                        title="Delete the {{ add_collection.collection_name }} collection"
+                        aria-label="Delete the {{ add_collection.collection_name }} collection">
+                        <i class="bi bi-trash"></i>
+                     </button>
                   </li>
                   {% endfor %}
 
@@ -2297,54 +2488,21 @@
                   <!-- Additional Collections -->
                   {% for add_collection in additional_collections_set %}
                   <div class="tab-pane fade" id="additional_collection_{{ add_collection.id }}" role="tabpanel">
-                     <br>
-                     <div class="col-md-12">
-                        <div class="card elsa-subsection mb-3 border-0 bg-light">
-                           <div class="card-body p-3">
-                              <p class="mb-3 small text-muted">
-                                 <i class="bi bi-info-circle me-1"></i>
-                                 This is a model output ‘data’ collection. In this collection, you will upload your model output (.nc) 
-                                 and ELSA will add labels (.xml) to your products. Within the AMA, Model Output should be in netCDF format, 
-                                 and ELSA will extract metadata from those files and input them into your labels for you.
-                              </p>
-                              
-                              <div class="d-flex justify-content-end align-items-center border-top pt-3 mt-2">
-                                 <button type="button" class="btn btn-sm btn-danger btn-keep-bg" data-bs-toggle="modal" data-bs-target="#deleteCollectionModal{{ add_collection.id }}">
-                                    <i class="bi bi-trash me-1"></i> Delete Collection
-                                 </button>
-                              </div>
-                           </div>
-                        </div>
-                     </div>
-                     
-                     <!-- Delete Collection Modal -->
-                     <div class="modal fade" id="deleteCollectionModal{{ add_collection.id }}" tabindex="-1" aria-labelledby="deleteCollectionModalLabel{{ add_collection.id }}" aria-hidden="true">
-                        <div class="modal-dialog modal-dialog-centered">
-                           <div class="modal-content">
-                              <div class="modal-header border-0 pb-0">
-                                 <h5 class="modal-title text-danger" id="deleteCollectionModalLabel{{ add_collection.id }}">
-                                    <i class="bi bi-exclamation-triangle me-2"></i>Delete Collection
-                                 </h5>
-                                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                              </div>
-                              <div class="modal-body">
-                                 <p>Are you sure you want to delete the <strong>{{ add_collection.collection_name }}</strong> collection?</p>
-                                 <p class="text-muted small mb-0"><i class="bi bi-info-circle me-1"></i>This action cannot be undone.</p>
-                              </div>
-                              <div class="modal-footer border-0">
-                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                 <form action="{% url 'build:delete_collection' pk_bundle=bundle.id pk_collection=add_collection.id %}" method="post" class="mb-0">
-                                    {% csrf_token %}
-                                    <button type="submit" class="btn btn-danger btn-keep-bg">
-                                       <i class="bi bi-trash me-1"></i> Delete Collection
-                                    </button>
-                                 </form>
-                              </div>
-                           </div>
-                        </div>
-                     </div>
-                     
-                     <div class="modal-footer justify-content-start mt-3 mb-3">
+                     {% comment %}A card used to open every one of these panes: the same paragraph
+                     on every collection in every bundle, above a Delete button given a full row of
+                     its own. Both are gone. Delete is on the tab, next to the name of the thing it
+                     deletes, and the one thing the paragraph said that the Collections card header
+                     did not already say has been folded into that header's tooltip. The pane now
+                     opens on the thing the user came here for.{% endcomment %}
+
+                     {% comment %}Legacy table-based data products, which an External bundle has
+                     none of. The wrapper was a .modal-footer outside any modal, so Bootstrap drew
+                     its border-top and padding on every collection tab whether or not a single
+                     card went in it: a stray rule across the top of the pane, above the upload
+                     card, for content that was not there. Guarded, and given a plain flex wrapper
+                     so an empty one renders as nothing at all.{% endcomment %}
+                     {% if data_set %}
+                     <div class="d-flex flex-wrap justify-content-start mt-3">
                         {% for data in data_set %}
                         {% if data.collection == add_collection %}
                         <div class="card snippet-card ms-0 me-3">
@@ -2367,157 +2525,209 @@
                         {% endif %}
                         {% endfor %}
                      </div>
-                     
-                     <div class="card elsa-subsection mt-3 mb-3 border">
-                        <h5 class="card-header bg-secondary text-light text-center">NetCDF Files</h5>
-                        <div class="card-body">
-                           <div class="row">
-                              <div class="col-md-6 border-end">
-                                 <h6 class="card-title text-center mb-3">Upload New File</h6>
-                                 <form id="netcdfUploadForm" method="post" enctype="multipart/form-data">
-                                    {% csrf_token %}
-                                    <input type="hidden" class="form-control" id="collection" name="collection" value="{{ add_collection }}">
-                                    {% if form_netcdf.errors %}
-                                    <div class="alert alert-danger" role="alert">
-                                       <strong>Please correct the errors below:</strong>
-                                       {{ form_netcdf.errors }}
-                                    </div>
-                                    {% endif %}
-                                    <div class="mb-3">
-                                       {% comment %}The upload card renders once per collection, so the
-                                          widget id must be per collection too: otherwise every
-                                          tab's <label for> points at the first tab's input.{% endcomment %}
-                                       <label for="id_netcdf_files_{{ add_collection.id }}">{{ form_netcdf.netcdf_files.label }}</label>
-                                       {% comment %}Rendered by hand rather than as {{ form_netcdf.netcdf_files }} only so the id can
-                                          be unique per collection; the name must stay netcdf_files for the view.{% endcomment %}
-                                       <input type="file" name="netcdf_files" multiple class="form-control"
-                                          id="id_netcdf_files_{{ add_collection.id }}">
-                                       <div class="form-text">You can select multiple NetCDF files (.nc or extensionless).</div>
-                                    </div>
-                                    
-                                    <!-- File summary -->
-                                    <div id="fileSummary" class="text-muted small mb-2" style="display:none;"></div>
-                                    
-                                    <!-- Progress bar -->
-                                    <div id="uploadProgressWrapper" style="display:none;" class="mb-3">
-                                       <div class="d-flex justify-content-between align-items-center small text-muted mb-1">
-                                          <span id="uploadStatusText">Uploading...</span>
-                                          <div class="d-flex align-items-center gap-2">
-                                             <span id="uploadPercent">0%</span>
-                                             <!-- Only offered while bytes are still in flight. Once the server starts
-                                             processing, aborting the request cannot stop it, so the button is
-                                             replaced by a note rather than left there making a false promise. -->
-                                             <button type="button" id="uploadCancelBtn"
-                                             class="btn btn-sm btn-outline-danger btn-keep-bg py-0 px-2"
-                                             style="display:none; font-size: .75rem;">
-                                             Cancel
-                                          </button>
-                                       </div>
-                                    </div>
-                                    <div class="progress" style="height: 10px;">
-                                       <div id="uploadProgressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-success"
-                                       role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
-                                    </div>
+                     {% endif %}
+
+                     {% comment %}No card around this. It was a card with its own grey header
+                     sitting inside the Collections card, which read as a panel inside a panel and
+                     said "NetCDF Files" directly under a tab already naming the collection. The
+                     two columns keep their own headings, so nothing is lost by dropping the frame
+                     around them.{% endcomment %}
+                     {% comment %}g-4 so the columns keep breathing room from each other once they
+                     stack, which they do below md.{% endcomment %}
+                     <div class="row g-4 mt-1 mb-3">
+                        <div class="col-md-6 ecu-divider">
+                           {% comment %}Left-aligned, like the heading in the other column. One
+                           centred and one not put the two halves of the same row on different
+                           axes.{% endcomment %}
+                           {% comment %}Eyebrow-and-rule, the same section header the Bundle
+                           Components card and the Files tree use. Two bare headings floating over
+                           two columns read as loose text; this is the shape the rest of the page
+                           already gives a section, so the pane stops looking like an exception.
+
+                           "Add NetCDF files", not "Upload New File": the removed card header was
+                           the only place the pane said what kind of file this takes, and the input
+                           accepts several at once, which "New File" said it did not.{% endcomment %}
+                           <div class="ecu-head">
+                              <span class="text-muted fw-semibold text-nowrap ecu-eyebrow">Add NetCDF files</span>
+                           </div>
+                           <form id="netcdfUploadForm" method="post" enctype="multipart/form-data">
+                              {% csrf_token %}
+                              <input type="hidden" class="form-control" id="collection" name="collection" value="{{ add_collection }}">
+                              {% if form_netcdf.errors %}
+                              <div class="alert alert-danger" role="alert">
+                                 <strong>Please correct the errors below:</strong>
+                                 {{ form_netcdf.errors }}
+                              </div>
+                              {% endif %}
+                              {% comment %}A drop area rather than a bare file input sitting on the
+                                 card. It is a <label for>, so clicking it opens the picker with no
+                                 JS at all and the drag-and-drop wiring below is pure addition: a
+                                 drop writes into the same input and fires the same change event
+                                 the picker does, so the summary, the validation and the submit
+                                 path never learn where the files came from.
+
+                                 The label also carries the input's accessible name, which is why
+                                 the separate hidden one is gone: one label, doing both jobs.
+
+                                 The upload area renders once per collection, so the widget id has
+                                 to be per collection too, or every tab's label points at the first
+                                 tab's input.{% endcomment %}
+                              {% comment %}Two states in the one well. Idle is the invitation;
+                                 once something is picked the well shows what it is holding,
+                                 because a drop target still saying "drag files here" over a
+                                 selection it has already taken is the control disagreeing with
+                                 itself. The well stays clickable in both states, so clicking it
+                                 again replaces the selection.{% endcomment %}
+                              <div class="mb-3">
+                                 <label class="ecu-drop" for="id_netcdf_files_{{ add_collection.id }}">
+                                    <span class="ecu-drop-idle">
+                                       <i class="bi bi-cloud-arrow-up ecu-drop-icon"></i>
+                                       <span class="ecu-drop-title">Drag netCDF files here</span>
+                                       <span class="ecu-drop-hint">
+                                          or click to browse. Several at once is fine, and files
+                                          with no extension are accepted.
+                                       </span>
+                                    </span>
+                                    {% comment %}Filled in by the change handler, which writes
+                                       filenames as text and never as markup.{% endcomment %}
+                                    <span class="ecu-drop-picked d-none"></span>
+                                 </label>
+                                 {% comment %}Outside the label on purpose: a button inside one
+                                    opens the file picker when clicked, which is the opposite of
+                                    what Clear is for.{% endcomment %}
+                                 <div class="ecu-drop-actions d-none">
+                                    <button type="button" class="btn btn-sm btn-link btn-keep-bg text-decoration-none p-0 ecu-clear">
+                                       Clear
+                                    </button>
+                                    <span class="text-muted">or click above to choose different files</span>
+                                 </div>
+                                 {% comment %}Rendered by hand rather than as {{ form_netcdf.netcdf_files }} only so the id
+                                    can be unique per collection; the name must stay netcdf_files for the view. Hidden,
+                                    not removed: it is still the control, still focusable, and the drop area lights up
+                                    around it on focus.{% endcomment %}
+                                 <input type="file" name="netcdf_files" multiple class="visually-hidden"
+                                    id="id_netcdf_files_{{ add_collection.id }}"
+                                    aria-describedby="uploadHint{{ add_collection.id }}">
+                                 <span class="visually-hidden" id="uploadHint{{ add_collection.id }}">{{ form_netcdf.netcdf_files.label }}</span>
+                              </div>
+                              
+                              
+                              <!-- Progress bar -->
+                              <div id="uploadProgressWrapper" style="display:none;" class="mb-3">
+                                 <div class="d-flex justify-content-between align-items-center small text-muted mb-1">
+                                    <span id="uploadStatusText">Uploading...</span>
+                                    <div class="d-flex align-items-center gap-2">
+                                       <span id="uploadPercent">0%</span>
+                                       <!-- Only offered while bytes are still in flight. Once the server starts
+                                       processing, aborting the request cannot stop it, so the button is
+                                       replaced by a note rather than left there making a false promise. -->
+                                       <button type="button" id="uploadCancelBtn"
+                                       class="btn btn-sm btn-outline-danger btn-keep-bg py-0 px-2"
+                                       style="display:none; font-size: .75rem;">
+                                       Cancel
+                                    </button>
                                  </div>
                               </div>
-                              
-                              <!-- Success message -->
-                              <div id="uploadSuccessMsg" class="alert alert-success py-2 small" style="display:none;">
-                                 <i class="bi bi-check-circle me-1"></i> Upload complete! Reloading...
+                              <div class="progress" style="height: 10px;">
+                                 <div id="uploadProgressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-success"
+                                 role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
                               </div>
-                              
-                              <button type="submit" id="uploadBtn" class="btn btn-success w-100">Upload</button>
-                           </form>
+                           </div>
                         </div>
                         
-                        <div class="col-md-6">
-                           <form method="post" action="{% url 'build:bulk_delete_netcdf' pk_bundle=bundle.id %}" id="bulkDeleteNetCDFForm">
-                              {% csrf_token %}
-                              
-                              <div class="d-flex justify-content-between align-items-center mb-3 px-1">
-                                 <div class="d-flex align-items-center gap-2">
-                                    <h6 class="card-title mb-0">Uploaded Files</h6>
-                                    <span class="badge rounded-pill bg-light text-dark border">
-                                       {{ add_collection.ama_files|length }} File{% if add_collection.ama_files|length != 1 %}s{% endif %}
-                                    </span>
-                                 </div>
-                                 {% if add_collection.ama_files %}
-                                 <div class="d-flex align-items-center gap-2">
-                                    {% comment %}Was rendered with style="display: none;" and never
-                                       unhidden by anything, so the control shipped invisible.
-                                       toggleSelectAll() was wired and correct all along.{% endcomment %}
-                                    <button type="button" class="btn btn-sm btn-outline-secondary"
-                                       id="selectAllWrapper" onclick="toggleSelectAll(this)">
-                                       Select All
-                                    </button>
-                                    <button type="button" class="btn btn-sm btn-outline-danger btn-keep-bg"
-                                    data-bs-toggle="modal" data-bs-target="#bulkDeleteNetCDFModal"
-                                    id="bulkDeleteBtn">
-                                    <i class="bi bi-trash me-1"></i> Delete Selected
-                                 </button>
-                              </div>
-                              {% endif %}
-                           </div>
-                           
-                           <div class="border rounded bg-light" style="max-height: 250px; overflow-y: auto;">
-                              <ul class="list-group list-group-flush">
-                                 {% comment %}Scoped to this collection: a file uploaded here must not appear
-                                    under every other collection's tab.{% endcomment %}
-                                 {% for nc_file in add_collection.ama_files %}
-                                 <li class="list-group-item d-flex justify-content-between align-items-center px-2 bg-transparent">
-                                    <div class="d-flex align-items-center" style="overflow:hidden;">
-                                       <input class="form-check-input me-2 netcdf-checkbox" type="checkbox"
-                                       name="selected_netcdf" value="{{ nc_file.pk }}" id="nc_{{ nc_file.pk }}">
-                                       <i class="bi bi-file-earmark-code me-2 text-secondary"></i>
-                                       <a href="{{ nc_file.file.url }}" target="_blank" class="text-truncate"
-                                       style="max-width: 150px;" title="{{ nc_file.title }}">
-                                       {{ nc_file.title }}
-                                    </a>
-                                    {% if nc_file.processed %}
-                                    <span class="badge bg-success ms-2" title="Metadata extracted and XML label generated.">
-                                       <i class="bi bi-check-circle-fill me-1"></i>Processed
-                                    </span>
-                                    {% else %}
-                                    <span class="badge bg-danger ms-2"
-                                    title="{% if nc_file.processing_error %}{{ nc_file.processing_error }}{% else %}Metadata was not extracted from this file.{% endif %}">
-                                    <i class="bi bi-exclamation-triangle-fill me-1"></i>Not processed
-                                 </span>
-                                 {% endif %}
-                                 {% if nc_file.is_unassigned %}
-                                 <span class="badge bg-warning text-dark ms-2"
-                                 title="Uploaded before files were filed by collection, and its collection could not be determined. Re-upload it into a collection to edit its AMA metadata.">
-                                 Unassigned
-                              </span>
-                              {% endif %}
-                                 {% if nc_file.has_ama_override %}
-                                 <span class="badge bg-info text-dark ms-2"
-                                 title="This file has metadata of its own instead of the collection defaults.">
-                                 Own metadata
-                              </span>
-                              {% endif %}
-                           </div>
-                           <div class="d-flex align-items-center gap-2 flex-shrink-0">
-                              {% comment %}No metadata button here any more. Metadata is edited from
-                                 the label it belongs to, in the Files card below: this card is for
-                                 managing the files themselves.{% endcomment %}
-                           <span class="text-muted small">{{ nc_file.uploaded_at|date:"M d, H:i" }}</span>
+                        <!-- Success message -->
+                        <div id="uploadSuccessMsg" class="alert alert-success py-2 small" style="display:none;">
+                           <i class="bi bi-check-circle me-1"></i> Upload complete! Reloading...
                         </div>
-                     </li>
-                     {% empty %}
-                     <li class="list-group-item text-center text-muted py-4 bg-transparent">
-                        <i class="bi bi-folder2-open display-6 d-block mb-2"></i>
-                        No NetCDF files uploaded yet.
-                     </li>
-                     {% endfor %}
-                  </ul>
-               </div>
-               
-            </form>
+                        
+                        <button type="submit" id="uploadBtn" class="btn btn-success w-100">Upload</button>
+                     </form>
+                  </div>
+                  
+                  <div class="col-md-6">
+                     <form method="post" action="{% url 'build:bulk_delete_netcdf' pk_bundle=bundle.id %}" id="bulkDeleteNetCDFForm">
+                        {% csrf_token %}
+                        
+                        {% comment %}The same header as the column opposite. .ecu-head gives both
+                           a fixed height, which is what keeps the two labels on one line: this
+                           column's row carries buttons and the other's does not, so left to
+                           themselves the two headings sat at different heights.{% endcomment %}
+                        <div class="ecu-head">
+                           <span class="text-muted fw-semibold text-nowrap ecu-eyebrow">Uploaded files</span>
+                           <span class="badge rounded-pill bg-light text-dark border fw-normal">
+                              {{ add_collection.ama_files|length }}
+                           </span>
+                           {% if add_collection.ama_files %}
+                           <div class="d-flex align-items-center gap-2 flex-shrink-0 ms-auto">
+                              {% comment %}Was rendered with style="display: none;" and never
+                                 unhidden by anything, so the control shipped invisible.
+                                 toggleSelectAll() was wired and correct all along.{% endcomment %}
+                              <button type="button" class="btn btn-sm btn-outline-secondary"
+                                 id="selectAllWrapper" onclick="toggleSelectAll(this)">
+                                 Select All
+                              </button>
+                              <button type="button" class="btn btn-sm btn-outline-danger btn-keep-bg"
+                              data-bs-toggle="modal" data-bs-target="#bulkDeleteNetCDFModal"
+                              id="bulkDeleteBtn">
+                              <i class="bi bi-trash me-1"></i> Delete Selected
+                           </button>
+                        </div>
+                        {% endif %}
+                     </div>
+                     
+                     <div class="border rounded bg-light" style="max-height: 250px; overflow-y: auto;">
+                        <ul class="list-group list-group-flush">
+                           {% comment %}Scoped to this collection: a file uploaded here must not appear
+                              under every other collection's tab.{% endcomment %}
+                           {% for nc_file in add_collection.ama_files %}
+                           {% comment %}Two lines, not one: the name on top and the date under it, with the status
+                              on the right. Everything used to sit on a single line competing for the same width, so a
+                              name, a solid badge and a timestamp all fought over it and the name lost.
+
+                              min-width:0 is what lets a flex item shrink below its content and truncate at all;
+                              everything beside the name is flex-shrink-0, so the name is the only thing that gives.
+
+                              No "Own metadata" badge: it spent a good part of the row saying something this card
+                              cannot act on, and the Files card reports what each label carries in the place where it
+                              can be edited. No metadata button either, for the same reason: this card is for managing
+                              the files themselves.{% endcomment %}
+                           <li class="list-group-item d-flex align-items-center gap-2 px-2 py-2 bg-transparent">
+                              <input class="form-check-input flex-shrink-0 netcdf-checkbox" type="checkbox"
+                                 name="selected_netcdf" value="{{ nc_file.pk }}" id="nc_{{ nc_file.pk }}">
+                              <i class="bi bi-file-earmark-code text-secondary flex-shrink-0"></i>
+                              <span class="flex-grow-1" style="min-width: 0;">
+                                 <a href="{{ nc_file.file.url }}" target="_blank" class="d-block text-truncate"
+                                    title="{{ nc_file.title }}">{{ nc_file.title }}</a>
+                                 <span class="text-muted ecu-file-meta">{{ nc_file.uploaded_at|date:"M d, H:i" }}</span>
+                              </span>
+                              {% comment %}Outline pills rather than solid badges, matching the readings in the Files
+                                 tree and in the post-upload dialog: state reads the same way everywhere on this page,
+                                 and solid green was shouting loudest at the least interesting thing in the row.
+                                 Kept, unlike the tree's, because this list is built from the database: a file whose
+                                 processing failed still has a row here, and saying so is the whole point.{% endcomment %}
+                              {% if nc_file.processed %}
+                              <span class="ecu-pill ecu-ok flex-shrink-0" title="Metadata extracted and XML label generated.">Processed</span>
+                              {% else %}
+                              <span class="ecu-pill ecu-bad flex-shrink-0"
+                                 title="{% if nc_file.processing_error %}{{ nc_file.processing_error }}{% else %}Metadata was not extracted from this file.{% endif %}">Not processed</span>
+                              {% endif %}
+                              {% if nc_file.is_unassigned %}
+                              <span class="ecu-pill ecu-warn flex-shrink-0"
+                                 title="Uploaded before files were filed by collection, and its collection could not be determined. Re-upload it into a collection to edit its AMA metadata.">Unassigned</span>
+                              {% endif %}
+                           </li>
+               {% empty %}
+               <li class="list-group-item text-center text-muted py-4 bg-transparent">
+                  <i class="bi bi-folder2-open display-6 d-block mb-2"></i>
+                  No NetCDF files uploaded yet.
+               </li>
+               {% endfor %}
+            </ul>
          </div>
-      </div>
-      
-         </div>
-      </div>
+         
+      </form>
+   </div>
+</div>
    </div>
 {% endfor %}
 
@@ -2623,6 +2833,40 @@ when in fact their collection was NULL the whole time.
 </div>
 </div>
 </div>
+
+{% comment %}Delete confirmations for every collection, rendered once, here, outside every
+tab pane. They are triggered from the tabs now, and Bootstrap gives a tab you are not
+standing on display:none, which would leave its modal unopenable if it stayed inside. This
+also follows the project's own rule: modals go outside the card structure they belong to.
+{% endcomment %}
+{% for add_collection in additional_collections_set %}
+<!-- Delete Collection Modal -->
+<div class="modal fade" id="deleteCollectionModal{{ add_collection.id }}" tabindex="-1" aria-labelledby="deleteCollectionModalLabel{{ add_collection.id }}" aria-hidden="true">
+   <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+         <div class="modal-header border-0 pb-0">
+            <h5 class="modal-title text-danger" id="deleteCollectionModalLabel{{ add_collection.id }}">
+               <i class="bi bi-exclamation-triangle me-2"></i>Delete Collection
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+         </div>
+         <div class="modal-body">
+            <p>Are you sure you want to delete the <strong>{{ add_collection.collection_name }}</strong> collection?</p>
+            <p class="text-muted small mb-0"><i class="bi bi-info-circle me-1"></i>This action cannot be undone.</p>
+         </div>
+         <div class="modal-footer border-0">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <form action="{% url 'build:delete_collection' pk_bundle=bundle.id pk_collection=add_collection.id %}" method="post" class="mb-0">
+               {% csrf_token %}
+               <button type="submit" class="btn btn-danger btn-keep-bg">
+                  <i class="bi bi-trash me-1"></i> Delete Collection
+               </button>
+            </form>
+         </div>
+      </div>
+   </div>
+</div>
+{% endfor %}
 
 <!-- The Rest -->
 <div class="row py-4">
@@ -2782,23 +3026,111 @@ when in fact their collection was NULL the whole time.
    });
    
    
+   // Drag and drop onto the upload area.
+   //
+   // Pure addition: the input stays the source of truth, so a drop writes into it and fires the
+   // same change event the file picker does, and the summary, the validation and the submit path
+   // never learn where the files came from. Clicking still works with no JS at all, because the
+   // drop area is a <label for> pointing at the input.
+   //
+   // Delegated, like everything else here, because the upload area renders once per collection
+   // tab pane and its ids are therefore not unique.
+   ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(function (name) {
+      document.addEventListener(name, function (e) {
+         // Cancelled document-wide, not only over the drop area: a file dropped anywhere else
+         // would otherwise make the browser navigate away and open it, taking the page and
+         // anything half-filled in on it with it.
+         if (name === 'dragover' || name === 'drop') e.preventDefault();
+
+         var zone = e.target.closest ? e.target.closest('.ecu-drop') : null;
+         if (!zone) return;
+
+         zone.classList.toggle('ecu-drop-over', name === 'dragenter' || name === 'dragover');
+         if (name !== 'drop') return;
+
+         var input = document.getElementById(zone.getAttribute('for'));
+         if (!input || !e.dataTransfer || !e.dataTransfer.files || !e.dataTransfer.files.length) {
+            return;
+         }
+         input.files = e.dataTransfer.files;
+         input.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+   });
+
    // NetCDF upload progress: event delegation handles duplicate form IDs across
    // multiple collection tab panes. Progress elements are resolved relative to the
    // form that was actually submitted.
+   // What the drop well shows once files are picked. The input is visually hidden, so without
+   // this the well would go on inviting a drag over a selection it has already taken.
+   function renderPicked(input) {
+      var zone = document.querySelector('.ecu-drop[for="' + input.id + '"]');
+      if (!zone) return;
+      var idle    = zone.querySelector('.ecu-drop-idle');
+      var picked  = zone.querySelector('.ecu-drop-picked');
+      var actions = zone.parentNode.querySelector('.ecu-drop-actions');
+      if (!idle || !picked) return;
+
+      var files = input.files;
+      if (!files || !files.length) {
+         picked.classList.add('d-none');
+         picked.textContent = '';
+         idle.classList.remove('d-none');
+         if (actions) actions.classList.add('d-none');
+         return;
+      }
+
+      function span(className, text) {
+         var node = document.createElement('span');
+         node.className = className;
+         // textContent, never innerHTML: these are the user's own filenames.
+         if (text !== undefined) node.textContent = text;
+         return node;
+      }
+
+      function mb(bytes) { return (bytes / 1048576).toFixed(2) + ' MB'; }
+
+      picked.textContent = '';
+      var total = [].reduce.call(files, function (sum, f) { return sum + f.size; }, 0);
+      picked.appendChild(span('ecu-picked-head',
+         files.length === 1 ? '1 file ready to upload'
+                            : files.length + ' files ready to upload, ' + mb(total)));
+
+      // Enough to check the right things were picked, without the well growing without limit.
+      [].slice.call(files, 0, 5).forEach(function (file) {
+         var row = span('ecu-picked-row');
+         var icon = document.createElement('i');
+         icon.className = 'bi bi-file-earmark-code flex-shrink-0';
+         row.appendChild(icon);
+         row.appendChild(span('ecu-picked-name', file.name));
+         row.appendChild(span('ecu-picked-size', mb(file.size)));
+         picked.appendChild(row);
+      });
+      if (files.length > 5) {
+         picked.appendChild(span('ecu-picked-more', 'and ' + (files.length - 5) + ' more'));
+      }
+
+      idle.classList.add('d-none');
+      picked.classList.remove('d-none');
+      if (actions) actions.classList.remove('d-none');
+   }
+
    document.addEventListener('change', function(e) {
       var input = e.target;
       if (!input || input.name !== 'netcdf_files') return;
-      var form = input.closest('form');
-      var fileSummary = form ? form.querySelector('#fileSummary') : null;
-      if (!fileSummary) return;
-      var files = input.files;
-      if (files && files.length > 0) {
-         var sizeMB = ([...files].reduce(function(a, f) { return a + f.size; }, 0) / 1048576).toFixed(2);
-         fileSummary.textContent = files.length + ' file' + (files.length > 1 ? 's' : '') + ' selected — ' + sizeMB + ' MB total';
-         fileSummary.style.display = 'block';
-      } else {
-         fileSummary.style.display = 'none';
-      }
+      renderPicked(input);
+   });
+
+   // Clear puts the well back to its invitation. Delegated, because the upload area renders once
+   // per collection tab pane.
+   document.addEventListener('click', function (e) {
+      var clear = e.target.closest ? e.target.closest('.ecu-clear') : null;
+      if (!clear) return;
+      e.preventDefault();
+      var wrapper = clear.closest('.mb-3');
+      var input = wrapper ? wrapper.querySelector('input[name="netcdf_files"]') : null;
+      if (!input) return;
+      input.value = '';
+      renderPicked(input);
    });
    
    document.addEventListener('submit', function(e) {
@@ -2874,7 +3206,7 @@ when in fact their collection was NULL the whole time.
       
       xhr.addEventListener('load', function() {
          if (cancelBtn) cancelBtn.style.display = 'none';
-         if (xhr.status === 400) {
+         if (xhr.status >= 400) {
             var errorMsg = 'Upload failed.';
             try { errorMsg = JSON.parse(xhr.responseText).error; } catch (err) {}
             if (progressWrapper) progressWrapper.style.display = 'none';
@@ -2897,6 +3229,22 @@ when in fact their collection was NULL the whole time.
          if (uploadStatusText) uploadStatusText.textContent = 'Done!';
          if (uploadSuccessMsg) uploadSuccessMsg.style.display = 'block';
          if (uploadBtn) uploadBtn.textContent = 'Upload';
+
+         // The reload that follows wipes this card, the green message on it and the tab the user
+         // was standing on. Hand what just happened to the reloaded page instead of letting it
+         // scroll away: it reopens this collection's tab and says what the new files still need.
+         // Nothing here is load-bearing - a browser with sessionStorage disabled, or a reply that
+         // is not the JSON we expect, simply reloads the way it always did.
+         try {
+            var uploaded = JSON.parse(xhr.responseText);
+            if (uploaded && uploaded.files) {
+               sessionStorage.setItem('elsaNetcdfUpload:{{ bundle.id }}', xhr.responseText);
+               if (uploaded.tab_target) {
+                  sessionStorage.setItem('elsaCollectionTab:{{ bundle.id }}', uploaded.tab_target);
+               }
+            }
+         } catch (err) {}
+
          setTimeout(function() { window.location.reload(); }, 1500);
       });
       
@@ -2911,6 +3259,9 @@ when in fact their collection was NULL the whole time.
       });
       
       xhr.open('POST', form.action || window.location.href);
+      // Without this the view cannot tell a scripted upload from a plain form post, and answers
+      // with a redirect that carries nothing the post-upload notice can be built from.
+      xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
       xhr.send(formData);
    });
    
@@ -4712,6 +5063,311 @@ Has its own form; JS populates hidden inputs with the selected IDs on show. -->
       e.returnValue = '';
    });
 
+})();
+</script>
+
+{% comment %}
+Post-upload notice, and the collection tab the page comes back on.
+
+Both exist because the NetCDF upload ends in window.location.reload(). Before this, the reload
+threw away the green "Upload complete" message that had been on screen for a second and a half,
+and dropped the user on the hardcoded "document" tab rather than the collection they had just
+uploaded into. So the last thing a successful upload did was move the user somewhere else and say
+nothing. This puts them back where they were and tells them what the new files still need.
+
+A dialog rather than a card in the collection pane. The card version sat between two other cards
+in a busy tab and read as more page furniture: the one thing it existed to do, be noticed, was the
+thing it did not do. This is the moment a user has just finished an action and is being offered the
+next one, which is what a dialog is for. It costs one Escape to leave, and nothing is lost by
+leaving: every file keeps its standing "No AMA metadata yet" line in the Files tree, so the dialog
+is the announcement and the tree stays the record.
+
+The upload handler above stashes the view's JSON reply in sessionStorage on its way into the
+reload; everything below reads it back out. Readings and the editor URL come from that reply, not
+from the tree: the tree is a view of the labels on disk, and a file whose label it cannot place has
+no row there to read.
+{% endcomment %}
+<style>
+   /* Prefixed enu- (ELSA netcdf upload) so nothing here reaches the rest of the bundle page. */
+   .enu-tick { color: #198754; font-size: 1.15rem; }
+   .enu-title { overflow-wrap: anywhere; }
+   .enu-file {
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+      padding: .4rem .6rem;
+      border: 1px solid #e9ecef;
+      border-radius: .375rem;
+      background: #f8f9fa;
+   }
+   .enu-file + .enu-file { margin-top: .35rem; }
+   .enu-file-name { min-width: 0; overflow-wrap: anywhere; }
+   /* A pill, like the type chips in the Files card, so the reading reads as a status rather than
+      as another line of prose in a body that is already three paragraphs. */
+   .enu-status {
+      display: inline-block;
+      padding: .1rem .55rem;
+      border: 1px solid currentColor;
+      border-radius: 1rem;
+      font-size: .75rem;
+      white-space: nowrap;
+   }
+   /* Amber, matching the tree's "No AMA metadata yet": every AMA attribute is optional, so an
+      undescribed file is a nudge and never a fault. */
+   .enu-pending { color: #997404; }
+   .enu-done { color: #6c757d; }
+</style>
+
+{% comment %}Shell only. Everything inside is written by the script below from the upload reply,
+so a page that was not just uploaded to never shows it.{% endcomment %}
+<div class="modal fade" id="netcdfUploadModal" tabindex="-1" aria-hidden="true"
+   aria-labelledby="netcdfUploadModalTitle">
+   <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content enu-notice">
+         <div class="modal-header">
+            <h5 class="modal-title d-flex align-items-center gap-2" id="netcdfUploadModalTitle">
+               <i class="bi bi-check-circle-fill enu-tick"></i>
+               <span class="enu-title"></span>
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"
+               aria-label="Close"></button>
+         </div>
+         <div class="modal-body">
+            <p class="small text-muted enu-lede"></p>
+            <div class="enu-list"></div>
+            {% comment %}Always shown, including when everything is already described: this line is
+            the only place the page says out loud where the editor lives, and it has to survive the
+            dialog being dismissed.{% endcomment %}
+            <p class="small text-muted mb-0 mt-3">
+               Not now is fine. Every AMA field is optional, and you can fill them in at any time:
+               open a file’s .xml label in Files below and choose Edit AMA metadata.
+            </p>
+         </div>
+         <div class="modal-footer enu-actions">
+            {% comment %}btn-keep-bg: the External theme repaints every other .btn solid blue,
+            which would make declining look exactly as inviting as accepting.{% endcomment %}
+            <button type="button" class="btn btn-sm btn-outline-secondary btn-keep-bg"
+               data-bs-dismiss="modal">Not now</button>
+         </div>
+      </div>
+   </div>
+</div>
+
+<script>
+(function () {
+   var BUNDLE   = '{{ bundle.id }}';
+   var TAB_KEY  = 'elsaCollectionTab:' + BUNDLE;
+   var LOAD_KEY = 'elsaNetcdfUpload:' + BUNDLE;
+   var SAFE_ID  = /^#[A-Za-z0-9_-]+$/;
+
+   function readStore(key, consume) {
+      try {
+         var value = sessionStorage.getItem(key);
+         if (consume) sessionStorage.removeItem(key);
+         return value;
+      } catch (err) { return null; }
+   }
+
+   // ---- Collection tab ----------------------------------------------------------------------
+   // Kept for the session rather than consumed once: an AMA save reloads the page too, and coming
+   // back on the document tab is just as wrong there.
+   var card = document.getElementById('collections_card');
+
+   function rememberTab(target) {
+      if (!target) return;
+      try { sessionStorage.setItem(TAB_KEY, target); } catch (err) {}
+   }
+
+   if (card) {
+      card.querySelectorAll('[data-bs-toggle="tab"]').forEach(function (button) {
+         button.addEventListener('shown.bs.tab', function () {
+            rememberTab(this.getAttribute('data-bs-target'));
+         });
+      });
+   }
+
+   function restoreTab() {
+      var target = readStore(TAB_KEY, false);
+      // A collection deleted since the tab was remembered leaves a target that matches nothing,
+      // in which case the page keeps the document tab it rendered with.
+      if (!card || !target || !SAFE_ID.test(target)) return;
+      var button = card.querySelector('[data-bs-toggle="tab"][data-bs-target="' + target + '"]');
+      if (button && window.bootstrap && bootstrap.Tab) {
+         bootstrap.Tab.getOrCreateInstance(button).show();
+      }
+   }
+
+   // ---- Post-upload notice ------------------------------------------------------------------
+
+   // How described a file is, in the tree's own words. The numbers come from the upload reply,
+   // not from the tree: the tree is a view of the labels on disk, and a file whose label it cannot
+   // place has no row there at all, which used to leave the notice with nothing to say about it.
+   function statusText(file) {
+      return file.ama_filled
+         ? file.ama_filled + ' of ' + file.ama_total + ' described'
+         : 'No AMA metadata yet';
+   }
+
+   // Matches the Files tree exactly: amber runs the whole way from an empty label to one field
+   // short of the full set, because every field is optional and none of those states is an error.
+   // Green is reserved for the one state with nothing left to add.
+   function isComplete(file) {
+      return file.ama_total && file.ama_filled >= file.ama_total;
+   }
+
+   var modalEl = document.getElementById('netcdfUploadModal');
+
+   function dialog() {
+      return (window.bootstrap && modalEl)
+         ? bootstrap.Modal.getOrCreateInstance(modalEl) : null;
+   }
+
+   // Open the editor on a file. Two dialogs must never be up at once: Bootstrap stacks a second
+   // backdrop and the first one is left behind, so this one is closed and the editor opened only
+   // once it is fully gone, the same handoff switchToModal() does elsewhere on this page.
+   function openEditor(file) {
+      var instance = dialog();
+      if (!instance) { reveal(file); return; }
+      modalEl.addEventListener('hidden.bs.modal', function handler() {
+         modalEl.removeEventListener('hidden.bs.modal', handler);
+         reveal(file);
+      });
+      instance.hide();
+   }
+
+   // The label's row in the Files tree is the preferred way in, because it opens the drawer in
+   // place and leaves the user standing at the label afterwards, with its refreshed reading in
+   // front of them. Where there is no row to open it from, the standalone editor page renders the
+   // same three forms, so the offer still leads somewhere.
+   function reveal(file) {
+      var row = document.querySelector('.eft-item[data-netcdf-id="' + file.id + '"]');
+      if (!row) {
+         if (file.ama_url) window.location.href = file.ama_url;
+         return;
+      }
+      var viewer = document.getElementById('fileName');
+      var viewerCard = viewer ? viewer.closest('.card') : null;
+      if (viewerCard && viewerCard.scrollIntoView) viewerCard.scrollIntoView({ block: 'start' });
+      row.click();
+      var metaBtn = document.getElementById('editMetadataBtn');
+      if (metaBtn && metaBtn.dataset.amaUrl) {
+         metaBtn.click();
+      } else if (file.ama_url) {
+         window.location.href = file.ama_url;
+      }
+   }
+
+   function el(tag, className, text) {
+      var node = document.createElement(tag);
+      if (className) node.className = className;
+      // textContent throughout: filenames are the user's own and go in as text, never as markup.
+      if (text !== undefined) node.textContent = text;
+      return node;
+   }
+
+   function actionButton(label, file, className) {
+      var button = el('button', className || 'btn btn-sm', label);
+      button.type = 'button';
+      button.addEventListener('click', function () { openEditor(file); });
+      return button;
+   }
+
+   function fillNotice(payload) {
+      var files = payload.files || [];
+      var collection = payload.collection_name || 'this collection';
+      // What the dialog says happened turns on whether anything was inherited at all; what it
+      // offers, per file below, turns on whether the label is complete.
+      var blank = files.filter(function (file) { return !file.ama_filled; });
+
+      // One file is named; several are counted, and listed in the body.
+      modalEl.querySelector('.enu-title').textContent = files.length === 1
+         ? files[0].title + ' added to ' + collection
+         : files.length + ' files added to ' + collection;
+
+      var lede = modalEl.querySelector('.enu-lede');
+      if (!blank.length) {
+         lede.textContent = files.length === 1
+            ? 'ELSA read the variables and coordinates out of it, and it inherits this '
+              + 'collection’s AMA metadata for the rest.'
+            : 'ELSA read the variables and coordinates out of them, and they inherit this '
+              + 'collection’s AMA metadata for the rest.';
+      } else {
+         lede.textContent = 'ELSA read the variables and coordinates straight out of the netCDF. '
+            + 'What it cannot read is the model run behind the data, so those fields are still '
+            + 'empty.';
+      }
+
+      // Rebuilt every time rather than appended to, so a second upload cannot show the first
+      // upload's files underneath its own.
+      var list = modalEl.querySelector('.enu-list');
+      list.innerHTML = '';
+      var actions = modalEl.querySelector('.enu-actions');
+      actions.querySelectorAll('.enu-open').forEach(function (node) { node.remove(); });
+
+      if (files.length === 1) {
+         // A list of one row says nothing the title has not already said, so the single file
+         // carries its reading on a line of its own and its action in the footer.
+         var only = files[0];
+         list.appendChild(el('div', 'enu-status ' + (isComplete(only) ? 'enu-done' : 'enu-pending'),
+            statusText(only)));
+         // Three states, three verbs: nothing to go on, something to finish, or nothing left.
+         var open = actionButton(
+            isComplete(only) ? 'Review AMA metadata'
+                             : (only.ama_filled ? 'Complete AMA metadata' : 'Add AMA metadata'),
+            only, 'btn btn-sm enu-open');
+         // Before Not now, so the offer is the button nearest the reading edge.
+         actions.insertBefore(open, actions.firstChild);
+      } else {
+         files.slice(0, 6).forEach(function (file) {
+            var row = el('div', 'enu-file small');
+            row.appendChild(el('i', 'bi bi-file-earmark-code text-muted flex-shrink-0'));
+            row.appendChild(el('span', 'flex-grow-1 enu-file-name', file.title));
+            if (isComplete(file)) {
+               row.appendChild(el('span', 'enu-status enu-done flex-shrink-0', statusText(file)));
+            } else {
+               row.appendChild(el('span', 'enu-status enu-pending flex-shrink-0',
+                  statusText(file)));
+               // Per file, and no aggregate button: an aggregate would have to pick one of them,
+               // and which one it picked would not be visible.
+               row.appendChild(actionButton('Describe', file, 'btn btn-sm flex-shrink-0'));
+            }
+            list.appendChild(row);
+         });
+         if (files.length > 6) {
+            list.appendChild(el('p', 'small text-muted mt-2 mb-0',
+               'and ' + (files.length - 6) + ' more, each with its own label in Files below.'));
+         }
+      }
+   }
+
+   function showNotice() {
+      var raw = readStore(LOAD_KEY, true);
+      if (!raw || !modalEl) return;
+
+      var payload;
+      try { payload = JSON.parse(raw); } catch (err) { return; }
+      if (!payload || !payload.files || !payload.files.length) return;
+
+      fillNotice(payload);
+
+      var instance = dialog();
+      // Without Bootstrap the dialog cannot be opened, and a half-shown modal is worse than none:
+      // the page behind it still works and the Files tree still says what each file needs.
+      if (instance) instance.show();
+   }
+
+   function init() {
+      restoreTab();
+      showNotice();
+   }
+
+   // After the Files tree, whose own DOMContentLoaded handler is registered earlier in the page:
+   // the readings this notice quotes are on rows the tree has to have wired up first.
+   if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+   } else {
+      init();
+   }
 })();
 </script>
 {% endif %}
