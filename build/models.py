@@ -5737,13 +5737,26 @@ class ValidationRun(models.Model):
         (TIER_FULL, 'Full, including data content'),
     )
 
-    # Phases validate moves through. It emits nothing at all while it compiles the
-    # schemas, which takes about five seconds, so that period has to be shown as
-    # indeterminate rather than as a bar sitting at zero.
+    # Phases validate moves through, in order. It emits nothing at all while it
+    # compiles the schemas, which takes about five seconds, so that period has to be
+    # shown as indeterminate rather than as a bar sitting at zero.
     PHASE_LOADING = 'loading'
     PHASE_LABELS = 'labels'
     PHASE_CONTENT = 'content'
+    PHASE_REFERENCES = 'references'
     PHASE_DONE = 'done'
+
+    # The passes each tier actually makes over the bundle's products. A structure run
+    # skips content validation, so it makes two passes; a full run makes three. This
+    # is what percent_complete divides by, rather than a set of invented weights.
+    #
+    # Note that validate emits a [content.validation] counter even when content
+    # validation is skipped, so the pass list - not the counter's presence - is what
+    # decides whether a structure run can be in the content phase.
+    PASSES = {
+        TIER_STRUCTURE: [PHASE_LABELS, PHASE_REFERENCES],
+        TIER_FULL: [PHASE_LABELS, PHASE_CONTENT, PHASE_REFERENCES],
+    }
 
     bundle = models.ForeignKey(Bundle, on_delete=models.CASCADE, related_name='validation_runs')
     tier = models.CharField(max_length=16, choices=TIER_CHOICES, default=TIER_STRUCTURE)
@@ -5812,15 +5825,29 @@ class ValidationRun(models.Model):
 
         None is not zero. Returning 0 during the loading phase would show a bar that
         sits still for five seconds and then jumps, which reads as a hang.
+
+        Each pass over the products is an equal share of the bar, so the figure is
+        (passes finished + progress through this one) / passes this tier makes.
         """
         if self.status == self.STATUS_DONE:
             return 100
         if self.phase == self.PHASE_LOADING or not self.products_total:
             return None
-        # Two passes over the same products in a full run, so each is half the bar.
-        if self.tier == self.TIER_FULL:
-            passes_done = self.products_done
-            if self.phase == self.PHASE_CONTENT:
-                passes_done += self.products_total
-            return min(100, int(100 * passes_done / (self.products_total * 2)))
-        return min(100, int(100 * self.products_done / self.products_total))
+
+        passes = self.PASSES.get(self.tier, [self.PHASE_LABELS])
+        if self.phase not in passes:
+            return None
+
+        finished = passes.index(self.phase)
+        within = min(1.0, self.products_done / self.products_total)
+        return min(100, int(100 * (finished + within) / len(passes)))
+
+    def phase_label(self):
+        """What this run is doing, in words, for the progress indicator."""
+        return {
+            self.PHASE_LOADING: 'Loading PDS schemas',
+            self.PHASE_LABELS: 'Checking labels',
+            self.PHASE_CONTENT: 'Checking data files',
+            self.PHASE_REFERENCES: 'Checking references',
+            self.PHASE_DONE: 'Finished',
+        }.get(self.phase, self.phase)
