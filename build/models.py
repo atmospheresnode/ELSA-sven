@@ -794,9 +794,12 @@ class Investigation(models.Model):
         return self.name
 
     def fill_label(self, label_root):
-        if label_root.find('{}Context_Area'.format(NAMESPACE)):
-            Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE))
-        else:
+        # 'is None', not truthiness: an lxml element with no children is falsy today,
+        # so an empty Context_Area would fall through and look for an Observation_Area
+        # that is not there. lxml also warns that truth-testing will always return True
+        # in a future release, which would break the Product_Observational path instead.
+        Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE))
+        if Context_Area is None:
             Context_Area = label_root.find('{}Observation_Area'.format(NAMESPACE))
 
         Investigation_Area = Context_Area.find('{}Investigation_Area'.format(NAMESPACE))
@@ -1128,9 +1131,12 @@ class Instrument(models.Model):
         self.save()
 
     def fill_label(self, label_root):
-        if label_root.find('{}Context_Area'.format(NAMESPACE)):
-            Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE))
-        else:
+        # 'is None', not truthiness: an lxml element with no children is falsy today,
+        # so an empty Context_Area would fall through and look for an Observation_Area
+        # that is not there. lxml also warns that truth-testing will always return True
+        # in a future release, which would break the Product_Observational path instead.
+        Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE))
+        if Context_Area is None:
             Context_Area = label_root.find('{}Observation_Area'.format(NAMESPACE))
 
         Observing_System = Context_Area.find('{}Observing_System'.format(NAMESPACE))
@@ -1347,9 +1353,12 @@ class Target(models.Model):
         self.save()
 
     def fill_label(self, label_root):
-        if label_root.find('{}Context_Area'.format(NAMESPACE)):
-            Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE))
-        else:
+        # 'is None', not truthiness: an lxml element with no children is falsy today,
+        # so an empty Context_Area would fall through and look for an Observation_Area
+        # that is not there. lxml also warns that truth-testing will always return True
+        # in a future release, which would break the Product_Observational path instead.
+        Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE))
+        if Context_Area is None:
             Context_Area = label_root.find('{}Observation_Area'.format(NAMESPACE))
 
         # Observing_System = Context_Area.find('{}Observing_System'.format(NAMESPACE))
@@ -1544,9 +1553,12 @@ class Instrument_Host(models.Model):
         self.save()
 
     def fill_label(self, label_root):
-        if label_root.find('{}Context_Area'.format(NAMESPACE)):
-            Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE))
-        else:
+        # 'is None', not truthiness: an lxml element with no children is falsy today,
+        # so an empty Context_Area would fall through and look for an Observation_Area
+        # that is not there. lxml also warns that truth-testing will always return True
+        # in a future release, which would break the Product_Observational path instead.
+        Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE))
+        if Context_Area is None:
             Context_Area = label_root.find('{}Observation_Area'.format(NAMESPACE))
 
         Observing_System = Context_Area.find('{}Observing_System'.format(NAMESPACE))
@@ -1886,9 +1898,12 @@ class Telescope(models.Model):
         self.save()
 
     def fill_label(self, label_root):
-        if label_root.find('{}Context_Area'.format(NAMESPACE)):
-            Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE))
-        else:
+        # 'is None', not truthiness: an lxml element with no children is falsy today,
+        # so an empty Context_Area would fall through and look for an Observation_Area
+        # that is not there. lxml also warns that truth-testing will always return True
+        # in a future release, which would break the Product_Observational path instead.
+        Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE))
+        if Context_Area is None:
             Context_Area = label_root.find('{}Observation_Area'.format(NAMESPACE))
 
         Observing_System = Context_Area.find('{}Observing_System'.format(NAMESPACE))

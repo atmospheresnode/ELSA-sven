@@ -486,6 +486,17 @@ def build(request):
                 #label_root = bundle.version.fill_xml_schema(label_root)
                 label_root = product_collection.fill_base_case(label_root)
 
+                # The AMA investigation is written into the bundle label above, but the
+                # collection carries its own Investigation_Area and was shipping it empty:
+                # a blank name, type and lid_reference are each a validation error, and the
+                # collection genuinely does belong to the same investigation. fill_label
+                # already picks 'collection_to_investigation' from the root tag, so the same
+                # call serves both labels. Done on the tree that is already open rather than
+                # reopening it.
+                if ama_investigation:
+                    print(' ... Adding Investigation Area ... ')
+                    label_root = ama_investigation.fill_label(label_root)
+
                 # Close label
                 print(' ... Closing Label ... ')
                 close_label(product_collection.label(), label_root, label_list[2])
