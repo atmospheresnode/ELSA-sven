@@ -2360,6 +2360,28 @@ class AdditionalCollections(models.Model):
 
         return
 
+    def member_lidvids(self):
+        """The LIDVID of every NetCDF product filed into this collection.
+
+        Only files whose label was written successfully belong in the inventory: a
+        failed harvest leaves a NetCDFFile row with no product label to point at.
+        """
+        # Derived exactly the way views._process_single_netcdf builds the product's own
+        # logical_identifier: the bundle LID, the collection's directory name, then the
+        # file's basename with its extension intact. Both sides read the same directory,
+        # so the inventory cannot drift from the labels it points at.
+        collection_segment = os.path.basename(self.directory())
+        return ['{}:{}:{}::1.0'.format(self.bundle.lid(), collection_segment,
+                                       os.path.basename(nc.file.name))
+                for nc in self.netcdf_files.filter(processed=True).order_by('id')]
+
+    def build_inventory(self):
+        """Write this collection's inventory table and update its label to match.
+
+        Safe to call again whenever membership changes; it rewrites both from scratch.
+        """
+        return write_collection_inventory(self.label(), self.member_lidvids())
+
     def fill_base_case(self, root):
         Product_Collection = root
          
@@ -3037,6 +3059,25 @@ class Product_Collection(models.Model):
         #copyfile(source_file, label_file)
 
         return
+
+    def member_lidvids(self):
+        """The LIDVID of every product in this collection, for the inventory table.
+
+        Only the Document collection has members ELSA tracks as products today; Context
+        and XML Schema collections are placeholders with nothing filed into them yet.
+        """
+        if self.collection != 'Document':
+            return []
+        return ['{}::1.0'.format(document.lid())
+                for document in Product_Document.objects.filter(bundle=self.bundle)]
+
+    def build_inventory(self):
+        """Write this collection's inventory table and update its label to match.
+
+        Safe to call again whenever membership changes; it rewrites both from scratch.
+        """
+        return write_collection_inventory(self.label(), self.member_lidvids())
+
 
     def build_base_case_data(self, data):
 

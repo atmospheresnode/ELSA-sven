@@ -500,6 +500,11 @@ def build(request):
                 # Close label
                 print(' ... Closing Label ... ')
                 close_label(product_collection.label(), label_root, label_list[2])
+
+                # Write the inventory table the label promises. A brand new collection has
+                # no members yet, so this writes an empty table; it is rewritten each time a
+                # document is added or removed.
+                product_collection.build_inventory()
                 print('-------------End Build Product_Collection Base Case-----------------')
             else:
                 print('before initial save')
@@ -1442,6 +1447,11 @@ def bundle(request, pk_bundle):
                 close_label(label.label(), label_root, label_list[2])
             print('\n----------------End Build Internal_Reference for Document-------------------')
 
+            # The document collection's inventory names every member product, so it has to
+            # be rewritten whenever membership changes.
+            for product_collection in product_collections_list:
+                product_collection.build_inventory()
+
             for citation_information in citation_information_set:
                 write_into_label(citation_information, product_document, None)
             for alias in alias_set:
@@ -1589,6 +1599,10 @@ def bulk_delete_netcdf(request, pk_bundle):
                     print('NetCDF file {} not found, skipping.'.format(netcdf_id))
                 except Exception as e:
                     print('Error deleting NetCDF file {}: {}'.format(netcdf_id, e))
+
+        # Rewrite inventories after the deletes, so they stop naming files that are gone.
+        for additional_collection in AdditionalCollections.objects.filter(bundle=bundle):
+            additional_collection.build_inventory()
 
         return HttpResponseRedirect('/elsa/build/' + str(pk_bundle) + '/')
 
@@ -4259,6 +4273,11 @@ def delete_product_document(request, pk_bundle, pk_product_document):
         # Delete the product_document from the database
         product_document.delete()
 
+        # Rewrite the inventory so it stops naming a product that is no longer there.
+        # Done after the delete, so member_lidvids() sees the new membership.
+        for product_collection in product_collections_list:
+            product_collection.build_inventory()
+
         return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
 
     # Secure: Current user is not the user associated with the bundle
@@ -5307,6 +5326,12 @@ def regenerate_netcdf_labels(bundle, netcdf_objs=None):
             nc_obj.save(update_fields=['processed', 'processing_error'])
             errors.append('{}: {}'.format(nc_obj.title, e))
 
+    # Membership changed, so every collection inventory in this bundle is rewritten.
+    # build_inventory() only lists files whose label was written successfully, so a
+    # failed harvest drops out of the inventory rather than pointing at a missing label.
+    for additional_collection in AdditionalCollections.objects.filter(bundle=bundle):
+        additional_collection.build_inventory()
+
     return errors
 
 
@@ -5360,6 +5385,12 @@ def variable_coord_to_product(bundle, netcdf_objs, collection_directory):
             nc_obj.processing_error = str(e)
             nc_obj.save(update_fields=['processed', 'processing_error'])
             errors.append('{}: {}'.format(nc_obj.title, e))
+
+    # Membership changed, so every collection inventory in this bundle is rewritten.
+    # build_inventory() only lists files whose label was written successfully, so a
+    # failed harvest drops out of the inventory rather than pointing at a missing label.
+    for additional_collection in AdditionalCollections.objects.filter(bundle=bundle):
+        additional_collection.build_inventory()
 
     return errors
 

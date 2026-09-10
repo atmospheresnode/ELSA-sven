@@ -10,6 +10,7 @@ from django.template import Context, loader
 from lxml import etree
 from xml.dom import minidom
 from django.utils.encoding import *
+import datetime
 import sys
 import urllib.request, urllib.error, urllib.parse
 import os
@@ -227,3 +228,79 @@ class MediaObject(object):
         self.sInfo = MediaInfo(self.root.find('sInfo'))
 
 """
+
+
+# ------------------------------------------------------------------------------------------------ #
+#                                     Collection inventories
+# ------------------------------------------------------------------------------------------------ #
+
+PDS_NS = "{http://pds.nasa.gov/pds4/pds/v1}"
+
+
+def write_collection_inventory(label_path, member_lidvids):
+    """Write a collection's inventory table and point its label at it.
+
+    Every PDS4 collection is required to carry an inventory: a delimited table naming
+    each member product, one row per member. ELSA never wrote one, so collection labels
+    described a file that did not exist and declared a hardcoded three records.
+
+    member_lidvids is the LIDVID of each member, in the order they should appear.
+    Returns the path of the table written, or None if the label has no inventory area.
+
+    A collection with no members produces a zero-row table. That does not validate --
+    PDS requires records to be 1 or greater -- but writing the true count is the honest
+    result: the collection really is empty, and that is a thing its owner needs to fix
+    rather than something this function can paper over.
+    """
+    inventory_path = os.path.splitext(label_path)[0] + '.csv'
+
+    # PDS DSV 1, exactly as the label declares it: comma between fields, CRLF between
+    # records, and 'P' for a product being archived here for the first time.
+    rows = ['P,{}'.format(lidvid) for lidvid in member_lidvids]
+    with open(inventory_path, 'w', newline='', encoding='utf-8') as inventory:
+        for row in rows:
+            inventory.write(row + '\r\n')
+
+    label_path, label_root, tree = open_label_with_tree(label_path)
+    File_Area = label_root.find('{}File_Area_Inventory'.format(PDS_NS))
+    if File_Area is None:
+        return inventory_path
+
+    File = File_Area.find('{}File'.format(PDS_NS))
+    if File is not None:
+        _set_text(File, 'file_name', os.path.basename(inventory_path))
+        _set_text(File, 'creation_date_time',
+                  datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'))
+        # Optional, and ELSA has nothing meaningful to put in it. An empty element is
+        # a validation error, so drop it rather than ship it blank.
+        _drop_if_empty(File, 'local_identifier')
+
+    Inventory = File_Area.find('{}Inventory'.format(PDS_NS))
+    if Inventory is not None:
+        _set_text(Inventory, 'records', str(len(rows)))
+        _drop_if_empty(Inventory, 'local_identifier')
+        Record_Delimited = Inventory.find('{}Record_Delimited'.format(PDS_NS))
+        if Record_Delimited is not None:
+            # The declared maximum has to cover the longest row actually written,
+            # counting the CRLF that terminates it.
+            longest = max((len(row) + 2 for row in rows), default=0)
+            _set_text(Record_Delimited, 'maximum_record_length', str(longest))
+
+    close_label(label_path, label_root, tree)
+    return inventory_path
+
+
+def _set_text(parent, tag, value):
+    """Set a child's text, creating the child if the template did not carry it."""
+    child = parent.find('{}{}'.format(PDS_NS, tag))
+    if child is None:
+        child = etree.SubElement(parent, '{}{}'.format(PDS_NS, tag))
+    child.text = value
+    return child
+
+
+def _drop_if_empty(parent, tag):
+    """Remove a child that carries no value. PDS rejects an element with empty text."""
+    child = parent.find('{}{}'.format(PDS_NS, tag))
+    if child is not None and not (child.text or '').strip() and len(child) == 0:
+        parent.remove(child)
