@@ -252,6 +252,15 @@ def write_collection_inventory(label_path, member_lidvids):
     result: the collection really is empty, and that is a thing its owner needs to fix
     rather than something this function can paper over.
     """
+    # A collection row can exist before its label has been written: the label is built
+    # in a later step, and a bulk delete can run against a collection whose label was
+    # never created. Writing a table beside a label that is not there would leave an
+    # orphan file and then fail on the parse, so there is nothing useful to do yet.
+    # The next label build calls this again.
+    if not os.path.exists(label_path):
+        print('write_collection_inventory: no label at {} yet, skipping.'.format(label_path))
+        return None
+
     inventory_path = os.path.splitext(label_path)[0] + '.csv'
 
     # PDS DSV 1, exactly as the label declares it: comma between fields, CRLF between
