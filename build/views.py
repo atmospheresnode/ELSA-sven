@@ -5147,6 +5147,32 @@ def _ama_namespaces():
     return NS
 
 
+def _label_prolog(template_path):
+    """The XML declaration and xml-model instructions that belong above the root element.
+
+    ElementTree keeps only the element tree, so the processing instructions sitting above
+    the root of the template are dropped on parse and cannot be serialized back out. Those
+    instructions are what point validate at the schematrons: without them the tool reports
+    warning.label.missing_schematron_spec, "No schematrons specified in the label", and then
+    silently skips every schematron rule. That is where the PDS4 value constraints live,
+    including the assertion that information_model_version matches the referenced schema, so
+    the label passes while roughly 500 checks never run. Copy them from the template verbatim
+    so the schema references stay defined in exactly one place.
+    """
+    prolog = ['<?xml version="1.0" encoding="UTF-8"?>']
+
+    with open(template_path, encoding='utf-8') as template:
+        for line in template:
+            stripped = line.strip()
+            if stripped.startswith('<?xml-model'):
+                prolog.append(stripped)
+            elif stripped.startswith('<') and not stripped.startswith('<?'):
+                # Reached the root element; there is nothing above it left to copy.
+                break
+
+    return '\n'.join(prolog) + '\n'
+
+
 def _fill_ama_container(container, values, NS, unit_attributes=None):
     """Replace a container's children with only the non-blank values, in LDD sequence order.
 
@@ -5494,6 +5520,7 @@ def _process_single_netcdf(bundle, nc_path, collection_directory, NS, allowed_va
     # 7. Write to Output File
     # =====================================================================================
     with open(output_path, "w", encoding="utf-8") as f:
+        f.write(_label_prolog(source_file))
         f.write(ET.tostring(root, encoding='unicode'))
 
     update = Version()
