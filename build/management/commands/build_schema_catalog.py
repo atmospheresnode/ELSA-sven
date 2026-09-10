@@ -20,10 +20,10 @@ of what a data provider actually gets wrong.
 import os
 
 import requests
-from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
 from build.forms import VERSION_CHOICES
+from build.validate_runner import work_dir
 
 PDS_CORE_URL = 'https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_{version}.{extension}'
 
@@ -36,11 +36,11 @@ EXTENSIONS = ('xsd', 'sch')
 
 
 def catalog_path():
-    return os.path.join(settings.VALIDATE_WORK_DIR, 'catalog.xml')
+    return os.path.join(work_dir(), 'catalog.xml')
 
 
 def schema_dir():
-    return os.path.join(settings.VALIDATE_WORK_DIR, 'schemas')
+    return os.path.join(work_dir(), 'schemas')
 
 
 def required_schemas():

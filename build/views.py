@@ -12,6 +12,8 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
 from django.http import HttpResponse, HttpRequest, JsonResponse
+
+from build import validate_report, validate_runner
 from django.shortcuts import render, redirect, get_object_or_404
 from django.template import RequestContext
 from django.urls import reverse
@@ -5784,3 +5786,145 @@ def submit_feedback(request):
     return JsonResponse({'success': True})
 
         
+
+
+# ------------------------------------------------------------------------------------------------ #
+#                                    PDS validation
+# ------------------------------------------------------------------------------------------------ #
+
+
+@login_required
+def start_validation(request, pk_bundle):
+    """Queue a validation run for a bundle and report where it got to.
+
+    POST only: it starts work. Answers with the run's state rather than a redirect,
+    so the page that asked can go straight into polling without a round trip.
+
+    An already-running validation is returned instead of a second one being started;
+    see validate_runner.start.
+    """
+    bundle = Bundle.objects.get(pk=pk_bundle)
+
+    if request.user != bundle.user:
+        print('unauthorized user attempting to access a restricted area.')
+        return redirect('main:restricted_access')
+
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+
+    tier = request.POST.get('tier', ValidationRun.TIER_STRUCTURE)
+    if tier not in dict(ValidationRun.TIER_CHOICES):
+        tier = ValidationRun.TIER_STRUCTURE
+
+    validation_run = validate_runner.start(bundle, tier)
+    return JsonResponse(_validation_state(validation_run))
+
+
+@login_required
+def validation_status(request, pk_bundle):
+    """The current state of this bundle's most recent validation, for polling.
+
+    Deliberately small and side-effect free: it is hit every couple of seconds while
+    a run is in flight.
+    """
+    bundle = Bundle.objects.get(pk=pk_bundle)
+
+    if request.user != bundle.user:
+        print('unauthorized user attempting to access a restricted area.')
+        return redirect('main:restricted_access')
+
+    tier = request.GET.get('tier') or None
+    validation_run = validate_runner.latest_run_for(bundle, tier)
+
+    if validation_run is None:
+        return JsonResponse({'status': 'none'})
+
+    return JsonResponse(_validation_state(validation_run))
+
+
+def _validation_state(validation_run):
+    """What a polling client needs, and nothing it does not.
+
+    Findings are summarised rather than sent in full: a poll every two seconds does
+    not need the whole list, and the Phase 2 panel will render them from a page load
+    once the run is complete.
+    """
+    return {
+        'id': validation_run.pk,
+        'status': validation_run.status,
+        'status_label': validation_run.get_status_display(),
+        'tier': validation_run.tier,
+        'phase': validation_run.phase,
+        'phase_label': validation_run.phase_label(),
+        'percent': validation_run.percent_complete(),
+        'products_done': validation_run.products_done,
+        'products_total': validation_run.products_total,
+        'errors': validation_run.error_count,
+        'warnings': validation_run.warning_count,
+        'finished': validation_run.status in (
+            ValidationRun.STATUS_DONE, ValidationRun.STATUS_FAILED),
+        # A completed run whose bundle has since changed still describes a real
+        # bundle, just not this one. The client has to be able to say so.
+        'stale': validation_run.is_stale(),
+        'failure_reason': validation_run.failure_reason,
+    }
+
+
+@login_required
+def validation_report(request, pk_run):
+    """Staff view of one run: every finding, grouped, with the raw report available.
+
+    Staff-only on purpose. In this phase nothing is translated for data providers
+    yet, and raw validate output shown to someone who does not read PDS4 is worse
+    than showing them nothing - which is exactly the mistake this phase exists to
+    avoid making at scale.
+    """
+    if not request.user.is_staff:
+        print('unauthorized user attempting to access a restricted area.')
+        return redirect('main:restricted_access')
+
+    validation_run = ValidationRun.objects.select_related('bundle').get(pk=pk_run)
+    findings = validation_run.findings or []
+
+    context_dict = {
+        'run': validation_run,
+        'bundle': validation_run.bundle,
+        'errors': validate_report.errors(findings),
+        'warnings': validate_report.warnings(findings),
+        'by_location': sorted(
+            validate_report.group_by_location(findings).items(),
+            key=lambda item: (-len(item[1]), item[0])),
+        'by_type': sorted(
+            validate_report.summarise_types(findings).items(),
+            key=lambda item: (-item[1], item[0])),
+    }
+    return render(request, 'build/validation/report.html', context_dict)
+
+
+@login_required
+def validation_runs(request):
+    """Staff list of recent runs across every bundle.
+
+    This is the phase's actual deliverable: what findings occur in the wild, so the
+    Phase 2 rule table is built from observation rather than from the one bundle
+    that happened to be at hand.
+    """
+    if not request.user.is_staff:
+        print('unauthorized user attempting to access a restricted area.')
+        return redirect('main:restricted_access')
+
+    runs = ValidationRun.objects.select_related('bundle', 'bundle__user')[:100]
+
+    # Aggregated across every stored run, which is the view worth having: a message
+    # type that shows up on most bundles is the first thing worth translating.
+    type_counts = {}
+    for validation_run in ValidationRun.objects.exclude(findings=None):
+        for finding_type, count in validate_report.summarise_types(
+                validation_run.findings or []).items():
+            type_counts[finding_type] = type_counts.get(finding_type, 0) + count
+
+    context_dict = {
+        'runs': runs,
+        'by_type': sorted(type_counts.items(), key=lambda item: (-item[1], item[0])),
+    }
+    return render(request, 'build/validation/runs.html', context_dict)

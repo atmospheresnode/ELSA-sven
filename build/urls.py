@@ -136,6 +136,14 @@ urlpatterns = [
     # Submit Bundle for Review
     re_path(r'^(?P<pk_bundle>\d+)/submit/$', views.submit_bundle_internal, name='submit_bundle_internal'),
 
+    # PDS validation. The two bundle-scoped routes are hit by the page itself; the
+    # two report routes are staff-only and exist so we can see what findings occur
+    # in the wild before anything is shown to data providers.
+    re_path(r'^(?P<pk_bundle>\d+)/validate/start/$', views.start_validation, name='start_validation'),
+    re_path(r'^(?P<pk_bundle>\d+)/validate/status/$', views.validation_status, name='validation_status'),
+    re_path(r'^validation/runs/$', views.validation_runs, name='validation_runs'),
+    re_path(r'^validation/run/(?P<pk_run>\d+)/$', views.validation_report, name='validation_report'),
+
     # Beta Feedback
     re_path(r'^feedback/$', views.submit_feedback, name='submit_feedback'),
     

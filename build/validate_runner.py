@@ -80,6 +80,18 @@ def _environment():
     return environment
 
 
+def work_dir():
+    """Where the schema cache and reports live.
+
+    Read through getattr with a default because elsa/settings.py is gitignored: the
+    settings block for validation does not travel with the code, so a host that has
+    not had it applied yet must still import and run rather than raising
+    AttributeError from an import-time path join. See docs/pds_validation_setup.md.
+    """
+    return getattr(settings, 'VALIDATE_WORK_DIR',
+                   os.path.join(settings.BASE_DIR, 'validation'))
+
+
 def label_count(bundle):
     """How many XML labels the bundle holds, which is what progress is measured against."""
     total = 0
@@ -89,7 +101,7 @@ def label_count(bundle):
 
 
 def report_path_for(run):
-    reports = os.path.join(settings.VALIDATE_WORK_DIR, 'reports')
+    reports = os.path.join(work_dir(), 'reports')
     os.makedirs(reports, exist_ok=True)
     return os.path.join(reports, 'run-{}.json'.format(run.pk))
 
@@ -107,7 +119,7 @@ def build_command(run, report_path):
         '--progressN', '1',
     ]
 
-    catalog = os.path.join(settings.VALIDATE_WORK_DIR, 'catalog.xml')
+    catalog = os.path.join(work_dir(), 'catalog.xml')
     if os.path.exists(catalog):
         # Resolves schema URLs against the local cache, so a run does not depend on
         # pds.nasa.gov being reachable. Built by `manage.py build_schema_catalog`.
