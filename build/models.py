@@ -5701,3 +5701,126 @@ class FileDescription(AMACollectionScopedMixin):
         if self.netcdf_file_id is None:
             return 'File Description default for {}'.format(self.collection)
         return 'File Description for {}'.format(self.netcdf_file)
+
+# ------------------------------------------------------------------------------------------------ #
+#                                    PDS validation runs
+# ------------------------------------------------------------------------------------------------ #
+
+
+class ValidationRun(models.Model):
+    """One execution of the PDS validate tool against one bundle.
+
+    Kept as a row rather than a cached blob so that a run has a lifecycle a page can
+    poll, and so staff can see what a data provider saw when they submitted.
+
+    Two tiers, because the cost differs by orders of magnitude. STRUCTURE skips
+    content validation and takes a few seconds, which is cheap enough to run whenever
+    a bundle changes. FULL reads inside every data file and is the one that has to
+    happen before submission.
+    """
+
+    STATUS_QUEUED = 'q'
+    STATUS_RUNNING = 'r'
+    STATUS_DONE = 'd'
+    STATUS_FAILED = 'f'
+    STATUS_CHOICES = (
+        (STATUS_QUEUED, 'Queued'),
+        (STATUS_RUNNING, 'Running'),
+        (STATUS_DONE, 'Complete'),
+        (STATUS_FAILED, 'Failed'),
+    )
+
+    TIER_STRUCTURE = 'structure'
+    TIER_FULL = 'full'
+    TIER_CHOICES = (
+        (TIER_STRUCTURE, 'Structure only'),
+        (TIER_FULL, 'Full, including data content'),
+    )
+
+    # Phases validate moves through. It emits nothing at all while it compiles the
+    # schemas, which takes about five seconds, so that period has to be shown as
+    # indeterminate rather than as a bar sitting at zero.
+    PHASE_LOADING = 'loading'
+    PHASE_LABELS = 'labels'
+    PHASE_CONTENT = 'content'
+    PHASE_DONE = 'done'
+
+    bundle = models.ForeignKey(Bundle, on_delete=models.CASCADE, related_name='validation_runs')
+    tier = models.CharField(max_length=16, choices=TIER_CHOICES, default=TIER_STRUCTURE)
+    status = models.CharField(max_length=1, choices=STATUS_CHOICES, default=STATUS_QUEUED)
+
+    requested_at = models.DateTimeField(auto_now_add=True)
+    started_at = models.DateTimeField(null=True, blank=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+
+    # Snapshot of the bundle as it was when this run started. Compared against
+    # Bundle.updated_at to tell whether the result still describes the bundle the
+    # user is looking at; see is_stale().
+    bundle_updated_at = models.DateTimeField(null=True, blank=True)
+
+    # Progress, driven by the counters validate streams as it works.
+    phase = models.CharField(max_length=16, default=PHASE_LOADING)
+    products_total = models.PositiveIntegerField(default=0)
+    products_done = models.PositiveIntegerField(default=0)
+
+    error_count = models.PositiveIntegerField(default=0)
+    warning_count = models.PositiveIntegerField(default=0)
+
+    # Where the raw JSON report landed, and the findings parsed out of it. The raw
+    # file is kept because staff will want to see exactly what the tool said, and
+    # because a parser change should be re-runnable against old reports.
+    report_path = models.CharField(max_length=MAX_CHAR_FIELD, blank=True, default='')
+    findings = models.JSONField(null=True, blank=True)
+
+    # Why a run failed to produce a report at all: validate missing, Java missing,
+    # a crash, a timeout. Distinct from a bundle that validated and had errors.
+    failure_reason = models.TextField(blank=True, default='')
+
+    class Meta:
+        ordering = ['-requested_at']
+        indexes = [
+            models.Index(fields=['bundle', '-requested_at']),
+        ]
+
+    def __str__(self):
+        return '{} validation of {} ({})'.format(
+            self.get_tier_display(), self.bundle.name, self.get_status_display())
+
+    def is_active(self):
+        """Queued or running, so a second request should join it rather than start another."""
+        return self.status in (self.STATUS_QUEUED, self.STATUS_RUNNING)
+
+    def is_stale(self):
+        """True when the bundle changed after this run started.
+
+        The findings still describe a real bundle, just not the current one. Saying so
+        is the difference between a user trusting the panel and learning to ignore it:
+        the alternative is showing them errors they already fixed, or a clean result
+        that no longer applies.
+        """
+        if self.bundle_updated_at is None or self.bundle.updated_at is None:
+            return False
+        return self.bundle.updated_at > self.bundle_updated_at
+
+    def duration_seconds(self):
+        if self.started_at is None or self.finished_at is None:
+            return None
+        return (self.finished_at - self.started_at).total_seconds()
+
+    def percent_complete(self):
+        """0-100, or None while validate is still compiling schemas.
+
+        None is not zero. Returning 0 during the loading phase would show a bar that
+        sits still for five seconds and then jumps, which reads as a hang.
+        """
+        if self.status == self.STATUS_DONE:
+            return 100
+        if self.phase == self.PHASE_LOADING or not self.products_total:
+            return None
+        # Two passes over the same products in a full run, so each is half the bar.
+        if self.tier == self.TIER_FULL:
+            passes_done = self.products_done
+            if self.phase == self.PHASE_CONTENT:
+                passes_done += self.products_total
+            return min(100, int(100 * passes_done / (self.products_total * 2)))
+        return min(100, int(100 * self.products_done / self.products_total))
