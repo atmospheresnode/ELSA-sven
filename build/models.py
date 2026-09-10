@@ -2747,34 +2747,26 @@ class Product_Bundle(models.Model):
 
     def build_internal_reference(self, root, relation):
 
-        print('---DEBUG---')
-        print('Root: {}'.format(root))
-
         Reference_List = root.find('{}Reference_List'.format(NAMESPACE))
 
-        # Using .append
+        # Every element has to be created in the PDS namespace. The previous version
+        # built them bare - etree.Element("Internal_Reference") - which the namespaced
+        # find() below could not see, so each call appended an invisible stray element
+        # and then wrote its values into the template's placeholder instead. A second
+        # reference re-filled that same placeholder, so a bundle with two documents
+        # emitted one mangled reference with duplicated empty children rather than two
+        # good ones. Building each element in the namespace and holding on to it means
+        # the template needs no placeholder at all.
+        Internal_Reference = etree.SubElement(
+            Reference_List, '{}Internal_Reference'.format(NAMESPACE))
 
-        Reference_List.append(etree.Element("Internal_Reference"))
-        Internal_Reference = Reference_List.find('{}Internal_Reference'.format(NAMESPACE))
-
-        Internal_Reference.append(etree.Element("lid_reference"))
-        lid_reference = Internal_Reference.find('{}lid_reference'.format(NAMESPACE))
+        lid_reference = etree.SubElement(
+            Internal_Reference, '{}lid_reference'.format(NAMESPACE))
         lid_reference.text = relation.lid()
 
-        Internal_Reference.append(etree.Element("reference_type"))
-        lid_reference = Internal_Reference.find('{}reference_type'.format(NAMESPACE))
-        lid_reference.text = 'bundle_to_{}'.format(relation.reference_type())
-
-        # using .subelement
-
-        # Internal_Reference = etree.SubElement(
-        #     Reference_List, 'Internal_Reference')
-
-        # lid_reference = etree.SubElement(Internal_Reference, 'lid_reference')
-        # lid_reference.text = relation.lid()
-
-        # reference_type = etree.SubElement(Internal_Reference, 'reference_type')
-        # reference_type.text = 'bundle_to_{}'.format(relation.reference_type())
+        reference_type = etree.SubElement(
+            Internal_Reference, '{}reference_type'.format(NAMESPACE))
+        reference_type.text = 'bundle_to_{}'.format(relation.reference_type())
 
         return root
 

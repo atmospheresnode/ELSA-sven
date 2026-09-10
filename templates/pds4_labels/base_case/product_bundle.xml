@@ -12,10 +12,6 @@
         </Modification_History>
     </Identification_Area>
     <Context_Area>
-        <Time_Coordinates>
-            <start_date_time></start_date_time>
-            <stop_date_time></stop_date_time>
-        </Time_Coordinates>
         <Investigation_Area>
             <name></name>
             <type></type>
@@ -28,12 +24,7 @@
             <name></name>
         </Observing_System>
     </Context_Area>
-    <Reference_List>
-        <Internal_Reference>
-            <lid_reference></lid_reference>
-            <reference_type></reference_type>
-        </Internal_Reference>
-    </Reference_List>
+    <Reference_List></Reference_List>
     <Bundle>
         <bundle_type></bundle_type>
     </Bundle>
