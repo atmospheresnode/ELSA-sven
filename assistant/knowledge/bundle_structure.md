@@ -2,14 +2,14 @@
 <!-- fingerprint:
      build/models.py#Bundle                  = 81fb6e671b24
      build/models.py#Collections             = efb0c8c55c09
-     build/models.py#AdditionalCollections   = e7d4fb297ed3
-     build/models.py#Product_Bundle          = a4a2242d07bf
+     build/models.py#AdditionalCollections   = 6f67e205c8a6
+     build/models.py#Product_Bundle          = 066355abe899
      build/models.py#Product_Collection      = 0595895e042e
      build/forms.py#BundleForm               = 89db5879e013
      build/forms.py#AdditionalCollectionForm = a51e7bc09d85
 -->
-<!-- reviewed: 2026-08-28 -->
-<!-- baseline: d8df4b96320a4636b7a95ac426bec7ff1a1fa839 -->
+<!-- reviewed: 2026-09-10 -->
+<!-- baseline: 916e4783e9b5a297ffb9e0d83dbb9a4951cd9f8d -->
 # Bundle and Collection Structure
 
 PDS4 Information Model (v1.24 / 1O00): a Product_Bundle is an aggregate product
@@ -33,6 +33,10 @@ descriptions), and references to context products.
 In ELSA: ELSA builds this structure for you. When you create a bundle, ELSA
 generates the bundle product label and collection labels; uploading NetCDF files
 or documents places them in the right collection with generated PDS4 labels.
+Each collection also gets an inventory table, a .csv file sitting beside the
+collection label that lists every member product. ELSA writes and rewrites it
+for you as products are added or removed; PDS requires it, and it must name at
+least one member, so a collection with nothing in it will not validate.
 ELSA has two bundle types: "Archive" (a full PDS4 archive bundle) and "External"
 (a lighter bundle, used for the Atmospheres Model Archive (AMA), where the data
 is hosted externally and ELSA produces the metadata bundle).
