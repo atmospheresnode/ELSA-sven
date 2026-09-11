@@ -72,6 +72,21 @@ class PreflightPanelTests(TestCase):
         self.assertEqual(response.status_code, 200)
         return response
 
+    # The page now carries two tabs. "What to fix" is the translated one and is what
+    # opens; "Validation output" is the raw PDS text, shown deliberately. An assertion
+    # about jargon has to say which of the two it means, so these split the body at
+    # the boundary between them.
+    RAW_PANE = 'id="preflight_pane_raw"'
+
+    def fix_pane(self, response=None):
+        body = (response or self.page()).content.decode()
+        return body.split(self.RAW_PANE)[0]
+
+    def raw_pane(self, response=None):
+        body = (response or self.page()).content.decode()
+        self.assertIn(self.RAW_PANE, body, 'the raw output tab is not on the page')
+        return body.split(self.RAW_PANE)[1]
+
     def run_with(self, findings, **kwargs):
         defaults = dict(bundle=self.bundle, status=ValidationRun.STATUS_DONE,
                         products_total=2, products_done=2,
@@ -103,20 +118,20 @@ class PreflightPanelTests(TestCase):
         self.assertContains(page, 'Add Citation Information')
         self.assertContains(page, 'Citation Information')
 
-    def test_a_raw_pds_error_code_never_reaches_the_page(self):
+    def test_a_raw_pds_error_code_never_reaches_the_translated_tab(self):
         """The whole point of the translation layer."""
         self.run_with([CITATION, EMPTY_COLLECTION])
-        body = self.page().content.decode()
+        pane = self.fix_pane()
         for jargon in ('cvc-minInclusive-valid', 'cvc-minLength-valid', 'facet-valid',
                        'Product_Collection/File_Area_Inventory'):
-            self.assertNotIn(jargon, body, 'raw PDS output leaked to the user')
+            self.assertNotIn(jargon, pane, 'raw PDS output leaked into the translation')
 
-    def test_an_elsa_defect_is_not_shown_to_the_user(self):
+    def test_an_elsa_defect_is_not_shown_in_the_translated_tab(self):
         """A finding they cannot act on is noise, and teaches them to ignore the panel."""
         self.run_with([ELSA_DEFECT])
-        body = self.page().content.decode()
-        self.assertNotIn('Time_Coordinates', body)
-        self.assertNotIn('An empty container that ELSA wrote', body)
+        pane = self.fix_pane()
+        self.assertNotIn('Time_Coordinates', pane)
+        self.assertNotIn('An empty container that ELSA wrote', pane)
 
     def test_an_elsa_defect_does_not_count_against_the_user(self):
         self.run_with([ELSA_DEFECT])
@@ -172,6 +187,102 @@ class PreflightPanelTests(TestCase):
         self.assertEqual(page.context['validation_summary']['blocking'], 1)
         self.assertContains(page, 'Affects 4 labels')
 
+    # -- the two tabs ------------------------------------------------------------
+
+    def test_both_tabs_are_offered(self):
+        self.run_with([CITATION])
+        page = self.page()
+        self.assertContains(page, 'What to fix')
+        self.assertContains(page, 'Validation output')
+
+    def test_the_translated_tab_is_the_one_that_opens(self):
+        """Raw output has to be a deliberate click, or the translation buys nothing."""
+        self.run_with([CITATION, ELSA_DEFECT])
+        body = self.page().content.decode()
+        fix_tab = body.split('id="preflight_tab_fix"')[1].split('>')[0]
+        raw_tab = body.split('id="preflight_tab_raw"')[1].split('>')[0]
+        self.assertIn('aria-selected="true"', fix_tab)
+        self.assertIn('aria-selected="false"', raw_tab)
+        # The button carrying "active" is the one Bootstrap opens on.
+        self.assertIn('class="nav-link active" id="preflight_tab_fix"', body)
+
+    def test_only_the_translated_pane_starts_active(self):
+        """Both panes visible at once would show the same findings twice."""
+        self.run_with([CITATION])
+        body = self.page().content.decode()
+        self.assertIn('class="tab-pane fade show active" id="preflight_pane_fix"', body)
+        self.assertIn('class="tab-pane fade" id="preflight_pane_raw"', body)
+
+    def test_the_raw_tab_shows_what_pds_actually_said(self):
+        self.run_with([CITATION, EMPTY_COLLECTION])
+        pane = self.raw_pane()
+        self.assertIn('cvc-minInclusive-valid', pane)
+        self.assertIn(
+            'In Product_Bundle both Citation_Information and its description are required.',
+            pane)
+
+    def test_the_raw_tab_hides_nothing_the_translation_hides(self):
+        """The reason for offering it: nobody has to take the translation on trust."""
+        self.run_with([ELSA_DEFECT])
+        pane = self.raw_pane()
+        self.assertIn('Time_Coordinates', pane)
+        self.assertIn('cvc-minLength-valid', pane)
+
+    def test_a_three_kilobyte_message_is_folded_not_truncated(self):
+        """PDS's date-time pattern message runs past 3000 characters."""
+        huge = 'cvc-pattern-valid: Value is not facet-valid with respect to ' + 'A|' * 1600
+        self.run_with([finding(huge)])
+        pane = self.raw_pane()
+        self.assertIn('<details>', pane)
+        self.assertIn(huge[:120], pane)         # the opening words identify it
+        self.assertIn(huge[-60:], pane)         # and the whole thing is still there
+
+    def test_a_short_message_is_not_folded(self):
+        self.run_with([finding('Modification_History is not complete.')])
+        pane = self.raw_pane()
+        self.assertIn('Modification_History is not complete.', pane)
+        self.assertNotIn('<details>', pane)
+
+    def test_the_raw_tab_counts_every_finding_not_just_the_shown_ones(self):
+        self.run_with([CITATION, ELSA_DEFECT, ADVISORY])
+        page = self.page()
+        self.assertEqual(page.context['validation_raw_total'], 3)
+        self.assertEqual(page.context['validation_summary']['blocking'], 1)
+
+    def test_the_raw_tab_groups_by_the_label_the_finding_came_from(self):
+        self.run_with([finding('first problem', label='collection_b.xml'),
+                       finding('second problem', label='bundle_a.xml')])
+        page = self.page()
+        names = [name for name, _items in page.context['validation_raw']]
+        self.assertEqual(names, ['bundle_a.xml', 'collection_b.xml'])
+        pane = self.raw_pane(page)
+        self.assertLess(pane.index('bundle_a.xml'), pane.index('collection_b.xml'))
+
+    def test_a_finding_with_no_label_is_still_shown(self):
+        """Bundle-level findings carry no label path; they must not vanish."""
+        self.run_with([finding('something about the bundle as a whole', label='')])
+        page = self.page()
+        self.assertEqual([name for name, _ in page.context['validation_raw']], ['bundle'])
+        self.assertIn('something about the bundle as a whole', self.raw_pane(page))
+
+    def test_the_raw_tab_is_shown_to_the_owner_not_only_to_staff(self):
+        self.run_with([CITATION, EMPTY_COLLECTION])
+        self.assertFalse(self.user.is_staff)
+        # raw_pane() fails if the tab is absent; the jargon proves it is populated.
+        self.assertIn('cvc-minInclusive-valid', self.raw_pane())
+        self.assertNotContains(self.page(), 'Full report')
+
+    def test_no_tabs_before_a_check_has_run(self):
+        """Nothing to put in either tab, so neither is drawn."""
+        body = self.page().content.decode()
+        self.assertNotIn('preflight_tab_raw', body)
+
+    def test_a_run_that_reported_nothing_says_the_bundle_passed(self):
+        self.run_with([], products_total=9)
+        page = self.page()
+        self.assertContains(page, 'PDS reported nothing on this bundle')
+        self.assertNotContains(page, 'finished without storing any findings')
+
     # -- the controls ------------------------------------------------------------
 
     def test_the_panel_offers_to_run_a_check(self):
@@ -180,11 +291,12 @@ class PreflightPanelTests(TestCase):
         self.assertContains(page, reverse('build:start_validation', args=[self.bundle.pk]))
         self.assertContains(page, reverse('build:validation_status', args=[self.bundle.pk]))
 
-    def test_raw_detail_is_available_but_not_in_the_way(self):
-        self.run_with([CITATION])
+    def test_the_technical_tally_lives_with_the_raw_output(self):
+        """One place for the technical view, not a disclosure beside a tab for it."""
+        self.run_with([CITATION], products_total=7)
         page = self.page()
-        self.assertContains(page, 'Technical detail')
-        self.assertContains(page, '<details')
+        self.assertNotContains(page, 'Technical detail')
+        self.assertIn('across 7 labels', self.raw_pane(page))
 
     def test_the_full_report_link_is_staff_only(self):
         run = self.run_with([CITATION])

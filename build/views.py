@@ -1086,10 +1086,21 @@ def bundle(request, pk_bundle):
             context_dict['validation_summary'] = validate_rules.summarise(findings)
             context_dict['validation_cards'] = validate_rules.cards(findings)
             context_dict['validation_advisory'] = validate_rules.translate(findings)['advisory']
+            # The raw output, for the second tab. Everything PDS reported, including
+            # the findings the translation hides, grouped by the label each came
+            # from. Shown to the bundle's owner, not just staff: the point of
+            # offering it is that nobody has to take the translation on trust.
+            raw = {}
+            for finding in findings:
+                raw.setdefault(finding['label'] or 'bundle', []).append(finding)
+            context_dict['validation_raw'] = sorted(raw.items())
+            context_dict['validation_raw_total'] = len(findings)
         else:
             context_dict['validation_summary'] = None
             context_dict['validation_cards'] = []
             context_dict['validation_advisory'] = []
+            context_dict['validation_raw'] = []
+            context_dict['validation_raw_total'] = 0
 
         # To handle NetCDF files
         # if form_netcdf.is_valid():
