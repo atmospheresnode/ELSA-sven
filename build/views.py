@@ -1073,6 +1073,10 @@ def bundle(request, pk_bundle):
         # started. Running a check is an explicit POST from the page.
         latest_validation = validate_runner.latest_run_for(bundle)
         context_dict['validation_run'] = latest_validation
+        # Whether the page should start a check for itself once it has loaded. The
+        # view does not start one: rendering a bundle must never spawn a JVM, or a
+        # crawler would.
+        context_dict['validation_auto_check'] = validate_runner.should_auto_check(bundle)
         if latest_validation is not None and latest_validation.findings:
             findings = latest_validation.findings
             context_dict['validation_summary'] = validate_rules.summarise(findings)
@@ -2539,6 +2543,17 @@ def submit_bundle_internal(request, pk_bundle):
             is_resubmission = bundle.submitted_at is not None
             bundle.submitted_at = timezone.now()
             bundle.save()
+
+            # Submission is the one moment worth paying for a full check, including
+            # reading inside every data file. It runs in the background: the
+            # submission itself is not held up, and staff have the report by the time
+            # they look. The structure checks the user saw while working skipped
+            # content validation, which is the expensive part.
+            try:
+                validate_runner.start(bundle, ValidationRun.TIER_FULL)
+            except Exception as error:
+                # A submission must never fail because validation could not start.
+                print('Could not start submission validation: {}'.format(error))
 
             # Build email
             archive_path = bundle.directory()

@@ -415,6 +415,42 @@ def latest_run_for(bundle, tier=None):
     return runs.first()
 
 
+def should_auto_check(bundle):
+    """Whether the page should start a structure check by itself.
+
+    True when there is nothing to show, or what is shown no longer describes the
+    bundle. False while a run is in flight, and false for a short cooldown after one
+    finishes, so a user reloading the page while fixing things does not start a run
+    on every load.
+
+    This only ever decides whether the *page* offers to start one. The view never
+    starts anything, so a crawler, a link preview or a HEAD request spawns no JVM.
+    """
+    if not getattr(settings, 'VALIDATE_AUTO_CHECK', False):
+        return False
+
+    if active_run_for(bundle) is not None:
+        return False
+
+    latest = latest_run_for(bundle, ValidationRun.TIER_STRUCTURE)
+    if latest is None:
+        return True
+
+    if latest.finished_at is not None:
+        cooldown = getattr(settings, 'VALIDATE_AUTO_CHECK_COOLDOWN_SECONDS', 300)
+        if timezone.now() - latest.finished_at < timezone.timedelta(seconds=cooldown):
+            return False
+
+    # A failed run is not retried automatically. Whatever stopped it - validate
+    # missing, a crash - will almost certainly stop the next one too, and a page
+    # that silently retries a broken thing every five minutes is worse than one
+    # that reports the failure and waits to be asked.
+    if latest.status == ValidationRun.STATUS_FAILED:
+        return False
+
+    return latest.is_stale()
+
+
 def start(bundle, tier=ValidationRun.TIER_STRUCTURE):
     """Queue a validation and launch it detached. Returns the ValidationRun.
 

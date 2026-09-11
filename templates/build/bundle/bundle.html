@@ -5498,6 +5498,19 @@ so a page that was not just uploaded to never shows it.{% endcomment %}
    if (progress && !progress.hidden) {
       showProgress(true);
       polling = window.setInterval(poll, 1500);
+      return;
+   }
+
+   /* Start one automatically when the server says the results are missing or no
+    * longer describe this bundle, so the panel is usually already filled in rather
+    * than waiting to be asked.
+    *
+    * Started here rather than in the view on purpose: rendering a bundle page must
+    * never spawn a JVM, or a crawler or a link preview would. The server decides
+    * whether it is worth doing (see validate_runner.should_auto_check, which holds
+    * the cooldown and refuses to retry a failed run); the page only acts on it. */
+   if (button.getAttribute('data-auto-check') === '1') {
+      button.click();
    }
 })();
 </script>
