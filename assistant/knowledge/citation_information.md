@@ -1,15 +1,15 @@
 <!-- watches: build/models.py#Citation_Information, build/views.py#citation_information, build/views.py#edit_citation_information, build/views.py#delete_citation_information, build/forms.py#CitationInformationForm, build/forms.py#EditCitationInformationForm, templates/build/citation_information -->
 <!-- fingerprint:
-     build/models.py#Citation_Information       = ecc7990bfbd6
-     build/views.py#citation_information        = 2aea55b3e4cd
-     build/views.py#edit_citation_information   = e48616352a5c
-     build/views.py#delete_citation_information = 147128ea559e
+     build/models.py#Citation_Information       = 8740bc431326
+     build/views.py#citation_information        = 39fef0014289
+     build/views.py#edit_citation_information   = 589c768f0597
+     build/views.py#delete_citation_information = 42b60db2375b
      build/forms.py#CitationInformationForm     = e8db3aa1ac79
      build/forms.py#EditCitationInformationForm = 01577ec8a08f
      templates/build/citation_information       = b26336432488
 -->
 <!-- reviewed: 2026-09-11 -->
-<!-- baseline: 66e63c0801aa5cb2a7e96e0f79d946a40832d093 -->
+<!-- baseline: cccbfb1398f3f9d71491853657d2b7b04c6e0c4a -->
 # Citation Information
 
 PDS4 Information Model (v1.24 / 1O00): the Citation_Information class provides the
@@ -52,9 +52,13 @@ delete actions instead of the create form.
 
 Where it is stored: the counts, publication year, description and keyword are
 columns on the Citation_Information row, but the author and editor names are
-held only in the XML labels. ELSA copies the citation into the bundle label and
-into every collection label, its own and any the user added, so all of them
-agree. A collection created after the citation already exists is written with
-the names the bundle label already carries, rather than with blank ones. If
-someone reports that an author "did not save", the thing to check is whether one
-label is out of step with the others rather than whether the form submitted.
+held only in the XML labels. ELSA copies the citation into the bundle label,
+into every collection label (its own and any the user added), and into every
+data product label, so all of them agree. The bundle label is the source of
+truth: adding, editing or deleting a citation mirrors it outward from there.
+
+If someone reports that an author "did not save", the form almost certainly did
+submit. What used to happen is that only some labels were updated, and PDS
+reported the blank in one of the others, which reads as the citation being
+rejected. The thing to check is whether every label agrees, not whether the form
+worked.

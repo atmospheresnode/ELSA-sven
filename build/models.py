@@ -4734,6 +4734,82 @@ Referenced from        Identification_Area
 
 
 # @python_2_unicode_compatible
+def mirror_citation_into_data_products(bundle):
+    """Make every data product label agree with the bundle label about the citation.
+
+    Data product labels carry a Citation_Information of their own and were in no
+    write path at all: adding, editing or deleting a citation rewrote the bundle and
+    its collections and left every NetCDF product holding whatever it was born with.
+    That produced two different wrong states. A label written before the names were
+    entered kept a blank <given_name/>, which PDS reports as an error on a citation
+    the user had just filled in; and a citation that was then deleted stayed behind
+    in the data product, so the bundle said it had no citation while one of its
+    products still carried one.
+
+    Mirroring rather than replaying the edit: the bundle label is the source of
+    truth, so if it has a citation every data product gets a copy, and if it does not
+    every data product loses its own. One rule covers all three operations, which is
+    why this is called from each of them rather than each one growing its own.
+
+    Returns the number of labels changed.
+    """
+    try:
+        product_bundle = Product_Bundle.objects.get(bundle=bundle)
+        source_path = product_bundle.label()
+    except (Product_Bundle.DoesNotExist, AttributeError):
+        return 0
+    if not source_path or not os.path.exists(source_path):
+        return 0
+
+    try:
+        source_root = etree.parse(source_path).getroot()
+    except (etree.XMLSyntaxError, OSError):
+        return 0
+
+    source = source_root.find(
+        '{0}Identification_Area/{0}Citation_Information'.format(NAMESPACE))
+
+    changed = 0
+    for netcdf_file in NetCDFFile.objects.filter(bundle=bundle):
+        label_path = netcdf_file.label()
+        if not os.path.exists(label_path):
+            continue
+        try:
+            target_list = open_label_with_tree(label_path)
+        except (etree.XMLSyntaxError, OSError):
+            continue
+        target_root = target_list[1]
+        identification = target_root.find('{}Identification_Area'.format(NAMESPACE))
+        if identification is None:
+            continue
+
+        existing = identification.find('{}Citation_Information'.format(NAMESPACE))
+
+        if source is None:
+            if existing is None:
+                continue
+            identification.remove(existing)
+        else:
+            replacement = copy.deepcopy(source)
+            if existing is not None:
+                identification.replace(existing, replacement)
+            else:
+                # Citation_Information precedes Modification_History in the PDS4
+                # content model, so it cannot simply be appended.
+                modification = identification.find(
+                    '{}Modification_History'.format(NAMESPACE))
+                if modification is not None:
+                    identification.insert(
+                        identification.index(modification), replacement)
+                else:
+                    identification.append(replacement)
+
+        close_label(label_path, target_root, target_list[2])
+        changed += 1
+
+    return changed
+
+
 class Citation_Information(models.Model):
 
     bundle = models.ForeignKey(Bundle, on_delete=models.CASCADE)
@@ -4939,6 +5015,63 @@ class Citation_Information(models.Model):
                 'editor_orgs', index, 'parent_organization_name')
 
         return label_root
+
+    def sync_into_label(self, label_path):
+        """Give the label at this path the citation the bundle label carries.
+
+        Copies the whole Citation_Information element rather than editing field by
+        field, which keeps labels in step even when they disagree about how many
+        authors there are: a label written when the citation had one author cannot
+        be filled correctly from a form that now has three, and a per-field copy
+        would leave the extra ones blank, which is the error being fixed.
+
+        Returns True if it wrote anything.
+        """
+        try:
+            product_bundle = Product_Bundle.objects.get(bundle=self.bundle)
+            source_path = product_bundle.label()
+        except (Product_Bundle.DoesNotExist, AttributeError):
+            return False
+        if not source_path or not os.path.exists(source_path):
+            return False
+        if os.path.abspath(source_path) == os.path.abspath(label_path):
+            return False            # the source of truth needs no copy of itself
+        if not os.path.exists(label_path):
+            return False
+
+        try:
+            source_root = etree.parse(source_path).getroot()
+            target_list = open_label_with_tree(label_path)
+        except (etree.XMLSyntaxError, OSError):
+            return False
+
+        source = source_root.find(
+            '{0}Identification_Area/{0}Citation_Information'.format(NAMESPACE))
+        if source is None:
+            return False
+
+        target_root = target_list[1]
+        identification = target_root.find('{}Identification_Area'.format(NAMESPACE))
+        if identification is None:
+            return False
+
+        replacement = copy.deepcopy(source)
+        existing = identification.find('{}Citation_Information'.format(NAMESPACE))
+        if existing is not None:
+            identification.replace(existing, replacement)
+        else:
+            # Citation_Information precedes Modification_History in the PDS4 content
+            # model, so it cannot simply be appended.
+            modification = identification.find(
+                '{}Modification_History'.format(NAMESPACE))
+            if modification is not None:
+                identification.insert(identification.index(modification), replacement)
+            else:
+                identification.append(replacement)
+
+        close_label(label_path, target_root, target_list[2])
+        return True
+
 
     def fill_label_values(self, label_root, cleaned_form):
         # Find Identification_Area
@@ -5638,6 +5771,23 @@ class NetCDFFile(models.Model):
         if self.collection_id is not None:
             return self.collection.directory()
         return self.bundle.directory()
+
+    def label(self):
+        """The PDS4 label for this file.
+
+        Named the way _process_single_netcdf names it when it writes the label: a
+        trailing .nc is dropped if present and .xml appended, so an extensionless
+        upload does not get an extensionless label.
+
+        This exists so a NetCDF product can join the label-writing paths that
+        bundle-level metadata already walks. Without it these labels were reachable
+        only by regenerating them from the NetCDF file, which is why editing a
+        citation updated the bundle and its collections and left every data product
+        holding whatever it was born with.
+        """
+        base = os.path.basename(self.file.name)
+        stem = base[:-3] if base.endswith('.nc') else base
+        return os.path.join(self.directory(), stem + '.xml')
 
 
 # ------------------------------------------------------------------------------------------------ #

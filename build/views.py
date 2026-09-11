@@ -2872,6 +2872,9 @@ def citation_information(request, pk_bundle):
             product_collections_list = bundle_label_targets(bundle)
 
             write_into_label(citation_information, product_bundle, product_collections_list)
+            # A NetCDF uploaded before the citation existed has a label with no
+            # citation in it; one uploaded after gets it at generation time.
+            mirror_citation_into_data_products(bundle)
 
             print('------------- End Build Citation Information -------------------')
 
@@ -2934,6 +2937,16 @@ def edit_citation_information(request, pk_bundle, pk_citation_information):
                 # Close appropriate label(s)
                 print(' ... Closing Label ... ')
                 close_label(label.label(), label_root, label_list[2])
+
+            # Data product labels carry the citation too, and were in no write path at
+            # all: a NetCDF label could only be reached by regenerating it from the
+            # file it describes. So editing the citation updated the bundle and its
+            # collections while every data product kept the blank it was born with,
+            # PDS reported that blank, and the panel showed a citation error on a
+            # citation that had just been filled in. Copied from the bundle label
+            # rather than filled from the form, because a label written when the
+            # citation had one author cannot be filled from a form that now has three.
+            mirror_citation_into_data_products(bundle)
 
             #return redirect(reverse('build:context_search', args=[pk_bundle]))
 
@@ -4801,6 +4814,10 @@ def delete_citation_information(request, pk_bundle, pk_citation_information):
     product_collections_list = bundle_label_targets(bundle)
 
     remove_from_label(citation_information, product_bundle, product_collections_list)
+    # And out of the data product labels, which otherwise keep a citation the bundle
+    # no longer has: the bundle then says it has none while one of its own products
+    # still carries one.
+    mirror_citation_into_data_products(bundle)
     bundle.citation_information.remove(citation_information)
 
     return HttpResponseRedirect(reverse('build:citation_information', args=[pk_bundle]))
@@ -4933,6 +4950,10 @@ def delete_citation_information(request, pk_bundle, pk_citation_information):
         product_collections_list = bundle_label_targets(bundle)
 
         remove_from_label(citation_information, product_bundle, product_collections_list)
+        # And out of the data product labels, which otherwise keep a citation the
+        # bundle no longer has: the bundle then says it has none while one of its
+        # own products still carries one.
+        mirror_citation_into_data_products(bundle)
 
         citation_information.delete()
 

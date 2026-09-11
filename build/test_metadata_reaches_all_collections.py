@@ -175,3 +175,179 @@ class MetadataReachesEveryCollectionTests(TestCase):
                 given and family,
                 'a collection created after the citation was born with a blank '
                 'author, which PDS reports as an error on a citation the user filled in')
+
+
+class DataProductLabelsGetTheCitationTests(TestCase):
+    """A NetCDF product label carries a citation too, and was in no write path.
+
+    This is the case that survived the first round of fixes. The reported bundle had
+    a citation filled in, bundle and collection labels correct and written minutes
+    ago, and one data product label from an hour earlier still holding an empty
+    <given_name/>. Re-entering the citation did not help, because nothing ELSA does
+    to a citation has ever touched a data product label: they could only be reached
+    by regenerating them from the NetCDF file they describe.
+    """
+
+    def setUp(self):
+        self.archive = tempfile.mkdtemp(prefix='elsa-dpl-')
+        self.addCleanup(shutil.rmtree, self.archive, True)
+        patcher = override_settings(ARCHIVE_DIR=self.archive)
+        patcher.enable()
+        self.addCleanup(patcher.disable)
+
+        self.user = User.objects.create_user('dpl', password='pw')
+        self.client.login(username='dpl', password='pw')
+        Investigation.objects.create(
+            name='Atmospheric Modeling Annex', type_of='Individual Investigation',
+            lid='urn:nasa:pds:context:investigation:individual.atmospheric_modeling_annex',
+            file_ref='')
+        self.client.post(reverse('build:build'), {
+            'name': 'dpl bundle', 'bundle_type': 'External',
+            'version': '1O00', 'bundleID': ''})
+        self.bundle = Bundle.objects.get(name='dpl bundle')
+
+        # NetCDF files always live in a collection the user added: NetCDFFile.collection
+        # is a foreign key to AdditionalCollections, which is the collection the
+        # reported bundle kept its data in too.
+        self.client.post(reverse('build:bundle', kwargs={'pk_bundle': self.bundle.pk}),
+                         {'collection_name': 'sims', 'collection_type': 'External'})
+        self.collection = AdditionalCollections.objects.filter(bundle=self.bundle).first()
+        self.assertIsNotNone(self.collection)
+
+        self.citation = self.add_citation()
+        self.fill_author('Ada', 'Lovelace')
+
+    def add_citation(self):
+        self.client.post(
+            reverse('build:citation_information', args=[str(self.bundle.pk)]),
+            {'number_of_authors_people': 1, 'number_of_authors_organization': 0,
+             'number_of_editors_people': 0, 'number_of_editors_organization': 0,
+             'publication_year': '2026', 'description': 'A description', 'keyword': 'k'})
+        return Citation_Information.objects.get(bundle=self.bundle)
+
+    def fill_author(self, given, family):
+        self.client.post(
+            reverse('build:edit_citation_information',
+                    args=[str(self.bundle.pk), str(self.citation.pk)]),
+            {'author_person_0_given_name': given,
+             'author_person_0_family_name': family,
+             'author_person_0_orcid': '0000-0001-2345-6789',
+             'author_person_0_affiliation': 'New Mexico State University'})
+
+    def write_stale_product_label(self):
+        """A data product label as the generator wrote it before the citation edit.
+
+        Built by hand rather than by uploading a NetCDF, which needs a real file and
+        xarray; what matters here is a label on disk, in the right place, holding the
+        blank skeleton, which is exactly the state of the reported bundle.
+        """
+        from build.models import NetCDFFile
+        row = NetCDFFile.objects.create(
+            bundle=self.bundle, collection=self.collection, title='sample',
+            file='sample.nc')
+        label = (
+            '<?xml version="1.0" encoding="utf-8"?>\n'
+            '<Product_External xmlns="http://pds.nasa.gov/pds4/pds/v1">\n'
+            '  <Identification_Area>\n'
+            '    <logical_identifier>urn:nasa:pds-ama:dpl_bundle:sims:sample.nc</logical_identifier>\n'
+            '    <version_id>1.0</version_id>\n'
+            '    <title>sample</title>\n'
+            '    <information_model_version>1.24.0.0</information_model_version>\n'
+            '    <product_class>Product_External</product_class>\n'
+            '    <Citation_Information>\n'
+            '      <publication_year>2026</publication_year>\n'
+            '      <description>A description</description>\n'
+            '      <List_Author>\n'
+            '        <Person>\n'
+            '          <given_name/>\n'
+            '          <family_name/>\n'
+            '          <person_orcid/>\n'
+            '          <Affiliation><organization_name/></Affiliation>\n'
+            '        </Person>\n'
+            '      </List_Author>\n'
+            '    </Citation_Information>\n'
+            '    <Modification_History/>\n'
+            '  </Identification_Area>\n'
+            '</Product_External>\n')
+        path = row.label()
+        with open(path, 'w', encoding='utf-8') as handle:
+            handle.write(label)
+        return row, path
+
+    def authors_in(self, path):
+        root = ET.parse(path).getroot()
+        return [((p.findtext('pds:given_name', '', NS) or '').strip(),
+                 (p.findtext('pds:family_name', '', NS) or '').strip())
+                for p in root.findall(
+                    'pds:Identification_Area/pds:Citation_Information/'
+                    'pds:List_Author/pds:Person', NS)]
+
+    # -- the bug -----------------------------------------------------------------
+
+    def test_a_netcdf_file_knows_where_its_label_is(self):
+        """Without this the label is unreachable by anything but regeneration."""
+        row, path = self.write_stale_product_label()
+        self.assertTrue(path.endswith('sample.xml'), path)
+        self.assertTrue(os.path.exists(row.label()))
+
+    def test_an_extensionless_upload_does_not_get_an_extensionless_label(self):
+        from build.models import NetCDFFile
+        row = NetCDFFile.objects.create(
+            bundle=self.bundle, collection=self.collection,
+            title='no extension', file='00000.atmos_average')
+        self.assertTrue(row.label().endswith('00000.atmos_average.xml'), row.label())
+
+    def test_editing_the_citation_reaches_a_data_product_label(self):
+        _row, path = self.write_stale_product_label()
+        self.assertEqual(self.authors_in(path), [('', '')], 'the fixture is not stale')
+
+        self.fill_author('Grace', 'Hopper')
+
+        self.assertEqual(self.authors_in(path), [('Grace', 'Hopper')],
+                         'the data product label was left behind again')
+
+    def test_no_label_anywhere_keeps_a_blank_author(self):
+        """What the validation panel actually reports on."""
+        _row, path = self.write_stale_product_label()
+        self.fill_author('Grace', 'Hopper')
+
+        for dirpath, _dirnames, filenames in os.walk(self.bundle.directory()):
+            for filename in filenames:
+                if not filename.endswith('.xml'):
+                    continue
+                full = os.path.join(dirpath, filename)
+                for given, family in self.authors_in(full):
+                    self.assertTrue(
+                        given and family,
+                        '{} still has a blank author'.format(
+                            os.path.relpath(full, self.bundle.directory())))
+
+    def has_citation(self, path):
+        root = ET.parse(path).getroot()
+        return root.find('pds:Identification_Area/pds:Citation_Information', NS) is not None
+
+    def test_deleting_the_citation_removes_it_from_data_products_too(self):
+        """The state the reported bundle was actually left in.
+
+        Its Citation_Information row was gone and the bundle label had no citation,
+        while the data product label still carried one. A bundle that says it has no
+        citation while one of its own products still has one is inconsistent in a way
+        no amount of re-entering the citation can fix.
+        """
+        _row, path = self.write_stale_product_label()
+        self.fill_author('Grace', 'Hopper')
+        self.assertTrue(self.has_citation(path), 'the fixture has no citation to delete')
+
+        response = self.client.get(reverse(
+            'build:citation_information_delete',
+            args=[str(self.bundle.pk), str(self.citation.pk)]))
+        self.assertIn(response.status_code, (200, 302))
+
+        bundle_label = os.path.join(
+            self.bundle.directory(),
+            [n for n in os.listdir(self.bundle.directory())
+             if n.startswith('bundle_') and n.endswith('.xml')][0])
+        self.assertFalse(self.has_citation(bundle_label),
+                         'the bundle label kept the citation')
+        self.assertFalse(self.has_citation(path),
+                         'the data product label kept a citation the bundle no longer has')
