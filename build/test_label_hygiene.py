@@ -106,17 +106,56 @@ class EmptyContainerTests(SimpleTestCase):
                     'build_internal_reference creates its own references now; a '
                     'placeholder here ships as an empty reference when unused.')
 
-    def test_context_area_never_left_empty(self):
-        """Removing Time_Coordinates must not strand an empty Context_Area.
+    def test_no_empty_investigation_area_or_observing_system(self):
+        """Archive templates shipped both of these with empty children.
 
-        fill_label falls back to Observation_Area when Context_Area is absent, and an
-        empty one would send it looking for an element that is not there.
+        Both are optional in Context_Area and neither is populated until the user adds
+        context products, so they are created on demand instead. The External templates
+        keep an Investigation_Area because the AMA investigation is written into it at
+        build time, so it never ships empty.
         """
-        for path in CONTAINER_TEMPLATES:
+        archive_templates = [
+            os.path.join(TEMPLATE_DIR, 'base_case', 'product_bundle.xml'),
+            os.path.join(TEMPLATE_DIR, 'base_case', 'product_collection.xml'),
+        ]
+        for path in archive_templates:
             with self.subTest(template=os.path.basename(path)):
-                context_area = parse(path).find('pds:Context_Area', NS)
-                if context_area is not None:
-                    self.assertGreater(len(context_area), 0)
+                root = parse(path)
+                self.assertIsNone(root.find('.//pds:Investigation_Area', NS))
+                self.assertIsNone(root.find('.//pds:Observing_System', NS))
+
+    def test_an_empty_context_area_is_tolerated(self):
+        """Context_Area can now legitimately be empty, and nothing may assume otherwise.
+
+        fill_label used to fall through to Observation_Area on a falsy Context_Area,
+        which an empty element is. That is fixed with an explicit None check, so this
+        guards the assumption rather than the emptiness.
+        """
+        from build.models import Investigation
+        root = etree.fromstring(
+            ('<Product_Bundle xmlns="{}"><Context_Area></Context_Area>'
+             '</Product_Bundle>').format(PDS).encode('utf-8'))
+        Investigation(name='Demo Investigation', type_of='Individual Investigation',
+                      lid='urn:nasa:pds:context:investigation:individual.demo').fill_label(root)
+        area = root.find('pds:Context_Area/pds:Investigation_Area', NS)
+        self.assertIsNotNone(area, 'fill_label must build the area it no longer finds')
+        self.assertEqual(area.find('pds:name', NS).text, 'Demo Investigation')
+        self.assertEqual(
+            area.find('pds:Internal_Reference/pds:reference_type', NS).text,
+            'bundle_to_investigation')
+
+    def test_removing_an_investigation_takes_the_whole_area_out(self):
+        """Blanking the fields would leave a container full of empty elements."""
+        from build.models import Investigation
+        root = etree.fromstring(
+            ('<Product_Bundle xmlns="{}"><Context_Area></Context_Area>'
+             '</Product_Bundle>').format(PDS).encode('utf-8'))
+        investigation = Investigation(
+            name='Demo Investigation', type_of='Individual Investigation',
+            lid='urn:nasa:pds:context:investigation:individual.demo')
+        investigation.fill_label(root)
+        investigation.remove_xml(root)
+        self.assertIsNone(root.find('pds:Context_Area/pds:Investigation_Area', NS))
 
 
 class ModificationHistoryTests(SimpleTestCase):

@@ -10,17 +10,6 @@
         <product_class>Product_Collection</product_class>
     </Identification_Area>
     <Context_Area>
-        <Investigation_Area>
-            <name></name>
-            <type></type>
-            <Internal_Reference>
-                <lid_reference></lid_reference>
-                <reference_type></reference_type>
-            </Internal_Reference>
-        </Investigation_Area>
-        <Observing_System>
-            <name></name>
-        </Observing_System>
     </Context_Area>
     <Reference_List></Reference_List>
     <Collection>

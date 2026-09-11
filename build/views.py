@@ -577,6 +577,11 @@ def build(request):
                         # Close label
                         print(' ... Closing Label ... ')
                         close_label(product_collection.label(), label_root, label_list[2])
+
+                        # Write the inventory table the label promises. Archive bundles
+                        # need this exactly as much as External ones do: every PDS4
+                        # collection is required to carry one.
+                        product_collection.build_inventory()
                         print('-------------End Build Product_Collection Base Case-----------------')
 
             # Further develop context_dict entries for templates

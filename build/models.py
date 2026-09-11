@@ -76,6 +76,26 @@ def get_most_current_version():
 """
 
 
+
+def context_container(Context_Area, tag):
+    """Find a Context_Area child, creating it in the PDS namespace when absent.
+
+    The bundle and collection templates no longer ship empty Investigation_Area and
+    Observing_System containers. An empty one is a validation error on every bundle
+    that has not had context products added yet, and both are optional in
+    Context_Area, so they are created here the first time there is something to put
+    in them.
+
+    Created with the namespace, because the find() above is namespaced: an element
+    built bare would be invisible to the next lookup, which is the failure that made
+    build_internal_reference collapse two documents into one.
+    """
+    child = Context_Area.find('{}{}'.format(NAMESPACE, tag))
+    if child is None:
+        child = etree.SubElement(Context_Area, '{}{}'.format(NAMESPACE, tag))
+    return child
+
+
 def get_upload_path(instance, filename):
     return '{0}/{1}'.format(instance.user.id, filename)
 
@@ -802,21 +822,41 @@ class Investigation(models.Model):
         if Context_Area is None:
             Context_Area = label_root.find('{}Observation_Area'.format(NAMESPACE))
 
-        Investigation_Area = Context_Area.find('{}Investigation_Area'.format(NAMESPACE))
+        Investigation_Area = context_container(Context_Area, 'Investigation_Area')
 
-        Investigation_Area.find('{}name'.format(NAMESPACE)).text = self.name
-        Investigation_Area.find('{}type'.format(NAMESPACE)).text = self.type_of
+        # The template no longer carries these, so build whichever are missing.
+        name = Investigation_Area.find('{}name'.format(NAMESPACE))
+        if name is None:
+            name = etree.SubElement(Investigation_Area, '{}name'.format(NAMESPACE))
+        name.text = self.name
+
+        investigation_type = Investigation_Area.find('{}type'.format(NAMESPACE))
+        if investigation_type is None:
+            investigation_type = etree.SubElement(
+                Investigation_Area, '{}type'.format(NAMESPACE))
+        investigation_type.text = self.type_of
         # Investigation_Area.name.text = self.name
         # Investigation_Area.type.text = self.type_of
 
         Internal_Reference = Investigation_Area.find('{}Internal_Reference'.format(NAMESPACE))
-        Internal_Reference.find('{}lid_reference'.format(NAMESPACE)).text = self.lid
+        if Internal_Reference is None:
+            Internal_Reference = etree.SubElement(
+                Investigation_Area, '{}Internal_Reference'.format(NAMESPACE))
+        lid_reference = Internal_Reference.find('{}lid_reference'.format(NAMESPACE))
+        if lid_reference is None:
+            lid_reference = etree.SubElement(
+                Internal_Reference, '{}lid_reference'.format(NAMESPACE))
+        lid_reference.text = self.lid
+        reference_type = Internal_Reference.find('{}reference_type'.format(NAMESPACE))
+        if reference_type is None:
+            reference_type = etree.SubElement(
+                Internal_Reference, '{}reference_type'.format(NAMESPACE))
         if label_root.tag == '{http://pds.nasa.gov/pds4/pds/v1}Product_Bundle':
-            Internal_Reference.find('{}reference_type'.format(NAMESPACE)).text = 'bundle_to_investigation'
+            reference_type.text = 'bundle_to_investigation'
         elif label_root.tag == '{http://pds.nasa.gov/pds4/pds/v1}Product_Observational':
-            Internal_Reference.find('{}reference_type'.format(NAMESPACE)).text = 'data_to_investigation'
+            reference_type.text = 'data_to_investigation'
         else:
-            Internal_Reference.find('{}reference_type'.format(NAMESPACE)).text = 'collection_to_investigation'
+            reference_type.text = 'collection_to_investigation'
         # Internal_Reference.lid_reference.text = self.lid
         # Internal_Reference.reference_type.text = 'is_investigation'
 
@@ -903,16 +943,18 @@ class Investigation(models.Model):
 
         Investigation_Area = Context_Area.find('{}Investigation_Area'.format(NAMESPACE))
 
-        Investigation_Area.find('{}name'.format(NAMESPACE)).text = ''
-        Investigation_Area.find('{}type'.format(NAMESPACE)).text = ''
-        # Investigation_Area.name.text = self.name
-        # Investigation_Area.type.text = self.type_of
-
-        Internal_Reference = Investigation_Area.find('{}Internal_Reference'.format(NAMESPACE))
-        Internal_Reference.find('{}lid_reference'.format(NAMESPACE)).text = ''
-        Internal_Reference.find('{}reference_type'.format(NAMESPACE)).text = ''
+        # Remove the whole Investigation_Area rather than blanking its fields. Emptying
+        # them leaves a container full of empty elements, each of which is a validation
+        # error, so removing an investigation used to swap one problem for several.
+        # Investigation_Area is optional in Context_Area, and fill_label rebuilds it
+        # from nothing when another investigation is added.
+        if Investigation_Area is not None:
+            Context_Area.remove(Investigation_Area)
 
         Observing_System = Context_Area.find('{}Observing_System'.format(NAMESPACE))
+        if Observing_System is None:
+            # Nothing was ever added, so there is nothing to take out.
+            return label_root
 
         for component in Observing_System:
 
@@ -1139,7 +1181,7 @@ class Instrument(models.Model):
         if Context_Area is None:
             Context_Area = label_root.find('{}Observation_Area'.format(NAMESPACE))
 
-        Observing_System = Context_Area.find('{}Observing_System'.format(NAMESPACE))
+        Observing_System = context_container(Context_Area, 'Observing_System')
         
 
         # Add Facility to Observing System
@@ -1215,6 +1257,9 @@ class Instrument(models.Model):
         Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE))
 
         Observing_System = Context_Area.find('{}Observing_System'.format(NAMESPACE))
+        if Observing_System is None:
+            # Nothing was ever added, so there is nothing to take out.
+            return label_root
 
         for component in Observing_System:
 
@@ -1561,7 +1606,7 @@ class Instrument_Host(models.Model):
         if Context_Area is None:
             Context_Area = label_root.find('{}Observation_Area'.format(NAMESPACE))
 
-        Observing_System = Context_Area.find('{}Observing_System'.format(NAMESPACE))
+        Observing_System = context_container(Context_Area, 'Observing_System')
 
         # Add Facility to Observing System
         Observing_System_Component = etree.SubElement(
@@ -1634,6 +1679,9 @@ class Instrument_Host(models.Model):
         Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE))
 
         Observing_System = Context_Area.find('{}Observing_System'.format(NAMESPACE))
+        if Observing_System is None:
+            # Nothing was ever added, so there is nothing to take out.
+            return label_root
 
         for component in Observing_System:
             if(component.tag == "{http://pds.nasa.gov/pds4/pds/v1}Observing_System_Component"):
@@ -1723,7 +1771,7 @@ class Facility(models.Model):
     def fill_label(self, label_root):
         Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE)) # <- This is the issue
 
-        Observing_System = Context_Area.find('{}Observing_System'.format(NAMESPACE))
+        Observing_System = context_container(Context_Area, 'Observing_System')
 
         # Add Facility to Observing System
         Observing_System_Component = etree.SubElement(
@@ -1801,6 +1849,9 @@ class Facility(models.Model):
         Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE))
 
         Observing_System = Context_Area.find('{}Observing_System'.format(NAMESPACE))
+        if Observing_System is None:
+            # Nothing was ever added, so there is nothing to take out.
+            return label_root
 
         for component in Observing_System:
             if(component.tag == "{http://pds.nasa.gov/pds4/pds/v1}Observing_System_Component"):
@@ -1906,7 +1957,7 @@ class Telescope(models.Model):
         if Context_Area is None:
             Context_Area = label_root.find('{}Observation_Area'.format(NAMESPACE))
 
-        Observing_System = Context_Area.find('{}Observing_System'.format(NAMESPACE))
+        Observing_System = context_container(Context_Area, 'Observing_System')
 
         # Add Facility to Observing System
         Observing_System_Component = etree.SubElement(
