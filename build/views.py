@@ -1077,6 +1077,10 @@ def bundle(request, pk_bundle):
         # view does not start one: rendering a bundle must never spawn a JVM, or a
         # crawler would.
         context_dict['validation_auto_check'] = validate_runner.should_auto_check(bundle)
+        # Why submission is blocked, if it is, so the page can say so in the same
+        # words the view would use when refusing.
+        context_dict['validation_block'] = validate_runner.submission_block(
+            bundle, request.user)
         if latest_validation is not None and latest_validation.findings:
             findings = latest_validation.findings
             context_dict['validation_summary'] = validate_rules.summarise(findings)
@@ -2540,6 +2544,18 @@ def submit_bundle_internal(request, pk_bundle):
 
     if request.user == bundle.user:
         if request.method == 'POST':
+            # Enforced here, not only by disabling the button. A disabled button is
+            # a courtesy to someone reading the page; it stops nobody who reloads,
+            # scripts the form, or has it open from before the results changed.
+            blocked = validate_runner.submission_block(bundle, request.user)
+            if blocked is not None:
+                _reason, explanation = blocked
+                messages.warning(
+                    request,
+                    'This bundle was not submitted. {}'.format(explanation))
+                return HttpResponseRedirect(
+                    reverse('build:bundle', kwargs={'pk_bundle': pk_bundle}))
+
             is_resubmission = bundle.submitted_at is not None
             bundle.submitted_at = timezone.now()
             bundle.save()

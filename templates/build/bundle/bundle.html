@@ -3322,6 +3322,21 @@ also follows the project's own rule: modals go outside the card structure they b
          </div>
          <div class="modal-footer border-0">
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            {% if validation_block %}
+            {% comment %}
+               The PDS validation check found something, or has not run against this
+               version of the bundle. Disabling the button is only the visible half:
+               submit_bundle_internal refuses the same cases, because a disabled
+               button stops nobody who reloads or has the page open from before.
+            {% endcomment %}
+            <div class="alert alert-warning py-2 px-3 small text-start mb-2">
+               <strong>Not ready to submit.</strong> {{ validation_block.1 }}
+            </div>
+            <button type="button" class="btn btn-secondary" disabled>
+               <i class="bi bi-send me-1"></i>
+               {% if bundle.submitted_at %}Resubmit{% else %}Submit{% endif %} for Review
+            </button>
+            {% else %}
             <form action="{% url 'build:submit_bundle_internal' bundle.pk %}" method="post" class="mb-0">
                {% csrf_token %}
                <button type="submit" class="btn btn-success">
@@ -3329,6 +3344,7 @@ also follows the project's own rule: modals go outside the card structure they b
                   {% if bundle.submitted_at %}Resubmit{% else %}Submit{% endif %} for Review
                </button>
             </form>
+            {% endif %}
          </div>
       </div>
    </div>

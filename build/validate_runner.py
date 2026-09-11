@@ -484,6 +484,71 @@ def _fail(validation_run, reason):
 
 
 
+# Why a bundle cannot be submitted, if it cannot. Each is a state the panel and the
+# view both have to agree about, so they are named rather than repeated as strings.
+BLOCK_NOT_CHECKED = 'not_checked'
+BLOCK_STALE = 'stale'
+BLOCK_FINDINGS = 'findings'
+
+
+def submission_block(bundle, user=None):
+    """Why this bundle may not be submitted yet, or None if it may.
+
+    Returns (reason_code, message) so the page can explain and the view can refuse
+    with the same words.
+
+    Three deliberate holes in the gate:
+
+    Staff are never blocked. The people who would have to open the gate when a rule
+    is wrong are the people operating it, and making them edit a setting to accept
+    one bundle is how a gate becomes a thing everyone routes around.
+
+    A validation that could not run does not block. If validate is missing or
+    broken, blocking is the worst possible response: the node cannot receive
+    anything at all, for a reason nobody outside the team can fix. Being unable to
+    check is not evidence of a problem.
+
+    And the whole thing can be turned off with VALIDATE_BLOCKS_SUBMISSION.
+    """
+    if not getattr(settings, 'VALIDATE_BLOCKS_SUBMISSION', False):
+        return None
+
+    if user is not None and getattr(user, 'is_staff', False):
+        return None
+
+    from build import validate_rules
+
+    latest = latest_run_for(bundle, ValidationRun.TIER_STRUCTURE)
+
+    if latest is None or latest.status == ValidationRun.STATUS_QUEUED:
+        return (BLOCK_NOT_CHECKED,
+                'Run the PDS validation check before submitting, so anything it finds '
+                'can be fixed here rather than coming back from review.')
+
+    if latest.status == ValidationRun.STATUS_RUNNING:
+        return (BLOCK_NOT_CHECKED,
+                'The validation check is still running. It takes a few seconds.')
+
+    if latest.status == ValidationRun.STATUS_FAILED:
+        # Cannot check is not the same as found a problem.
+        return None
+
+    if latest.is_stale():
+        return (BLOCK_STALE,
+                'This bundle changed after it was last checked. Run the check again '
+                'so the result describes what you are submitting.')
+
+    summary = validate_rules.summarise(latest.findings or [])
+    if not summary['can_submit']:
+        count = summary['blocking']
+        return (BLOCK_FINDINGS,
+                '{} item{} in the PDS Validation card still need{} attention. '
+                'Each one has a Fix button.'.format(
+                    count, '' if count == 1 else 's', 's' if count == 1 else ''))
+
+    return None
+
+
 def should_auto_check(bundle):
     """Whether the page should start a structure check by itself.
 
