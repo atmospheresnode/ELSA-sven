@@ -81,6 +81,19 @@ class EmptyContainerTests(SimpleTestCase):
                     root.find('.//pds:Time_Coordinates', NS),
                     'Observation_Area requires Time_Coordinates (minOccurs=1).')
 
+    def test_no_empty_modification_history_in_templates(self):
+        """Modification_History requires at least one Modification_Detail.
+
+        An empty one is therefore an error on every bundle that has not had an entry
+        added yet, and it is optional in Identification_Area, so it is created when
+        there is something to put in it rather than shipped blank.
+        """
+        for path in CONTAINER_TEMPLATES + [
+                os.path.join(TEMPLATE_DIR, 'base_templates', 'Template_PE.xml'),
+                os.path.join(TEMPLATE_DIR, 'base_templates', 'Template_PE_document.xml')]:
+            with self.subTest(template=os.path.basename(path)):
+                self.assertIsNone(parse(path).find('.//pds:Modification_History', NS))
+
     def test_reference_list_has_no_placeholder_internal_reference(self):
         for path in CONTAINER_TEMPLATES:
             with self.subTest(template=os.path.basename(path)):
@@ -104,6 +117,47 @@ class EmptyContainerTests(SimpleTestCase):
                 context_area = parse(path).find('pds:Context_Area', NS)
                 if context_area is not None:
                     self.assertGreater(len(context_area), 0)
+
+
+class ModificationHistoryTests(SimpleTestCase):
+    """fill_label has to create the container the templates no longer carry."""
+
+    def label_root(self, with_container=False):
+        inner = '<Modification_History/>' if with_container else ''
+        return etree.fromstring(
+            ('<Product_Bundle xmlns="{}"><Identification_Area>'
+             '<product_class>Product_Bundle</product_class>{}'
+             '</Identification_Area></Product_Bundle>').format(PDS, inner).encode('utf-8'))
+
+    def fill(self, root):
+        from build.models import Modification_History
+        return Modification_History(
+            modification_date='2026-09-10', version_id='1.0',
+            description='Initial release').fill_label(root)
+
+    def test_container_is_created_when_absent(self):
+        root = self.fill(self.label_root(with_container=False))
+        self.assertIsNotNone(root.find('pds:Identification_Area/pds:Modification_History', NS))
+
+    def test_detail_carries_the_values(self):
+        root = self.fill(self.label_root())
+        detail = root.find(
+            'pds:Identification_Area/pds:Modification_History/pds:Modification_Detail', NS)
+        self.assertEqual(detail.find('pds:modification_date', NS).text, '2026-09-10')
+        self.assertEqual(detail.find('pds:description', NS).text, 'Initial release')
+
+    def test_everything_written_is_namespaced(self):
+        root = self.fill(self.label_root())
+        for element in root.iter():
+            if isinstance(element.tag, str):
+                self.assertTrue(element.tag.startswith('{' + PDS + '}'), element.tag)
+
+    def test_two_entries_produce_two_details(self):
+        root = self.label_root()
+        root = self.fill(root)
+        root = self.fill(root)
+        self.assertEqual(len(root.findall(
+            'pds:Identification_Area/pds:Modification_History/pds:Modification_Detail', NS)), 2)
 
 
 class InternalReferenceTests(SimpleTestCase):

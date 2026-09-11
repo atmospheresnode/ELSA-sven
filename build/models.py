@@ -4529,8 +4529,16 @@ class Alias(models.Model):
             Identification_Area.insert(Identification_Area.index(Citation_Information), Alias_List)
 
         else:
-    
-            Identification_Area.insert(Identification_Area.index(Modification_History), Alias_List)
+            # PDS4 fixes the order inside Identification_Area: Alias_List comes after
+            # product_class and before Citation_Information and Modification_History.
+            # Either of those may legitimately be absent now that empty ones are no
+            # longer shipped, so anchor on whichever exists and fall back to appending,
+            # which lands Alias_List straight after product_class.
+            if Modification_History is not None:
+                Identification_Area.insert(
+                    Identification_Area.index(Modification_History), Alias_List)
+            else:
+                Identification_Area.append(Alias_List)
 
         return label_root
 
@@ -4900,28 +4908,36 @@ class Modification_History(models.Model):
         Identification_Area = label_root.find(
             '{}Identification_Area'.format(NAMESPACE))
 
-        # Find Alias_List.  If no Alias_List is found, make one.
+        # The templates no longer ship an empty Modification_History: the class requires
+        # at least one Modification_Detail, so an empty one is a validation error on
+        # every bundle that has not had an entry added yet. It is created here, the
+        # first time there is something to put in it.
         Modification_History = Identification_Area.find(
             '{}Modification_History'.format(NAMESPACE))
-
-        # Double check but I'm pretty sure Modification_History is only added once.
-        # if Modification_History is None:
-        # Modification_History = etree.SubElement(
-        #     Identification_Area, 'Modification_History')
+        if Modification_History is None:
+            Modification_History = etree.SubElement(
+                Identification_Area, '{}Modification_History'.format(NAMESPACE))
 
         # Add Modification_Detail information
         Modification_Detail = etree.SubElement(
             Modification_History, '{}Modification_Detail'.format(NAMESPACE))
-        
-        # Add Modification_History information
-        modification_date = etree.SubElement(Modification_Detail, 'modification_date')
+
+        # Built in the PDS namespace like everything else. These three came out
+        # correct anyway, because lxml resolves an unprefixed child against the
+        # default namespace on serialization, but an in-memory tree where some
+        # elements are namespaced and some are not is a trap for the next person
+        # who tries to find() one of them before it is written.
+        modification_date = etree.SubElement(
+            Modification_Detail, '{}modification_date'.format(NAMESPACE))
         modification_date.text = self.modification_date
         if self.version_id:
-            version_id = etree.SubElement(Modification_Detail, 'version_id')
+            version_id = etree.SubElement(
+                Modification_Detail, '{}version_id'.format(NAMESPACE))
             version_id.text = self.version_id
-        description = etree.SubElement(Modification_Detail, 'description')
+        description = etree.SubElement(
+            Modification_Detail, '{}description'.format(NAMESPACE))
         description.text = self.description
-        
+
         return label_root
 
     def remove_xml(self, label_root):
