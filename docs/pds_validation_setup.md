@@ -91,6 +91,24 @@ at all, which means the host cannot reach pds.nasa.gov.
 Then watch it at `/elsa/build/validation/runs/` — staff only. A run against a small
 bundle takes about five seconds.
 
+## 6. Repair labels written before the fix
+
+    python3 manage.py rebuild_netcdf_labels            # report only
+    python3 manage.py rebuild_netcdf_labels --apply    # rewrite them
+
+NetCDF labels written before 2026-09-11 identify their product as belonging to
+"sample_bundle" rather than to the bundle they are in, so PDS reports the product
+as a missing bundle member. At the time of writing that is 19 labels across 8
+bundles in production, belonging to five users.
+
+Those labels predate the rest of the generator fixes too, so rebuilding also gives
+them their schematron reference, drops the empty containers, and corrects the
+information model version. Reporting is the default and writes nothing: these are
+archived files, and some belong to bundles already submitted for review.
+
+Worth doing before validation is switched on for users, or their first check will
+report something they cannot fix.
+
 ## How it runs
 
 A view creates a `ValidationRun` row and launches `manage.py run_validation <id>` as
