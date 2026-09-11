@@ -337,7 +337,14 @@
             </div>
          </div>
       </div>
-      
+
+      <!-- Pre-flight Check Card -->
+      <div class="row justify-content-center align-items-center mt-3">
+         <div class="col-md-12">
+            {% include 'build/validation/panel.html' %}
+         </div>
+      </div>
+
       <!-- Collections Card -->
       <div class="row justify-content-center align-items-center mt-3">
          <div class="col-md-12">
@@ -2323,7 +2330,14 @@
          </div>
       </div>
    </div>
-   
+
+   <!-- Pre-flight Check Card -->
+   <div class="row justify-content-center mt-3">
+      <div class="col-md-12">
+         {% include 'build/validation/panel.html' %}
+      </div>
+   </div>
+
    <!-- Collections Card -->
    <div class="row justify-content-center mt-3">
       <div class="col-md-12">
@@ -5364,5 +5378,128 @@ so a page that was not just uploaded to never shows it.{% endcomment %}
 })();
 </script>
 {% endif %}
+
+<script>
+/* Pre-flight check: start a run, then poll until it finishes.
+ *
+ * Deliberately small. The panel's contents are rendered server-side on page load;
+ * this only drives the progress indicator and reloads once there is something new
+ * to show, rather than duplicating the rendering in JavaScript where it would
+ * drift from the template.
+ */
+(function () {
+   var button = document.getElementById('preflight_run');
+   if (!button) { return; }
+
+   var progress = document.getElementById('preflight_progress');
+   var bar      = document.getElementById('preflight_bar');
+   var phase    = document.getElementById('preflight_phase');
+   var counts   = document.getElementById('preflight_counts');
+   var results  = document.getElementById('preflight_results');
+
+   var statusUrl = button.getAttribute('data-status-url');
+   var startUrl  = button.getAttribute('data-start-url');
+   var polling   = null;
+
+   function token() {
+      var input = document.querySelector('input[name="csrfmiddlewaretoken"]');
+      return input ? input.value : '';
+   }
+
+   function showProgress(on) {
+      if (progress) { progress.hidden = !on; }
+      if (results)  { results.style.opacity = on ? '0.5' : ''; }
+      button.disabled = on;
+      button.textContent = on ? 'Checking…' : 'Run check again';
+   }
+
+   function render(state) {
+      if (phase)  { phase.textContent = state.phase_label || 'Working…'; }
+
+      /* percent is null while validate compiles schemas, which takes a few seconds
+       * and produces no output at all. An indeterminate striped bar is honest about
+       * that; a bar sitting at 0 looks like a hang. */
+      if (bar) {
+         if (state.percent === null || state.percent === undefined) {
+            bar.classList.add('progress-bar-striped', 'progress-bar-animated');
+            bar.style.width = '100%';
+            bar.setAttribute('aria-valuenow', 0);
+         } else {
+            bar.classList.remove('progress-bar-animated');
+            bar.style.width = state.percent + '%';
+            bar.setAttribute('aria-valuenow', state.percent);
+         }
+      }
+
+      if (counts) {
+         counts.textContent = state.products_total
+            ? state.products_done + ' of ' + state.products_total
+            : '';
+      }
+   }
+
+   function stopPolling() {
+      if (polling) { window.clearInterval(polling); polling = null; }
+   }
+
+   function poll() {
+      fetch(statusUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+         .then(function (response) {
+            if (!response.ok) { throw new Error('status ' + response.status); }
+            return response.json();
+         })
+         .then(function (state) {
+            if (state.status === 'none') { stopPolling(); showProgress(false); return; }
+            render(state);
+            if (state.finished) {
+               stopPolling();
+               /* Reload so the results come from the template rather than being
+                * rebuilt here. Keeps one rendering of the findings, not two. */
+               window.location.reload();
+            }
+         })
+         .catch(function () {
+            stopPolling();
+            showProgress(false);
+            if (phase) { phase.textContent = 'Could not reach the server. Try again.'; }
+         });
+   }
+
+   button.addEventListener('click', function () {
+      showProgress(true);
+      render({ percent: null, phase_label: 'Starting…' });
+
+      fetch(startUrl, {
+         method: 'POST',
+         headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': token(),
+            'Content-Type': 'application/x-www-form-urlencoded'
+         },
+         body: 'tier=structure'
+      })
+         .then(function (response) {
+            if (!response.ok) { throw new Error('start failed'); }
+            return response.json();
+         })
+         .then(function (state) {
+            render(state);
+            if (state.finished) { window.location.reload(); return; }
+            polling = window.setInterval(poll, 1500);
+         })
+         .catch(function () {
+            showProgress(false);
+            if (phase) { phase.textContent = 'Could not start the check. Try again.'; }
+         });
+   });
+
+   /* A run already in flight when the page loaded: pick it up rather than showing
+    * a stale panel until someone presses the button. */
+   if (progress && !progress.hidden) {
+      showProgress(true);
+      polling = window.setInterval(poll, 1500);
+   }
+})();
+</script>
 
    {% endblock %}

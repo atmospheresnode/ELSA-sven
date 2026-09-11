@@ -13,7 +13,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
 from django.http import HttpResponse, HttpRequest, JsonResponse
 
-from build import validate_report, validate_runner
+from build import validate_report, validate_rules, validate_runner
 from django.shortcuts import render, redirect, get_object_or_404
 from django.template import RequestContext
 from django.urls import reverse
@@ -1067,6 +1067,21 @@ def bundle(request, pk_bundle):
 
         context_dict['status_dict'] = status_dict
         context_dict['file_tree'] = file_tree
+
+        # Pre-flight panel. Everything here is read-only and cheap: the most recent
+        # run is looked up, its stored findings are translated, and nothing is
+        # started. Running a check is an explicit POST from the page.
+        latest_validation = validate_runner.latest_run_for(bundle)
+        context_dict['validation_run'] = latest_validation
+        if latest_validation is not None and latest_validation.findings:
+            findings = latest_validation.findings
+            context_dict['validation_summary'] = validate_rules.summarise(findings)
+            context_dict['validation_cards'] = validate_rules.cards(findings)
+            context_dict['validation_advisory'] = validate_rules.translate(findings)['advisory']
+        else:
+            context_dict['validation_summary'] = None
+            context_dict['validation_cards'] = []
+            context_dict['validation_advisory'] = []
 
         # To handle NetCDF files
         # if form_netcdf.is_valid():
