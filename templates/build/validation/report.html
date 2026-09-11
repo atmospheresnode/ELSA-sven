@@ -1,0 +1,179 @@
+{% extends 'base-derk.html' %}
+{% load tz %}
+
+{% comment %}
+Staff-only. Findings grouped by the XML path they resolve to, because that is the
+grouping the panel uses: a path names something ELSA has a form for, while a
+message type does not.
+{% endcomment %}
+
+{% block body_block %}
+<div class="container-fluid py-4">
+
+  <div class="mb-4">
+    <a href="{% url 'build:validation_runs' %}" class="text-decoration-none small">&larr; All runs</a>
+    <h2 class="mt-2 mb-1">{{ bundle.name }}</h2>
+    <p class="text-muted mb-0">
+      {{ run.get_tier_display }} &middot; {{ run.get_status_display }} &middot;
+      {% timezone "America/Denver" %}{{ run.requested_at|date:"F j, Y \a\t g:i A T" }}{% endtimezone %}
+      {% if run.duration_seconds %} &middot; {{ run.duration_seconds|floatformat:1 }}s{% endif %}
+      &middot; {{ run.products_total }} label{{ run.products_total|pluralize }}
+    </p>
+  </div>
+
+  {% if run.is_stale %}
+  <div class="alert alert-warning">
+    <strong>These results are out of date.</strong>
+    The bundle has changed since this run finished, so some findings may already be
+    fixed and new ones may not appear here.
+  </div>
+  {% endif %}
+
+  {% if run.failure_reason %}
+  <div class="alert alert-danger">
+    <strong>This run did not complete.</strong> {{ run.failure_reason }}
+  </div>
+  {% endif %}
+
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+      <div class="card h-100"><div class="card-body">
+        <div class="h3 mb-0 {% if run.error_count %}text-danger{% else %}text-success{% endif %}">{{ run.error_count }}</div>
+        <div class="text-muted small">Error{{ run.error_count|pluralize }}</div>
+      </div></div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card h-100"><div class="card-body">
+        <div class="h3 mb-0">{{ run.warning_count }}</div>
+        <div class="text-muted small">Warning{{ run.warning_count|pluralize }}</div>
+      </div></div>
+    </div>
+    <div class="col-12 col-md-6">
+      <div class="card h-100"><div class="card-body">
+        <div class="text-muted small mb-1">Raw report</div>
+        <code class="small text-break">{{ run.report_path|default:"not written" }}</code>
+      </div></div>
+    </div>
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-header bg-white">
+      <strong>Findings by location</strong>
+      <span class="text-muted small ms-2">where in the label the problem is</span>
+    </div>
+    <div class="card-body p-0">
+      {% if by_location %}
+      <div class="table-responsive">
+        <table class="table table-sm mb-0 align-middle">
+          <thead>
+            <tr>
+              <th scope="col">Element path</th>
+              <th scope="col" class="text-end">Findings</th>
+              <th scope="col">Types</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for path, group in by_location %}
+            <tr>
+              <td><code class="small">{{ path|default:"(could not be placed)" }}</code></td>
+              <td class="text-end">{{ group|length }}</td>
+              <td class="text-muted small">
+                {% for finding in group %}{% if forloop.first %}{{ finding.type }}{% endif %}{% endfor %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="p-4 text-muted">Nothing was reported against this bundle.</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-header bg-white"><strong>Message types in this run</strong></div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <tbody>
+            {% for type_name, count in by_type %}
+            <tr>
+              <td><code>{{ type_name }}</code></td>
+              <td class="text-end" style="width: 6rem;">{{ count }}</td>
+            </tr>
+            {% empty %}
+            <tr><td class="text-muted p-3">None.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-header bg-white"><strong>Errors</strong> <span class="text-muted small ms-2">{{ errors|length }}</span></div>
+    <div class="card-body p-0">
+      {% if errors %}
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead>
+            <tr>
+              <th scope="col">Label</th>
+              <th scope="col">Line</th>
+              <th scope="col">Location</th>
+              <th scope="col">Message</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for finding in errors %}
+            <tr>
+              <td class="small text-nowrap">{{ finding.label }}</td>
+              <td class="small text-muted">{{ finding.line|default:"&mdash;" }}</td>
+              <td><code class="small">{{ finding.element_path|default:"&mdash;" }}</code></td>
+              <td class="small">{{ finding.message }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="p-4 text-muted">No errors.</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header bg-white"><strong>Warnings</strong> <span class="text-muted small ms-2">{{ warnings|length }}</span></div>
+    <div class="card-body p-0">
+      {% if warnings %}
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead>
+            <tr>
+              <th scope="col">Label</th>
+              <th scope="col">Line</th>
+              <th scope="col">Location</th>
+              <th scope="col">Message</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for finding in warnings %}
+            <tr>
+              <td class="small text-nowrap">{{ finding.label }}</td>
+              <td class="small text-muted">{{ finding.line|default:"&mdash;" }}</td>
+              <td><code class="small">{{ finding.element_path|default:"&mdash;" }}</code></td>
+              <td class="small">{{ finding.message }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="p-4 text-muted">No warnings.</div>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,312 @@
+{% comment %}
+PDS validation panel.
+
+Grouped by the ELSA card that fixes each item, never by XML file or line: someone
+thinks "my citation is incomplete", not "line 22 of collection_x_document.xml".
+
+Counts what passed as well as what failed, because a validation panel that only
+ever reports failures is one people avoid opening.
+
+Nothing here starts work on page load. Running a check is an explicit action.
+{% endcomment %}
+
+<div class="card mb-3" id="preflight_card">
+   <h5 class="card-header bg-secondary text-white text-center position-relative">
+      PDS Validation
+      <span class="ms-1 d-inline-flex align-items-center">
+         <i class="bi bi-info-circle text-light opacity-75" style="cursor: help;" role="button" tabindex="0"
+            data-bs-toggle="tooltip" data-bs-placement="left"
+            title="Runs the PDS validation tool against your bundle and shows anything that needs fixing before it goes for review."></i>
+      </span>
+   </h5>
+
+   <div class="p-3">
+
+      {% if validation_run and validation_run.is_stale %}
+      <div class="alert alert-warning py-2 px-3 small mb-3" id="preflight_stale">
+         <strong>These results are out of date.</strong>
+         The bundle changed after this check ran, so some items may already be fixed.
+         Run it again to see where things stand.
+      </div>
+      {% endif %}
+
+      {% if validation_run and validation_run.status == 'f' %}
+      <div class="alert alert-danger py-2 px-3 small mb-3">
+         <strong>The last check could not finish.</strong>
+         {{ validation_run.failure_reason }}
+      </div>
+      {% endif %}
+
+      {# --- running ------------------------------------------------------- #}
+      <div id="preflight_progress" class="mb-3" {% if not validation_run.is_active %}hidden{% endif %}>
+         <div class="d-flex justify-content-between align-items-baseline mb-1">
+            <span class="small fw-semibold" id="preflight_phase">Starting…</span>
+            <span class="small text-muted" id="preflight_counts"></span>
+         </div>
+         <div class="progress" style="height: 8px;">
+            {% comment %}
+               Indeterminate while validate compiles schemas, which takes a few
+               seconds and emits nothing. A bar sitting at zero reads as a hang.
+            {% endcomment %}
+            <div id="preflight_bar"
+                 class="progress-bar progress-bar-striped progress-bar-animated"
+                 role="progressbar" style="width: 100%;"
+                 aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+         </div>
+      </div>
+
+      {# --- results ------------------------------------------------------- #}
+      <div id="preflight_updated" class="alert alert-success py-2 px-3 small mb-3" hidden>
+         <strong>Results updated.</strong>
+         <span id="preflight_summary_counts"></span>
+         <a href="" onclick="window.location.reload(); return false;">Refresh to see the details.</a>
+      </div>
+
+      {% if validation_summary %}
+      {% comment %}
+         Two tabs rather than two panes side by side. A split view would imply that a
+         row on one side lines up with a row on the other, and it does not: on a real
+         bundle four rows stand for fifty-six findings, one of them backed by sixteen,
+         and thirty-four correspond to nothing shown at all. Tabs make no such promise.
+
+         "What to fix" is first and opens by default. The raw output is there for
+         anyone who wants to check the translation rather than trust it, which is the
+         whole reason for offering it, but meeting it first would undo the work the
+         translation does.
+      {% endcomment %}
+      <ul class="nav nav-tabs small mb-3" role="tablist">
+         <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="preflight_tab_fix" data-bs-toggle="tab"
+                    data-bs-target="#preflight_pane_fix" type="button" role="tab"
+                    aria-controls="preflight_pane_fix" aria-selected="true">What to fix</button>
+         </li>
+         <li class="nav-item" role="presentation">
+            <button class="nav-link" id="preflight_tab_raw" data-bs-toggle="tab"
+                    data-bs-target="#preflight_pane_raw" type="button" role="tab"
+                    aria-controls="preflight_pane_raw" aria-selected="false">
+               Validation output
+               <span class="badge rounded-pill bg-secondary ms-1">{{ validation_raw_total }}</span>
+            </button>
+         </li>
+      </ul>
+
+      <div class="tab-content">
+      <div class="tab-pane fade show active" id="preflight_pane_fix" role="tabpanel"
+           aria-labelledby="preflight_tab_fix">
+      {% endif %}
+
+      <div id="preflight_results">
+
+         {% if not validation_run %}
+         <p class="small text-muted mb-3">
+            {% if validation_auto_check %}
+            Checking this bundle against the PDS validation tool. This takes a few seconds.
+            {% else %}
+            This bundle has not been checked yet. Running a check takes a few seconds
+            and tells you what PDS would say about it today.
+            {% endif %}
+         </p>
+
+         {% elif validation_summary %}
+         <div class="d-flex text-center border rounded overflow-hidden mb-3">
+            <div class="flex-fill py-2 px-1 border-end">
+               <div class="fw-bold {% if validation_summary.blocking %}text-danger{% else %}text-success{% endif %}"
+                    style="font-size:1.4rem; line-height:1;">{{ validation_summary.blocking }}</div>
+               <div class="text-muted" style="font-size:0.7rem;">Need your attention</div>
+            </div>
+            <div class="flex-fill py-2 px-1 border-end">
+               <div class="fw-bold" style="font-size:1.4rem; line-height:1;">{{ validation_summary.advisory }}</div>
+               <div class="text-muted" style="font-size:0.7rem;">Worth reviewing</div>
+            </div>
+            <div class="flex-fill py-2 px-1">
+               <div class="fw-bold text-success" style="font-size:1.4rem; line-height:1;">{{ validation_run.products_total }}</div>
+               <div class="text-muted" style="font-size:0.7rem;">Labels checked</div>
+            </div>
+         </div>
+
+         {% if validation_summary.can_submit %}
+         <div class="d-flex align-items-center gap-2 p-2 rounded mb-3"
+              style="background-color:#e2f0ee;">
+            <span class="text-success fw-bold">&check;</span>
+            <span class="small">Nothing is blocking this bundle from going for review.</span>
+         </div>
+         {% endif %}
+
+         {% for card_name, items in validation_cards %}
+         <div class="d-flex align-items-center gap-2 mb-2">
+            <span class="text-muted fw-semibold text-nowrap"
+                  style="font-size:0.7rem; letter-spacing:0.07em; text-transform:uppercase;">{{ card_name }}</span>
+            <hr class="flex-grow-1 my-0 opacity-50">
+         </div>
+         <div class="list-group rounded overflow-hidden mb-3">
+            {% for item in items %}
+            <div class="list-group-item py-2">
+               <div class="d-flex justify-content-between align-items-start gap-2">
+                  <div class="flex-grow-1">
+                     <div class="small fw-semibold">{{ item.title }}</div>
+                     <div class="text-muted" style="font-size:0.78rem;">{{ item.detail }}</div>
+                     {% if item.labels|length > 1 %}
+                     <div class="text-muted" style="font-size:0.72rem;">
+                        Affects {{ item.labels|length }} labels in this bundle.
+                     </div>
+                     {% endif %}
+                  </div>
+                  {% if item.anchor %}
+                  <button type="button" class="btn btn-sm btn-outline-secondary flex-shrink-0"
+                          data-bs-toggle="modal" data-bs-target="#{{ item.anchor }}">Fix</button>
+                  {% endif %}
+               </div>
+               {% comment %}
+                  Asks the existing assistant, and only when someone presses it. The
+                  assistant runs on a model chain with a daily quota, so generating an
+                  explanation for every finding automatically would exhaust it and the
+                  feature would fail intermittently. User-initiated keeps the cost
+                  bounded and means nobody pays for an explanation they did not want.
+               {% endcomment %}
+               <button type="button"
+                       class="btn btn-link btn-sm p-0 mt-1 text-decoration-none preflight-explain"
+                       style="font-size:0.75rem;"
+                       data-question="In ELSA, my bundle's PDS validation says: {{ item.title|escapejs }}. Why does this matter for a PDS4 archive, and what exactly should I do about it?">Why does this matter?</button>
+            </div>
+            {% endfor %}
+         </div>
+         {% endfor %}
+
+         {% if validation_advisory %}
+         <div class="d-flex align-items-center gap-2 mb-2">
+            <span class="text-muted fw-semibold text-nowrap"
+                  style="font-size:0.7rem; letter-spacing:0.07em; text-transform:uppercase;">Worth reviewing</span>
+            <hr class="flex-grow-1 my-0 opacity-50">
+         </div>
+         <div class="list-group rounded overflow-hidden mb-3">
+            {% for item in validation_advisory %}
+            <div class="list-group-item py-2">
+               <div class="small">{{ item.title }}</div>
+               <div class="text-muted" style="font-size:0.78rem;">{{ item.detail }}</div>
+            </div>
+            {% endfor %}
+         </div>
+         {% endif %}
+
+         {% elif validation_run.is_active %}
+         <p class="small text-muted mb-3">
+            Checking this bundle against the PDS validation tool.
+         </p>
+
+         {% elif validation_run.status == 'd' %}
+         {% comment %}
+            A completed run that reported nothing at all. Saying "run it again" here,
+            as this branch used to, tells someone whose bundle passed cleanly that
+            something went wrong.
+         {% endcomment %}
+         <div class="d-flex align-items-center gap-2 p-2 rounded mb-3"
+              style="background-color:#e2f0ee;">
+            <span class="text-success fw-bold">&check;</span>
+            <span class="small">
+               PDS reported nothing on this bundle. All
+               {{ validation_run.products_total }} label{{ validation_run.products_total|pluralize }}
+               passed.
+            </span>
+         </div>
+
+         {% elif validation_run.status != 'f' %}
+         <p class="small text-muted mb-3">
+            The last check finished without storing any findings. Run it again.
+         </p>
+         {% endif %}
+
+         {% if validation_run and validation_run.finished_at %}
+         <div class="text-muted" style="font-size:0.72rem;">
+            Last checked {{ validation_run.finished_at|timesince }} ago.
+         </div>
+         {% endif %}
+      </div>
+
+      {% if validation_summary %}
+      </div>{# /pane: what to fix #}
+
+      <div class="tab-pane fade" id="preflight_pane_raw" role="tabpanel"
+           aria-labelledby="preflight_tab_raw">
+         {% comment %}
+            The technical tally lives here rather than behind a separate disclosure in
+            the other tab: this tab is the technical detail, and two doors to the same
+            room made the panel look unsure of itself.
+         {% endcomment %}
+         <p class="small text-muted">
+            PDS validate reported
+            {{ validation_run.error_count }} error{{ validation_run.error_count|pluralize }}
+            and {{ validation_run.warning_count }} warning{{ validation_run.warning_count|pluralize }}
+            across {{ validation_run.products_total }} label{{ validation_run.products_total|pluralize }},
+            in its own words and including the
+            {{ validation_summary.hidden }} item{{ validation_summary.hidden|pluralize }}
+            caused by ELSA rather than by anything you entered. Nothing is hidden from
+            you here; the other tab is this same output with the parts you can act on
+            explained.
+            {% if user.is_staff %}
+            <a href="{% url 'build:validation_report' validation_run.pk %}">Full report</a>
+            {% endif %}
+         </p>
+         {% comment %}
+            One scroller around the whole list, not one per label. A real bundle
+            reports forty-odd findings across three labels, and a scroller per group
+            puts three scrollbars inside a sidebar card.
+         {% endcomment %}
+         <div style="max-height:30rem; overflow-y:auto;">
+         {% for label_name, findings in validation_raw %}
+         <div class="d-flex align-items-center gap-2 mb-1 mt-2">
+            <span class="text-muted fw-semibold text-nowrap"
+                  style="font-size:0.7rem; letter-spacing:0.07em; text-transform:uppercase;">{{ label_name }}</span>
+            <hr class="flex-grow-1 my-0 opacity-50">
+         </div>
+         <div>
+            {% for finding in findings %}
+            <div class="d-flex gap-2 py-1 border-bottom" style="font-size:0.74rem;">
+               <span class="badge rounded-pill flex-shrink-0
+                  {% if finding.severity == 'ERROR' %}bg-danger{% else %}bg-warning text-dark{% endif %}"
+                  style="font-size:0.6rem;">{{ finding.severity|title }}</span>
+               <div class="flex-grow-1" style="min-width:0;">
+                  <div class="font-monospace text-muted" style="font-size:0.68rem;">
+                     {{ finding.type }}{% if finding.line %} &middot; line {{ finding.line }}{% endif %}
+                  </div>
+                  {% comment %}
+                     A schema message can be a three-kilobyte regular expression: the
+                     ASCII_Date_Time_YMD_UTC pattern alone runs past 3000 characters,
+                     and one of those dropped in verbatim fills the whole tab. Folded,
+                     not truncated. The opening words are what identifies the problem,
+                     and the rest is one click away rather than gone.
+                  {% endcomment %}
+                  {% if finding.message|length > 220 %}
+                  <details>
+                     <summary style="cursor:pointer; overflow-wrap:anywhere;">{{ finding.message|truncatechars:200 }}</summary>
+                     <div class="mt-1 p-2 bg-light rounded"
+                          style="overflow-wrap:anywhere; font-size:0.7rem;">{{ finding.message }}</div>
+                  </details>
+                  {% else %}
+                  <div style="overflow-wrap:anywhere;">{{ finding.message }}</div>
+                  {% endif %}
+                  {% if finding.element_path %}
+                  <div class="font-monospace text-muted" style="font-size:0.68rem; overflow-wrap:anywhere;">
+                     {{ finding.element_path }}
+                  </div>
+                  {% endif %}
+               </div>
+            </div>
+            {% endfor %}
+         </div>
+         {% empty %}
+         <p class="small text-muted">Nothing was reported.</p>
+         {% endfor %}
+         </div>
+      </div>
+      </div>{# /tab-content #}
+      {% endif %}
+
+      <button type="button" class="btn btn-sm btn-outline-secondary w-100 mt-2"
+              id="preflight_run"
+              data-status-url="{% url 'build:validation_status' bundle.pk %}"
+              data-start-url="{% url 'build:start_validation' bundle.pk %}"
+              {% if validation_auto_check %}data-auto-check="1"{% endif %}>
+         {% if validation_run %}Check again{% else %}Check this bundle{% endif %}
+      </button>
+   </div>
+</div>

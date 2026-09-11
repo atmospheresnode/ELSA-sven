@@ -12,4 +12,5 @@ __pycache__/
 
 # Cached PDS4 schemas and validate reports. Regenerable with
 # `manage.py build_schema_catalog`, ~6MB, and host-specific.
-validation/
+# Anchored: unanchored, it also swallowed templates/build/validation/.
+/validation/
