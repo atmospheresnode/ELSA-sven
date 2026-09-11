@@ -4,10 +4,10 @@
      build/models.py#Bundle                = 81fb6e671b24
      build/models.py#AdditionalCollections = 6f67e205c8a6
      build/models.py#NetCDFFile            = 0259cb4196cf
-     templates/build/bundle/bundle.html    = 1dd18e79aea1
+     templates/build/bundle/bundle.html    = 2669226d9806
 -->
 <!-- reviewed: 2026-09-10 -->
-<!-- baseline: 3b72c3e244976369a029755e3dbd548b370c17f3 -->
+<!-- baseline: 61342f1b4fa454909819442d2a00eac31cec3b98 -->
 # External Bundle Workflow (AMA)
 
 External bundles are ELSA's lighter-weight bundle type, used for the Atmospheres
@@ -25,9 +25,19 @@ Alias is optional (yellow "Optional" badge) and never blocks submission.
 
 The bundle page shows a Bundle Components card (top right) with the status of
 each component: green "Added" when complete, red "Missing" when required and
-absent. The Review & Submit button opens a pre-flight checklist showing required
+absent. The Review & Submit button opens a checklist showing required
 components, optional items, and content (uploaded NetCDF files and documents).
 Submission is enabled once the three required components are complete.
+
+The bundle page also has a PDS Validation card. Pressing "Check this bundle"
+runs the official NASA PDS validation tool against the bundle and reports
+anything that needs fixing, in plain language, grouped by the card that fixes
+it: each item has a Fix button that opens the right panel. It takes a few
+seconds. Items under "Need your attention" are things to resolve; items under
+"Worth reviewing" are advisory and do not stop a submission. Problems caused by
+ELSA itself rather than by the user are not shown there; they go to the ELSA
+team. Results are marked as out of date if the bundle is edited after a check,
+and the raw tool output is available under "Technical detail".
 
 After submission: Atmospheres node staff are notified by email and review the
 bundle. The user can continue editing and resubmit at any time, the bundle page

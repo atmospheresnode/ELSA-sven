@@ -84,9 +84,9 @@ class PreflightPanelTests(TestCase):
 
     def test_a_bundle_never_checked_invites_a_check(self):
         page = self.page()
-        self.assertContains(page, 'Pre-flight Check')
+        self.assertContains(page, 'PDS Validation')
         self.assertContains(page, 'has not been checked yet')
-        self.assertContains(page, 'Run pre-flight check')
+        self.assertContains(page, 'Check this bundle')
 
     def test_findings_are_shown_in_plain_language(self):
         self.run_with([CITATION])
@@ -197,8 +197,13 @@ class TemplateHygieneTests(TestCase):
     """Django's {# #} comment is single-line only.
 
     A multi-line one is not a comment at all: it renders as visible text on the
-    page. This was live in the panel until the rendered output was actually read,
-    which is the argument for reading it rather than trusting the template.
+    page. Two were live in the pre-flight panel until the rendered output was read.
+
+    build.tests.AMARegressionTests already guards this by rendering the bundle page
+    and looking for '{#' in the output, which is the stronger check and is what
+    caught the panel. This one scans the source of the two staff templates as well,
+    which that test never renders, and it names the offending file rather than only
+    reporting that something leaked.
     """
 
     TEMPLATES = [
