@@ -298,3 +298,39 @@ class UnmappedWordingTests(SimpleTestCase):
 
     def test_it_says_the_thing_that_matters_to_the_reader(self):
         self.assertIn('stop', UNMAPPED.detail.lower())
+
+
+class EmptyCollectionAdviceTests(SimpleTestCase):
+    """The advice has to be something the reader can actually do.
+
+    Found by building a bundle from Raul's EPIC model output and validating it: the
+    only finding left was the document collection, and the rule offered to remove it.
+    delete_collection only handles AdditionalCollections, so the document collection
+    ELSA creates for every bundle cannot be removed by anyone.
+    """
+
+    def empty(self, label):
+        return finding(
+            message="cvc-minInclusive-valid: Value '0' is not facet-valid with "
+                    "respect to minInclusive '1' for type 'records'.",
+            path='Product_Collection/File_Area_Inventory/Inventory/records',
+            label=label)
+
+    def test_the_document_collection_is_not_offered_for_removal(self):
+        item = translate([self.empty('collection_x_document.xml')])['user'][0]
+        self.assertNotIn('remove the collection', item['detail'])
+        self.assertIn('document', item['detail'].lower())
+
+    def test_a_user_added_collection_still_offers_removal(self):
+        item = translate([self.empty('collection_x_sims.xml')])['user'][0]
+        self.assertIn('remove the collection', item['detail'])
+
+    def test_both_are_still_the_users_to_fix(self):
+        for label in ('collection_x_document.xml', 'collection_x_sims.xml'):
+            self.assertFalse(summarise([self.empty(label)])['can_submit'], label)
+
+    def test_they_are_reported_as_two_separate_things(self):
+        """One empty collection of each kind is two different jobs."""
+        result = translate([self.empty('collection_x_document.xml'),
+                            self.empty('collection_x_sims.xml')])
+        self.assertEqual(len(result['user']), 2)

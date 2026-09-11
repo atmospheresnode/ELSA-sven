@@ -133,6 +133,23 @@ RULES = [
          card=CARD_CITATION,
          message=(r'Citation_Information and its description are required',)),
 
+    # The document collection is created for every bundle and, unlike the ones the
+    # user adds, cannot be deleted: delete_collection only handles
+    # AdditionalCollections. Offering to remove it, as the general rule below does,
+    # is advice nobody can follow. Measured on a bundle built from real EPIC model
+    # output, this is the only thing left standing between an AMA delivery and a
+    # clean validation: every other finding was ELSA's and is fixed.
+    Rule('document-collection-empty', USER,
+         'The document collection has nothing in it',
+         'Every bundle gets a document collection, and PDS will not accept one that '
+         'is empty. Add at least one document describing the data: how it was '
+         'produced, what the variables mean, or how to read it.',
+         card=CARD_DOCUMENT,
+         path=('File_Area_Inventory/Inventory',),
+         message=(r"Value '0' is not facet-valid", r"value '0' of element",
+                  r"must have no element"),
+         when=lambda finding: (finding.get('label') or '').endswith('_document.xml')),
+
     Rule('collection-empty', USER,
          'This collection has nothing in it yet',
          'Every collection has to list at least one product. Add a file to it, or '
