@@ -1432,6 +1432,16 @@ def bundle(request, pk_bundle):
             for modification_history in modification_history_set:
                 write_into_label(modification_history, additional_collections, None)
 
+            # The inventory the label promises. Every PDS4 collection is required to
+            # carry one, and a collection the user added was shipping with the whole
+            # File_Area_Inventory blank: no file name, no local identifier, no
+            # creation date. That alone was ten of the seventeen findings on a
+            # freshly built bundle, because validate reports each empty field twice
+            # and then gives up on the product entirely for want of a file name.
+            # ELSA's own document collection has had this call since the inventory
+            # work; the user's collections were simply never given it.
+            additional_collections.build_inventory()
+
             additional_collections_set = _collections_with_ama(bundle)
             context_dict['additional_collections_set'] = additional_collections_set
             context_dict['additional_collections_count'] =  len(additional_collections_set)
