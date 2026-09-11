@@ -443,6 +443,65 @@ class PreflightPanelTests(TestCase):
             self.client.get(reverse('build:validation_panel', args=[self.bundle.pk]))
         self.assertEqual(ValidationRun.objects.count(), before)
 
+    def test_the_fetched_fragments_carry_the_review_verdict_too(self):
+        """The panel is not the only thing that shows the result.
+
+        The Review & Submit window states the verdict and decides whether to offer a
+        Submit button. Refreshing only the panel left both of those answering with
+        whatever was true at page load, which is how the window came to refuse a
+        submission over a stale result that had already been re-checked.
+        """
+        self.run_with([CITATION])
+        body = self.client.get(
+            reverse('build:validation_panel', args=[self.bundle.pk])).content.decode()
+        for element in ('preflight_body', 'validation_verdict', 'review_submit_action'):
+            self.assertIn('id="{}"'.format(element), body,
+                          '{} is not in what the page fetches'.format(element))
+
+    def test_the_page_and_the_fragments_agree_about_the_verdict(self):
+        self.run_with([CITATION, EMPTY_COLLECTION])
+        page = self.page().content.decode()
+        fragments = self.client.get(
+            reverse('build:validation_panel', args=[self.bundle.pk])).content.decode()
+
+        def verdict(text):
+            return text.split('id="validation_verdict"')[1].split(
+                '<!-- /validation_verdict -->')[0]
+
+        self.assertIn('2 things', verdict(page))
+        self.assertIn('2 things', verdict(fragments))
+
+    @override_settings(VALIDATE_BLOCKS_SUBMISSION=True)
+    def test_a_cleared_result_lets_the_fragments_offer_submit_again(self):
+        """The reported symptom: blocked on a result that no longer applies."""
+        stale = self.run_with([CITATION])
+        self.bundle.save()                      # the bundle changed: now stale
+        stale.refresh_from_db()
+        self.assertTrue(stale.is_stale())
+        blocked = self.client.get(
+            reverse('build:validation_panel', args=[self.bundle.pk]))
+        self.assertIsNotNone(blocked.context['validation_block'])
+
+        # A fresh check that finds nothing, exactly as pressing Check again would.
+        ValidationRun.objects.all().delete()
+        self.run_with([ADVISORY])
+
+        cleared = self.client.get(
+            reverse('build:validation_panel', args=[self.bundle.pk]))
+        self.assertIsNone(cleared.context['validation_block'],
+                          'the fragments still report the superseded block')
+        self.assertNotIn('no longer describe what you are about to send',
+                         cleared.content.decode())
+
+    def test_the_review_window_refreshes_itself_when_opened(self):
+        """A check can finish between the page loading and someone deciding to send."""
+        with open('templates/build/bundle/bundle.html', encoding='utf-8') as handle:
+            text = handle.read()
+        start = text.index('Pre-flight check: start a run')
+        panel_script = text[start:text.index('</script>', start)]
+        self.assertIn("show.bs.modal", panel_script)
+        self.assertIn('reviewBundleModal', panel_script)
+
     # -- the controls ------------------------------------------------------------
 
     def test_the_panel_offers_to_run_a_check(self):

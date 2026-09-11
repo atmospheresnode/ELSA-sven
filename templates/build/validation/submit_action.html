@@ -1,0 +1,31 @@
+{% comment %}
+The Review & Submit window's Submit button, and whether it is offered.
+
+Extracted for the same reason as the verdict band above it: the page fetches this
+again when a check finishes, so a button disabled by a result that has since been
+superseded does not stay disabled until someone reloads.
+{% endcomment %}
+<span id="review_submit_action">
+   {% if validation_block %}
+   {% comment %}
+      Stopping here rather than at the next modal. submitBundleModal already refused
+      this case, but only after another click, and a button that leads somewhere it
+      cannot go is worse than one that says why it will not.
+   {% endcomment %}
+   <button type="button" class="btn btn-success" disabled title="{{ validation_block.1 }}">
+   <i class="bi bi-send me-1"></i>
+   {% if bundle.submitted_at %}Resubmit{% else %}Submit{% endif %}
+</button>
+{% elif status_dict.Modification_History and status_dict.Citation_Information and status_dict.Targets %}
+   <button type="button" class="btn btn-success"
+   onclick="switchToModal('reviewBundleModal', 'submitBundleModal')">
+   <i class="bi bi-send me-1"></i>
+   {% if bundle.submitted_at %}Resubmit{% else %}Submit{% endif %}
+</button>
+{% else %}
+<button type="button" class="btn btn-success" disabled>
+   <i class="bi bi-send me-1"></i>
+   {% if bundle.submitted_at %}Resubmit{% else %}Submit{% endif %}
+</button>
+{% endif %}
+</span><!-- /review_submit_action -->

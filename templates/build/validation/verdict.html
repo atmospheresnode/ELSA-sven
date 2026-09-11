@@ -1,0 +1,64 @@
+{% comment %}
+The validation verdict, as the Review & Submit window states it.
+
+Its own partial so that the page and the fragment the page fetches after a check
+render it from one place. It used to live inline in bundle.html, which meant the
+panel refreshed itself when a check finished and this did not: the window went on
+showing whatever was true when the page loaded, including a stale warning that had
+since been answered and a Submit button disabled on it.
+{% endcomment %}
+<div id="validation_verdict">
+            {% comment %}
+               The verdict comes from one place.
+
+               This modal used to reach its own conclusion about whether the bundle
+               was ready, from whether Modification History, Citation Information and
+               Targets existed. PDS validation now answers a strictly better version
+               of that question, and the two could disagree in a way nobody could
+               resolve: Citation Information can be present, and so tick green in the
+               list below, while validation reports that an author on it has no name.
+
+               So the band states where the bundle stands, and the list below it is an
+               inventory of what is being sent plus the fastest route to editing each
+               piece. It is no longer the thing that decides.
+            {% endcomment %}
+            {% if not validation_run %}
+            <div class="alert alert-secondary py-2 px-3 small d-flex align-items-center gap-2 mb-4">
+               <i class="bi bi-hourglass-split"></i>
+               <span class="flex-grow-1">This bundle has not been checked against the PDS
+                  validation tool yet. The check takes a few seconds.</span>
+               <button type="button" class="btn btn-sm btn-outline-secondary flex-shrink-0"
+                       onclick="switchToModal('reviewBundleModal', 'validation_modal')">Check it</button>
+            </div>
+            {% elif validation_run.is_stale %}
+            <div class="alert alert-warning py-2 px-3 small d-flex align-items-center gap-2 mb-4">
+               <i class="bi bi-exclamation-triangle-fill"></i>
+               <span class="flex-grow-1">The bundle changed since it was last validated,
+                  so those results no longer describe what you are about to send.</span>
+               <button type="button" class="btn btn-sm btn-outline-secondary flex-shrink-0"
+                       onclick="switchToModal('reviewBundleModal', 'validation_modal')">Check again</button>
+            </div>
+            {% elif validation_summary.blocking %}
+            <div class="alert alert-danger py-2 px-3 small d-flex align-items-center gap-2 mb-4">
+               <i class="bi bi-x-circle-fill"></i>
+               <span class="flex-grow-1">PDS validation found
+                  {{ validation_summary.blocking }} thing{{ validation_summary.blocking|pluralize }}
+                  to fix before this bundle can go for review.</span>
+               <button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0"
+                       onclick="switchToModal('reviewBundleModal', 'validation_modal')">See what</button>
+            </div>
+            {% elif validation_run.status == 'f' %}
+            <div class="alert alert-warning py-2 px-3 small d-flex align-items-center gap-2 mb-4">
+               <i class="bi bi-exclamation-triangle-fill"></i>
+               <span class="flex-grow-1">The validation check could not run, so this
+                  bundle has not been checked. You can still submit it.</span>
+            </div>
+            {% else %}
+            <div class="alert alert-success py-2 px-3 small d-flex align-items-center gap-2 mb-4">
+               <i class="bi bi-check-circle-fill"></i>
+               <span class="flex-grow-1">PDS validation found nothing blocking this bundle.</span>
+               <button type="button" class="btn btn-sm btn-outline-success flex-shrink-0"
+                       onclick="switchToModal('reviewBundleModal', 'validation_modal')">See the report</button>
+            </div>
+            {% endif %}
+</div><!-- /validation_verdict -->

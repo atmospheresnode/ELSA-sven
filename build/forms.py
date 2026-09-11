@@ -8,6 +8,7 @@ from django.utils.safestring import mark_safe
 
 from lxml import etree
 import json
+import re
 import urllib.request
 import urllib.error
 import urllib.parse
@@ -999,6 +1000,69 @@ PE_STD_ID = [
 ]
 
 # Nov. 24, 2025 -- External Bundles are supposed to have some different fields for document collections.
+# PDS4 file_name: must start alphanumeric, may then contain letters, digits, dots,
+# dashes and underscores, and must end in a dot and an extension. Taken from the
+# pattern in the PDS4 schema rather than approximated, because a form that accepts
+# something validate then rejects is worse than no check at all.
+PDS_FILE_NAME = re.compile(r'^[a-zA-Z0-9]([a-zA-Z0-9]|[-]|[_]|[.])*[.][a-zA-Z0-9]+$')
+
+
+def clean_pds_file_name(value):
+    """Reject a document file name PDS would reject, while the user is still here.
+
+    Both of these reached a real bundle and were only caught by the validator, by
+    which point the document was written, labelled, listed in an inventory and shown
+    to its owner as an error they had to go back and undo.
+    """
+    value = (value or '').strip()
+    if not value:
+        return value
+    if '.' not in value.strip('.'):
+        raise forms.ValidationError(
+            'PDS needs a file extension here, like User_Guide.pdf. '
+            '"%(value)s" has none.',
+            params={'value': value})
+    if not PDS_FILE_NAME.match(value):
+        raise forms.ValidationError(
+            'PDS file names may use letters, digits, dots, dashes and underscores, '
+            'must start with a letter or digit, and must end in an extension. '
+            '"%(value)s" does not.',
+            params={'value': value})
+    return value
+
+
+def clean_unique_document_name(form, value):
+    """Refuse a document name already used in this bundle.
+
+    The name becomes the product identifier, which the collection inventory lists,
+    and a collection cannot list the same identifier twice. Two documents called
+    "11" is not a duplicate row in a table somewhere; it is a bundle PDS refuses.
+    """
+    value = (value or '').strip()
+    bundle = getattr(form, 'bundle', None)
+    if not value or bundle is None:
+        return value
+
+    clash = Product_Document.objects.filter(bundle=bundle, document_name=value)
+
+    # The document being edited is not a clash with itself. The edit views build
+    # these forms with initial= rather than instance=, so form.instance has no pk to
+    # exclude and `editing` is how they say which document this is. Without it,
+    # opening a document and saving it unchanged would be refused as a duplicate.
+    editing = getattr(form, 'editing', None)
+    exclude_pk = getattr(editing, 'pk', None) or (
+        form.instance.pk if form.instance is not None else None)
+    if exclude_pk:
+        clash = clash.exclude(pk=exclude_pk)
+    if clash.exists():
+        raise forms.ValidationError(
+            'This bundle already has a document called "%(value)s". PDS identifies '
+            'a document by its name, and a collection cannot list the same one '
+            'twice, so give this one a different name.',
+            params={'value': value})
+    return value
+
+
 class AnnexProductDocumentForm(forms.ModelForm):
 
     document_name = forms.CharField(
@@ -1061,6 +1125,22 @@ class AnnexProductDocumentForm(forms.ModelForm):
             "comment",
             "document_std_id",
         ]
+
+    def __init__(self, *args, **kwargs):
+        # The bundle is needed to tell whether a document name is already taken in
+        # it. Optional, so existing callers that do not pass one keep working and
+        # simply skip that one check.
+        self.bundle = kwargs.pop('bundle', None)
+        # The Product_Document being edited, when this form is an edit rather than an
+        # add, so the duplicate-name check can tell it apart from a real clash.
+        self.editing = kwargs.pop('editing', None)
+        super(AnnexProductDocumentForm, self).__init__(*args, **kwargs)
+
+    def clean_file_name(self):
+        return clean_pds_file_name(self.cleaned_data.get('file_name'))
+
+    def clean_document_name(self):
+        return clean_unique_document_name(self, self.cleaned_data.get('document_name'))
 
 
 
@@ -1202,6 +1282,19 @@ class ProductDocumentForm(forms.ModelForm):
             "local_id",
             "document_std_id",
         ]
+
+    def __init__(self, *args, **kwargs):
+        self.bundle = kwargs.pop('bundle', None)
+        # The Product_Document being edited, when this form is an edit rather than an
+        # add, so the duplicate-name check can tell it apart from a real clash.
+        self.editing = kwargs.pop('editing', None)
+        super(ProductDocumentForm, self).__init__(*args, **kwargs)
+
+    def clean_file_name(self):
+        return clean_pds_file_name(self.cleaned_data.get('file_name'))
+
+    def clean_document_name(self):
+        return clean_unique_document_name(self, self.cleaned_data.get('document_name'))
 
 
 """

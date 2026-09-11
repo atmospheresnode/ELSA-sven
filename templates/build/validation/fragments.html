@@ -1,0 +1,17 @@
+{% comment %}
+Everything on the bundle page that depends on the validation result, rendered
+together so the page can replace all of it at once when a check finishes.
+
+Three separate places show the verdict: the panel itself, the band at the top of
+the Review & Submit window, and whether that window offers a Submit button. When
+only the panel refreshed itself, the other two went on showing what was true at
+page load, so a check that cleared a stale result left the review window still
+saying the bundle had changed and still refusing to submit it.
+
+Rendered by build:validation_panel, from the same context the bundle page uses.
+The page picks each piece out by id, so adding another one here is enough to have
+it refreshed too.
+{% endcomment %}
+{% include 'build/validation/panel.html' %}
+{% include 'build/validation/verdict.html' %}
+{% include 'build/validation/submit_action.html' %}

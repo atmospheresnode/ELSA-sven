@@ -69,6 +69,21 @@ def rebuild_collection_inventories(bundle):
                 collection, error))
 
 
+def _submission_status(bundle):
+    """The three components the Review & Submit button checks, for the fragment view.
+
+    The bundle page builds a larger status_dict for its own progress bar; this is the
+    subset the extracted Submit button reads, computed the same way. Kept small on
+    purpose: a second, fuller copy of that dict would be a thing to keep in step for
+    no benefit, since nothing else in the fragments consults it.
+    """
+    return {
+        'Modification_History': bundle.modification_history_set.exists(),
+        'Citation_Information': bundle.citation_information_set.exists(),
+        'Targets': bundle.targets.exists(),
+    }
+
+
 def validation_context(bundle, user):
     """Everything the PDS validation panel needs to render.
 
@@ -1044,8 +1059,8 @@ def bundle(request, pk_bundle):
         )
         form_modification_history = ModificationHistoryForm(request.POST or None)     
         form_data = DataForm(request.POST or None, pk_bun=pk_bundle)
-        form_document = ProductDocumentForm(request.POST or None)
-        annex_form_document = AnnexProductDocumentForm(request.POST or None)
+        form_document = ProductDocumentForm(request.POST or None, bundle=bundle)
+        annex_form_document = AnnexProductDocumentForm(request.POST or None, bundle=bundle)
         form_collections = CollectionsForm(request.POST or None)
         form_product_collection = ProductCollectionForm(request.POST or None)
         form_additional_collections = AdditionalCollectionForm(request.POST or None, bundle=bundle)
@@ -1500,9 +1515,9 @@ def bundle(request, pk_bundle):
         # this conditional.  We must do [] things: 1. Create the Document model object, 2. Add a Product_Document label to the Document Collection, 3. Add the Document as an Internal_Reference to the proper labels (like Product_Bundle and Product_Collection).
         
         if bundle.bundle_type == "External":
-            form_document = AnnexProductDocumentForm(request.POST or None, request.FILES or None)
+            form_document = AnnexProductDocumentForm(request.POST or None, request.FILES or None, bundle=bundle)
         else:
-            form_document = ProductDocumentForm(request.POST or None, request.FILES or None)
+            form_document = ProductDocumentForm(request.POST or None, request.FILES or None, bundle=bundle)
             
         if form_document.is_valid():
             print('\n\n---------------------- DOCUMENT INFO -------------------------------')
@@ -3730,7 +3745,7 @@ def annex_collection_document(request, pk_bundle):
     bundle = Bundle.objects.get(pk=pk_bundle)
     if request.user != bundle.user:
         return redirect('main:restricted_access')
-    annex_form_document = AnnexProductDocumentForm(request.POST or None)
+    annex_form_document = AnnexProductDocumentForm(request.POST or None, bundle=bundle)
 
     if annex_form_document.is_valid():        
         document = annex_form_document.save(commit=False)
@@ -3776,7 +3791,7 @@ def collection_document(request, pk_bundle):
     bundle = Bundle.objects.get(pk=pk_bundle)
     if request.user != bundle.user:
         return redirect('main:restricted_access')
-    form_document = ProductDocumentForm(request.POST or None)
+    form_document = ProductDocumentForm(request.POST or None, bundle=bundle)
 
     if form_document.is_valid():        
         document = form_document.save(commit=False)
@@ -4095,7 +4110,7 @@ def document(request, pk_bundle):
     print('------------------------------ DEBUGGER ---------------------------------')
 
     # Get forms
-    form_product_document = ProductDocumentForm(request.POST or None)
+    form_product_document = ProductDocumentForm(request.POST or None, bundle=bundle)
     bundle = Bundle.objects.get(pk=pk_bundle)
 
     # Declare context_dict for template
@@ -4184,7 +4199,7 @@ def annex_product_document(request, pk_bundle, pk_product_document):
             "document_std_id":product_document.document_std_id,
         }
 
-        annex_form_product_document = AnnexProductDocumentForm(request.POST or None, initial=initial_product)
+        annex_form_product_document = AnnexProductDocumentForm(request.POST or None, initial=initial_product, bundle=bundle, editing=product_document)
         documents = Product_Document.objects.filter(bundle=bundle)
         
         if annex_form_product_document.is_valid() and annex_form_product_document.has_changed():
@@ -4282,7 +4297,7 @@ def product_document(request, pk_bundle, pk_product_document):
                 "document_std_id":product_document.document_std_id,
             }
             # When editing the product document via the bundle page, we want to use the external form for external bundles
-            form_product_document = AnnexProductDocumentForm(request.POST or None, initial=initial_product)
+            form_product_document = AnnexProductDocumentForm(request.POST or None, initial=initial_product, bundle=bundle, editing=product_document)
         else:
             initial_product = {
                 'author_list':product_document.author_list,
@@ -4300,7 +4315,7 @@ def product_document(request, pk_bundle, pk_product_document):
                 'document_std_id': product_document.document_std_id,
             }
             
-            form_product_document = ProductDocumentForm(request.POST or None, initial=initial_product)
+            form_product_document = ProductDocumentForm(request.POST or None, initial=initial_product, bundle=bundle, editing=product_document)
         documents = Product_Document.objects.filter(bundle=bundle)
         
         if form_product_document.is_valid() and form_product_document.has_changed():
@@ -6050,7 +6065,10 @@ def validation_panel(request, pk_bundle):
 
     context = validation_context(bundle, request.user)
     context['bundle'] = bundle
-    return render(request, 'build/validation/panel.html', context)
+    # Also carries the Review & Submit window's verdict band and Submit button, which
+    # depend on the same result and used to be left behind when the panel refreshed.
+    context['status_dict'] = _submission_status(bundle)
+    return render(request, 'build/validation/fragments.html', context)
 
 
 def _validation_state(validation_run):
