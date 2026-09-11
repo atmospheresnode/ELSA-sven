@@ -283,6 +283,105 @@ class PreflightPanelTests(TestCase):
         self.assertContains(page, 'PDS reported nothing on this bundle')
         self.assertNotContains(page, 'finished without storing any findings')
 
+    # -- where the panel lives ---------------------------------------------------
+
+    def test_validation_is_a_row_in_the_bundle_components_card(self):
+        """Not a card of its own: it had a full-width card to say nothing most days."""
+        self.run_with([CITATION])
+        page = self.page()
+        self.assertContains(page, 'preflight_row_badge')
+        self.assertContains(page, 'data-bs-target="#validation_modal"')
+        self.assertNotContains(page, 'id="preflight_card"')
+
+    def test_the_row_badge_counts_what_the_user_must_fix(self):
+        """Not the raw error count, which is an order of magnitude larger."""
+        self.run_with([CITATION, ELSA_DEFECT, EMPTY_COLLECTION])
+        body = self.page().content.decode()
+        badge = body.split('id="preflight_row_badge"')[0].rsplit('<span', 1)[-1] \
+            + body.split('id="preflight_row_badge"')[1].split('</span>')[0]
+        self.assertIn('2 to fix', badge)
+        self.assertIn('bg-danger', badge)
+
+    def test_the_row_badge_says_passed_when_nothing_blocks(self):
+        self.run_with([ADVISORY])
+        badge = self.page().content.decode().split('id="preflight_row_badge"')[1]
+        self.assertIn('Passed', badge.split('</span>')[0])
+
+    def test_the_row_badge_prefers_out_of_date_over_passed(self):
+        """Results that no longer describe the bundle are not a pass."""
+        self.run_with([ADVISORY])
+        self.bundle.save()                      # auto_now bumps updated_at
+        body = self.page().content.decode()
+        badge = body.split('id="preflight_row_badge"')[1].split('</span>')[0]
+        self.assertIn('Out of date', badge)
+        self.assertNotIn('Passed', badge)
+
+    def test_the_row_badge_says_not_checked_before_a_run(self):
+        with override_settings(VALIDATE_AUTO_CHECK=False):
+            body = self.page().content.decode()
+        self.assertIn('Not checked', body.split('id="preflight_row_badge"')[1])
+
+    def test_the_modal_is_rendered_once(self):
+        self.run_with([CITATION])
+        self.assertEqual(self.page().content.decode().count('id="validation_modal"'), 1)
+
+    def test_the_modal_exists_for_an_archive_bundle_too(self):
+        """The row is in both layouts; the modal was inside the External branch."""
+        response = self.client.post(reverse('build:build'), {
+            'name': 'panel archive', 'bundle_type': 'Archive',
+            'version': '1O00', 'bundleID': ''})
+        self.assertIn(response.status_code, (200, 302))
+        archive = Bundle.objects.get(name='panel archive')
+        page = self.client.get(reverse('build:bundle', args=[archive.pk]))
+        self.assertEqual(page.status_code, 200)
+        body = page.content.decode()
+        self.assertIn('preflight_row_badge', body)
+        self.assertIn('id="validation_modal"', body)
+
+    # -- the review modal defers to validation -----------------------------------
+
+    def test_the_review_modal_states_the_validation_verdict(self):
+        self.run_with([CITATION, EMPTY_COLLECTION])
+        page = self.page()
+        self.assertContains(page, 'PDS validation found')
+        self.assertContains(page, '2 things')
+
+    def test_the_review_modal_says_so_when_nothing_blocks(self):
+        self.run_with([ADVISORY])
+        self.assertContains(self.page(), 'found nothing blocking this bundle')
+
+    def test_the_review_modal_flags_stale_results_before_sending(self):
+        self.run_with([ADVISORY])
+        self.bundle.save()
+        self.assertContains(self.page(), 'no longer describe what you are about to send')
+
+    def test_the_review_modal_no_longer_renders_its_own_verdict_heading(self):
+        """The component list is an inventory now, not the thing that decides."""
+        self.run_with([CITATION])
+        page = self.page()
+        self.assertContains(page, 'What you are sending')
+
+    @override_settings(VALIDATE_BLOCKS_SUBMISSION=True)
+    def test_the_review_modal_submit_is_disabled_when_validation_blocks(self):
+        """It used to walk people into the next modal, which then refused them.
+
+        Checked by the reason on the button, not merely by "disabled": this bundle
+        has no components filled in either, so it would be disabled regardless and
+        the assertion would pass without the gate being wired at all.
+        """
+        self.run_with([CITATION])
+        page = self.page()
+        reason = page.context['validation_block'][1]
+        self.assertIn('title="{}"'.format(reason), page.content.decode())
+
+    @override_settings(VALIDATE_BLOCKS_SUBMISSION=True)
+    def test_validation_stops_blocking_once_it_passes(self):
+        """Whereupon the footer falls through to the component check, as before."""
+        self.run_with([ADVISORY])
+        page = self.page()
+        self.assertIsNone(page.context['validation_block'])
+        self.assertNotContains(page, 'Run the PDS validation check before submitting')
+
     # -- the controls ------------------------------------------------------------
 
     def test_the_panel_offers_to_run_a_check(self):

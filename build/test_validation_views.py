@@ -32,6 +32,43 @@ class ValidationViewTests(TestCase):
         self.assertIn('percent', payload)
         self.assertIn('stale', payload)
 
+    def test_status_carries_the_translated_count_not_just_the_raw_one(self):
+        """The Bundle Components badge is rendered from the translated count.
+
+        If the poll only carried error_count, the badge would jump the moment a
+        check finished: on a real AMA bundle from 3 to fix to 43 to fix, for a
+        bundle nothing had touched.
+        """
+        self.run.findings = [
+            {'severity': 'ERROR', 'type': 'error.label.schematron',
+             'message': 'In Product_Bundle both Citation_Information and its '
+                        'description are required.',
+             'label': 'a.xml', 'label_path': '/a.xml', 'line': 1,
+             'element_path': 'Product_Bundle/Identification_Area'},
+            # An ELSA defect: counted as an error by PDS, never shown to the user.
+            {'severity': 'ERROR', 'type': 'error.label.schema',
+             'message': "cvc-minLength-valid: Value '' with length = '0' is not facet-valid.",
+             'label': 'a.xml', 'label_path': '/a.xml', 'line': 9,
+             'element_path': 'Product_Bundle/Context_Area/Time_Coordinates/start_date_time'},
+        ]
+        self.run.error_count = 2
+        self.run.save()
+
+        self.client.login(username='owner', password='pw')
+        payload = json.loads(self.client.get(
+            reverse('build:validation_status', args=[self.bundle.pk])).content)
+        self.assertEqual(payload['errors'], 2)
+        self.assertEqual(payload['blocking'], 1)
+
+    def test_status_reports_no_blocking_work_on_a_clean_run(self):
+        self.run.findings = []
+        self.run.error_count = 0
+        self.run.save()
+        self.client.login(username='owner', password='pw')
+        payload = json.loads(self.client.get(
+            reverse('build:validation_status', args=[self.bundle.pk])).content)
+        self.assertEqual(payload['blocking'], 0)
+
     def test_status_reports_none_when_nothing_has_run(self):
         empty = Bundle.objects.create(name='never validated', user=self.owner, version='1O00')
         self.client.login(username='owner', password='pw')

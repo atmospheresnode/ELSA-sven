@@ -4,10 +4,10 @@
      build/models.py#Bundle                = 81fb6e671b24
      build/models.py#AdditionalCollections = 6f67e205c8a6
      build/models.py#NetCDFFile            = 0259cb4196cf
-     templates/build/bundle/bundle.html    = e7bae0628aea
+     templates/build/bundle/bundle.html    = 3be92705d11d
 -->
 <!-- reviewed: 2026-09-10 -->
-<!-- baseline: 60b6e509aee8ac54072f7fde271746a058312675 -->
+<!-- baseline: 210a2d62517ef72426dc522c2ad54d9143f137fd -->
 # External Bundle Workflow (AMA)
 
 External bundles are ELSA's lighter-weight bundle type, used for the Atmospheres
@@ -25,23 +25,33 @@ Alias is optional (yellow "Optional" badge) and never blocks submission.
 
 The bundle page shows a Bundle Components card (top right) with the status of
 each component: green "Added" when complete, red "Missing" when required and
-absent. The Review & Submit button opens a checklist showing required
-components, optional items, and content (uploaded NetCDF files and documents).
-Submission is enabled once the three required components are complete.
+absent. The Review & Submit button opens a checklist showing what is being sent:
+required components, optional items, and content (uploaded NetCDF files and
+documents).
 
-The bundle page also has a PDS Validation card. It runs the official NASA PDS
-validation tool against the bundle and reports anything that needs fixing, in
-plain language, grouped by the card that fixes it: each item has a Fix button
+The last row of the Bundle Components card is "Label check", under a PDS
+Validation heading. Its badge says where the bundle stands: "Passed", a red
+count such as "3 to fix", "Out of date" when the bundle was edited after the
+last check, or "Not checked". Clicking the row opens the PDS Validation window.
+
+That window runs the official NASA PDS validation tool against the bundle and
+has two tabs. "What to fix" opens first and reports anything that needs fixing
+in plain language, grouped by the card that fixes it: each item has a Fix button
 that opens the right panel, and a "Why does this matter?" link that asks this
-assistant to explain it. A check usually starts by itself when the results are
-missing or out of date, and takes a few seconds; the "Check again" button runs
-one at any time. Items listed under "Need your attention" have to be resolved
-before the bundle can be submitted for review; items under "Worth reviewing" do
-not block anything. Items under "Need your attention" are things to resolve; items under
-"Worth reviewing" are advisory and do not stop a submission. Problems caused by
-ELSA itself rather than by the user are not shown there; they go to the ELSA
-team. Results are marked as out of date if the bundle is edited after a check,
-and the raw tool output is available under "Technical detail".
+assistant to explain it. "Validation output" is the second tab and shows every
+finding exactly as the PDS tool reported it, grouped by label, including the
+findings the first tab does not show. A check usually starts by itself when the
+results are missing or out of date, and takes a few seconds; the "Check again"
+button runs one at any time. Items listed under "Need your attention" have to be
+resolved before the bundle can be submitted for review; items under "Worth
+reviewing" are advisory and do not stop a submission. Problems caused by ELSA
+itself rather than by the user are not shown in the first tab; they go to the
+ELSA team, and they do appear in the second tab.
+
+Submission is gated on validation. The Review & Submit window states the
+validation verdict at the top, and its Submit button is disabled while
+validation has findings, has not run, or is out of date. Staff are never
+blocked, and a validation that could not run does not block anyone.
 
 After submission: Atmospheres node staff are notified by email and review the
 bundle. The user can continue editing and resubmit at any time, the bundle page

@@ -332,16 +332,11 @@
                         </span>
                      </a>
                   </div>
-                  
+
+                  {% include 'build/validation/row.html' %}
+
                </div>
             </div>
-         </div>
-      </div>
-
-      <!-- PDS Validation Card -->
-      <div class="row justify-content-center align-items-center mt-3">
-         <div class="col-md-12">
-            {% include 'build/validation/panel.html' %}
          </div>
       </div>
 
@@ -2310,9 +2305,11 @@
                      </a>
                   </div>
                   
+                  {% include 'build/validation/row.html' %}
+
                   <!-- Submit -->
                   <button type="button" id="externalSubmitBtn"
-                  class="btn {% if status_dict.Modification_History and status_dict.Citation_Information and status_dict.Targets %}btn-success{% else %}btn-outline-secondary{% endif %} w-100"
+                  class="btn {% if status_dict.Modification_History and status_dict.Citation_Information and status_dict.Targets %}btn-success{% else %}btn-outline-secondary{% endif %} w-100 mt-3"
                   data-bs-toggle="modal" data-bs-target="#reviewBundleModal"
                   title="Complete all required sections to submit your bundle."
                   data-bs-placement="top">
@@ -2328,13 +2325,6 @@
                
             </div>
          </div>
-      </div>
-   </div>
-
-   <!-- PDS Validation Card -->
-   <div class="row justify-content-center mt-3">
-      <div class="col-md-12">
-         {% include 'build/validation/panel.html' %}
       </div>
    </div>
 
@@ -3368,11 +3358,66 @@ also follows the project's own rule: modals go outside the card structure they b
             <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal" aria-label="Close"></button>
          </div>
          <div class="modal-body pt-3">
+
+            {% comment %}
+               The verdict comes from one place.
+
+               This modal used to reach its own conclusion about whether the bundle
+               was ready, from whether Modification History, Citation Information and
+               Targets existed. PDS validation now answers a strictly better version
+               of that question, and the two could disagree in a way nobody could
+               resolve: Citation Information can be present, and so tick green in the
+               list below, while validation reports that an author on it has no name.
+
+               So the band states where the bundle stands, and the list below it is an
+               inventory of what is being sent plus the fastest route to editing each
+               piece. It is no longer the thing that decides.
+            {% endcomment %}
+            {% if not validation_run %}
+            <div class="alert alert-secondary py-2 px-3 small d-flex align-items-center gap-2 mb-4">
+               <i class="bi bi-hourglass-split"></i>
+               <span class="flex-grow-1">This bundle has not been checked against the PDS
+                  validation tool yet. The check takes a few seconds.</span>
+               <button type="button" class="btn btn-sm btn-outline-secondary flex-shrink-0"
+                       onclick="switchToModal('reviewBundleModal', 'validation_modal')">Check it</button>
+            </div>
+            {% elif validation_run.is_stale %}
+            <div class="alert alert-warning py-2 px-3 small d-flex align-items-center gap-2 mb-4">
+               <i class="bi bi-exclamation-triangle-fill"></i>
+               <span class="flex-grow-1">The bundle changed since it was last validated,
+                  so those results no longer describe what you are about to send.</span>
+               <button type="button" class="btn btn-sm btn-outline-secondary flex-shrink-0"
+                       onclick="switchToModal('reviewBundleModal', 'validation_modal')">Check again</button>
+            </div>
+            {% elif validation_summary.blocking %}
+            <div class="alert alert-danger py-2 px-3 small d-flex align-items-center gap-2 mb-4">
+               <i class="bi bi-x-circle-fill"></i>
+               <span class="flex-grow-1">PDS validation found
+                  {{ validation_summary.blocking }} thing{{ validation_summary.blocking|pluralize }}
+                  to fix before this bundle can go for review.</span>
+               <button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0"
+                       onclick="switchToModal('reviewBundleModal', 'validation_modal')">See what</button>
+            </div>
+            {% elif validation_run.status == 'f' %}
+            <div class="alert alert-warning py-2 px-3 small d-flex align-items-center gap-2 mb-4">
+               <i class="bi bi-exclamation-triangle-fill"></i>
+               <span class="flex-grow-1">The validation check could not run, so this
+                  bundle has not been checked. You can still submit it.</span>
+            </div>
+            {% else %}
+            <div class="alert alert-success py-2 px-3 small d-flex align-items-center gap-2 mb-4">
+               <i class="bi bi-check-circle-fill"></i>
+               <span class="flex-grow-1">PDS validation found nothing blocking this bundle.</span>
+               <button type="button" class="btn btn-sm btn-outline-success flex-shrink-0"
+                       onclick="switchToModal('reviewBundleModal', 'validation_modal')">See the report</button>
+            </div>
+            {% endif %}
+
             <div class="row g-4">
                
                <!-- Left column: Required + Optional -->
                <div class="col-md-6">
-                  <p class="text-uppercase text-muted small fw-semibold mb-2">Required</p>
+                  <p class="text-uppercase text-muted small fw-semibold mb-2">What you are sending</p>
                   <div class="list-group mb-4">
                      
                      <!-- Modification History -->
@@ -3549,7 +3594,17 @@ also follows the project's own rule: modals go outside the card structure they b
 </div>
 <div class="modal-footer border-0 d-flex justify-content-between align-items-center">
    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-   {% if status_dict.Modification_History and status_dict.Citation_Information and status_dict.Targets %}
+   {% if validation_block %}
+   {% comment %}
+      Stopping here rather than at the next modal. submitBundleModal already refused
+      this case, but only after another click, and a button that leads somewhere it
+      cannot go is worse than one that says why it will not.
+   {% endcomment %}
+   <button type="button" class="btn btn-success" disabled title="{{ validation_block.1 }}">
+   <i class="bi bi-send me-1"></i>
+   {% if bundle.submitted_at %}Resubmit{% else %}Submit{% endif %}
+</button>
+{% elif status_dict.Modification_History and status_dict.Citation_Information and status_dict.Targets %}
    <button type="button" class="btn btn-success"
    onclick="switchToModal('reviewBundleModal', 'submitBundleModal')">
    <i class="bi bi-send me-1"></i>
@@ -4764,6 +4819,13 @@ also follows the project's own rule: modals go outside the card structure they b
 </div>
 {% endif %}
 
+{% comment %}
+   Outside the Archive/External branch on purpose. The Bundle Components card carries
+   the validation row in both layouts, and this modal is what that row opens; inside
+   the branch, the Archive row pointed at a modal that was never rendered.
+{% endcomment %}
+{% include 'build/validation/modal.html' %}
+
 <!-- NetCDF Bulk Delete Modal — outside all cards/forms so overflow:hidden cannot interfere.
 Has its own form; JS populates hidden inputs with the selected IDs on show. -->
 <div class="modal fade" id="bulkDeleteNetCDFModal" tabindex="-1" aria-hidden="true">
@@ -5412,6 +5474,16 @@ so a page that was not just uploaded to never shows it.{% endcomment %}
    var phase    = document.getElementById('preflight_phase');
    var counts   = document.getElementById('preflight_counts');
    var results  = document.getElementById('preflight_results');
+   /* The badge on the Bundle Components row. The results now live in a modal, so a
+    * check that runs on page load happens entirely out of sight; without this the
+    * row would still read "Checking…" long after it finished. */
+   var rowBadge = document.getElementById('preflight_row_badge');
+
+   function setBadge(text, variant) {
+      if (!rowBadge) { return; }
+      rowBadge.textContent = text;
+      rowBadge.className = 'badge rounded-pill ' + variant;
+   }
 
    var statusUrl = button.getAttribute('data-status-url');
    var startUrl  = button.getAttribute('data-start-url');
@@ -5427,6 +5499,7 @@ so a page that was not just uploaded to never shows it.{% endcomment %}
       if (results)  { results.style.opacity = on ? '0.5' : ''; }
       button.disabled = on;
       button.textContent = on ? 'Checking…' : 'Run check again';
+      if (on) { setBadge('Checking…', 'bg-secondary'); }
    }
 
    function render(state) {
@@ -5481,6 +5554,17 @@ so a page that was not just uploaded to never shows it.{% endcomment %}
 
       var notice = document.getElementById('preflight_updated');
       if (notice) { notice.hidden = false; }
+
+      /* state.blocking is the translated count, the same number the template rendered
+       * into the badge. Using state.errors here instead would make the badge jump the
+       * moment a check finished: 3 to fix becomes 43 to fix, for the same bundle. */
+      if (state.status === 'f') {
+         setBadge('Could not run', 'bg-warning text-dark');
+      } else if (state.blocking) {
+         setBadge(state.blocking + ' to fix', 'bg-danger');
+      } else {
+         setBadge('Passed', 'bg-success');
+      }
    }
 
    function poll() {

@@ -5932,6 +5932,11 @@ def _validation_state(validation_run):
         'products_total': validation_run.products_total,
         'errors': validation_run.error_count,
         'warnings': validation_run.warning_count,
+        # The translated count, which is what the Bundle Components badge shows. The
+        # raw error count is a different and much larger number (43 against 3 on a
+        # real AMA bundle), so sending only that would make the badge jump the moment
+        # a check finished, from what the page rendered to what the poll reported.
+        'blocking': validate_rules.summarise(validation_run.findings or [])['blocking'],
         'finished': validation_run.status in (
             ValidationRun.STATUS_DONE, ValidationRun.STATUS_FAILED),
         # A completed run whose bundle has since changed still describes a real

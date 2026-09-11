@@ -1,0 +1,41 @@
+{% comment %}
+The PDS validation row in the Bundle Components card.
+
+A row rather than a button, because a button would hide the state behind a click
+and knowing where you stand without asking is the reason the check runs on page
+load at all. The badge carries the state; the row opens the full results.
+
+Matches the other rows in that card exactly: a name, a badge, and a modal.
+{% endcomment %}
+
+<div class="d-flex align-items-center gap-2 mb-2 mt-3">
+   <span class="text-muted fw-semibold text-nowrap"
+         style="font-size:0.7rem; letter-spacing:0.07em; text-transform:uppercase;">PDS Validation</span>
+   <hr class="flex-grow-1 my-0 opacity-50">
+</div>
+<div class="list-group rounded overflow-hidden mb-0">
+   <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2"
+      data-bs-toggle="modal" data-bs-target="#validation_modal">
+      <span class="small">Label check</span>
+      {% comment %}
+         One badge, and the order of these branches is the order that matters to
+         someone reading it. "Out of date" outranks a pass: results that no longer
+         describe the bundle are not a pass, and saying so is the difference between
+         a panel people trust and one they learn to ignore.
+      {% endcomment %}
+      <span class="badge rounded-pill
+         {% if not validation_run or validation_run.is_active %}bg-secondary
+         {% elif validation_run.status == 'f' %}bg-warning text-dark
+         {% elif validation_run.is_stale %}bg-warning text-dark
+         {% elif validation_summary.blocking %}bg-danger
+         {% else %}bg-success{% endif %}" id="preflight_row_badge">
+         {% if not validation_run %}
+            {% if validation_auto_check %}Checking…{% else %}Not checked{% endif %}
+         {% elif validation_run.is_active %}Checking…
+         {% elif validation_run.status == 'f' %}Could not run
+         {% elif validation_run.is_stale %}Out of date
+         {% elif validation_summary.blocking %}{{ validation_summary.blocking }} to fix
+         {% else %}Passed{% endif %}
+      </span>
+   </a>
+</div>

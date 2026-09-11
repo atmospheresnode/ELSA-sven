@@ -1,5 +1,7 @@
 {% comment %}
-PDS validation panel.
+PDS validation results. The body only: this is rendered inside the validation modal,
+which the Bundle Components card opens. It used to be a card of its own on the bundle
+page, which cost a full-width card to say nothing most of the time.
 
 Grouped by the ELSA card that fixes each item, never by XML file or line: someone
 thinks "my citation is incomplete", not "line 22 of collection_x_document.xml".
@@ -9,18 +11,6 @@ ever reports failures is one people avoid opening.
 
 Nothing here starts work on page load. Running a check is an explicit action.
 {% endcomment %}
-
-<div class="card mb-3" id="preflight_card">
-   <h5 class="card-header bg-secondary text-white text-center position-relative">
-      PDS Validation
-      <span class="ms-1 d-inline-flex align-items-center">
-         <i class="bi bi-info-circle text-light opacity-75" style="cursor: help;" role="button" tabindex="0"
-            data-bs-toggle="tooltip" data-bs-placement="left"
-            title="Runs the PDS validation tool against your bundle and shows anything that needs fixing before it goes for review."></i>
-      </span>
-   </h5>
-
-   <div class="p-3">
 
       {% if validation_run and validation_run.is_stale %}
       <div class="alert alert-warning py-2 px-3 small mb-3" id="preflight_stale">
@@ -247,11 +237,11 @@ Nothing here starts work on page load. Running a check is an explicit action.
             {% endif %}
          </p>
          {% comment %}
-            One scroller around the whole list, not one per label. A real bundle
-            reports forty-odd findings across three labels, and a scroller per group
-            puts three scrollbars inside a sidebar card.
+            No scroller of its own. This started as a sidebar card, where a long list
+            needed containing; it now renders in a scrollable modal body, and an inner
+            scroller there just means two scrollbars for one list.
          {% endcomment %}
-         <div style="max-height:30rem; overflow-y:auto;">
+         <div>
          {% for label_name, findings in validation_raw %}
          <div class="d-flex align-items-center gap-2 mb-1 mt-2">
             <span class="text-muted fw-semibold text-nowrap"
@@ -306,7 +296,5 @@ Nothing here starts work on page load. Running a check is an explicit action.
               data-status-url="{% url 'build:validation_status' bundle.pk %}"
               data-start-url="{% url 'build:start_validation' bundle.pk %}"
               {% if validation_auto_check %}data-auto-check="1"{% endif %}>
-         {% if validation_run %}Check again{% else %}Check this bundle{% endif %}
-      </button>
-   </div>
-</div>
+   {% if validation_run %}Check again{% else %}Check this bundle{% endif %}
+</button>
