@@ -5515,4 +5515,22 @@ so a page that was not just uploaded to never shows it.{% endcomment %}
 })();
 </script>
 
+<script>
+/* "Why does this matter?" hands the question to the existing assistant.
+ *
+ * Deliberately not a second path to a model: the assistant already has the
+ * knowledge base, the rate limiting and the conversation history, so routing
+ * through it means an explanation here behaves exactly like one someone typed. */
+(function () {
+   document.addEventListener('click', function (event) {
+      var trigger = event.target.closest('.preflight-explain');
+      if (!trigger) { return; }
+      var question = trigger.getAttribute('data-question');
+      if (window.elsaAssistant && window.elsaAssistant.ask) {
+         window.elsaAssistant.ask(question);
+      }
+   });
+})();
+</script>
+
    {% endblock %}

@@ -82,11 +82,20 @@ class PreflightPanelTests(TestCase):
 
     # -- the states the panel can be in -----------------------------------------
 
-    def test_a_bundle_never_checked_invites_a_check(self):
-        page = self.page()
+    def test_a_bundle_never_checked_says_a_check_is_starting(self):
+        """With auto-check on, the page starts one itself and says so."""
+        with override_settings(VALIDATE_AUTO_CHECK=True):
+            page = self.page()
         self.assertContains(page, 'PDS Validation')
+        self.assertContains(page, 'Checking this bundle')
+        self.assertContains(page, 'data-auto-check="1"')
+
+    def test_a_bundle_never_checked_invites_a_check_when_auto_is_off(self):
+        with override_settings(VALIDATE_AUTO_CHECK=False):
+            page = self.page()
         self.assertContains(page, 'has not been checked yet')
         self.assertContains(page, 'Check this bundle')
+        self.assertNotContains(page, 'data-auto-check="1"')
 
     def test_findings_are_shown_in_plain_language(self):
         self.run_with([CITATION])
@@ -222,3 +231,53 @@ class TemplateHygieneTests(TestCase):
                 spans, [],
                 '{} has a multi-line {{# #}} that will render as visible text; '
                 'use {{% comment %}}'.format(path))
+
+
+class ExplainButtonTests(TestCase):
+    """"Why does this matter?" routes through the existing assistant, on demand only."""
+
+    def setUp(self):
+        self.archive = tempfile.mkdtemp(prefix='elsa-explain-')
+        self.addCleanup(shutil.rmtree, self.archive, True)
+        self.media = tempfile.mkdtemp(prefix='elsa-explain-media-')
+        self.addCleanup(shutil.rmtree, self.media, True)
+        patcher = override_settings(ARCHIVE_DIR=self.archive, MEDIA_ROOT=self.media)
+        patcher.enable()
+        self.addCleanup(patcher.disable)
+
+        self.user = User.objects.create_user('explain', password='pw')
+        self.client.login(username='explain', password='pw')
+        Investigation.objects.create(
+            name='Atmospheric Modeling Annex', type_of='Individual Investigation',
+            lid='urn:nasa:pds:context:investigation:individual.atmospheric_modeling_annex',
+            file_ref='')
+        self.client.post(reverse('build:build'), {
+            'name': 'explain bundle', 'bundle_type': 'External',
+            'version': '1O00', 'bundleID': ''})
+        self.bundle = Bundle.objects.get(name='explain bundle')
+        ValidationRun.objects.create(
+            bundle=self.bundle, status=ValidationRun.STATUS_DONE, products_total=2,
+            products_done=2, phase=ValidationRun.PHASE_DONE, findings=[CITATION],
+            error_count=1, bundle_updated_at=self.bundle.updated_at)
+
+    def page(self):
+        return self.client.get(reverse('build:bundle', args=[self.bundle.pk]))
+
+    def test_each_item_offers_an_explanation(self):
+        self.assertContains(self.page(), 'Why does this matter?')
+
+    def test_the_question_names_the_actual_problem(self):
+        body = self.page().content.decode()
+        self.assertIn('preflight-explain', body)
+        self.assertIn('Add Citation Information', body)
+
+    def test_it_goes_through_the_existing_assistant(self):
+        """Not a second path to a model: the assistant has the knowledge base,
+        the rate limiting and the history."""
+        body = self.page().content.decode()
+        self.assertIn('window.elsaAssistant', body)
+
+    def test_nothing_is_asked_without_a_click(self):
+        """The assistant runs on a quota; an explanation per finding would exhaust it."""
+        body = self.page().content.decode()
+        self.assertNotIn('elsaAssistant.ask(', body.split('preflight-explain')[0])

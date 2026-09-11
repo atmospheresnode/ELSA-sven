@@ -666,6 +666,22 @@
                 form.dispatchEvent(new Event('submit', {cancelable: true}));
             }
         });
+
+        /* A small, deliberate hook so other parts of a page can hand the assistant a
+         * question: the PDS Validation panel uses it for "Why does this matter?".
+         *
+         * Exposing this rather than letting callers poke at the input and the form
+         * keeps one way in, so the rate limiting, history and streaming all still
+         * apply exactly as they do when someone types the question themselves. */
+        window.elsaAssistant = {
+            ask: function (question) {
+                if (!question) { return; }
+                openPanel();
+                input.value = question;
+                autoGrow();
+                form.dispatchEvent(new Event('submit', {cancelable: true}));
+            }
+        };
     })();
     </script>
     {% endif %}
