@@ -20,6 +20,7 @@ of what a data provider actually gets wrong.
 import os
 
 import requests
+from lxml import etree
 from django.core.management.base import BaseCommand, CommandError
 
 from build.forms import VERSION_CHOICES
@@ -33,6 +34,13 @@ PDS_CORE_URL = 'https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_{version}.{extension}'
 AMA_LDD_URL = 'https://pds.nasa.gov/pds4/ama/v1/PDS4_AMA_1O00_1300.{extension}'
 
 EXTENSIONS = ('xsd', 'sch')
+
+# The root element each kind of file must have. Checked on download, because a
+# well-formed error page passes an XML parse perfectly happily.
+EXPECTED_ROOTS = {
+    'xsd': '{http://www.w3.org/2001/XMLSchema}schema',
+    'sch': '{http://purl.oclc.org/dsdl/schematron}schema',
+}
 
 
 def catalog_path():
@@ -118,6 +126,28 @@ class Command(BaseCommand):
                 # A schema for a version nobody uses may simply not be published.
                 # Report it and carry on rather than failing the whole catalog.
                 failed.append((url, str(error)))
+                continue
+
+            # Check the body really is the schema before caching it. A proxy or
+            # captive portal can answer 200 with an error page, and a truncated body
+            # also arrives looking like success. Either would sit in the cache being
+            # served to validate, which then fails in ways that appear to be about
+            # the label rather than about the schema behind it.
+            #
+            # Parsing is not enough on its own: an HTML error page is frequently
+            # well-formed XML and sails through. The root element is what actually
+            # distinguishes a schema from a polite apology.
+            try:
+                root = etree.fromstring(response.content)
+            except etree.XMLSyntaxError as error:
+                failed.append((url, 'response was not XML ({})'.format(error)))
+                continue
+
+            expected = EXPECTED_ROOTS[filename.rsplit('.', 1)[-1]]
+            if root.tag != expected:
+                failed.append((url, 'expected a {} document, got <{}>'.format(
+                    filename.rsplit('.', 1)[-1], etree.QName(root).localname
+                    if isinstance(root.tag, str) else root.tag)))
                 continue
 
             with open(destination, 'wb') as schema:

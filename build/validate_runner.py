@@ -28,9 +28,10 @@ import threading
 import time
 
 from django.conf import settings
+from django.db import transaction
 from django.utils import timezone
 
-from build.models import ValidationRun
+from build.models import Bundle, ValidationRun
 from build.validate_report import parse_report
 
 # "[label.validation] 3 products completed." - the counters validate streams. Each
@@ -154,10 +155,50 @@ def label_count(bundle):
     return total
 
 
-def report_path_for(run):
+# Raw reports kept per bundle. They exist so staff can see exactly what the tool
+# said, which matters for the run someone is asking about and the few before it.
+# Keeping every report of every run forever is how a disk fills up quietly,
+# especially once validation runs automatically on change.
+REPORTS_KEPT_PER_BUNDLE = 10
+
+
+def reports_dir():
     reports = os.path.join(work_dir(), 'reports')
     os.makedirs(reports, exist_ok=True)
-    return os.path.join(reports, 'run-{}.json'.format(run.pk))
+    return reports
+
+
+def report_path_for(run):
+    return os.path.join(reports_dir(), 'run-{}.json'.format(run.pk))
+
+
+def prune_reports(bundle):
+    """Delete raw reports for all but this bundle's most recent runs.
+
+    The ValidationRun rows are left alone: they are small, they carry the parsed
+    findings, and the history of what a bundle scored is worth keeping. It is only
+    the raw JSON on disk that is pruned, so report_path is cleared on the rows whose
+    file has gone rather than left pointing at nothing.
+    """
+    runs = list(bundle.validation_runs.order_by('-requested_at'))
+    stale = runs[REPORTS_KEPT_PER_BUNDLE:]
+
+    removed = 0
+    for validation_run in stale:
+        if not validation_run.report_path:
+            continue
+        try:
+            if os.path.exists(validation_run.report_path):
+                os.remove(validation_run.report_path)
+                removed += 1
+        except OSError as error:
+            # Housekeeping must never be the reason a validation fails.
+            print('could not remove {}: {}'.format(validation_run.report_path, error))
+            continue
+        validation_run.report_path = ''
+        validation_run.save(update_fields=['report_path'])
+
+    return removed
 
 
 def build_command(run, report_path):
@@ -288,6 +329,8 @@ def run(run_id):
     validation_run.status = ValidationRun.STATUS_DONE
     validation_run.finished_at = timezone.now()
     validation_run.save()
+
+    prune_reports(validation_run.bundle)
     return validation_run
 
 
@@ -369,13 +412,36 @@ def start(bundle, tier=ValidationRun.TIER_STRUCTURE):
     report path and cost twice the memory to produce one answer, and a user clicking
     a button twice is not asking for that.
     """
-    existing = active_run_for(bundle, tier)
-    if existing is not None:
-        return existing
+    # Checking for an existing run and creating one have to be one step. Two requests
+    # arriving together - a double-click, or two open tabs - would otherwise both
+    # look, both see nothing in flight, and both start a JVM against the same
+    # directory.
+    #
+    # Two guards, because neither covers everything. The row lock serialises the
+    # check on MariaDB, which is what production runs. SQLite does not implement
+    # select_for_update at all, so the claim below is what actually holds there, and
+    # it is also the backstop if two processes slip past the lock: whoever holds the
+    # lowest id wins, and everyone else deletes their row and returns the winner's.
+    # The important part is that only the winner launches a subprocess.
+    with transaction.atomic():
+        Bundle.objects.select_for_update().filter(pk=bundle.pk).first()
 
-    validation_run = ValidationRun.objects.create(
-        bundle=bundle, tier=tier, status=ValidationRun.STATUS_QUEUED,
-        bundle_updated_at=bundle.updated_at)
+        existing = active_run_for(bundle, tier)
+        if existing is not None:
+            return existing
+
+        validation_run = ValidationRun.objects.create(
+            bundle=bundle, tier=tier, status=ValidationRun.STATUS_QUEUED,
+            bundle_updated_at=bundle.updated_at)
+
+    winner = ValidationRun.objects.filter(
+        bundle=bundle, tier=tier,
+        status__in=[ValidationRun.STATUS_QUEUED, ValidationRun.STATUS_RUNNING]
+    ).order_by('pk').first()
+
+    if winner is not None and winner.pk != validation_run.pk:
+        validation_run.delete()
+        return winner
 
     command = [sys.executable, os.path.join(settings.BASE_DIR, 'manage.py'),
                'run_validation', str(validation_run.pk)]

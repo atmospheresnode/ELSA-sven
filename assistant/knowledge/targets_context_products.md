@@ -1,18 +1,18 @@
 <!-- watches: build/models.py#Target, build/models.py#Investigation, build/models.py#Instrument, build/models.py#Instrument_Host, build/models.py#Facility, build/models.py#Telescope, build/views.py#context_search*, build/views.py#delete_target, build/views.py#delete_investigation, templates/build/context -->
 <!-- fingerprint:
      build/models.py#Target              = d684c57d9375
-     build/models.py#Investigation       = 5450706093d1
-     build/models.py#Instrument          = 7b9ba1496311
-     build/models.py#Instrument_Host     = 0faa606a4d3f
-     build/models.py#Facility            = fe3f71b6bc88
-     build/models.py#Telescope           = cf7090684a3d
+     build/models.py#Investigation       = 6346b098b3f5
+     build/models.py#Instrument          = 5f4031a2ca33
+     build/models.py#Instrument_Host     = 803a80c9e890
+     build/models.py#Facility            = 9125217e7a35
+     build/models.py#Telescope           = 8517fb364fcf
      build/views.py#context_search*      = eb3e9e767306
      build/views.py#delete_target        = eb9d21f1c8dc
      build/views.py#delete_investigation = 9b74bef19257
      templates/build/context             = a8559e40f4ac
 -->
 <!-- reviewed: 2026-09-10 -->
-<!-- baseline: 916e4783e9b5a297ffb9e0d83dbb9a4951cd9f8d -->
+<!-- baseline: 3b72c3e244976369a029755e3dbd548b370c17f3 -->
 # Targets and Context Products
 
 PDS4 Information Model (v1.24 / 1O00): the Target_Identification class provides

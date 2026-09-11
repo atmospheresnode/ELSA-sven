@@ -18,7 +18,7 @@ import tempfile
 import time
 
 from django.contrib.auth.models import User
-from django.test import TestCase, TransactionTestCase, override_settings
+from django.test import TestCase, override_settings
 from django.utils import timezone
 
 from build.models import Bundle, ValidationRun
@@ -364,11 +364,19 @@ class StaleRunVisibilityTests(TestCase):
         self.assertEqual(run.status, ValidationRun.STATUS_FAILED)
 
 
-class ConcurrentStartTests(TransactionTestCase):
+class ConcurrentStartTests(TestCase):
     """Two browser tabs, or a double-click, hitting start at the same moment.
 
-    TransactionTestCase rather than TestCase: threads need real committed rows, not
-    a transaction the test rolls back.
+    Tested deterministically rather than with threads. The test database is
+    in-memory SQLite, where each thread gets its own connection and therefore its
+    own empty database, so a threaded test here proves nothing about concurrency -
+    it just fails to find the bundle. Worse, SQLite does not implement
+    select_for_update at all, so the row lock that serialises this in production is
+    a no-op under test.
+
+    What is exercised instead is the backstop that works on every backend: whoever
+    holds the lowest id wins, everyone else deletes their row and returns the
+    winner's, and only the winner launches a subprocess.
     """
 
     def setUp(self):
@@ -377,30 +385,152 @@ class ConcurrentStartTests(TransactionTestCase):
         user = User.objects.create_user('racer', password='pw')
         self.bundle = Bundle.objects.create(
             name='race bundle', user=user, version='1O00')
+        self.home = fake_validate(self.workdir, 'exit 0\n')
 
-    def test_simultaneous_starts_do_not_launch_two_validations(self):
-        import threading
-        home = fake_validate(self.workdir, 'exit 0\n')
-        barrier = threading.Barrier(4)
-        created = []
+    def test_a_request_that_loses_the_race_backs_off(self):
+        """Simulates the second request: it looked, saw nothing, and created a row.
 
-        def go():
-            barrier.wait()
-            with override_settings(VALIDATE_HOME=home, VALIDATE_WORK_DIR=self.workdir,
-                                   ARCHIVE_DIR=self.workdir):
-                created.append(validate_runner.start(
-                    self.bundle, ValidationRun.TIER_STRUCTURE).pk)
-            from django.db import connection
-            connection.close()
+        active_run_for is forced to report nothing in flight, which is exactly what
+        the losing request saw a moment before the winner committed.
+        """
+        from unittest import mock
 
-        threads = [threading.Thread(target=go) for _ in range(4)]
-        for thread in threads:
-            thread.start()
-        for thread in threads:
-            thread.join(timeout=30)
+        winner = ValidationRun.objects.create(
+            bundle=self.bundle, tier=ValidationRun.TIER_STRUCTURE,
+            status=ValidationRun.STATUS_QUEUED)
 
-        total = ValidationRun.objects.filter(bundle=self.bundle).count()
+        launched = []
+        with override_settings(VALIDATE_HOME=self.home, VALIDATE_WORK_DIR=self.workdir,
+                               ARCHIVE_DIR=self.workdir):
+            with mock.patch.object(validate_runner, 'active_run_for', return_value=None):
+                with mock.patch.object(validate_runner.subprocess, 'Popen',
+                                       side_effect=lambda *a, **k: launched.append(a)):
+                    returned = validate_runner.start(
+                        self.bundle, ValidationRun.TIER_STRUCTURE)
+
+        self.assertEqual(returned.pk, winner.pk, 'the loser must return the winner')
         self.assertEqual(
-            total, 1,
-            'four simultaneous requests created {} runs; each is a JVM'.format(total))
-        self.assertEqual(len(set(created)), 1)
+            ValidationRun.objects.filter(bundle=self.bundle).count(), 1,
+            'the losing row was not cleaned up')
+        self.assertEqual(launched, [], 'the loser must not start a second JVM')
+
+    def test_the_winner_is_the_one_that_launches(self):
+        from unittest import mock
+        launched = []
+        with override_settings(VALIDATE_HOME=self.home, VALIDATE_WORK_DIR=self.workdir,
+                               ARCHIVE_DIR=self.workdir):
+            with mock.patch.object(validate_runner.subprocess, 'Popen',
+                                   side_effect=lambda *a, **k: launched.append(a)):
+                run = validate_runner.start(self.bundle, ValidationRun.TIER_STRUCTURE)
+        self.assertEqual(ValidationRun.objects.filter(bundle=self.bundle).count(), 1)
+        self.assertEqual(len(launched), 1)
+        self.assertEqual(run.status, ValidationRun.STATUS_QUEUED)
+
+    def test_a_repeat_request_never_creates_a_second_row(self):
+        from unittest import mock
+        with override_settings(VALIDATE_HOME=self.home, VALIDATE_WORK_DIR=self.workdir,
+                               ARCHIVE_DIR=self.workdir):
+            with mock.patch.object(validate_runner.subprocess, 'Popen'):
+                for _ in range(5):
+                    validate_runner.start(self.bundle, ValidationRun.TIER_STRUCTURE)
+        self.assertEqual(ValidationRun.objects.filter(bundle=self.bundle).count(), 1)
+
+
+class ReportRetentionTests(TestCase):
+    """Raw reports are bounded. Rows are not: they are small and worth keeping."""
+
+    def setUp(self):
+        self.workdir = tempfile.mkdtemp(prefix='elsa-retain-')
+        self.addCleanup(shutil.rmtree, self.workdir, True)
+        user = User.objects.create_user('retain', password='pw')
+        self.bundle = Bundle.objects.create(
+            name='retain bundle', user=user, version='1O00')
+
+    def make_runs(self, count):
+        made = []
+        with override_settings(VALIDATE_WORK_DIR=self.workdir):
+            reports = validate_runner.reports_dir()
+            for index in range(count):
+                run = ValidationRun.objects.create(
+                    bundle=self.bundle, status=ValidationRun.STATUS_DONE)
+                path = os.path.join(reports, 'run-{}.json'.format(run.pk))
+                with open(path, 'w') as handle:
+                    handle.write('{}')
+                run.report_path = path
+                run.save(update_fields=['report_path'])
+                made.append(run)
+        return made
+
+    def test_old_reports_are_removed(self):
+        self.make_runs(validate_runner.REPORTS_KEPT_PER_BUNDLE + 5)
+        with override_settings(VALIDATE_WORK_DIR=self.workdir):
+            validate_runner.prune_reports(self.bundle)
+            remaining = os.listdir(validate_runner.reports_dir())
+        self.assertEqual(len(remaining), validate_runner.REPORTS_KEPT_PER_BUNDLE)
+
+    def test_the_run_history_itself_is_kept(self):
+        total = validate_runner.REPORTS_KEPT_PER_BUNDLE + 5
+        self.make_runs(total)
+        with override_settings(VALIDATE_WORK_DIR=self.workdir):
+            validate_runner.prune_reports(self.bundle)
+        self.assertEqual(ValidationRun.objects.filter(bundle=self.bundle).count(), total)
+
+    def test_a_row_whose_report_is_gone_stops_pointing_at_it(self):
+        runs = self.make_runs(validate_runner.REPORTS_KEPT_PER_BUNDLE + 2)
+        with override_settings(VALIDATE_WORK_DIR=self.workdir):
+            validate_runner.prune_reports(self.bundle)
+        oldest = ValidationRun.objects.filter(bundle=self.bundle).order_by('requested_at').first()
+        self.assertEqual(oldest.report_path, '')
+
+    def test_pruning_survives_a_file_that_is_already_gone(self):
+        runs = self.make_runs(validate_runner.REPORTS_KEPT_PER_BUNDLE + 2)
+        os.remove(runs[0].report_path)
+        with override_settings(VALIDATE_WORK_DIR=self.workdir):
+            validate_runner.prune_reports(self.bundle)   # must not raise
+
+    def test_another_bundles_reports_are_untouched(self):
+        other_user = User.objects.create_user('retain2', password='pw')
+        other = Bundle.objects.create(name='other retain', user=other_user, version='1O00')
+        with override_settings(VALIDATE_WORK_DIR=self.workdir):
+            reports = validate_runner.reports_dir()
+            run = ValidationRun.objects.create(bundle=other, status=ValidationRun.STATUS_DONE)
+            path = os.path.join(reports, 'run-{}.json'.format(run.pk))
+            with open(path, 'w') as handle:
+                handle.write('{}')
+            run.report_path = path
+            run.save(update_fields=['report_path'])
+
+        self.make_runs(validate_runner.REPORTS_KEPT_PER_BUNDLE + 5)
+        with override_settings(VALIDATE_WORK_DIR=self.workdir):
+            validate_runner.prune_reports(self.bundle)
+        self.assertTrue(os.path.exists(path), "pruned another bundle's report")
+
+
+class SchemaCacheIntegrityTests(TestCase):
+    """A cached schema that is not XML fails later, in a place that looks unrelated."""
+
+    def test_an_html_error_page_is_not_cached_as_a_schema(self):
+        import shutil as _shutil
+        from unittest import mock
+        from build.management.commands import build_schema_catalog as command_module
+
+        workdir = tempfile.mkdtemp(prefix='elsa-cache-')
+        self.addCleanup(_shutil.rmtree, workdir, True)
+
+        class FakeResponse:
+            status_code = 200
+            content = b'<html><body>502 Bad Gateway</body></html>'
+
+            def raise_for_status(self):
+                return None
+
+        with override_settings(VALIDATE_WORK_DIR=workdir):
+            with mock.patch.object(command_module.requests, 'get',
+                                   return_value=FakeResponse()):
+                from django.core.management import call_command
+                from django.core.management.base import CommandError
+                with self.assertRaises(CommandError):
+                    call_command('build_schema_catalog', verbosity=0)
+
+            cached = os.listdir(command_module.schema_dir())
+        self.assertEqual(cached, [], 'an HTML error page was cached as a schema')
