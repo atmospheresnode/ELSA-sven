@@ -126,8 +126,19 @@ def validate_executable():
 
 
 def _environment():
-    """A copy of the environment with JAVA_HOME pointed at the configured runtime."""
+    """A copy of the environment with JAVA_HOME pointed at the configured runtime.
+
+    Also carries the settings module across. The child is a fresh `manage.py`
+    invocation, so without this it loads whatever manage.py defaults to rather than
+    the settings the parent is running under, and would look for its ValidationRun
+    row in a different database than the one holding it.
+    """
     environment = os.environ.copy()
+
+    settings_module = os.environ.get('DJANGO_SETTINGS_MODULE') or settings.SETTINGS_MODULE
+    if settings_module:
+        environment['DJANGO_SETTINGS_MODULE'] = settings_module
+
     java_home = getattr(settings, 'VALIDATE_JAVA_HOME', '')
     if java_home:
         environment['JAVA_HOME'] = java_home
