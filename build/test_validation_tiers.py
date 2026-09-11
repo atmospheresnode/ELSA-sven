@@ -178,22 +178,35 @@ class SubmissionTierTests(TestCase):
         self.bundle = Bundle.objects.create(
             name='submit bundle', user=self.user, version='1O00', bundle_type='External')
 
+    def passing_check(self):
+        """A clean structure check, so the submission gate lets the request through.
+
+        These tests are about which tier a submission runs, not about the gate, and
+        a bundle that has never been checked cannot be submitted at all now.
+        """
+        ValidationRun.objects.create(
+            bundle=self.bundle, tier=ValidationRun.TIER_STRUCTURE,
+            status=ValidationRun.STATUS_DONE, findings=[],
+            bundle_updated_at=self.bundle.updated_at)
+
     def submit(self):
         return self.client.post(
             reverse('build:submit_bundle_internal', args=[self.bundle.pk]))
 
     def test_submitting_starts_a_full_check(self):
         from unittest import mock
+        self.passing_check()
         with mock.patch.object(validate_runner.subprocess, 'Popen'):
             with override_settings(VALIDATE_HOME='', VALIDATE_WORK_DIR=self.archive):
                 self.submit()
-        run = ValidationRun.objects.filter(bundle=self.bundle).first()
-        self.assertIsNotNone(run)
-        self.assertEqual(run.tier, ValidationRun.TIER_FULL)
+        full = ValidationRun.objects.filter(
+            bundle=self.bundle, tier=ValidationRun.TIER_FULL).first()
+        self.assertIsNotNone(full, 'submitting did not start a full check')
 
     def test_a_submission_succeeds_even_if_validation_cannot_start(self):
         """Validation is a service to the submission, never a gate on it."""
         from unittest import mock
+        self.passing_check()
         with mock.patch.object(validate_runner, 'start',
                                side_effect=RuntimeError('validate exploded')):
             response = self.submit()
