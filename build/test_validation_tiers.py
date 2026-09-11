@@ -90,11 +90,31 @@ class AutoCheckTests(TestCase):
                                VALIDATE_AUTO_CHECK_COOLDOWN_SECONDS=300):
             self.assertTrue(validate_runner.should_auto_check(self.bundle))
 
-    def test_the_cooldown_stops_a_reload_starting_another_run(self):
-        """Someone fixing things reloads repeatedly; each reload must not cost a JVM."""
-        self.finished_run(ago_seconds=5, stale=True)
+    def test_reloading_an_unchanged_bundle_starts_nothing(self):
+        """Someone fixing things reloads repeatedly; each reload must not cost a JVM.
+
+        This used to be a five minute cooldown, which was needed because staleness was
+        measured against a timestamp that never moved: without the wait, every single
+        load would have started a run. Now an unchanged bundle simply is not stale, so
+        the protection holds however many times the page is opened, and it no longer
+        costs the person who did change something a five minute wait to see it.
+        """
+        self.finished_run(ago_seconds=5)
+        with override_settings(VALIDATE_AUTO_CHECK=True):
+            for _ in range(5):
+                self.assertFalse(validate_runner.should_auto_check(self.bundle))
+
+    def test_a_changed_bundle_is_rechecked_without_waiting(self):
+        """The complaint this fixes: fix the thing, and the panel says so."""
+        self.finished_run(ago_seconds=1, stale=True)
+        with override_settings(VALIDATE_AUTO_CHECK=True):
+            self.assertTrue(validate_runner.should_auto_check(self.bundle))
+
+    def test_a_host_can_still_impose_a_debounce(self):
+        """Kept as a safety valve, off by default."""
+        self.finished_run(ago_seconds=1, stale=True)
         with override_settings(VALIDATE_AUTO_CHECK=True,
-                               VALIDATE_AUTO_CHECK_COOLDOWN_SECONDS=300):
+                               VALIDATE_AUTO_CHECK_DEBOUNCE_SECONDS=300):
             self.assertFalse(validate_runner.should_auto_check(self.bundle))
 
     def test_a_run_in_flight_is_never_duplicated(self):

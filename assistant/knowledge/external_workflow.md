@@ -1,13 +1,13 @@
 <!-- watches: build/views.py#build, build/models.py#Bundle, build/models.py#AdditionalCollections, build/models.py#NetCDFFile, templates/build/bundle/bundle.html -->
 <!-- fingerprint:
      build/views.py#build                  = 6dde137f9726
-     build/models.py#Bundle                = 81fb6e671b24
+     build/models.py#Bundle                = f0f1ab10d36c
      build/models.py#AdditionalCollections = 6f67e205c8a6
      build/models.py#NetCDFFile            = 83f3987e85ee
      templates/build/bundle/bundle.html    = 3be92705d11d
 -->
 <!-- reviewed: 2026-09-11 -->
-<!-- baseline: cccbfb1398f3f9d71491853657d2b7b04c6e0c4a -->
+<!-- baseline: 618b92907da0069495e21af468dcb703b045929f -->
 # External Bundle Workflow (AMA)
 
 External bundles are ELSA's lighter-weight bundle type, used for the Atmospheres
@@ -42,7 +42,14 @@ assistant to explain it. "Validation output" is the second tab and shows every
 finding exactly as the PDS tool reported it, grouped by label, including the
 findings the first tab does not show. A check usually starts by itself when the
 results are missing or out of date, and takes a few seconds; the "Check again"
-button runs one at any time. Items listed under "Need your attention" have to be
+button runs one at any time and is always available.
+
+The check re-runs by itself whenever the bundle changes. Anything that edits a
+label counts: adding, editing or deleting a citation, a modification history, an
+alias, a document, a collection or a NetCDF file. Whether a result is still
+current is decided by the bundle's files rather than by a timestamp, so simply
+opening or reloading the page never starts a check, and a change always does. A
+run makes the result match the files again, so it settles instead of repeating. Items listed under "Need your attention" have to be
 resolved before the bundle can be submitted for review; items under "Worth
 reviewing" are advisory and do not stop a submission. Problems caused by ELSA
 itself rather than by the user are not shown in the first tab; they go to the

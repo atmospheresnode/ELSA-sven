@@ -25,6 +25,7 @@ from shutil import *
 import datetime
 import re
 import shutil
+import hashlib
 import os
 import copy
 
@@ -2139,6 +2140,53 @@ class Bundle(models.Model):
             bundle_directory, self.name_directory_case())
         return bundle_directory
 
+
+    def content_fingerprint(self):
+        """A short digest of every file in this bundle, as it is on disk right now.
+
+        Used to tell whether a validation result still describes the bundle. The
+        obvious alternative, Bundle.updated_at, does not work: it is auto_now, so it
+        moves only when Bundle.save() is called, and none of the views that edit a
+        bundle's metadata save the bundle. Adding a modification history rewrote four
+        labels and left updated_at untouched, so nothing ever looked stale and the
+        automatic re-check had no reason to run.
+
+        Files are stat-ed, never read, so a bundle holding a 200MB NetCDF costs the
+        same as an empty one. Size and modification time together catch every edit
+        ELSA makes, all of which rewrite a whole label. Paths are included so that
+        adding or deleting a file registers even when nothing else changes.
+
+        Returns '' when the directory does not exist yet, which callers read as
+        "nothing to compare".
+        """
+        # Deliberately not cached on the instance. Caching it saves a few directory
+        # walks per page load, and those walks only stat files, so the saving is
+        # negligible; what it costs is a value that is wrong the moment anything in
+        # the same request writes a label, which is a whole class of bug for no real
+        # gain. Measured on a bundle holding a 190MB NetCDF, the walk is not visible.
+        directory = self.directory()
+        if not os.path.isdir(directory):
+            return ''
+
+        digest = hashlib.sha256()
+        for dirpath, dirnames, filenames in os.walk(directory):
+            # Sorted, so the digest depends on the contents and not on the order the
+            # filesystem happens to hand them back.
+            dirnames.sort()
+            for filename in sorted(filenames):
+                path = os.path.join(dirpath, filename)
+                try:
+                    stat = os.stat(path)
+                except OSError:
+                    # A file that vanished mid-walk is itself a change; record the
+                    # name so the digest still moves.
+                    digest.update(os.path.relpath(path, directory).encode('utf-8'))
+                    continue
+                digest.update('{}|{}|{}'.format(
+                    os.path.relpath(path, directory),
+                    stat.st_size,
+                    stat.st_mtime_ns).encode('utf-8'))
+        return digest.hexdigest()
 
     def relative_dir(self):
         # rel_dir = os.path.join('archive/', self.user.username)
@@ -6120,10 +6168,23 @@ class ValidationRun(models.Model):
     started_at = models.DateTimeField(null=True, blank=True)
     finished_at = models.DateTimeField(null=True, blank=True)
 
-    # Snapshot of the bundle as it was when this run started. Compared against
-    # Bundle.updated_at to tell whether the result still describes the bundle the
-    # user is looking at; see is_stale().
+    # Snapshot of the bundle as it was when this run started. Kept for runs recorded
+    # before content_fingerprint existed, and as a fallback when the bundle directory
+    # cannot be read; see is_stale().
     bundle_updated_at = models.DateTimeField(null=True, blank=True)
+
+    # What the bundle's files looked like when this run started.
+    #
+    # Staleness used to be Bundle.updated_at moving, which sounds right and never
+    # worked: updated_at is auto_now, so it only changes when Bundle.save() is
+    # called, and not one of the views that edits a bundle's metadata saves the
+    # bundle. Adding a modification history wrote four labels and left updated_at
+    # exactly where it was, so no result was ever stale and the automatic check
+    # never had a reason to fire.
+    #
+    # The validator reads files, so this is what a fingerprint of those files says.
+    # It cannot be forgotten by a view that writes a label without telling anyone.
+    content_fingerprint = models.CharField(max_length=64, blank=True, default='')
 
     # Progress, driven by the counters validate streams as it works.
     phase = models.CharField(max_length=16, default=PHASE_LOADING)
@@ -6164,7 +6225,23 @@ class ValidationRun(models.Model):
         is the difference between a user trusting the panel and learning to ignore it:
         the alternative is showing them errors they already fixed, or a clean result
         that no longer applies.
+
+        Measured against the files, because that is what was validated. The timestamp
+        comparison this used to do could never be true: Bundle.updated_at is auto_now
+        and no view that edits a bundle's metadata saves the bundle.
+
+        Runs recorded before the fingerprint existed fall back to the timestamp, which
+        is wrong in the same old way but is all those rows have; they age out.
         """
+        if self.content_fingerprint:
+            current = self.bundle.content_fingerprint()
+            if not current:
+                # The directory is gone. That is a change, but not one re-running can
+                # describe, and saying "out of date" about a bundle with no files is
+                # less useful than leaving the last result standing.
+                return False
+            return current != self.content_fingerprint
+
         if self.bundle_updated_at is None or self.bundle.updated_at is None:
             return False
         return self.bundle.updated_at > self.bundle_updated_at

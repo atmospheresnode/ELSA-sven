@@ -1,12 +1,12 @@
 <!-- watches: build/models.py#Version, build/models.py#Bundle, build/models.py#Product_Collection, build/models.py#Product_Bundle -->
 <!-- fingerprint:
      build/models.py#Version            = 0f76e3bfc42a
-     build/models.py#Bundle             = 81fb6e671b24
+     build/models.py#Bundle             = f0f1ab10d36c
      build/models.py#Product_Collection = 0595895e042e
      build/models.py#Product_Bundle     = 066355abe899
 -->
-<!-- reviewed: 2026-09-10 -->
-<!-- baseline: 916e4783e9b5a297ffb9e0d83dbb9a4951cd9f8d -->
+<!-- reviewed: 2026-09-11 -->
+<!-- baseline: 618b92907da0069495e21af468dcb703b045929f -->
 # LIDs, VIDs, and the Identification Area
 
 PDS4 Information Model (v1.24 / 1O00): every PDS4 product label has an

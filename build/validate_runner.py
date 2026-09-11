@@ -262,6 +262,10 @@ def run(run_id):
     validation_run.status = ValidationRun.STATUS_RUNNING
     validation_run.started_at = timezone.now()
     validation_run.bundle_updated_at = validation_run.bundle.updated_at
+    # Taken here rather than when the row was created, so an edit made between
+    # pressing the button and the JVM starting counts as a change and the result is
+    # correctly reported as out of date.
+    validation_run.content_fingerprint = validation_run.bundle.content_fingerprint()
     validation_run.products_total = label_count(validation_run.bundle)
     validation_run.products_done = 0
     validation_run.phase = ValidationRun.PHASE_LOADING
@@ -570,9 +574,26 @@ def should_auto_check(bundle):
     if latest is None:
         return True
 
+    # No cooldown by default, where this used to wait five minutes.
+    #
+    # That cooldown existed because staleness was measured against a timestamp that
+    # never moved: without it, every page load would have started a run. Now a result
+    # only looks stale when the bundle's files actually changed, which page loads were
+    # measured not to do, so an untouched bundle starts nothing however often it is
+    # opened. The wait only got in the way, because someone who fixed the thing the
+    # panel told them to fix then had to sit it out, or press the button, to see the
+    # panel agree with them.
+    #
+    # This is also self-limiting rather than merely rate-limited. A run makes the
+    # result match the files, so the next load is not stale and starts nothing; it
+    # repeats only while someone keeps editing, which is when it should. Per-bundle
+    # deduplication already refuses a second run while one is in flight.
+    #
+    # The setting remains as a safety valve for a host that wants one.
     if latest.finished_at is not None:
-        cooldown = getattr(settings, 'VALIDATE_AUTO_CHECK_COOLDOWN_SECONDS', 300)
-        if timezone.now() - latest.finished_at < timezone.timedelta(seconds=cooldown):
+        debounce = getattr(settings, 'VALIDATE_AUTO_CHECK_DEBOUNCE_SECONDS', 0)
+        if debounce and timezone.now() - latest.finished_at < timezone.timedelta(
+                seconds=debounce):
             return False
 
     # A failed run is not retried automatically. Whatever stopped it - validate
@@ -643,7 +664,8 @@ def start(bundle, tier=ValidationRun.TIER_STRUCTURE):
 
         validation_run = ValidationRun.objects.create(
             bundle=bundle, tier=tier, status=ValidationRun.STATUS_QUEUED,
-            bundle_updated_at=bundle.updated_at)
+            bundle_updated_at=bundle.updated_at,
+            content_fingerprint=bundle.content_fingerprint())
 
     winner = ValidationRun.objects.filter(
         bundle=bundle, tier=tier,

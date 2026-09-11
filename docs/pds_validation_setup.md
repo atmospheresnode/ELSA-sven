@@ -57,7 +57,7 @@ path definitions near `TEMPORARY_DIR`:
 not its parent. That is the mistake worth guarding against, and the error message
 says so if you get it wrong.
 
-The two optional settings and what they do:
+The optional settings and what they do:
 
 - `VALIDATE_WORK_DIR` — where the schema cache and reports live. Defaults to
   `validation/` in the project root, which is gitignored. Everything in it is
@@ -65,6 +65,19 @@ The two optional settings and what they do:
 - `VALIDATE_TIMEOUT_SECONDS` — how long one run may take before it is treated as
   hung. Defaults to an hour, deliberately generous because content validation
   against a large NetCDF bundle has not been timed against real data yet.
+- `VALIDATE_AUTO_CHECK_DEBOUNCE_SECONDS` — how long after a check finishes before
+  the page may start another by itself. Defaults to 0, meaning a change is acted
+  on immediately. It is a safety valve and should stay at 0 unless a host has a
+  reason: automatic checks are already self-limiting, because a run makes the
+  result match the files and an unchanged bundle then starts nothing.
+
+`VALIDATE_AUTO_CHECK_COOLDOWN_SECONDS` is obsolete and no longer read. Remove it
+from any settings file that still has it. It existed because staleness was
+measured against `Bundle.updated_at`, which never moved (nothing that edits a
+bundle's metadata calls `Bundle.save()`), so without a long cooldown every page
+load would have started a run. Staleness is now measured against the bundle's
+files, so the cooldown's only remaining effect was to make someone who had just
+fixed something wait five minutes to see the panel agree.
 
 ## 4. Cache the schemas
 

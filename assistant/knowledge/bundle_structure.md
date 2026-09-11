@@ -1,6 +1,6 @@
 <!-- watches: build/models.py#Bundle, build/models.py#Collections, build/models.py#AdditionalCollections, build/models.py#Product_Bundle, build/models.py#Product_Collection, build/forms.py#BundleForm, build/forms.py#AdditionalCollectionForm -->
 <!-- fingerprint:
-     build/models.py#Bundle                  = 81fb6e671b24
+     build/models.py#Bundle                  = f0f1ab10d36c
      build/models.py#Collections             = efb0c8c55c09
      build/models.py#AdditionalCollections   = 6f67e205c8a6
      build/models.py#Product_Bundle          = 066355abe899
@@ -8,8 +8,8 @@
      build/forms.py#BundleForm               = 89db5879e013
      build/forms.py#AdditionalCollectionForm = a51e7bc09d85
 -->
-<!-- reviewed: 2026-09-10 -->
-<!-- baseline: 916e4783e9b5a297ffb9e0d83dbb9a4951cd9f8d -->
+<!-- reviewed: 2026-09-11 -->
+<!-- baseline: 618b92907da0069495e21af468dcb703b045929f -->
 # Bundle and Collection Structure
 
 PDS4 Information Model (v1.24 / 1O00): a Product_Bundle is an aggregate product
