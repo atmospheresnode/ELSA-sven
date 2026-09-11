@@ -449,11 +449,22 @@ class TargetLabelTests(SimpleTestCase):
             'Product_Collection': 'collection_to_target',
             'Product_Observational': 'data_to_target',
             'Product_Document': 'document_to_target',
+            # The class every AMA data product uses. It was missing from the table
+            # and fell through to collection_to_target, which PDS rejects.
+            'Product_External': 'external_to_target',
         }
         for tag, expected in cases.items():
             root = etree.fromstring(
                 '<{0} xmlns="http://pds.nasa.gov/pds4/pds/v1"/>'.format(tag).encode())
             self.assertEqual(target_reference_type(root), expected)
+
+    def test_every_product_class_elsa_writes_is_in_the_table(self):
+        """A fallback that happens to be wrong is invisible until PDS says so."""
+        from build.models import TARGET_REFERENCE_TYPES
+        for tag in ('Product_Bundle', 'Product_Collection', 'Product_Observational',
+                    'Product_Document', 'Product_External'):
+            self.assertIn(tag, TARGET_REFERENCE_TYPES,
+                          '{} falls through to the fallback'.format(tag))
 
     def test_is_target_is_never_written(self):
         """It was the default for everything that was not a Product_Observational."""

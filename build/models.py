@@ -105,6 +105,11 @@ TARGET_REFERENCE_TYPES = {
     'Product_Collection': 'collection_to_target',
     'Product_Observational': 'data_to_target',
     'Product_Document': 'document_to_target',
+    # Every AMA data product is a Product_External, so leaving this out meant the
+    # fallback wrote collection_to_target into the one label type AMA bundles are
+    # made of. Missed because the fixture bundles had no target selected: nothing
+    # writes a Target_Identification until someone picks one.
+    'Product_External': 'external_to_target',
 }
 
 
@@ -121,7 +126,12 @@ def pds_target_type(value):
 
 
 def target_reference_type(label_root):
-    """The reference_type a Target_Identification needs in this kind of label."""
+    """The reference_type a Target_Identification needs in this kind of label.
+
+    The fallback is deliberately the one PDS accepts in the most places rather than
+    a guess, but every product class ELSA writes should be in the table above: a
+    fallback that happens to be wrong is how external_to_target went missing.
+    """
     localname = etree.QName(label_root).localname
     return TARGET_REFERENCE_TYPES.get(localname, 'collection_to_target')
 
@@ -4873,6 +4883,28 @@ class Citation_Information(models.Model):
     keyword = models.CharField(max_length=MAX_CHAR_FIELD, blank=True)
     
 
+    def _recorded_citation_element(self):
+        """A copy of the Citation_Information the bundle label carries, or None.
+
+        The bundle label is the source of truth for the citation: it is written
+        first everywhere the citation is written, so it always holds the newest
+        values by the time the other labels are reached.
+        """
+        try:
+            product_bundle = Product_Bundle.objects.get(bundle=self.bundle)
+            source_path = product_bundle.label()
+        except (Product_Bundle.DoesNotExist, AttributeError):
+            return None
+        if not source_path or not os.path.exists(source_path):
+            return None
+        try:
+            source_root = etree.parse(source_path).getroot()
+        except (etree.XMLSyntaxError, OSError):
+            return None
+        source = source_root.find(
+            '{0}Identification_Area/{0}Citation_Information'.format(NAMESPACE))
+        return copy.deepcopy(source) if source is not None else None
+
     def _recorded_people(self):
         """The author and editor values this bundle has already recorded.
 
@@ -5125,9 +5157,37 @@ class Citation_Information(models.Model):
         # Find Identification_Area
         Identification_Area = label_root.find(
             '{}Identification_Area'.format(NAMESPACE))
+        if Identification_Area is None:
+            return label_root
 
         # Find Citation_Information.  If no Citation_Information is found, make one.
         Citation_Information = Identification_Area.find('{}Citation_Information'.format(NAMESPACE))
+
+        if Citation_Information is None:
+            # The comment above has always said it would make one; it never did, and
+            # every label this ran against happened to have one already, so nothing
+            # noticed. That stopped being true when the edit was widened to reach the
+            # collections a user adds: a collection created while the bundle had no
+            # citation has no Citation_Information at all, and this walked straight
+            # into .find() on None and 500ed the edit.
+            #
+            # Copied whole from the bundle label rather than filled field by field.
+            # The bundle label is the first entry in the list this loop walks, so by
+            # the time a collection is reached it already carries the values being
+            # saved; and the per-field path below assumes a shape a label without a
+            # citation does not have, which is the bug being fixed rather than a
+            # foundation to build on.
+            replacement = self._recorded_citation_element()
+            if replacement is None:
+                return label_root
+            modification = Identification_Area.find(
+                '{}Modification_History'.format(NAMESPACE))
+            if modification is not None:
+                Identification_Area.insert(
+                    Identification_Area.index(modification), replacement)
+            else:
+                Identification_Area.append(replacement)
+            return label_root
 
         if self.number_of_authors_people > 0 or self.number_of_authors_organization > 0:
             list_author = Citation_Information.find('{}List_Author'.format(NAMESPACE))

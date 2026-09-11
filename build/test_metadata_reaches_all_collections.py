@@ -351,3 +351,50 @@ class DataProductLabelsGetTheCitationTests(TestCase):
                          'the bundle label kept the citation')
         self.assertFalse(self.has_citation(path),
                          'the data product label kept a citation the bundle no longer has')
+
+
+class CollectionWithoutACitationSectionTests(MetadataReachesEveryCollectionTests):
+    """Editing a citation must survive a label that has no citation section.
+
+    Reported as a 500 on the citation edit page. fill_label_values has always
+    carried a comment saying it would create a Citation_Information if it found
+    none, and never did: every label it ran against happened to have one, so the
+    missing branch was invisible.
+
+    It stopped being invisible when the edit was widened to reach the collections a
+    user adds. A collection created while the bundle had no citation has no
+    Citation_Information in its label, and the edit walked into .find() on None.
+    """
+
+    def strip_citation(self, collection_directory_name):
+        """A collection label as it is when the collection predates the citation."""
+        import xml.etree.ElementTree as ElementTree
+        path = self.collection_labels()[collection_directory_name]
+        ElementTree.register_namespace('', NS['pds'])
+        tree = ElementTree.parse(path)
+        identification = tree.getroot().find('pds:Identification_Area', NS)
+        citation = identification.find('pds:Citation_Information', NS)
+        if citation is not None:
+            identification.remove(citation)
+        tree.write(path, encoding='utf-8', xml_declaration=True)
+        return path
+
+    def test_editing_survives_a_collection_label_with_no_citation(self):
+        citation = self.add_citation()
+        path = self.strip_citation('mydata')
+        self.assertEqual(self.authors_in(path), [], 'the fixture still has a citation')
+
+        self.fill_author(citation, given='Ada', family='Lovelace')
+
+        self.assertEqual(self.authors_in(path), [('Ada', 'Lovelace')],
+                         'the label was skipped instead of being given a citation')
+
+    def test_the_other_labels_are_still_written(self):
+        """A crash on one label used to take the whole edit with it."""
+        citation = self.add_citation()
+        self.strip_citation('mydata')
+        self.fill_author(citation, given='Grace', family='Hopper')
+
+        for directory, path in self.collection_labels().items():
+            self.assertEqual(self.authors_in(path), [('Grace', 'Hopper')],
+                             '{} did not get the author'.format(directory))
