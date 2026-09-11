@@ -24,6 +24,8 @@ import os
 import re
 import subprocess
 import sys
+import threading
+import time
 
 from django.conf import settings
 from django.utils import timezone
@@ -42,6 +44,58 @@ COUNTER_PHASES = {
     'content.validation': ValidationRun.PHASE_CONTENT,
     'reference.integrity': ValidationRun.PHASE_REFERENCES,
 }
+
+
+# How often progress may be written back while a run is in flight. validate streams
+# one line per product per pass, so a bundle with a few hundred labels would
+# otherwise mean a database write per line for a number nobody reads more than once
+# every couple of seconds.
+PROGRESS_WRITE_INTERVAL_SECONDS = 1.0
+
+
+def _track_progress(process, validation_run):
+    """Consume validate's output, recording how far it has got.
+
+    Runs on its own thread. Every exit path from here is swallowed deliberately:
+    this is bookkeeping for a progress bar, and a failure to update it must never
+    be the reason a validation does not finish.
+    """
+    expected_phases = ValidationRun.PASSES.get(
+        validation_run.tier, [ValidationRun.PHASE_LABELS])
+    last_write = 0.0
+    pending = False
+
+    try:
+        for line in process.stdout:
+            match = PROGRESS.search(line)
+            if not match:
+                continue
+
+            phase = COUNTER_PHASES.get(match.group(1))
+            # validate emits a content counter even when --skip-content-validation
+            # was passed, so a structure run would otherwise report a phase it is
+            # not performing, and the bar would jump backwards when references
+            # started. Trust the tier over the counter.
+            if phase not in expected_phases:
+                continue
+
+            changed_phase = phase != validation_run.phase
+            validation_run.phase = phase
+            validation_run.products_done = int(match.group(2))
+            pending = True
+
+            # A phase change is always worth recording immediately; it is what the
+            # indicator shows in words, and there are only ever a few of them.
+            now = time.monotonic()
+            if changed_phase or now - last_write >= PROGRESS_WRITE_INTERVAL_SECONDS:
+                validation_run.save(update_fields=['phase', 'products_done'])
+                last_write = now
+                pending = False
+
+        if pending:
+            validation_run.save(update_fields=['phase', 'products_done'])
+    except Exception as error:                       # noqa: BLE001 - see docstring
+        print('validate progress tracking stopped: {}'.format(error))
 
 
 class ValidateUnavailable(RuntimeError):
@@ -161,48 +215,45 @@ def run(run_id):
         validation_run.save()
         return validation_run
 
+    timeout = getattr(settings, 'VALIDATE_TIMEOUT_SECONDS', 3600)
+
     try:
         process = subprocess.Popen(
             command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
             env=_environment(), text=True, bufsize=1)
-
-        expected_phases = ValidationRun.PASSES.get(
-            validation_run.tier, [ValidationRun.PHASE_LABELS])
-
-        for line in process.stdout:
-            match = PROGRESS.search(line)
-            if not match:
-                continue
-
-            phase = COUNTER_PHASES.get(match.group(1))
-            # validate emits a content counter even when --skip-content-validation
-            # was passed, so a structure run would otherwise report a phase it is
-            # not performing, and the bar would jump backwards when references
-            # started. Trust the tier over the counter.
-            if phase not in expected_phases:
-                continue
-
-            validation_run.phase = phase
-            validation_run.products_done = int(match.group(2))
-            validation_run.save(update_fields=['phase', 'products_done'])
-
-        process.wait(timeout=getattr(settings, 'VALIDATE_TIMEOUT_SECONDS', 3600))
-
-    except subprocess.TimeoutExpired:
-        process.kill()
-        validation_run.status = ValidationRun.STATUS_FAILED
-        validation_run.failure_reason = (
-            'Validation exceeded VALIDATE_TIMEOUT_SECONDS and was stopped.')
-        validation_run.finished_at = timezone.now()
-        validation_run.save()
-        return validation_run
-
     except OSError as error:
         validation_run.status = ValidationRun.STATUS_FAILED
         validation_run.failure_reason = 'Could not run validate: {}'.format(error)
         validation_run.finished_at = timezone.now()
         validation_run.save()
         return validation_run
+
+    # Progress is read on its own thread so the timeout below actually covers a hang.
+    # validate holds stdout open for as long as it lives, which makes reading that
+    # pipe to EOF the blocking operation: a timeout applied after the read finishes
+    # can only fire once the tool has already stopped, which is never the case that
+    # matters. Waiting on the process instead means a tool that goes silent is still
+    # stopped on schedule.
+    reader = threading.Thread(
+        target=_track_progress, args=(process, validation_run), daemon=True)
+    reader.start()
+
+    try:
+        process.wait(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        process.wait()
+        validation_run.status = ValidationRun.STATUS_FAILED
+        validation_run.failure_reason = (
+            'Validation ran longer than VALIDATE_TIMEOUT_SECONDS ({}s) and was '
+            'stopped.'.format(timeout))
+        validation_run.finished_at = timezone.now()
+        validation_run.save()
+        return validation_run
+
+    # Let the reader drain whatever is left in the pipe, but never wait on it
+    # indefinitely: the process has already exited, so this is bounded work.
+    reader.join(timeout=10)
 
     # A non-zero exit means errors were found, which is a normal outcome and not a
     # failure of the run. Only a missing report means validate could not do its job.
@@ -215,7 +266,19 @@ def run(run_id):
         validation_run.save()
         return validation_run
 
-    parsed = parse_report(report_path)
+    # The report is written by another program that may have been killed partway
+    # through. A half-written file raises here, and letting that escape would leave
+    # the row at RUNNING, which wedges the bundle for good.
+    try:
+        parsed = parse_report(report_path)
+    except (ValueError, OSError) as error:
+        validation_run.status = ValidationRun.STATUS_FAILED
+        validation_run.failure_reason = (
+            'validate wrote a report that could not be read: {}'.format(error))
+        validation_run.finished_at = timezone.now()
+        validation_run.save()
+        return validation_run
+
     validation_run.report_path = report_path
     validation_run.findings = parsed['findings']
     validation_run.error_count = parsed['summary']['errors']
@@ -228,8 +291,52 @@ def run(run_id):
     return validation_run
 
 
+def reap_abandoned_runs(bundle=None):
+    """Fail runs that cannot still be in flight, and say why.
+
+    A child can disappear without recording anything: killed by a deploy, an OOM, a
+    machine restart. Its row stays at QUEUED or RUNNING with nothing left to finish
+    it, and because deduplication treats any such row as work in progress, that one
+    dead row would refuse every future validation of the bundle. Permanently.
+
+    A run is considered abandoned once it is older than its own timeout plus a
+    margin, at which point a live run would have been stopped by the timeout anyway.
+    Returns how many were reaped.
+    """
+    timeout = getattr(settings, 'VALIDATE_TIMEOUT_SECONDS', 3600)
+    # The margin covers the gap between a row being created and its child actually
+    # starting, so a queued run on a busy machine is not reaped out from under itself.
+    cutoff = timezone.now() - timezone.timedelta(seconds=timeout + 300)
+
+    runs = ValidationRun.objects.filter(
+        status__in=[ValidationRun.STATUS_QUEUED, ValidationRun.STATUS_RUNNING],
+        requested_at__lt=cutoff)
+    if bundle is not None:
+        runs = runs.filter(bundle=bundle)
+
+    reaped = 0
+    for validation_run in runs:
+        validation_run.status = ValidationRun.STATUS_FAILED
+        validation_run.failure_reason = (
+            'This run stopped without finishing and was not recorded. The server may '
+            'have been restarted while it was working. Running the check again is '
+            'safe.')
+        validation_run.finished_at = timezone.now()
+        validation_run.save(
+            update_fields=['status', 'failure_reason', 'finished_at'])
+        reaped += 1
+
+    return reaped
+
+
 def active_run_for(bundle, tier=None):
-    """The queued or running validation for this bundle, if there is one."""
+    """The queued or running validation for this bundle, if there is one.
+
+    Reaps abandoned runs first, so a row left behind by a crash cannot be mistaken
+    for work in progress and block the bundle.
+    """
+    reap_abandoned_runs(bundle)
+
     runs = bundle.validation_runs.filter(
         status__in=[ValidationRun.STATUS_QUEUED, ValidationRun.STATUS_RUNNING])
     if tier is not None:
@@ -238,6 +345,16 @@ def active_run_for(bundle, tier=None):
 
 
 def latest_run_for(bundle, tier=None):
+    """This bundle's most recent validation, whatever state it is in.
+
+    Reaps first, for the same reason active_run_for does but from the other side:
+    this is what the polling endpoint reads, and a row left behind by a crash would
+    otherwise be reported as still running to a page that refreshes every couple of
+    seconds, forever. Reaping only on the start path would mean the panel never
+    recovers on its own.
+    """
+    reap_abandoned_runs(bundle)
+
     runs = bundle.validation_runs.all()
     if tier is not None:
         runs = runs.filter(tier=tier)

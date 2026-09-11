@@ -5808,7 +5808,7 @@ def start_validation(request, pk_bundle):
     An already-running validation is returned instead of a second one being started;
     see validate_runner.start.
     """
-    bundle = Bundle.objects.get(pk=pk_bundle)
+    bundle = get_object_or_404(Bundle, pk=pk_bundle)
 
     if request.user != bundle.user:
         print('unauthorized user attempting to access a restricted area.')
@@ -5830,9 +5830,11 @@ def validation_status(request, pk_bundle):
     """The current state of this bundle's most recent validation, for polling.
 
     Deliberately small and side-effect free: it is hit every couple of seconds while
-    a run is in flight.
+    a run is in flight. 404 rather than 500 on a bundle that is gone, because a user
+    deleting a bundle with the panel open is ordinary, and a polled endpoint that
+    raises fills the log with something nobody needs to read.
     """
-    bundle = Bundle.objects.get(pk=pk_bundle)
+    bundle = get_object_or_404(Bundle, pk=pk_bundle)
 
     if request.user != bundle.user:
         print('unauthorized user attempting to access a restricted area.')
@@ -5888,7 +5890,8 @@ def validation_report(request, pk_run):
         print('unauthorized user attempting to access a restricted area.')
         return redirect('main:restricted_access')
 
-    validation_run = ValidationRun.objects.select_related('bundle').get(pk=pk_run)
+    validation_run = get_object_or_404(
+        ValidationRun.objects.select_related('bundle'), pk=pk_run)
     findings = validation_run.findings or []
 
     context_dict = {
