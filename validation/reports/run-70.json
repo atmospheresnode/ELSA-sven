@@ -1,0 +1,312 @@
+{
+  "title": "PDS Validation Tool Report",
+  "configuration": {
+    "version": "4.2.0",
+    "date": "2026-09-11T07:50:59Z",
+    "cliArgs": "-R pds4.bundle -t /home/rupakdey/elsa/ELSA-sven/archive/rupakdey/sept_ama_bundle -r /home/rupakdey/elsa/ELSA-sven/validation/reports/run-70.json -s json --progressN 1 -C /home/rupakdey/elsa/ELSA-sven/validation/catalog.xml --skip-content-validation"
+  },
+  "parameters": {
+    "targets": "[file:/home/rupakdey/elsa/ELSA-sven/archive/rupakdey/sept_ama_bundle/]",
+    "ruleType": "pds4.bundle",
+    "userSpecifiedCatalogs": "[/home/rupakdey/elsa/ELSA-sven/validation/catalog.xml]",
+    "severityLevel": "WARNING",
+    "recurseDirectories": "true",
+    "fileFiltersUsed": "[*.xml, *.XML]",
+    "dataContentValidation": "off",
+    "productLevelValidation": "on",
+    "allowUnlabeledFiles": "false",
+    "skipStrictCollectionMembership": "false",
+    "maxErrors": "100000",
+    "registeredContextsFile": "/tmp/claude-764777/-home-rupakdey-elsa/c69501ac-d176-49bb-b2bc-f1a1a1e11c5f/scratchpad/validate-4.2.0/resources/registered_context_products.json"
+  },
+  "productLevelValidationResults": [
+    {
+      "status": "PASS",
+      "label": "file:/home/rupakdey/elsa/ELSA-sven/archive/rupakdey/sept_ama_bundle/bundle_sept_ama.xml",
+      "lidvid": "urn:nasa:pds-ama:sept_ama::1.0",
+      "messages": [
+        {
+          "severity": "WARNING",
+          "type": "warning.label.context_ref_mismatch",
+          "line": 67,
+          "message": "Context reference name mismatch. LIDVID: 'urn:nasa:pds:context:investigation:individual.atmospheric_modeling_annex'. Value: 'Atmospheric Modeling Annex' Expected one of: '[Atmospheric Modeling Annex Individual Investigation]'"
+        }
+      ],
+      "fragments": [],
+      "dataContents": []
+    },
+    {
+      "status": "FAIL",
+      "label": "file:/home/rupakdey/elsa/ELSA-sven/archive/rupakdey/sept_ama_bundle/document/11.xml",
+      "lidvid": "urn:nasa:pds-ama:sept_ama:document:11::1.0",
+      "messages": [
+        {
+          "severity": "ERROR",
+          "type": "error.label.schema",
+          "line": 25,
+          "column": 18,
+          "message": "cvc-pattern-valid: Value '111' is not facet-valid with respect to pattern '[a-zA-Z0-9]([a-zA-Z0-9]|[-]|[_]|[.])*[.][a-zA-Z0-9]+' for type 'file_name'."
+        },
+        {
+          "severity": "ERROR",
+          "type": "error.label.schema",
+          "line": 25,
+          "column": 18,
+          "message": "cvc-type.3.1.3: The value '111' of element 'file_name' is not valid."
+        },
+        {
+          "severity": "ERROR",
+          "type": "error.label.schema",
+          "line": 26,
+          "column": 28,
+          "message": "cvc-pattern-valid: Value '' is not facet-valid with respect to pattern '((1971|1972|1973|1974|1975|1976|1977|1978|1979|1987|1989|1990|1995|1998|2005|2008|2016)-12-31T23:59:60(\\.[0-9]+)?(Z?)|(1972|1981|1982|1983|1985|1992|1993|1994|1997|2012|2015)-06-30T23:59:60(\\.[0-9]+)?(Z?))|(-)?(00|04|08|12|16|20|24|28|32|36|40|44|48|52|56|60|64|68|72|76|80|84|88|92|96)00-02-29(T)(([0-1][0-9])|(2[0-3]))(Z?)|(-)?(00|04|08|12|16|20|24|28|32|36|40|44|48|52|56|60|64|68|72|76|80|84|88|92|96)00-02-29(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9](Z?)|(-)?(00|04|08|12|16|20|24|28|32|36|40|44|48|52|56|60|64|68|72|76|80|84|88|92|96)00-02-29(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9]:([0-5][0-9])(\\.([0-9]+))?(Z?)|(-)?(00|04|08|12|16|20|24|28|32|36|40|44|48|52|56|60|64|68|72|76|80|84|88|92|96)00-02-29(Z?)|(-)?([0-9]{2}(04|08|12|16|20|24|28|32|36|40|44|48|52|56|60|64|68|72|76|80|84|88|92|96)-02-29)(T)(([0-1][0-9])|(2[0-3]))(Z?)|(-)?([0-9]{2}(04|08|12|16|20|24|28|32|36|40|44|48|52|56|60|64|68|72|76|80|84|88|92|96)-02-29)(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9](Z?)|(-)?([0-9]{2}(04|08|12|16|20|24|28|32|36|40|44|48|52|56|60|64|68|72|76|80|84|88|92|96)-02-29)(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9]:([0-5][0-9])(\\.([0-9]+))?(Z?)|(-)?([0-9]{2}(04|08|12|16|20|24|28|32|36|40|44|48|52|56|60|64|68|72|76|80|84|88|92|96)-02-29)(Z?)|(-)?[0-9]{4}(Z?)|(-)?[0-9]{4}-((01|03|05|07|08|10|12)-((0[1-9])|([1-2][0-9])|(30|31)))(T)(([0-1][0-9])|(2[0-3]))(Z?)|(-)?[0-9]{4}-((01|03|05|07|08|10|12)-((0[1-9])|([1-2][0-9])|(30|31)))(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9](Z?)|(-)?[0-9]{4}-((01|03|05|07|08|10|12)-((0[1-9])|([1-2][0-9])|(30|31)))(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9]:([0-5][0-9])(\\.([0-9]+))?(Z?)|(-)?[0-9]{4}-((01|03|05|07|08|10|12)-((0[1-9])|([1-2][0-9])|(30|31)))(Z?)|(-)?[0-9]{4}-((04|06|09|11)-((0[1-9])|([1-2][0-9])|30))(T)(([0-1][0-9])|(2[0-3]))(Z?)|(-)?[0-9]{4}-((04|06|09|11)-((0[1-9])|([1-2][0-9])|30))(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9](Z?)|(-)?[0-9]{4}-((04|06|09|11)-((0[1-9])|([1-2][0-9])|30))(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9]:([0-5][0-9])(\\.([0-9]+))?(Z?)|(-)?[0-9]{4}-((04|06|09|11)-((0[1-9])|([1-2][0-9])|30))(Z?)|(-)?[0-9]{4}-((0[1-9])|(1[0-2]))(Z?)|(-)?[0-9]{4}-(02-((0[1-9])|(1[0-9])|(2[0-8])))(T)(([0-1][0-9])|(2[0-3]))(Z?)|(-)?[0-9]{4}-(02-((0[1-9])|(1[0-9])|(2[0-8])))(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9](Z?)|(-)?[0-9]{4}-(02-((0[1-9])|(1[0-9])|(2[0-8])))(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9]:([0-5][0-9])(\\.([0-9]+))?(Z?)|(-)?[0-9]{4}-(02-((0[1-9])|(1[0-9])|(2[0-8])))(Z?)' for type 'creation_date_time'."
+        },
+        {
+          "severity": "ERROR",
+          "type": "error.label.schema",
+          "line": 26,
+          "column": 28,
+          "message": "cvc-type.3.1.3: The value '' of element 'creation_date_time' is not valid."
+        },
+        {
+          "severity": "ERROR",
+          "type": "error.label.schema",
+          "line": 27,
+          "column": 31,
+          "message": "cvc-pattern-valid: Value '' is not facet-valid with respect to pattern '[0-9]+' for type 'file_size_WO_Units'."
+        },
+        {
+          "severity": "ERROR",
+          "type": "error.label.schema",
+          "line": 27,
+          "column": 31,
+          "message": "cvc-complex-type.2.2: Element 'file_size' must have no element [children], and the value must be valid."
+        }
+      ],
+      "fragments": [],
+      "dataContents": []
+    },
+    {
+      "status": "FAIL",
+      "label": "file:/home/rupakdey/elsa/ELSA-sven/archive/rupakdey/sept_ama_bundle/document/aa.xml",
+      "lidvid": "urn:nasa:pds-ama:sept_ama:document:aa::1.0",
+      "messages": [
+        {
+          "severity": "ERROR",
+          "type": "error.label.schema",
+          "line": 25,
+          "column": 18,
+          "message": "cvc-pattern-valid: Value 'aa' is not facet-valid with respect to pattern '[a-zA-Z0-9]([a-zA-Z0-9]|[-]|[_]|[.])*[.][a-zA-Z0-9]+' for type 'file_name'."
+        },
+        {
+          "severity": "ERROR",
+          "type": "error.label.schema",
+          "line": 25,
+          "column": 18,
+          "message": "cvc-type.3.1.3: The value 'aa' of element 'file_name' is not valid."
+        },
+        {
+          "severity": "ERROR",
+          "type": "error.label.schema",
+          "line": 26,
+          "column": 28,
+          "message": "cvc-pattern-valid: Value '' is not facet-valid with respect to pattern '((1971|1972|1973|1974|1975|1976|1977|1978|1979|1987|1989|1990|1995|1998|2005|2008|2016)-12-31T23:59:60(\\.[0-9]+)?(Z?)|(1972|1981|1982|1983|1985|1992|1993|1994|1997|2012|2015)-06-30T23:59:60(\\.[0-9]+)?(Z?))|(-)?(00|04|08|12|16|20|24|28|32|36|40|44|48|52|56|60|64|68|72|76|80|84|88|92|96)00-02-29(T)(([0-1][0-9])|(2[0-3]))(Z?)|(-)?(00|04|08|12|16|20|24|28|32|36|40|44|48|52|56|60|64|68|72|76|80|84|88|92|96)00-02-29(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9](Z?)|(-)?(00|04|08|12|16|20|24|28|32|36|40|44|48|52|56|60|64|68|72|76|80|84|88|92|96)00-02-29(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9]:([0-5][0-9])(\\.([0-9]+))?(Z?)|(-)?(00|04|08|12|16|20|24|28|32|36|40|44|48|52|56|60|64|68|72|76|80|84|88|92|96)00-02-29(Z?)|(-)?([0-9]{2}(04|08|12|16|20|24|28|32|36|40|44|48|52|56|60|64|68|72|76|80|84|88|92|96)-02-29)(T)(([0-1][0-9])|(2[0-3]))(Z?)|(-)?([0-9]{2}(04|08|12|16|20|24|28|32|36|40|44|48|52|56|60|64|68|72|76|80|84|88|92|96)-02-29)(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9](Z?)|(-)?([0-9]{2}(04|08|12|16|20|24|28|32|36|40|44|48|52|56|60|64|68|72|76|80|84|88|92|96)-02-29)(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9]:([0-5][0-9])(\\.([0-9]+))?(Z?)|(-)?([0-9]{2}(04|08|12|16|20|24|28|32|36|40|44|48|52|56|60|64|68|72|76|80|84|88|92|96)-02-29)(Z?)|(-)?[0-9]{4}(Z?)|(-)?[0-9]{4}-((01|03|05|07|08|10|12)-((0[1-9])|([1-2][0-9])|(30|31)))(T)(([0-1][0-9])|(2[0-3]))(Z?)|(-)?[0-9]{4}-((01|03|05|07|08|10|12)-((0[1-9])|([1-2][0-9])|(30|31)))(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9](Z?)|(-)?[0-9]{4}-((01|03|05|07|08|10|12)-((0[1-9])|([1-2][0-9])|(30|31)))(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9]:([0-5][0-9])(\\.([0-9]+))?(Z?)|(-)?[0-9]{4}-((01|03|05|07|08|10|12)-((0[1-9])|([1-2][0-9])|(30|31)))(Z?)|(-)?[0-9]{4}-((04|06|09|11)-((0[1-9])|([1-2][0-9])|30))(T)(([0-1][0-9])|(2[0-3]))(Z?)|(-)?[0-9]{4}-((04|06|09|11)-((0[1-9])|([1-2][0-9])|30))(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9](Z?)|(-)?[0-9]{4}-((04|06|09|11)-((0[1-9])|([1-2][0-9])|30))(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9]:([0-5][0-9])(\\.([0-9]+))?(Z?)|(-)?[0-9]{4}-((04|06|09|11)-((0[1-9])|([1-2][0-9])|30))(Z?)|(-)?[0-9]{4}-((0[1-9])|(1[0-2]))(Z?)|(-)?[0-9]{4}-(02-((0[1-9])|(1[0-9])|(2[0-8])))(T)(([0-1][0-9])|(2[0-3]))(Z?)|(-)?[0-9]{4}-(02-((0[1-9])|(1[0-9])|(2[0-8])))(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9](Z?)|(-)?[0-9]{4}-(02-((0[1-9])|(1[0-9])|(2[0-8])))(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9]:([0-5][0-9])(\\.([0-9]+))?(Z?)|(-)?[0-9]{4}-(02-((0[1-9])|(1[0-9])|(2[0-8])))(Z?)' for type 'creation_date_time'."
+        },
+        {
+          "severity": "ERROR",
+          "type": "error.label.schema",
+          "line": 26,
+          "column": 28,
+          "message": "cvc-type.3.1.3: The value '' of element 'creation_date_time' is not valid."
+        },
+        {
+          "severity": "ERROR",
+          "type": "error.label.schema",
+          "line": 27,
+          "column": 31,
+          "message": "cvc-pattern-valid: Value '' is not facet-valid with respect to pattern '[0-9]+' for type 'file_size_WO_Units'."
+        },
+        {
+          "severity": "ERROR",
+          "type": "error.label.schema",
+          "line": 27,
+          "column": 31,
+          "message": "cvc-complex-type.2.2: Element 'file_size' must have no element [children], and the value must be valid."
+        }
+      ],
+      "fragments": [],
+      "dataContents": []
+    },
+    {
+      "status": "FAIL",
+      "label": "file:/home/rupakdey/elsa/ELSA-sven/archive/rupakdey/sept_ama_bundle/document/collection_sept_ama_document.xml",
+      "lidvid": "urn:nasa:pds-ama:sept_ama:document::1.0",
+      "messages": [
+        {
+          "severity": "ERROR",
+          "type": "error.label.schema",
+          "line": 108,
+          "column": 16,
+          "message": "cvc-minInclusive-valid: Value '0' is not facet-valid with respect to minInclusive '1' for type 'records'."
+        },
+        {
+          "severity": "ERROR",
+          "type": "error.label.schema",
+          "line": 108,
+          "column": 16,
+          "message": "cvc-type.3.1.3: The value '0' of element 'records' is not valid."
+        },
+        {
+          "severity": "ERROR",
+          "type": "error.label.schema",
+          "line": 114,
+          "column": 44,
+          "message": "cvc-minInclusive-valid: Value '0' is not facet-valid with respect to minInclusive '1' for type 'maximum_record_length_WO_Units'."
+        },
+        {
+          "severity": "ERROR",
+          "type": "error.label.schema",
+          "line": 114,
+          "column": 44,
+          "message": "cvc-complex-type.2.2: Element 'maximum_record_length' must have no element [children], and the value must be valid."
+        },
+        {
+          "severity": "WARNING",
+          "type": "warning.label.context_ref_mismatch",
+          "line": 67,
+          "message": "Context reference name mismatch. LIDVID: 'urn:nasa:pds:context:investigation:individual.atmospheric_modeling_annex'. Value: 'Atmospheric Modeling Annex' Expected one of: '[Atmospheric Modeling Annex Individual Investigation]'"
+        }
+      ],
+      "fragments": [],
+      "dataContents": []
+    },
+    {
+      "status": "PASS",
+      "label": "file:/home/rupakdey/elsa/ELSA-sven/archive/rupakdey/sept_ama_bundle/new/collection_sept_ama_new.xml",
+      "lidvid": "urn:nasa:pds-ama:sept_ama:new::1.0",
+      "messages": [],
+      "fragments": [],
+      "dataContents": []
+    },
+    {
+      "status": "FAIL",
+      "label": "file:/home/rupakdey/elsa/ELSA-sven/archive/rupakdey/sept_ama_bundle/new/00000.atmos_average_pstd.xml",
+      "lidvid": "urn:nasa:pds-ama:sept_ama:new:00000.atmos_average_pstd.nc::1.0",
+      "messages": [
+        {
+          "severity": "ERROR",
+          "type": "error.label.schema",
+          "line": 408,
+          "column": 28,
+          "message": "cvc-complex-type.2.4.d: Invalid content was found starting with element 'Target_Identification'. No child element is expected at this point."
+        },
+        {
+          "severity": "ERROR",
+          "type": "error.label.schematron",
+          "line": 411,
+          "column": 27,
+          "message": "The attribute reference_type must be set to one of the following values 'external_to_target'."
+        }
+      ],
+      "fragments": [],
+      "dataContents": []
+    }
+  ],
+  "pDS4BundleLevelValidationResults": [
+    {
+      "status": "PASS",
+      "label": "file:/home/rupakdey/elsa/ELSA-sven/archive/rupakdey/sept_ama_bundle/new/collection_sept_ama_new.xml",
+      "lidvid": "urn:nasa:pds-ama:sept_ama:new::1.0",
+      "messages": [],
+      "fragments": [],
+      "dataContents": []
+    },
+    {
+      "status": "PASS",
+      "label": "file:/home/rupakdey/elsa/ELSA-sven/archive/rupakdey/sept_ama_bundle/document/collection_sept_ama_document.xml",
+      "lidvid": "urn:nasa:pds-ama:sept_ama:document::1.0",
+      "messages": [],
+      "fragments": [],
+      "dataContents": []
+    },
+    {
+      "status": "PASS",
+      "label": "file:/home/rupakdey/elsa/ELSA-sven/archive/rupakdey/sept_ama_bundle/bundle_sept_ama.xml",
+      "lidvid": "urn:nasa:pds-ama:sept_ama::1.0",
+      "messages": [],
+      "fragments": [],
+      "dataContents": []
+    },
+    {
+      "status": "PASS",
+      "label": "file:/home/rupakdey/elsa/ELSA-sven/archive/rupakdey/sept_ama_bundle/document/11.xml",
+      "lidvid": "urn:nasa:pds-ama:sept_ama:document:11::1.0",
+      "messages": [
+        {
+          "severity": "WARNING",
+          "type": "warning.integrity.unreferenced_member",
+          "message": "Identifier 'urn:nasa:pds-ama:sept_ama:document:11::1.0' is not a member of any collection within the given target"
+        }
+      ],
+      "fragments": [],
+      "dataContents": []
+    },
+    {
+      "status": "PASS",
+      "label": "file:/home/rupakdey/elsa/ELSA-sven/archive/rupakdey/sept_ama_bundle/new/00000.atmos_average_pstd.xml",
+      "lidvid": "urn:nasa:pds-ama:sept_ama:new:00000.atmos_average_pstd.nc::1.0",
+      "messages": [],
+      "fragments": [],
+      "dataContents": []
+    },
+    {
+      "status": "PASS",
+      "label": "file:/home/rupakdey/elsa/ELSA-sven/archive/rupakdey/sept_ama_bundle/document/aa.xml",
+      "lidvid": "urn:nasa:pds-ama:sept_ama:document:aa::1.0",
+      "messages": [
+        {
+          "severity": "WARNING",
+          "type": "warning.integrity.unreferenced_member",
+          "message": "Identifier 'urn:nasa:pds-ama:sept_ama:document:aa::1.0' is not a member of any collection within the given target"
+        }
+      ],
+      "fragments": [],
+      "dataContents": []
+    }
+  ],
+  "summary": {
+    "totalProducts": 6,
+    "totalErrors": 18,
+    "totalWarnings": 4,
+    "productValidation": {
+      "passed": "2",
+      "failed": "4",
+      "skipped": "0",
+      "total": "6"
+    },
+    "referentialIntegrity": {
+      "passed": "6",
+      "failed": "0",
+      "skipped": "0",
+      "total": "6"
+    },
+    "messageTypes": [
+      {
+        "messageType": "error.label.schema",
+        "total": "17"
+      },
+      {
+        "messageType": "error.label.schematron",
+        "total": "1"
+      },
+      {
+        "messageType": "warning.integrity.unreferenced_member",
+        "total": "2"
+      },
+      {
+        "messageType": "warning.label.context_ref_mismatch",
+        "total": "2"
+      }
+    ]
+  }
+}
