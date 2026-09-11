@@ -2,15 +2,15 @@
 <!-- fingerprint:
      build/models.py#Product_Document      = c6a56c43c704
      build/views.py#document               = 9d612a4101c8
-     build/views.py#product_document       = 292c1dbdf274
-     build/views.py#annex_product_document = a54af87bac59
+     build/views.py#product_document       = a0e165ac740e
+     build/views.py#annex_product_document = 396288aa4bcf
      build/forms.py#ProductDocumentForm    = 63796cd3b091
      submit/views.py                       = 1146328cfb92
      templates/build/document              = 01c8059ee137
      templates/submit                      = ab2d66cdde1f
 -->
-<!-- reviewed: 2026-08-28 -->
-<!-- baseline: d8df4b96320a4636b7a95ac426bec7ff1a1fa839 -->
+<!-- reviewed: 2026-09-11 -->
+<!-- baseline: 66e63c0801aa5cb2a7e96e0f79d946a40832d093 -->
 # Uploading Documents and the Submit Uploads Area
 
 Documents in a bundle: bundles have a document collection for user guides and

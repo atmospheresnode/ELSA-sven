@@ -1,15 +1,15 @@
 <!-- watches: build/models.py#Citation_Information, build/views.py#citation_information, build/views.py#edit_citation_information, build/views.py#delete_citation_information, build/forms.py#CitationInformationForm, build/forms.py#EditCitationInformationForm, templates/build/citation_information -->
 <!-- fingerprint:
-     build/models.py#Citation_Information       = 05817726b126
-     build/views.py#citation_information        = 32aee4d1289b
-     build/views.py#edit_citation_information   = 63be364bc808
-     build/views.py#delete_citation_information = 443c8dbcd846
+     build/models.py#Citation_Information       = ecc7990bfbd6
+     build/views.py#citation_information        = 2aea55b3e4cd
+     build/views.py#edit_citation_information   = e48616352a5c
+     build/views.py#delete_citation_information = 147128ea559e
      build/forms.py#CitationInformationForm     = e8db3aa1ac79
      build/forms.py#EditCitationInformationForm = 01577ec8a08f
      templates/build/citation_information       = b26336432488
 -->
-<!-- reviewed: 2026-08-28 -->
-<!-- baseline: d8df4b96320a4636b7a95ac426bec7ff1a1fa839 -->
+<!-- reviewed: 2026-09-11 -->
+<!-- baseline: 66e63c0801aa5cb2a7e96e0f79d946a40832d093 -->
 # Citation Information
 
 PDS4 Information Model (v1.24 / 1O00): the Citation_Information class provides the
@@ -49,3 +49,12 @@ submitted.
 A bundle holds one Citation Information section (PDS4 allows exactly one per
 bundle). Once it exists, the modal shows the current citation with edit and
 delete actions instead of the create form.
+
+Where it is stored: the counts, publication year, description and keyword are
+columns on the Citation_Information row, but the author and editor names are
+held only in the XML labels. ELSA copies the citation into the bundle label and
+into every collection label, its own and any the user added, so all of them
+agree. A collection created after the citation already exists is written with
+the names the bundle label already carries, rather than with blank ones. If
+someone reports that an author "did not save", the thing to check is whether one
+label is out of step with the others rather than whether the form submitted.

@@ -4749,6 +4749,87 @@ class Citation_Information(models.Model):
     keyword = models.CharField(max_length=MAX_CHAR_FIELD, blank=True)
     
 
+    def _recorded_people(self):
+        """The author and editor values this bundle has already recorded.
+
+        Author names are held only in the XML; the model stores how many there are
+        and nothing else. A label created after the citation was filled in therefore
+        has nowhere to learn the names from, and used to be written with the blank
+        skeleton fill_label produces. PDS then reported the blank as an error on a
+        citation the user had demonstrably filled in, which read to them as the
+        author not having saved.
+
+        The bundle label is the one always written first and always the target of
+        the edit form, so it is where the values are read back from. A bundle whose
+        label does not exist yet, or which has no citation in it yet, returns
+        nothing and the skeleton stays blank, which is correct at that point.
+        """
+        empty = {'author_people': [], 'author_orgs': [],
+                 'editor_people': [], 'editor_orgs': []}
+        try:
+            product_bundle = Product_Bundle.objects.get(bundle=self.bundle)
+            path = product_bundle.label()
+        except (Product_Bundle.DoesNotExist, AttributeError):
+            return empty
+        if not path or not os.path.exists(path):
+            return empty
+
+        try:
+            root = etree.parse(path).getroot()
+        except (etree.XMLSyntaxError, OSError):
+            # An unreadable label is a different problem and not one this can fix.
+            return empty
+
+        citation = root.find('{0}Identification_Area/{0}Citation_Information'.format(NAMESPACE))
+        if citation is None:
+            return empty
+
+        def text(element, tag):
+            found = element.find('{}{}'.format(NAMESPACE, tag))
+            return found.text if found is not None else None
+
+        def people(container):
+            values = []
+            for person in container.findall('{}Person'.format(NAMESPACE)):
+                affiliation = person.find('{}Affiliation'.format(NAMESPACE))
+                values.append({
+                    'given_name': text(person, 'given_name'),
+                    'family_name': text(person, 'family_name'),
+                    'person_orcid': text(person, 'person_orcid'),
+                    'organization_name': (text(affiliation, 'organization_name')
+                                          if affiliation is not None else None),
+                })
+            return values
+
+        def organizations(container):
+            values = []
+            for organization in container.findall('{}Organization'.format(NAMESPACE)):
+                parent = organization.find('{}Parent_Organization'.format(NAMESPACE))
+                values.append({
+                    'organization_name': text(organization, 'organization_name'),
+                    'organization_rorid': text(organization, 'organization_rorid'),
+                    'sequence_number': text(organization, 'sequence_number'),
+                    'parent_organization_name': (
+                        text(parent, 'parent_organization_name')
+                        if parent is not None else None),
+                })
+            return values
+
+        recorded = dict(empty)
+        list_author = citation.find('{}List_Author'.format(NAMESPACE))
+        if list_author is not None:
+            recorded['author_people'] = people(list_author)
+            recorded['author_orgs'] = organizations(list_author)
+
+        list_editor = citation.find('{}List_Editor'.format(NAMESPACE))
+        if list_editor is not None:
+            # The first two Persons are the fixed ATM editors, which fill_label
+            # writes for itself; only the user-added ones after them are carried.
+            recorded['editor_people'] = people(list_editor)[2:]
+            recorded['editor_orgs'] = organizations(list_editor)
+
+        return recorded
+
     # Builders
     def fill_label(self, label_root):
 
@@ -4782,27 +4863,38 @@ class Citation_Information(models.Model):
         description = etree.SubElement(Citation_Information, 'description')
         description.text = self.description
 
+        # What this bundle already knows about its authors, so a label created after
+        # the citation was filled in is born with the names rather than with blanks.
+        recorded = self._recorded_people()
+
+        def recorded_value(kind, index, field):
+            values = recorded.get(kind) or []
+            return values[index].get(field) if index < len(values) else None
+
         # Add Citation_Information information
         if self.number_of_authors_people > 0 or self.number_of_authors_organization > 0:
             list_author = etree.SubElement(Citation_Information, 'List_Author')
 
-            for _ in range(self.number_of_authors_people):
+            for index in range(self.number_of_authors_people):
                 author = etree.SubElement(list_author, 'Person')
-                given_name = etree.SubElement(author, 'given_name')
-                family_name = etree.SubElement(author, 'family_name')
-                person_orcid = etree.SubElement(author, 'person_orcid')
+                for field in ('given_name', 'family_name', 'person_orcid'):
+                    element = etree.SubElement(author, field)
+                    element.text = recorded_value('author_people', index, field)
                 affiliation = etree.SubElement(author, 'Affiliation')
-
                 organization_name = etree.SubElement(affiliation, 'organization_name')
+                organization_name.text = recorded_value(
+                    'author_people', index, 'organization_name')
 
-            for _ in range(self.number_of_authors_organization):
+            for index in range(self.number_of_authors_organization):
                 organization = etree.SubElement(list_author, 'Organization')
-                organization_name = etree.SubElement(organization, 'organization_name')
-                organization_rorid = etree.SubElement(organization, 'organization_rorid')
-                sequence_number = etree.SubElement(organization, 'sequence_number')
+                for field in ('organization_name', 'organization_rorid', 'sequence_number'):
+                    element = etree.SubElement(organization, field)
+                    element.text = recorded_value('author_orgs', index, field)
                 parent_organization = etree.SubElement(organization, 'Parent_Organization')
-
-                parent_organization_name = etree.SubElement(parent_organization, 'parent_organization_name')
+                parent_organization_name = etree.SubElement(
+                    parent_organization, 'parent_organization_name')
+                parent_organization_name.text = recorded_value(
+                    'author_orgs', index, 'parent_organization_name')
 
 
         # Default editors are Lynn Neakrase and Lyle Huber -- Could be changed later on
@@ -4825,21 +4917,26 @@ class Citation_Information(models.Model):
         # User-added editors follow the two fixed ATM editors. Like authors,
         # empty skeletons are created here and filled in on the edit page
         # (fill_label_values).
-        for _ in range(self.number_of_editors_people):
+        for index in range(self.number_of_editors_people):
             editor = etree.SubElement(list_editor, 'Person')
-            etree.SubElement(editor, 'given_name')
-            etree.SubElement(editor, 'family_name')
-            etree.SubElement(editor, 'person_orcid')
+            for field in ('given_name', 'family_name', 'person_orcid'):
+                element = etree.SubElement(editor, field)
+                element.text = recorded_value('editor_people', index, field)
             affiliation = etree.SubElement(editor, 'Affiliation')
-            etree.SubElement(affiliation, 'organization_name')
+            organization_name = etree.SubElement(affiliation, 'organization_name')
+            organization_name.text = recorded_value(
+                'editor_people', index, 'organization_name')
 
-        for _ in range(self.number_of_editors_organization):
+        for index in range(self.number_of_editors_organization):
             organization = etree.SubElement(list_editor, 'Organization')
-            etree.SubElement(organization, 'organization_name')
-            etree.SubElement(organization, 'organization_rorid')
-            etree.SubElement(organization, 'sequence_number')
+            for field in ('organization_name', 'organization_rorid', 'sequence_number'):
+                element = etree.SubElement(organization, field)
+                element.text = recorded_value('editor_orgs', index, field)
             parent_organization = etree.SubElement(organization, 'Parent_Organization')
-            etree.SubElement(parent_organization, 'parent_organization_name')
+            parent_organization_name = etree.SubElement(
+                parent_organization, 'parent_organization_name')
+            parent_organization_name.text = recorded_value(
+                'editor_orgs', index, 'parent_organization_name')
 
         return label_root
 

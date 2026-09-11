@@ -41,6 +41,30 @@ from django.utils.timezone import localtime
 #
 # -------------------------------------------------------------------------------------------------- #
 @login_required
+def bundle_label_targets(bundle):
+    """Every collection label a bundle-level metadata edit has to reach.
+
+    A bundle's collections live in two tables. Product_Collection holds the ones
+    ELSA creates for it (Document, Context, XML Schema); AdditionalCollections holds
+    the ones the user adds. Bundle-level metadata, the citation, the modification
+    history, the alias, is copied into all of their labels, so a write that queries
+    only the first table leaves the user's own collections behind.
+
+    That is how a citation could be filled in and still fail validation: the author
+    was written into the bundle and the document collection, while the collection
+    the user had added kept the empty <given_name/> skeleton it was created with,
+    and PDS reported the blank as an error against a citation the user had
+    demonstrably filled in. The context views had already grown a chain() for this;
+    every other one had not.
+
+    Data collections are excluded here as they were at each of the old call sites:
+    they carry their own observational metadata rather than the bundle's.
+    """
+    return list(chain(
+        Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data'),
+        AdditionalCollections.objects.filter(bundle=bundle)))
+
+
 def alias(request, pk_bundle):  # DEPRECATED: to be replaced by edit alias, **not deprecated**
     print(' \n\n \n\n-------------------------------------------------------------------------')
     print('\n\n---------------------- Add an Alias with ELSA ---------------------------')
@@ -78,7 +102,7 @@ def alias(request, pk_bundle):  # DEPRECATED: to be replaced by edit alias, **no
             print('Alias model object: {}'.format(alias))
 
             product_bundle = Product_Bundle.objects.get(bundle=bundle)
-            product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+            product_collections_list = bundle_label_targets(bundle)
 
             write_into_label(alias, product_bundle, product_collections_list)
 
@@ -120,7 +144,7 @@ def alias_edit(request, pk_bundle, pk_alias):  # DEPRECATED: to be replaced by e
             if form_alias.has_changed():
                 old_alias = Alias.objects.get(pk=pk_alias, bundle=bundle)
                 product_bundle = Product_Bundle.objects.get(bundle=bundle)
-                product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+                product_collections_list = bundle_label_targets(bundle)
 
                 remove_from_label(old_alias, product_bundle, product_collections_list,)
 
@@ -159,7 +183,7 @@ def alias_delete(request, pk_bundle, pk_alias):
         alias = Alias.objects.get(pk=pk_alias)
 
         product_bundle = Product_Bundle.objects.get(bundle=bundle)
-        product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+        product_collections_list = bundle_label_targets(bundle)
 
         remove_from_label(alias, product_bundle, product_collections_list)
 
@@ -638,7 +662,7 @@ def yes_intro_page(request, bundle_id):
             )
             mod_history.save()
             product_bundle = Product_Bundle.objects.get(bundle=bundle)
-            product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+            product_collections_list = bundle_label_targets(bundle)
             write_into_label(mod_history, product_bundle, product_collections_list)
 
         # Declare context_dict for template
@@ -2845,7 +2869,7 @@ def citation_information(request, pk_bundle):
             print('Citation Information model object: {}'.format(citation_information))
             
             product_bundle = Product_Bundle.objects.get(bundle=bundle)
-            product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+            product_collections_list = bundle_label_targets(bundle)
 
             write_into_label(citation_information, product_bundle, product_collections_list)
 
@@ -2893,7 +2917,7 @@ def edit_citation_information(request, pk_bundle, pk_citation_information):
             all_labels = []
 
             product_bundle = Product_Bundle.objects.get(bundle=bundle)
-            product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+            product_collections_list = bundle_label_targets(bundle)
 
             all_labels.append(product_bundle)
             all_labels.extend(product_collections_list)
@@ -2976,7 +3000,7 @@ def modification_history(request, pk_bundle):
             print(' Modification History  model object: {}'.format(modification_history))
 
             product_bundle = Product_Bundle.objects.get(bundle=bundle)
-            product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+            product_collections_list = bundle_label_targets(bundle)
 
             write_into_label(modification_history, product_bundle, product_collections_list)
 
@@ -3666,7 +3690,7 @@ def annex_collection_document(request, pk_bundle):
 
 
         product_bundle = Product_Bundle.objects.get(bundle=bundle)
-        product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+        product_collections_list = bundle_label_targets(bundle)
 
         if request.POST.get("source") == "bundle":
             return redirect(reverse("build:bundle", args=[pk_bundle]))
@@ -3705,7 +3729,7 @@ def collection_document(request, pk_bundle):
         print('---------------- End Build Product_Document Base Case -------')                     
 
         product_bundle = Product_Bundle.objects.get(bundle=bundle)
-        product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+        product_collections_list = bundle_label_targets(bundle)
 
         return redirect(reverse('build:collection_additional', args=[pk_bundle]))
 
@@ -4093,7 +4117,7 @@ def annex_product_document(request, pk_bundle, pk_product_document):
             
             all_labels = []
             product_bundle = Product_Bundle.objects.get(bundle=bundle)
-            product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+            product_collections_list = bundle_label_targets(bundle)
             # We need to check for Product_Collections associated with Data products now.
                     
             all_labels.append(product_bundle)
@@ -4207,7 +4231,7 @@ def product_document(request, pk_bundle, pk_product_document):
             
             all_labels = []
             product_bundle = Product_Bundle.objects.get(bundle=bundle)
-            product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+            product_collections_list = bundle_label_targets(bundle)
             # We need to check for Product_Collections associated with Data products now.
                     
             all_labels.append(product_bundle)
@@ -4744,7 +4768,7 @@ def delete_target(request, pk_bundle, pk_target):
     target = Target.objects.get(pk=pk_target)
 
     product_bundle = Product_Bundle.objects.get(bundle=bundle)
-    product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+    product_collections_list = bundle_label_targets(bundle)
 
     remove_from_label(target, product_bundle, product_collections_list)
 
@@ -4762,7 +4786,7 @@ def delete_modification_history(request, pk_bundle, pk_modification_history):
     modification_history = Modification_History.objects.get(pk=pk_modification_history)
 
     product_bundle = Product_Bundle.objects.get(bundle=bundle)
-    product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+    product_collections_list = bundle_label_targets(bundle)
 
     remove_from_label(modification_history, product_bundle, product_collections_list)
     bundle.modification_history.remove(modification_history)
@@ -4774,7 +4798,7 @@ def delete_citation_information(request, pk_bundle, pk_citation_information):
     citation_information = Citation_Information.objects.get(pk=pk_citation_information)
 
     product_bundle = Product_Bundle.objects.get(bundle=bundle)
-    product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+    product_collections_list = bundle_label_targets(bundle)
 
     remove_from_label(citation_information, product_bundle, product_collections_list)
     bundle.citation_information.remove(citation_information)
@@ -4792,7 +4816,7 @@ def delete_instrument(request, pk_bundle, pk_instrument):
     print(instrument_host)
 
     product_bundle = Product_Bundle.objects.get(bundle=bundle)
-    product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+    product_collections_list = bundle_label_targets(bundle)
 
     remove_from_label(instrument, product_bundle, product_collections_list)
 
@@ -4818,7 +4842,7 @@ def delete_instrument_host(request, pk_bundle, pk_instrument_host):
     investigation = instrument_host.investigations.first()
 
     product_bundle = Product_Bundle.objects.get(bundle=bundle)
-    product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+    product_collections_list = bundle_label_targets(bundle)
 
     for bundle_instrument in bundle.instruments.all():
         if bundle_instrument in instrument_host.instruments.all():
@@ -4846,7 +4870,7 @@ def delete_facility(request, pk_bundle, pk_facility):
     investigation = facility.investigations.first()
 
     product_bundle = Product_Bundle.objects.get(bundle=bundle)
-    product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+    product_collections_list = bundle_label_targets(bundle)
 
     for bundle_instrument in bundle.instruments.all():
         if bundle_instrument in facility.instruments.all():
@@ -4869,7 +4893,7 @@ def delete_investigation(request, pk_bundle, pk_investigation):
     investigation = Investigation.objects.get(pk=pk_investigation)
 
     product_bundle = Product_Bundle.objects.get(bundle=bundle)
-    product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+    product_collections_list = bundle_label_targets(bundle)
 
     for bundle_instrument_host in bundle.instrument_hosts.all():
         if bundle_instrument_host in investigation.instrument_hosts.all():
@@ -4906,7 +4930,7 @@ def delete_citation_information(request, pk_bundle, pk_citation_information):
         citation_information = Citation_Information.objects.get(pk=pk_citation_information)
 
         product_bundle = Product_Bundle.objects.get(bundle=bundle)
-        product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+        product_collections_list = bundle_label_targets(bundle)
 
         remove_from_label(citation_information, product_bundle, product_collections_list)
 
@@ -4933,7 +4957,7 @@ def delete_modification_history(request, pk_bundle, pk_modification_history):
         modification_history = Modification_History.objects.get(pk=pk_modification_history)
 
         product_bundle = Product_Bundle.objects.get(bundle=bundle)
-        product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+        product_collections_list = bundle_label_targets(bundle)
 
         remove_from_label(modification_history, product_bundle, product_collections_list)
 
@@ -4955,7 +4979,7 @@ def delete_instrument(request, pk_bundle, pk_instrument):
     print(instrument_host)
 
     product_bundle = Product_Bundle.objects.get(bundle=bundle)
-    product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+    product_collections_list = bundle_label_targets(bundle)
 
     remove_from_label(instrument, product_bundle, product_collections_list)
 
@@ -4981,7 +5005,7 @@ def delete_instrument_host(request, pk_bundle, pk_instrument_host):
     investigation = instrument_host.investigations.first()
 
     product_bundle = Product_Bundle.objects.get(bundle=bundle)
-    product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+    product_collections_list = bundle_label_targets(bundle)
 
     for bundle_instrument in bundle.instruments.all():
         if bundle_instrument in instrument_host.instruments.all():
@@ -5009,7 +5033,7 @@ def delete_facility(request, pk_bundle, pk_facility):
     investigation = facility.investigations.first()
 
     product_bundle = Product_Bundle.objects.get(bundle=bundle)
-    product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+    product_collections_list = bundle_label_targets(bundle)
 
     for bundle_instrument in bundle.instruments.all():
         if bundle_instrument in facility.instruments.all():
@@ -5032,7 +5056,7 @@ def delete_investigation(request, pk_bundle, pk_investigation):
     investigation = Investigation.objects.get(pk=pk_investigation)
 
     product_bundle = Product_Bundle.objects.get(bundle=bundle)
-    product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+    product_collections_list = bundle_label_targets(bundle)
 
     for bundle_instrument_host in bundle.instrument_hosts.all():
         if bundle_instrument_host in investigation.instrument_hosts.all():
