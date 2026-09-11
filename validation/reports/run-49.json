@@ -1,0 +1,479 @@
+{
+  "title": "PDS Validation Tool Report",
+  "configuration": {
+    "version": "4.2.0",
+    "date": "2026-09-11T06:46:39Z",
+    "cliArgs": "-R pds4.bundle -t /home/rupakdey/elsa/ELSA-sven/archive/rupakdey/sept_ama_bundle -r /home/rupakdey/elsa/ELSA-sven/validation/reports/run-49.json -s json --progressN 1 -C /home/rupakdey/elsa/ELSA-sven/validation/catalog.xml --skip-content-validation"
+  },
+  "parameters": {
+    "targets": "[file:/home/rupakdey/elsa/ELSA-sven/archive/rupakdey/sept_ama_bundle/]",
+    "ruleType": "pds4.bundle",
+    "userSpecifiedCatalogs": "[/home/rupakdey/elsa/ELSA-sven/validation/catalog.xml]",
+    "severityLevel": "WARNING",
+    "recurseDirectories": "true",
+    "fileFiltersUsed": "[*.xml, *.XML]",
+    "dataContentValidation": "off",
+    "productLevelValidation": "on",
+    "allowUnlabeledFiles": "false",
+    "skipStrictCollectionMembership": "false",
+    "maxErrors": "100000",
+    "registeredContextsFile": "/tmp/claude-764777/-home-rupakdey-elsa/c69501ac-d176-49bb-b2bc-f1a1a1e11c5f/scratchpad/validate-4.2.0/resources/registered_context_products.json"
+  },
+  "productLevelValidationResults": [
+    {
+      "status": "FAIL",
+      "label": "file:/home/rupakdey/elsa/ELSA-sven/archive/rupakdey/sept_ama_bundle/bundle_sept_ama.xml",
+      "lidvid": "urn:nasa:pds-ama:sept_ama::1.0",
+      "messages": [
+        {
+          "severity": "ERROR",
+          "type": "error.label.schema",
+          "line": 27,
+          "column": 25,
+          "message": "cvc-pattern-valid: Value '' is not facet-valid with respect to pattern '((1971|1972|1973|1974|1975|1976|1977|1978|1979|1987|1989|1990|1995|1998|2005|2008|2016)-12-31T23:59:60(\\.[0-9]+)?(Z)|(1972|1981|1982|1983|1985|1992|1993|1994|1997|2012|2015)-06-30T23:59:60(\\.[0-9]+)?(Z))|(-)?(00|04|08|12|16|20|24|28|32|36|40|44|48|52|56|60|64|68|72|76|80|84|88|92|96)00-02-29(T)(([0-1][0-9])|(2[0-3]))(Z)|(-)?(00|04|08|12|16|20|24|28|32|36|40|44|48|52|56|60|64|68|72|76|80|84|88|92|96)00-02-29(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9](Z)|(-)?(00|04|08|12|16|20|24|28|32|36|40|44|48|52|56|60|64|68|72|76|80|84|88|92|96)00-02-29(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9]:([0-5][0-9])(\\.([0-9]+))?(Z)|(-)?(00|04|08|12|16|20|24|28|32|36|40|44|48|52|56|60|64|68|72|76|80|84|88|92|96)00-02-29(Z)|(-)?([0-9]{2}(04|08|12|16|20|24|28|32|36|40|44|48|52|56|60|64|68|72|76|80|84|88|92|96)-02-29)(T)(([0-1][0-9])|(2[0-3]))(Z)|(-)?([0-9]{2}(04|08|12|16|20|24|28|32|36|40|44|48|52|56|60|64|68|72|76|80|84|88|92|96)-02-29)(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9](Z)|(-)?([0-9]{2}(04|08|12|16|20|24|28|32|36|40|44|48|52|56|60|64|68|72|76|80|84|88|92|96)-02-29)(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9]:([0-5][0-9])(\\.([0-9]+))?(Z)|(-)?([0-9]{2}(04|08|12|16|20|24|28|32|36|40|44|48|52|56|60|64|68|72|76|80|84|88|92|96)-02-29)(Z)|(-)?[0-9]{4}(Z)|(-)?[0-9]{4}-((01|03|05|07|08|10|12)-((0[1-9])|([1-2][0-9])|(30|31)))(T)(([0-1][0-9])|(2[0-3]))(Z)|(-)?[0-9]{4}-((01|03|05|07|08|10|12)-((0[1-9])|([1-2][0-9])|(30|31)))(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9](Z)|(-)?[0-9]{4}-((01|03|05|07|08|10|12)-((0[1-9])|([1-2][0-9])|(30|31)))(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9]:([0-5][0-9])(\\.([0-9]+))?(Z)|(-)?[0-9]{4}-((01|03|05|07|08|10|12)-((0[1-9])|([1-2][0-9])|(30|31)))(Z)|(-)?[0-9]{4}-((04|06|09|11)-((0[1-9])|([1-2][0-9])|30))(T)(([0-1][0-9])|(2[0-3]))(Z)|(-)?[0-9]{4}-((04|06|09|11)-((0[1-9])|([1-2][0-9])|30))(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9](Z)|(-)?[0-9]{4}-((04|06|09|11)-((0[1-9])|([1-2][0-9])|30))(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9]:([0-5][0-9])(\\.([0-9]+))?(Z)|(-)?[0-9]{4}-((04|06|09|11)-((0[1-9])|([1-2][0-9])|30))(Z)|(-)?[0-9]{4}-((0[1-9])|(1[0-2]))(Z)|(-)?[0-9]{4}-(02-((0[1-9])|(1[0-9])|(2[0-8])))(T)(([0-1][0-9])|(2[0-3]))(Z)|(-)?[0-9]{4}-(02-((0[1-9])|(1[0-9])|(2[0-8])))(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9](Z)|(-)?[0-9]{4}-(02-((0[1-9])|(1[0-9])|(2[0-8])))(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9]:([0-5][0-9])(\\.([0-9]+))?(Z)|(-)?[0-9]{4}-(02-((0[1-9])|(1[0-9])|(2[0-8])))(Z)' for type 'ASCII_Date_Time_YMD_UTC'."
+        },
+        {
+          "severity": "ERROR",
+          "type": "error.label.schema",
+          "line": 27,
+          "column": 25,
+          "message": "cvc-complex-type.2.2: Element 'start_date_time' must have no element [children], and the value must be valid."
+        },
+        {
+          "severity": "ERROR",
+          "type": "error.label.schema",
+          "line": 28,
+          "column": 24,
+          "message": "cvc-pattern-valid: Value '' is not facet-valid with respect to pattern '((1971|1972|1973|1974|1975|1976|1977|1978|1979|1987|1989|1990|1995|1998|2005|2008|2016)-12-31T23:59:60(\\.[0-9]+)?(Z)|(1972|1981|1982|1983|1985|1992|1993|1994|1997|2012|2015)-06-30T23:59:60(\\.[0-9]+)?(Z))|(-)?(00|04|08|12|16|20|24|28|32|36|40|44|48|52|56|60|64|68|72|76|80|84|88|92|96)00-02-29(T)(([0-1][0-9])|(2[0-3]))(Z)|(-)?(00|04|08|12|16|20|24|28|32|36|40|44|48|52|56|60|64|68|72|76|80|84|88|92|96)00-02-29(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9](Z)|(-)?(00|04|08|12|16|20|24|28|32|36|40|44|48|52|56|60|64|68|72|76|80|84|88|92|96)00-02-29(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9]:([0-5][0-9])(\\.([0-9]+))?(Z)|(-)?(00|04|08|12|16|20|24|28|32|36|40|44|48|52|56|60|64|68|72|76|80|84|88|92|96)00-02-29(Z)|(-)?([0-9]{2}(04|08|12|16|20|24|28|32|36|40|44|48|52|56|60|64|68|72|76|80|84|88|92|96)-02-29)(T)(([0-1][0-9])|(2[0-3]))(Z)|(-)?([0-9]{2}(04|08|12|16|20|24|28|32|36|40|44|48|52|56|60|64|68|72|76|80|84|88|92|96)-02-29)(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9](Z)|(-)?([0-9]{2}(04|08|12|16|20|24|28|32|36|40|44|48|52|56|60|64|68|72|76|80|84|88|92|96)-02-29)(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9]:([0-5][0-9])(\\.([0-9]+))?(Z)|(-)?([0-9]{2}(04|08|12|16|20|24|28|32|36|40|44|48|52|56|60|64|68|72|76|80|84|88|92|96)-02-29)(Z)|(-)?[0-9]{4}(Z)|(-)?[0-9]{4}-((01|03|05|07|08|10|12)-((0[1-9])|([1-2][0-9])|(30|31)))(T)(([0-1][0-9])|(2[0-3]))(Z)|(-)?[0-9]{4}-((01|03|05|07|08|10|12)-((0[1-9])|([1-2][0-9])|(30|31)))(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9](Z)|(-)?[0-9]{4}-((01|03|05|07|08|10|12)-((0[1-9])|([1-2][0-9])|(30|31)))(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9]:([0-5][0-9])(\\.([0-9]+))?(Z)|(-)?[0-9]{4}-((01|03|05|07|08|10|12)-((0[1-9])|([1-2][0-9])|(30|31)))(Z)|(-)?[0-9]{4}-((04|06|09|11)-((0[1-9])|([1-2][0-9])|30))(T)(([0-1][0-9])|(2[0-3]))(Z)|(-)?[0-9]{4}-((04|06|09|11)-((0[1-9])|([1-2][0-9])|30))(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9](Z)|(-)?[0-9]{4}-((04|06|09|11)-((0[1-9])|([1-2][0-9])|30))(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9]:([0-5][0-9])(\\.([0-9]+))?(Z)|(-)?[0-9]{4}-((04|06|09|11)-((0[1-9])|([1-2][0-9])|30))(Z)|(-)?[0-9]{4}-((0[1-9])|(1[0-2]))(Z)|(-)?[0-9]{4}-(02-((0[1-9])|(1[0-9])|(2[0-8])))(T)(([0-1][0-9])|(2[0-3]))(Z)|(-)?[0-9]{4}-(02-((0[1-9])|(1[0-9])|(2[0-8])))(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9](Z)|(-)?[0-9]{4}-(02-((0[1-9])|(1[0-9])|(2[0-8])))(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9]:([0-5][0-9])(\\.([0-9]+))?(Z)|(-)?[0-9]{4}-(02-((0[1-9])|(1[0-9])|(2[0-8])))(Z)' for type 'ASCII_Date_Time_YMD_UTC'."
+        },
+        {
+          "severity": "ERROR",
+          "type": "error.label.schema",
+          "line": 28,
+          "column": 24,
+          "message": "cvc-complex-type.2.2: Element 'stop_date_time' must have no element [children], and the value must be valid."
+        },
+        {
+          "severity": "ERROR",
+          "type": "error.label.schema",
+          "line": 49,
+          "column": 23,
+          "message": "cvc-pattern-valid: Value '' is not facet-valid with respect to pattern 'urn(:[\\p{Ll}\\p{Nd}\\-._]+){3,5}' for type 'lid_reference'."
+        },
+        {
+          "severity": "ERROR",
+          "type": "error.label.schema",
+          "line": 49,
+          "column": 23,
+          "message": "cvc-type.3.1.3: The value '' of element 'lid_reference' is not valid."
+        },
+        {
+          "severity": "ERROR",
+          "type": "error.label.schema",
+          "line": 50,
+          "column": 24,
+          "message": "cvc-minLength-valid: Value '' with length = '0' is not facet-valid with respect to minLength '1' for type 'reference_type'."
+        },
+        {
+          "severity": "ERROR",
+          "type": "error.label.schema",
+          "line": 50,
+          "column": 24,
+          "message": "cvc-type.3.1.3: The value '' of element 'reference_type' is not valid."
+        },
+        {
+          "severity": "ERROR",
+          "type": "error.label.schematron",
+          "line": 48,
+          "column": 25,
+          "message": "The number of colons found in lid_reference: (0) is inconsistent with the number expected: (3:5)."
+        },
+        {
+          "severity": "ERROR",
+          "type": "error.label.schematron",
+          "line": 48,
+          "column": 25,
+          "message": "The value of the attribute lid_reference must start with either: urn:nasa:pds: or urn:esa:psa: or urn:jaxa:darts: or urn:ros:rssa: or urn:isro:isda: or urn:kari:kpds:"
+        },
+        {
+          "severity": "ERROR",
+          "type": "error.label.schematron",
+          "line": 41,
+          "column": 27,
+          "message": "The attribute reference_type must be set to one of the following values 'bundle_to_target'."
+        },
+        {
+          "severity": "ERROR",
+          "type": "error.label.schematron",
+          "line": 4,
+          "column": 24,
+          "message": "In Product_Bundle both Citation_Information and its description are required."
+        },
+        {
+          "severity": "ERROR",
+          "type": "error.label.schematron",
+          "line": 48,
+          "column": 25,
+          "message": "The attribute reference_type must be set to one of the following values 'bundle_to_errata', 'bundle_to_document', 'bundle_to_investigation', 'bundle_to_instrument', 'bundle_to_instrument_host', 'bundle_to_target', 'bundle_to_resource', 'bundle_to_associate'."
+        },
+        {
+          "severity": "ERROR",
+          "type": "error.label.context_ref_not_found",
+          "line": 34,
+          "message": "'Context product not found: urn:nasa:pds:context:investigation:individual_investigation.atmospheric-modeling-annex"
+        }
+      ],
+      "fragments": [],
+      "dataContents": []
+    },
+    {
+      "status": "FAIL",
+      "label": "file:/home/rupakdey/elsa/ELSA-sven/archive/rupakdey/sept_ama_bundle/document/collection_sept_ama_document.xml",
+      "lidvid": "urn:nasa:pds-ama:sept_ama:document::1.0",
+      "messages": [
+        {
+          "severity": "ERROR",
+          "type": "error.label.schema",
+          "line": 27,
+          "column": 25,
+          "message": "cvc-pattern-valid: Value '' is not facet-valid with respect to pattern '((1971|1972|1973|1974|1975|1976|1977|1978|1979|1987|1989|1990|1995|1998|2005|2008|2016)-12-31T23:59:60(\\.[0-9]+)?(Z)|(1972|1981|1982|1983|1985|1992|1993|1994|1997|2012|2015)-06-30T23:59:60(\\.[0-9]+)?(Z))|(-)?(00|04|08|12|16|20|24|28|32|36|40|44|48|52|56|60|64|68|72|76|80|84|88|92|96)00-02-29(T)(([0-1][0-9])|(2[0-3]))(Z)|(-)?(00|04|08|12|16|20|24|28|32|36|40|44|48|52|56|60|64|68|72|76|80|84|88|92|96)00-02-29(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9](Z)|(-)?(00|04|08|12|16|20|24|28|32|36|40|44|48|52|56|60|64|68|72|76|80|84|88|92|96)00-02-29(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9]:([0-5][0-9])(\\.([0-9]+))?(Z)|(-)?(00|04|08|12|16|20|24|28|32|36|40|44|48|52|56|60|64|68|72|76|80|84|88|92|96)00-02-29(Z)|(-)?([0-9]{2}(04|08|12|16|20|24|28|32|36|40|44|48|52|56|60|64|68|72|76|80|84|88|92|96)-02-29)(T)(([0-1][0-9])|(2[0-3]))(Z)|(-)?([0-9]{2}(04|08|12|16|20|24|28|32|36|40|44|48|52|56|60|64|68|72|76|80|84|88|92|96)-02-29)(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9](Z)|(-)?([0-9]{2}(04|08|12|16|20|24|28|32|36|40|44|48|52|56|60|64|68|72|76|80|84|88|92|96)-02-29)(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9]:([0-5][0-9])(\\.([0-9]+))?(Z)|(-)?([0-9]{2}(04|08|12|16|20|24|28|32|36|40|44|48|52|56|60|64|68|72|76|80|84|88|92|96)-02-29)(Z)|(-)?[0-9]{4}(Z)|(-)?[0-9]{4}-((01|03|05|07|08|10|12)-((0[1-9])|([1-2][0-9])|(30|31)))(T)(([0-1][0-9])|(2[0-3]))(Z)|(-)?[0-9]{4}-((01|03|05|07|08|10|12)-((0[1-9])|([1-2][0-9])|(30|31)))(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9](Z)|(-)?[0-9]{4}-((01|03|05|07|08|10|12)-((0[1-9])|([1-2][0-9])|(30|31)))(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9]:([0-5][0-9])(\\.([0-9]+))?(Z)|(-)?[0-9]{4}-((01|03|05|07|08|10|12)-((0[1-9])|([1-2][0-9])|(30|31)))(Z)|(-)?[0-9]{4}-((04|06|09|11)-((0[1-9])|([1-2][0-9])|30))(T)(([0-1][0-9])|(2[0-3]))(Z)|(-)?[0-9]{4}-((04|06|09|11)-((0[1-9])|([1-2][0-9])|30))(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9](Z)|(-)?[0-9]{4}-((04|06|09|11)-((0[1-9])|([1-2][0-9])|30))(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9]:([0-5][0-9])(\\.([0-9]+))?(Z)|(-)?[0-9]{4}-((04|06|09|11)-((0[1-9])|([1-2][0-9])|30))(Z)|(-)?[0-9]{4}-((0[1-9])|(1[0-2]))(Z)|(-)?[0-9]{4}-(02-((0[1-9])|(1[0-9])|(2[0-8])))(T)(([0-1][0-9])|(2[0-3]))(Z)|(-)?[0-9]{4}-(02-((0[1-9])|(1[0-9])|(2[0-8])))(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9](Z)|(-)?[0-9]{4}-(02-((0[1-9])|(1[0-9])|(2[0-8])))(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9]:([0-5][0-9])(\\.([0-9]+))?(Z)|(-)?[0-9]{4}-(02-((0[1-9])|(1[0-9])|(2[0-8])))(Z)' for type 'ASCII_Date_Time_YMD_UTC'."
+        },
+        {
+          "severity": "ERROR",
+          "type": "error.label.schema",
+          "line": 27,
+          "column": 25,
+          "message": "cvc-complex-type.2.2: Element 'start_date_time' must have no element [children], and the value must be valid."
+        },
+        {
+          "severity": "ERROR",
+          "type": "error.label.schema",
+          "line": 28,
+          "column": 24,
+          "message": "cvc-pattern-valid: Value '' is not facet-valid with respect to pattern '((1971|1972|1973|1974|1975|1976|1977|1978|1979|1987|1989|1990|1995|1998|2005|2008|2016)-12-31T23:59:60(\\.[0-9]+)?(Z)|(1972|1981|1982|1983|1985|1992|1993|1994|1997|2012|2015)-06-30T23:59:60(\\.[0-9]+)?(Z))|(-)?(00|04|08|12|16|20|24|28|32|36|40|44|48|52|56|60|64|68|72|76|80|84|88|92|96)00-02-29(T)(([0-1][0-9])|(2[0-3]))(Z)|(-)?(00|04|08|12|16|20|24|28|32|36|40|44|48|52|56|60|64|68|72|76|80|84|88|92|96)00-02-29(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9](Z)|(-)?(00|04|08|12|16|20|24|28|32|36|40|44|48|52|56|60|64|68|72|76|80|84|88|92|96)00-02-29(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9]:([0-5][0-9])(\\.([0-9]+))?(Z)|(-)?(00|04|08|12|16|20|24|28|32|36|40|44|48|52|56|60|64|68|72|76|80|84|88|92|96)00-02-29(Z)|(-)?([0-9]{2}(04|08|12|16|20|24|28|32|36|40|44|48|52|56|60|64|68|72|76|80|84|88|92|96)-02-29)(T)(([0-1][0-9])|(2[0-3]))(Z)|(-)?([0-9]{2}(04|08|12|16|20|24|28|32|36|40|44|48|52|56|60|64|68|72|76|80|84|88|92|96)-02-29)(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9](Z)|(-)?([0-9]{2}(04|08|12|16|20|24|28|32|36|40|44|48|52|56|60|64|68|72|76|80|84|88|92|96)-02-29)(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9]:([0-5][0-9])(\\.([0-9]+))?(Z)|(-)?([0-9]{2}(04|08|12|16|20|24|28|32|36|40|44|48|52|56|60|64|68|72|76|80|84|88|92|96)-02-29)(Z)|(-)?[0-9]{4}(Z)|(-)?[0-9]{4}-((01|03|05|07|08|10|12)-((0[1-9])|([1-2][0-9])|(30|31)))(T)(([0-1][0-9])|(2[0-3]))(Z)|(-)?[0-9]{4}-((01|03|05|07|08|10|12)-((0[1-9])|([1-2][0-9])|(30|31)))(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9](Z)|(-)?[0-9]{4}-((01|03|05|07|08|10|12)-((0[1-9])|([1-2][0-9])|(30|31)))(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9]:([0-5][0-9])(\\.([0-9]+))?(Z)|(-)?[0-9]{4}-((01|03|05|07|08|10|12)-((0[1-9])|([1-2][0-9])|(30|31)))(Z)|(-)?[0-9]{4}-((04|06|09|11)-((0[1-9])|([1-2][0-9])|30))(T)(([0-1][0-9])|(2[0-3]))(Z)|(-)?[0-9]{4}-((04|06|09|11)-((0[1-9])|([1-2][0-9])|30))(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9](Z)|(-)?[0-9]{4}-((04|06|09|11)-((0[1-9])|([1-2][0-9])|30))(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9]:([0-5][0-9])(\\.([0-9]+))?(Z)|(-)?[0-9]{4}-((04|06|09|11)-((0[1-9])|([1-2][0-9])|30))(Z)|(-)?[0-9]{4}-((0[1-9])|(1[0-2]))(Z)|(-)?[0-9]{4}-(02-((0[1-9])|(1[0-9])|(2[0-8])))(T)(([0-1][0-9])|(2[0-3]))(Z)|(-)?[0-9]{4}-(02-((0[1-9])|(1[0-9])|(2[0-8])))(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9](Z)|(-)?[0-9]{4}-(02-((0[1-9])|(1[0-9])|(2[0-8])))(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9]:([0-5][0-9])(\\.([0-9]+))?(Z)|(-)?[0-9]{4}-(02-((0[1-9])|(1[0-9])|(2[0-8])))(Z)' for type 'ASCII_Date_Time_YMD_UTC'."
+        },
+        {
+          "severity": "ERROR",
+          "type": "error.label.schema",
+          "line": 28,
+          "column": 24,
+          "message": "cvc-complex-type.2.2: Element 'stop_date_time' must have no element [children], and the value must be valid."
+        },
+        {
+          "severity": "ERROR",
+          "type": "error.label.schema",
+          "line": 31,
+          "column": 14,
+          "message": "cvc-minLength-valid: Value '' with length = '0' is not facet-valid with respect to minLength '1' for type 'name'."
+        },
+        {
+          "severity": "ERROR",
+          "type": "error.label.schema",
+          "line": 31,
+          "column": 14,
+          "message": "cvc-type.3.1.3: The value '' of element 'name' is not valid."
+        },
+        {
+          "severity": "ERROR",
+          "type": "error.label.schema",
+          "line": 32,
+          "column": 14,
+          "message": "cvc-minLength-valid: Value '' with length = '0' is not facet-valid with respect to minLength '1' for type 'type'."
+        },
+        {
+          "severity": "ERROR",
+          "type": "error.label.schema",
+          "line": 32,
+          "column": 14,
+          "message": "cvc-type.3.1.3: The value '' of element 'type' is not valid."
+        },
+        {
+          "severity": "ERROR",
+          "type": "error.label.schema",
+          "line": 34,
+          "column": 25,
+          "message": "cvc-pattern-valid: Value '' is not facet-valid with respect to pattern 'urn(:[\\p{Ll}\\p{Nd}\\-._]+){3,5}' for type 'lid_reference'."
+        },
+        {
+          "severity": "ERROR",
+          "type": "error.label.schema",
+          "line": 34,
+          "column": 25,
+          "message": "cvc-type.3.1.3: The value '' of element 'lid_reference' is not valid."
+        },
+        {
+          "severity": "ERROR",
+          "type": "error.label.schema",
+          "line": 35,
+          "column": 26,
+          "message": "cvc-minLength-valid: Value '' with length = '0' is not facet-valid with respect to minLength '1' for type 'reference_type'."
+        },
+        {
+          "severity": "ERROR",
+          "type": "error.label.schema",
+          "line": 35,
+          "column": 26,
+          "message": "cvc-type.3.1.3: The value '' of element 'reference_type' is not valid."
+        },
+        {
+          "severity": "ERROR",
+          "type": "error.label.schema",
+          "line": 53,
+          "column": 19,
+          "message": "cvc-pattern-valid: Value '' is not facet-valid with respect to pattern '[a-zA-Z0-9]([a-zA-Z0-9]|[-]|[_]|[.])*[.][a-zA-Z0-9]+' for type 'file_name'."
+        },
+        {
+          "severity": "ERROR",
+          "type": "error.label.schema",
+          "line": 53,
+          "column": 19,
+          "message": "cvc-type.3.1.3: The value '' of element 'file_name' is not valid."
+        },
+        {
+          "severity": "ERROR",
+          "type": "error.label.schema",
+          "line": 54,
+          "column": 26,
+          "message": "cvc-datatype-valid.1.2.1: '' is not a valid value for 'NCName'."
+        },
+        {
+          "severity": "ERROR",
+          "type": "error.label.schema",
+          "line": 54,
+          "column": 26,
+          "message": "cvc-type.3.1.3: The value '' of element 'local_identifier' is not valid."
+        },
+        {
+          "severity": "ERROR",
+          "type": "error.label.schema",
+          "line": 55,
+          "column": 28,
+          "message": "cvc-pattern-valid: Value '' is not facet-valid with respect to pattern '((1971|1972|1973|1974|1975|1976|1977|1978|1979|1987|1989|1990|1995|1998|2005|2008|2016)-12-31T23:59:60(\\.[0-9]+)?(Z?)|(1972|1981|1982|1983|1985|1992|1993|1994|1997|2012|2015)-06-30T23:59:60(\\.[0-9]+)?(Z?))|(-)?(00|04|08|12|16|20|24|28|32|36|40|44|48|52|56|60|64|68|72|76|80|84|88|92|96)00-02-29(T)(([0-1][0-9])|(2[0-3]))(Z?)|(-)?(00|04|08|12|16|20|24|28|32|36|40|44|48|52|56|60|64|68|72|76|80|84|88|92|96)00-02-29(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9](Z?)|(-)?(00|04|08|12|16|20|24|28|32|36|40|44|48|52|56|60|64|68|72|76|80|84|88|92|96)00-02-29(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9]:([0-5][0-9])(\\.([0-9]+))?(Z?)|(-)?(00|04|08|12|16|20|24|28|32|36|40|44|48|52|56|60|64|68|72|76|80|84|88|92|96)00-02-29(Z?)|(-)?([0-9]{2}(04|08|12|16|20|24|28|32|36|40|44|48|52|56|60|64|68|72|76|80|84|88|92|96)-02-29)(T)(([0-1][0-9])|(2[0-3]))(Z?)|(-)?([0-9]{2}(04|08|12|16|20|24|28|32|36|40|44|48|52|56|60|64|68|72|76|80|84|88|92|96)-02-29)(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9](Z?)|(-)?([0-9]{2}(04|08|12|16|20|24|28|32|36|40|44|48|52|56|60|64|68|72|76|80|84|88|92|96)-02-29)(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9]:([0-5][0-9])(\\.([0-9]+))?(Z?)|(-)?([0-9]{2}(04|08|12|16|20|24|28|32|36|40|44|48|52|56|60|64|68|72|76|80|84|88|92|96)-02-29)(Z?)|(-)?[0-9]{4}(Z?)|(-)?[0-9]{4}-((01|03|05|07|08|10|12)-((0[1-9])|([1-2][0-9])|(30|31)))(T)(([0-1][0-9])|(2[0-3]))(Z?)|(-)?[0-9]{4}-((01|03|05|07|08|10|12)-((0[1-9])|([1-2][0-9])|(30|31)))(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9](Z?)|(-)?[0-9]{4}-((01|03|05|07|08|10|12)-((0[1-9])|([1-2][0-9])|(30|31)))(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9]:([0-5][0-9])(\\.([0-9]+))?(Z?)|(-)?[0-9]{4}-((01|03|05|07|08|10|12)-((0[1-9])|([1-2][0-9])|(30|31)))(Z?)|(-)?[0-9]{4}-((04|06|09|11)-((0[1-9])|([1-2][0-9])|30))(T)(([0-1][0-9])|(2[0-3]))(Z?)|(-)?[0-9]{4}-((04|06|09|11)-((0[1-9])|([1-2][0-9])|30))(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9](Z?)|(-)?[0-9]{4}-((04|06|09|11)-((0[1-9])|([1-2][0-9])|30))(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9]:([0-5][0-9])(\\.([0-9]+))?(Z?)|(-)?[0-9]{4}-((04|06|09|11)-((0[1-9])|([1-2][0-9])|30))(Z?)|(-)?[0-9]{4}-((0[1-9])|(1[0-2]))(Z?)|(-)?[0-9]{4}-(02-((0[1-9])|(1[0-9])|(2[0-8])))(T)(([0-1][0-9])|(2[0-3]))(Z?)|(-)?[0-9]{4}-(02-((0[1-9])|(1[0-9])|(2[0-8])))(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9](Z?)|(-)?[0-9]{4}-(02-((0[1-9])|(1[0-9])|(2[0-8])))(T)(([0-1][0-9])|(2[0-3])):[0-5][0-9]:([0-5][0-9])(\\.([0-9]+))?(Z?)|(-)?[0-9]{4}-(02-((0[1-9])|(1[0-9])|(2[0-8])))(Z?)' for type 'creation_date_time'."
+        },
+        {
+          "severity": "ERROR",
+          "type": "error.label.schema",
+          "line": 55,
+          "column": 28,
+          "message": "cvc-type.3.1.3: The value '' of element 'creation_date_time' is not valid."
+        },
+        {
+          "severity": "ERROR",
+          "type": "error.label.schema",
+          "line": 58,
+          "column": 26,
+          "message": "cvc-datatype-valid.1.2.1: '' is not a valid value for 'NCName'."
+        },
+        {
+          "severity": "ERROR",
+          "type": "error.label.schema",
+          "line": 58,
+          "column": 26,
+          "message": "cvc-type.3.1.3: The value '' of element 'local_identifier' is not valid."
+        },
+        {
+          "severity": "ERROR",
+          "type": "error.label.schematron",
+          "line": 33,
+          "column": 27,
+          "message": "The number of colons found in lid_reference: (0) is inconsistent with the number expected: (3:5)."
+        },
+        {
+          "severity": "ERROR",
+          "type": "error.label.schematron",
+          "line": 33,
+          "column": 27,
+          "message": "The value of the attribute lid_reference must start with either: urn:nasa:pds: or urn:esa:psa: or urn:jaxa:darts: or urn:ros:rssa: or urn:isro:isda: or urn:kari:kpds:"
+        },
+        {
+          "severity": "ERROR",
+          "type": "error.label.schematron",
+          "line": 32,
+          "column": 14,
+          "message": "The attribute pds:Investigation_Area/pds:type must be equal to one of the following values 'Field Campaign', 'Individual Investigation', 'Mission', 'Observing Campaign', 'Other Investigation'."
+        },
+        {
+          "severity": "ERROR",
+          "type": "error.label.schematron",
+          "line": 33,
+          "column": 27,
+          "message": "The attribute reference_type must be set to one of the following values 'collection_to_investigation'."
+        },
+        {
+          "severity": "ERROR",
+          "type": "error.label.schematron",
+          "line": 41,
+          "column": 27,
+          "message": "The attribute reference_type must be set to one of the following values 'collection_to_target'."
+        },
+        {
+          "severity": "ERROR",
+          "type": "error.label.schematron",
+          "line": 4,
+          "column": 24,
+          "message": "In Product_Collection both Citation_Information and its description are required."
+        },
+        {
+          "severity": "ERROR",
+          "type": "error.validation.internal_error",
+          "message": "Uncaught exception while validating: Could not retrieve a data file name using the following XPath: //*[starts-with(name(),'File_Area')]/File/file_name"
+        }
+      ],
+      "fragments": [],
+      "dataContents": []
+    },
+    {
+      "status": "FAIL",
+      "label": "file:/home/rupakdey/elsa/ELSA-sven/archive/rupakdey/sept_ama_bundle/new/00000.atmos_average_pstd_-_Copy.xml",
+      "lidvid": "urn:nasa:pds-ama:sept_ama:new:00000.atmos_average_pstd_-_Copy.nc::1.0",
+      "messages": [
+        {
+          "severity": "ERROR",
+          "type": "error.label.schema",
+          "line": 6,
+          "column": 25,
+          "message": "cvc-pattern-valid: Value 'urn:nasa:pds-ama:sept_ama:new:00000.atmos_average_pstd_-_Copy.nc' is not facet-valid with respect to pattern 'urn(:[\\p{Ll}\\p{Nd}\\-._]+){3,5}' for type 'logical_identifier'."
+        },
+        {
+          "severity": "ERROR",
+          "type": "error.label.schema",
+          "line": 6,
+          "column": 25,
+          "message": "cvc-type.3.1.3: The value 'urn:nasa:pds-ama:sept_ama:new:00000.atmos_average_pstd_-_Copy.nc' of element 'logical_identifier' is not valid."
+        },
+        {
+          "severity": "ERROR",
+          "type": "error.label.schema",
+          "line": 420,
+          "column": 28,
+          "message": "cvc-complex-type.2.4.d: Invalid content was found starting with element 'Target_Identification'. No child element is expected at this point."
+        },
+        {
+          "severity": "ERROR",
+          "type": "error.label.schematron",
+          "line": 423,
+          "column": 27,
+          "message": "The attribute reference_type must be set to one of the following values 'external_to_target'."
+        }
+      ],
+      "fragments": [],
+      "dataContents": []
+    },
+    {
+      "status": "FAIL",
+      "label": "file:/home/rupakdey/elsa/ELSA-sven/archive/rupakdey/sept_ama_bundle/new/collection_sept_ama_new.xml",
+      "lidvid": "urn:nasa:pds-ama:sept_ama:new::1.0",
+      "messages": [
+        {
+          "severity": "ERROR",
+          "type": "error.label.schematron",
+          "line": 29,
+          "column": 27,
+          "message": "The attribute reference_type must be set to one of the following values 'collection_to_target'."
+        },
+        {
+          "severity": "ERROR",
+          "type": "error.label.schematron",
+          "line": 4,
+          "column": 24,
+          "message": "In Product_Collection both Citation_Information and its description are required."
+        }
+      ],
+      "fragments": [],
+      "dataContents": []
+    }
+  ],
+  "pDS4BundleLevelValidationResults": [
+    {
+      "status": "FAIL",
+      "label": "file:/home/rupakdey/elsa/ELSA-sven/archive/rupakdey/sept_ama_bundle/document//",
+      "lidvid": "",
+      "messages": [
+        {
+          "severity": "ERROR",
+          "type": "error.file.name_has_invalid_characters",
+          "message": "File name uses invalid character"
+        }
+      ],
+      "fragments": [],
+      "dataContents": []
+    },
+    {
+      "status": "PASS",
+      "label": "file:/home/rupakdey/elsa/ELSA-sven/archive/rupakdey/sept_ama_bundle/new/collection_sept_ama_new.xml",
+      "lidvid": "urn:nasa:pds-ama:sept_ama:new::1.0",
+      "messages": [],
+      "fragments": [],
+      "dataContents": []
+    },
+    {
+      "status": "FAIL",
+      "label": "file:/home/rupakdey/elsa/ELSA-sven/archive/rupakdey/sept_ama_bundle/document/collection_sept_ama_document.xml",
+      "lidvid": "urn:nasa:pds-ama:sept_ama:document::1.0",
+      "messages": [
+        {
+          "severity": "ERROR",
+          "type": "error.validation.internal_error",
+          "message": "Uncaught exception while validating: Could not retrieve a data file name using the following XPath: //*[starts-with(name(),'File_Area')]/File/file_name"
+        }
+      ],
+      "fragments": [],
+      "dataContents": []
+    },
+    {
+      "status": "PASS",
+      "label": "file:/home/rupakdey/elsa/ELSA-sven/archive/rupakdey/sept_ama_bundle/bundle_sept_ama.xml",
+      "lidvid": "urn:nasa:pds-ama:sept_ama::1.0",
+      "messages": [],
+      "fragments": [],
+      "dataContents": []
+    },
+    {
+      "status": "PASS",
+      "label": "file:/home/rupakdey/elsa/ELSA-sven/archive/rupakdey/sept_ama_bundle/new/00000.atmos_average_pstd_-_Copy.xml",
+      "lidvid": "urn:nasa:pds-ama:sept_ama:new:00000.atmos_average_pstd_-_Copy.nc::1.0",
+      "messages": [],
+      "fragments": [],
+      "dataContents": []
+    }
+  ],
+  "summary": {
+    "totalProducts": 4,
+    "totalErrors": 49,
+    "totalWarnings": 0,
+    "productValidation": {
+      "passed": "0",
+      "failed": "4",
+      "skipped": "0",
+      "total": "4"
+    },
+    "referentialIntegrity": {
+      "passed": "3",
+      "failed": "1",
+      "skipped": "0",
+      "total": "4"
+    },
+    "messageTypes": [
+      {
+        "messageType": "error.file.name_has_invalid_characters",
+        "total": "1"
+      },
+      {
+        "messageType": "error.label.context_ref_not_found",
+        "total": "1"
+      },
+      {
+        "messageType": "error.label.schema",
+        "total": "31"
+      },
+      {
+        "messageType": "error.label.schematron",
+        "total": "14"
+      },
+      {
+        "messageType": "error.validation.internal_error",
+        "total": "2"
+      }
+    ]
+  }
+}

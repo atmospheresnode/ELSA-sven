@@ -1,0 +1,145 @@
+{
+  "title": "PDS Validation Tool Report",
+  "configuration": {
+    "version": "4.2.0",
+    "date": "2026-09-11T07:07:46Z",
+    "cliArgs": "-R pds4.bundle -t /home/rupakdey/elsa/ELSA-sven/archive/rupakdey/septem_ama_bundle -r /home/rupakdey/elsa/ELSA-sven/validation/reports/run-51.json -s json --progressN 1 -C /home/rupakdey/elsa/ELSA-sven/validation/catalog.xml --skip-content-validation"
+  },
+  "parameters": {
+    "targets": "[file:/home/rupakdey/elsa/ELSA-sven/archive/rupakdey/septem_ama_bundle/]",
+    "ruleType": "pds4.bundle",
+    "userSpecifiedCatalogs": "[/home/rupakdey/elsa/ELSA-sven/validation/catalog.xml]",
+    "severityLevel": "WARNING",
+    "recurseDirectories": "true",
+    "fileFiltersUsed": "[*.xml, *.XML]",
+    "dataContentValidation": "off",
+    "productLevelValidation": "on",
+    "allowUnlabeledFiles": "false",
+    "skipStrictCollectionMembership": "false",
+    "maxErrors": "100000",
+    "registeredContextsFile": "/tmp/claude-764777/-home-rupakdey-elsa/c69501ac-d176-49bb-b2bc-f1a1a1e11c5f/scratchpad/validate-4.2.0/resources/registered_context_products.json"
+  },
+  "productLevelValidationResults": [
+    {
+      "status": "FAIL",
+      "label": "file:/home/rupakdey/elsa/ELSA-sven/archive/rupakdey/septem_ama_bundle/bundle_septem_ama.xml",
+      "lidvid": "urn:nasa:pds-ama:septem_ama::1.0",
+      "messages": [
+        {
+          "severity": "ERROR",
+          "type": "error.label.schematron",
+          "line": 4,
+          "column": 24,
+          "message": "In Product_Bundle both Citation_Information and its description are required."
+        },
+        {
+          "severity": "WARNING",
+          "type": "warning.label.context_ref_mismatch",
+          "line": 16,
+          "message": "Context reference name mismatch. LIDVID: 'urn:nasa:pds:context:investigation:individual.atmospheric_modeling_annex'. Value: 'Atmospheric Modeling Annex' Expected one of: '[Atmospheric Modeling Annex Individual Investigation]'"
+        }
+      ],
+      "fragments": [],
+      "dataContents": []
+    },
+    {
+      "status": "FAIL",
+      "label": "file:/home/rupakdey/elsa/ELSA-sven/archive/rupakdey/septem_ama_bundle/document/collection_septem_ama_document.xml",
+      "lidvid": "urn:nasa:pds-ama:septem_ama:document::1.0",
+      "messages": [
+        {
+          "severity": "ERROR",
+          "type": "error.label.schema",
+          "line": 33,
+          "column": 16,
+          "message": "cvc-minInclusive-valid: Value '0' is not facet-valid with respect to minInclusive '1' for type 'records'."
+        },
+        {
+          "severity": "ERROR",
+          "type": "error.label.schema",
+          "line": 33,
+          "column": 16,
+          "message": "cvc-type.3.1.3: The value '0' of element 'records' is not valid."
+        },
+        {
+          "severity": "ERROR",
+          "type": "error.label.schema",
+          "line": 39,
+          "column": 44,
+          "message": "cvc-minInclusive-valid: Value '0' is not facet-valid with respect to minInclusive '1' for type 'maximum_record_length_WO_Units'."
+        },
+        {
+          "severity": "ERROR",
+          "type": "error.label.schema",
+          "line": 39,
+          "column": 44,
+          "message": "cvc-complex-type.2.2: Element 'maximum_record_length' must have no element [children], and the value must be valid."
+        },
+        {
+          "severity": "ERROR",
+          "type": "error.label.schematron",
+          "line": 4,
+          "column": 24,
+          "message": "In Product_Collection both Citation_Information and its description are required."
+        },
+        {
+          "severity": "WARNING",
+          "type": "warning.label.context_ref_mismatch",
+          "line": 16,
+          "message": "Context reference name mismatch. LIDVID: 'urn:nasa:pds:context:investigation:individual.atmospheric_modeling_annex'. Value: 'Atmospheric Modeling Annex' Expected one of: '[Atmospheric Modeling Annex Individual Investigation]'"
+        }
+      ],
+      "fragments": [],
+      "dataContents": []
+    }
+  ],
+  "pDS4BundleLevelValidationResults": [
+    {
+      "status": "PASS",
+      "label": "file:/home/rupakdey/elsa/ELSA-sven/archive/rupakdey/septem_ama_bundle/document/collection_septem_ama_document.xml",
+      "lidvid": "urn:nasa:pds-ama:septem_ama:document::1.0",
+      "messages": [],
+      "fragments": [],
+      "dataContents": []
+    },
+    {
+      "status": "PASS",
+      "label": "file:/home/rupakdey/elsa/ELSA-sven/archive/rupakdey/septem_ama_bundle/bundle_septem_ama.xml",
+      "lidvid": "urn:nasa:pds-ama:septem_ama::1.0",
+      "messages": [],
+      "fragments": [],
+      "dataContents": []
+    }
+  ],
+  "summary": {
+    "totalProducts": 2,
+    "totalErrors": 6,
+    "totalWarnings": 2,
+    "productValidation": {
+      "passed": "0",
+      "failed": "2",
+      "skipped": "0",
+      "total": "2"
+    },
+    "referentialIntegrity": {
+      "passed": "2",
+      "failed": "0",
+      "skipped": "0",
+      "total": "2"
+    },
+    "messageTypes": [
+      {
+        "messageType": "error.label.schema",
+        "total": "4"
+      },
+      {
+        "messageType": "error.label.schematron",
+        "total": "2"
+      },
+      {
+        "messageType": "warning.label.context_ref_mismatch",
+        "total": "2"
+      }
+    ]
+  }
+}

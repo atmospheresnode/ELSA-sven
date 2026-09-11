@@ -23,6 +23,7 @@ from .chocolate import *
 # from context.models import *
 from shutil import *
 import datetime
+import re
 import shutil
 import os
 import copy
@@ -130,63 +131,26 @@ class Version(models.Model):
     """
 
     def with_dots(self, number):
-        version_number = number
-        new_number = ""
-        i = 0
+        # PDS4 encodes a version component of 10 or greater as a single letter,
+        # so that every build number stays four characters wide: A=10, B=11,
+        # ... O=24, ... Z=35. Build 1O00 is therefore information model
+        # version 1.24.0.0, and 1800 is 1.8.0.0.
+        #
+        # This used to be a hand-written branch per letter, and it stopped at K.
+        # Anything past that fell through every branch and was dropped silently, so
+        # 1O00 -- the version ELSA writes today -- came out as "1.0.0" instead of
+        # "1.24.0.0", and 1Q00 would do the same.
+        components = []
 
-        while(i < 4):
-            if number[i].isalpha() is False:
-                new_number = new_number + number[i] + "."
+        for character in number:
+            if character.isalpha():
+                components.append(
+                    str(10 + ord(character.upper()) - ord('A')))
             else:
-                if number[i] == 'D':
-                    new_number = new_number + '13' + "."
-                if number[i] == 'E':
-                    new_number = new_number + '14' + "."
-                if number[i] == 'F':
-                    new_number = new_number + '15' + "."
-                if number[i] == 'G':
-                    new_number = new_number + '16' + "."
-                if number[i] == 'H':
-                    new_number = new_number + '17' + "."
-                if number[i] == 'I':
-                    new_number = new_number + '18' + "."
-                if number[i] == 'J':
-                    new_number = new_number + '19' + "."
-                if number[i] == 'K':
-                    new_number = new_number + '20' + "."
-            i = i + 1
-
-        '''
-        # Add a period after each digit.  Ex: 1234 -> 1.2.3.4.
-        for each_digit in version_number:
-            print new_number
-            if each_digit.isalpha() is False:
-                new_number = new_number + each_digit + "."#'{0}{1}{2}'.format(new_number, each_digit, '.')
-            else:
-                print type(each_digit)
-                if each_digit is "A":
-                    print each_digit
-                    new_number = '{0}{1}{2}'.format(new_number, '10', '.')
-                elif each_digit is 'B':
-                    new_number = '{0}{1}{2}'.format(new_number, '11', '.')
-                elif each_digit is 'C':
-                    new_number = '{0}{1}{2}'.format(new_number, '12', '.')
-                elif each_digit is 'D':
-                    new_number = '{0}{1}{2}'.format(new_number, '13', '.')
-                elif each_digit is 'E':
-                    new_number = '{0}{1}{2}'.format(new_number, '14', '.')
-                elif each_digit is 'F':
-                    new_number = '{0}{1}{2}'.format(new_number, '15', '.')
-                elif each_digit is 'G':
-                    new_number = '{0}{1}{2}'.format(new_number. '16', '.')
-        '''
-        print(new_number)
-
-        # Remove the last period. Ex: 1.2.3.4. -> 1.2.3.4
-        new_number = new_number[:-1]
+                components.append(character)
 
         # Number is now formatted to pds standard, so return it.
-        return new_number
+        return '.'.join(components)
 
     """
         fill_xml_schema takes in the root of a label (ex tags: Product_Bundle, Product_Collection)
@@ -286,28 +250,27 @@ class Version(models.Model):
 
         print(inFile)
 
-        # change the version number
-        while j <= len(fileText):
-            chunk = fileText[j:j+4]
-            if chunk == "AAAA":
+        # A label that has already been stamped, or a template that never carried a
+        # placeholder, is a copy rather than a substitution. Only say so; not an error.
+        if 'AAAA' not in fileText:
+            print(inFile + " has no 'AAAA' placeholder; copying its version as pinned.")
 
-                if i == 2:
-                    fileText = list(fileText)
-                    fileText[j:j+4] = self.with_dots(number)
-                    fileText = "".join(fileText)
-                    break
+        # information_model_version holds the dotted form of the version (1.24.0.0);
+        # every other placeholder is part of a schema or schematron filename and holds
+        # the four-character build number (1O00). Fill the dotted one first so the
+        # blanket replace below cannot claim it.
+        #
+        # Keyed off the tag rather than off the placeholder's position in the file.
+        # This used to walk the text counting occurrences of AAAA and treat the third
+        # one as the dotted field, which is only right for templates that carry
+        # exactly the expected number of placeholders in exactly the expected order.
+        fileText = re.sub(
+            r'(<(?:\w+:)?information_model_version>)AAAA(</(?:\w+:)?information_model_version>)',
+            r'\g<1>{}\g<2>'.format(self.with_dots(number)),
+            fileText)
 
-                fileText = list(fileText)
-                fileText[j:j+4] = number
-                fileText = "".join(fileText)
-                i += 1
-            j += 1
-            # prevents the while loop from looping infinately should the if statement fail
-            if j >= len(fileText):
-                print("No keyword found. Check the templates for the phrase 'AAAA'.")
-                break
-
-        print(fileText)
+        # change the version number everywhere else
+        fileText = fileText.replace('AAAA', number)
 
         # write the new bundle and collection to the xmls
 
