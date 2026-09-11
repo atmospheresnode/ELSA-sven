@@ -212,3 +212,82 @@ class AutoRecheckOnChangeTests(TestCase):
         shutil.rmtree(self.bundle.directory(), ignore_errors=True)
         run.refresh_from_db()
         self.assertFalse(run.is_stale())
+
+
+@override_settings(VALIDATE_AUTO_CHECK=True)
+class PanelRefreshesItselfTests(AutoRecheckOnChangeTests):
+    """The panel replaces its own contents when a check finishes.
+
+    It used to say "Results updated. Refresh to see the details", which asked someone
+    to reload a page to be shown a result the server already had. Reloading is not the
+    alternative: this code did reload once, and a reload firing while a NetCDF upload
+    was in flight tore the request down with the progress bar still saying
+    "Processing".
+    """
+
+    def panel(self):
+        response = self.client.get(
+            reverse('build:validation_panel', args=[self.bundle.pk]))
+        self.assertEqual(response.status_code, 200)
+        return response
+
+    def record_findings(self, findings):
+        run = ValidationRun.objects.create(
+            bundle=self.bundle, tier=ValidationRun.TIER_STRUCTURE,
+            status=ValidationRun.STATUS_DONE, phase=ValidationRun.PHASE_DONE,
+            products_total=2, products_done=2, findings=findings,
+            error_count=len(findings),
+            bundle_updated_at=self.bundle.updated_at,
+            content_fingerprint=self.bundle.content_fingerprint())
+        ValidationRun.objects.filter(pk=run.pk).update(finished_at=timezone.now())
+        return run
+
+    def test_the_fetched_panel_shows_the_newest_run(self):
+        """The whole point: what comes back is the result, not a prompt to reload."""
+        citation = {
+            'severity': 'ERROR', 'type': 'error.label.schematron',
+            'message': 'In Product_Bundle both Citation_Information and its '
+                       'description are required.',
+            'label': 'b.xml', 'label_path': '/b.xml', 'line': 1,
+            'element_path': 'Product_Bundle/Identification_Area'}
+        self.record_findings([citation])
+        self.assertContains(self.panel(), 'Add Citation Information')
+
+        ValidationRun.objects.all().delete()
+        self.record_findings([])
+        response = self.panel()
+        self.assertNotContains(response, 'Add Citation Information')
+
+    def test_the_swapped_region_is_self_contained(self):
+        """Everything the page replaces comes back in one element."""
+        self.record_findings([])
+        body = self.panel().content.decode()
+        self.assertIn('id="preflight_body"', body)
+        self.assertIn('<!-- /preflight_body -->', body)
+        region = body.split('id="preflight_body"')[1].split('<!-- /preflight_body -->')[0]
+        for element in ('preflight_progress', 'preflight_results', 'preflight_updated'):
+            self.assertIn(element, region,
+                          '{} is outside the region the page swaps'.format(element))
+
+    def test_the_panel_fetches_instead_of_reloading(self):
+        """Reloading aborts an upload in flight; that bug is not coming back.
+
+        Scoped to the panel's own script, because the page reloads elsewhere for
+        reasons that have nothing to do with validation.
+        """
+        with open('templates/build/bundle/bundle.html', encoding='utf-8') as handle:
+            text = handle.read()
+        start = text.index('Pre-flight check: start a run')
+        panel_script = text[start:text.index('</script>', start)]
+
+        self.assertNotIn(
+            'window.location.reload', panel_script,
+            'the validation panel reloads the page, which aborts an upload in flight')
+        self.assertIn('refreshPanel', panel_script,
+                      'the panel no longer refreshes itself')
+
+    def test_the_panel_is_told_where_to_fetch_itself_from(self):
+        self.record_findings([])
+        page = self.client.get(reverse('build:bundle', args=[self.bundle.pk]))
+        self.assertContains(
+            page, reverse('build:validation_panel', args=[self.bundle.pk]))

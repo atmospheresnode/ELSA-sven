@@ -4,10 +4,10 @@
      build/models.py#Bundle                = f0f1ab10d36c
      build/models.py#AdditionalCollections = 6f67e205c8a6
      build/models.py#NetCDFFile            = 83f3987e85ee
-     templates/build/bundle/bundle.html    = 3be92705d11d
+     templates/build/bundle/bundle.html    = 0a7809ac2938
 -->
 <!-- reviewed: 2026-09-11 -->
-<!-- baseline: 618b92907da0069495e21af468dcb703b045929f -->
+<!-- baseline: 4e0bb4b450ce5c2b934c567a62ac47485cca1529 -->
 # External Bundle Workflow (AMA)
 
 External bundles are ELSA's lighter-weight bundle type, used for the Atmospheres
@@ -49,7 +49,11 @@ label counts: adding, editing or deleting a citation, a modification history, an
 alias, a document, a collection or a NetCDF file. Whether a result is still
 current is decided by the bundle's files rather than by a timestamp, so simply
 opening or reloading the page never starts a check, and a change always does. A
-run makes the result match the files again, so it settles instead of repeating. Items listed under "Need your attention" have to be
+run makes the result match the files again, so it settles instead of repeating.
+
+When a check finishes, the window updates itself. It does not ask anyone to
+reload the page, and it must not: a reload would abort a NetCDF upload that was
+in progress, which is a bug this already had once. Items listed under "Need your attention" have to be
 resolved before the bundle can be submitted for review; items under "Worth
 reviewing" are advisory and do not stop a submission. Problems caused by ELSA
 itself rather than by the user are not shown in the first tab; they go to the

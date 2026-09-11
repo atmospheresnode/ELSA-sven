@@ -141,6 +141,7 @@ urlpatterns = [
     # in the wild before anything is shown to data providers.
     re_path(r'^(?P<pk_bundle>\d+)/validate/start/$', views.start_validation, name='start_validation'),
     re_path(r'^(?P<pk_bundle>\d+)/validate/status/$', views.validation_status, name='validation_status'),
+    re_path(r'^(?P<pk_bundle>\d+)/validate/panel/$', views.validation_panel, name='validation_panel'),
     re_path(r'^validation/runs/$', views.validation_runs, name='validation_runs'),
     re_path(r'^validation/run/(?P<pk_run>\d+)/$', views.validation_report, name='validation_report'),
 

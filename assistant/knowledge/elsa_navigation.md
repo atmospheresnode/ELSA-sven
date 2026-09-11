@@ -3,10 +3,10 @@
      templates/base-derk.html#nav      = 568cd6ce6baa
      friends/views.py#bundle_hub       = 02a643915c11
      templates/friends/bundle_hub.html = 1769e80d5787
-     build/urls.py                     = 54518287f294
+     build/urls.py                     = 6226f790128d
 -->
-<!-- reviewed: 2026-09-10 -->
-<!-- baseline: c85a5ab77a0ce5702756bef4326b6fb4ae3e2e3f -->
+<!-- reviewed: 2026-09-11 -->
+<!-- baseline: 4e0bb4b450ce5c2b934c567a62ac47485cca1529 -->
 # Navigating ELSA
 
 Key pages:

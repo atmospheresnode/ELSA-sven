@@ -382,6 +382,67 @@ class PreflightPanelTests(TestCase):
         self.assertIsNone(page.context['validation_block'])
         self.assertNotContains(page, 'Run the PDS validation check before submitting')
 
+    # -- refreshing itself -------------------------------------------------------
+
+    def test_the_panel_can_be_fetched_on_its_own(self):
+        """What the page swaps in when a check finishes."""
+        self.run_with([CITATION])
+        response = self.client.get(
+            reverse('build:validation_panel', args=[self.bundle.pk]))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'preflight_body')
+        self.assertContains(response, 'Add Citation Information')
+
+    def test_the_fetched_panel_matches_what_the_page_renders(self):
+        """Both come from one context builder, so they cannot drift apart."""
+        self.run_with([CITATION, EMPTY_COLLECTION])
+        partial = self.client.get(
+            reverse('build:validation_panel', args=[self.bundle.pk]))
+        page = self.page()
+        for key in ('validation_summary', 'validation_raw_total'):
+            self.assertEqual(partial.context[key], page.context[key], key)
+        self.assertEqual(
+            [name for name, _ in partial.context['validation_cards']],
+            [name for name, _ in page.context['validation_cards']])
+
+    def test_the_fetched_panel_carries_the_swappable_region(self):
+        """The page replaces this element's contents and nothing else."""
+        self.run_with([CITATION])
+        body = self.client.get(
+            reverse('build:validation_panel', args=[self.bundle.pk])).content.decode()
+        self.assertIn('id="preflight_body"', body)
+
+    def test_the_run_button_is_outside_the_swapped_region(self):
+        """Replacing it would throw away the click handler bound to it."""
+        body = self.page().content.decode()
+        region = body.split('id="preflight_body"')[1].split('<!-- /preflight_body -->')[0]
+        self.assertIn('<!-- /preflight_body -->', body,
+                      'the boundary marker is gone, so this test proves nothing')
+        self.assertNotIn('id="preflight_run"', region)
+
+    def test_nobody_is_asked_to_refresh_the_page(self):
+        """The panel used to say "Refresh to see the details"."""
+        self.run_with([CITATION])
+        page = self.page()
+        self.assertNotContains(page, 'Refresh to see the details')
+        self.assertNotContains(page, 'window.location.reload(); return false;')
+
+    def test_another_user_cannot_fetch_the_panel(self):
+        self.run_with([CITATION])
+        other = User.objects.create_user('panelthief', password='pw')
+        self.client.force_login(other)
+        response = self.client.get(
+            reverse('build:validation_panel', args=[self.bundle.pk]))
+        self.assertNotEqual(response.status_code, 200)
+
+    def test_fetching_the_panel_starts_nothing(self):
+        """It is fetched whenever a check finishes; it must not start another."""
+        self.run_with([CITATION])
+        before = ValidationRun.objects.count()
+        with override_settings(VALIDATE_AUTO_CHECK=True):
+            self.client.get(reverse('build:validation_panel', args=[self.bundle.pk]))
+        self.assertEqual(ValidationRun.objects.count(), before)
+
     # -- the controls ------------------------------------------------------------
 
     def test_the_panel_offers_to_run_a_check(self):

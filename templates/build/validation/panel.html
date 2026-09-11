@@ -12,7 +12,14 @@ ever reports failures is one people avoid opening.
 Nothing here starts work on page load. Running a check is an explicit action.
 {% endcomment %}
 
-      {% if validation_run and validation_run.is_stale %}
+      {% comment %}
+   Everything above the Check button lives in one container, because that is the
+   part the page replaces when a check finishes. The button stays put so the click
+   handler bound to it survives the swap.
+{% endcomment %}
+<div id="preflight_body">
+
+{% if validation_run and validation_run.is_stale %}
       <div class="alert alert-warning py-2 px-3 small mb-3" id="preflight_stale">
          <strong>These results are out of date.</strong>
          The bundle changed after this check ran, so some items may already be fixed.
@@ -46,10 +53,13 @@ Nothing here starts work on page load. Running a check is an explicit action.
       </div>
 
       {# --- results ------------------------------------------------------- #}
+      {% comment %}
+         Says what changed, not what to do about it: the details below are already
+         the new ones by the time this appears.
+      {% endcomment %}
       <div id="preflight_updated" class="alert alert-success py-2 px-3 small mb-3" hidden>
          <strong>Results updated.</strong>
          <span id="preflight_summary_counts"></span>
-         <a href="" onclick="window.location.reload(); return false;">Refresh to see the details.</a>
       </div>
 
       {% if validation_summary %}
@@ -299,10 +309,13 @@ Nothing here starts work on page load. Running a check is an explicit action.
       </div>{# /tab-content #}
       {% endif %}
 
+</div><!-- /preflight_body -->
+
       <button type="button" class="btn btn-sm btn-outline-secondary w-100 mt-2"
               id="preflight_run"
               data-status-url="{% url 'build:validation_status' bundle.pk %}"
               data-start-url="{% url 'build:start_validation' bundle.pk %}"
+              data-panel-url="{% url 'build:validation_panel' bundle.pk %}"
               {% if validation_auto_check %}data-auto-check="1"{% endif %}>
    {% if validation_run %}Check again{% else %}Check this bundle{% endif %}
 </button>

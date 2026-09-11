@@ -41,6 +41,51 @@ from django.utils.timezone import localtime
 #
 # -------------------------------------------------------------------------------------------------- #
 @login_required
+def validation_context(bundle, user):
+    """Everything the PDS validation panel needs to render.
+
+    Shared by the bundle page and by the partial the page fetches when a check
+    finishes, so the two cannot drift: the panel that replaces itself is rendered by
+    the same code that rendered it in the first place.
+
+    Read-only and cheap. The most recent run is looked up and its stored findings
+    translated; nothing is started. Running a check is an explicit POST.
+    """
+    latest_validation = validate_runner.latest_run_for(bundle)
+    context = {
+        'validation_run': latest_validation,
+        # Whether the page should start a check for itself once it has loaded. The
+        # view does not start one: rendering a bundle must never spawn a JVM, or a
+        # crawler would.
+        'validation_auto_check': validate_runner.should_auto_check(bundle),
+        # Why submission is blocked, if it is, so the page can say so in the same
+        # words the view would use when refusing.
+        'validation_block': validate_runner.submission_block(bundle, user),
+        'validation_summary': None,
+        'validation_cards': [],
+        'validation_advisory': [],
+        'validation_raw': [],
+        'validation_raw_total': 0,
+    }
+
+    if latest_validation is not None and latest_validation.findings:
+        findings = latest_validation.findings
+        context['validation_summary'] = validate_rules.summarise(findings)
+        context['validation_cards'] = validate_rules.cards(findings)
+        context['validation_advisory'] = validate_rules.translate(findings)['advisory']
+        # The raw output, for the second tab. Everything PDS reported, including the
+        # findings the translation hides, grouped by the label each came from. Shown
+        # to the bundle's owner, not just staff: the point of offering it is that
+        # nobody has to take the translation on trust.
+        raw = {}
+        for finding in findings:
+            raw.setdefault(finding['label'] or 'bundle', []).append(finding)
+        context['validation_raw'] = sorted(raw.items())
+        context['validation_raw_total'] = len(findings)
+
+    return context
+
+
 def bundle_label_targets(bundle):
     """Every collection label a bundle-level metadata edit has to reach.
 
@@ -1092,39 +1137,7 @@ def bundle(request, pk_bundle):
         context_dict['status_dict'] = status_dict
         context_dict['file_tree'] = file_tree
 
-        # Pre-flight panel. Everything here is read-only and cheap: the most recent
-        # run is looked up, its stored findings are translated, and nothing is
-        # started. Running a check is an explicit POST from the page.
-        latest_validation = validate_runner.latest_run_for(bundle)
-        context_dict['validation_run'] = latest_validation
-        # Whether the page should start a check for itself once it has loaded. The
-        # view does not start one: rendering a bundle must never spawn a JVM, or a
-        # crawler would.
-        context_dict['validation_auto_check'] = validate_runner.should_auto_check(bundle)
-        # Why submission is blocked, if it is, so the page can say so in the same
-        # words the view would use when refusing.
-        context_dict['validation_block'] = validate_runner.submission_block(
-            bundle, request.user)
-        if latest_validation is not None and latest_validation.findings:
-            findings = latest_validation.findings
-            context_dict['validation_summary'] = validate_rules.summarise(findings)
-            context_dict['validation_cards'] = validate_rules.cards(findings)
-            context_dict['validation_advisory'] = validate_rules.translate(findings)['advisory']
-            # The raw output, for the second tab. Everything PDS reported, including
-            # the findings the translation hides, grouped by the label each came
-            # from. Shown to the bundle's owner, not just staff: the point of
-            # offering it is that nobody has to take the translation on trust.
-            raw = {}
-            for finding in findings:
-                raw.setdefault(finding['label'] or 'bundle', []).append(finding)
-            context_dict['validation_raw'] = sorted(raw.items())
-            context_dict['validation_raw_total'] = len(findings)
-        else:
-            context_dict['validation_summary'] = None
-            context_dict['validation_cards'] = []
-            context_dict['validation_advisory'] = []
-            context_dict['validation_raw'] = []
-            context_dict['validation_raw_total'] = 0
+        context_dict.update(validation_context(bundle, request.user))
 
         # To handle NetCDF files
         # if form_netcdf.is_valid():
@@ -5966,6 +5979,36 @@ def validation_status(request, pk_bundle):
         return JsonResponse({'status': 'none'})
 
     return JsonResponse(_validation_state(validation_run))
+
+
+@login_required
+def validation_panel(request, pk_bundle):
+    """The validation panel's contents, rendered fresh, for the page to swap in.
+
+    When a check finishes the panel used to say "Results updated. Refresh to see the
+    details", which asked someone to reload a page in order to see a result the
+    server already had.
+
+    A page reload is not the fix. This used to reload, and it broke NetCDF uploads:
+    a check starts by itself on page load, the upload posts over XMLHttpRequest, and
+    a reload firing mid-upload tore the request down with the progress bar still
+    saying "Processing". Nothing the user did was wrong and nothing told them what
+    had happened.
+
+    So the page fetches this instead and replaces the panel's contents in place.
+    Nothing else on the page is disturbed, an upload in flight stays in flight, and
+    the rendering happens once, here, rather than being duplicated in JavaScript
+    where it would drift from the template.
+    """
+    bundle = get_object_or_404(Bundle, pk=pk_bundle)
+
+    if request.user != bundle.user:
+        print('unauthorized user attempting to access a restricted area.')
+        return redirect('main:restricted_access')
+
+    context = validation_context(bundle, request.user)
+    context['bundle'] = bundle
+    return render(request, 'build/validation/panel.html', context)
 
 
 def _validation_state(validation_run):

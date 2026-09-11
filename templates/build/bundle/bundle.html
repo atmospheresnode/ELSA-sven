@@ -5487,6 +5487,7 @@ so a page that was not just uploaded to never shows it.{% endcomment %}
 
    var statusUrl = button.getAttribute('data-status-url');
    var startUrl  = button.getAttribute('data-start-url');
+   var panelUrl  = button.getAttribute('data-panel-url');
    var polling   = null;
 
    function token() {
@@ -5531,29 +5532,75 @@ so a page that was not just uploaded to never shows it.{% endcomment %}
       if (polling) { window.clearInterval(polling); polling = null; }
    }
 
-   /* Never reloads the page.
+   /* Replaces the panel's contents, and never reloads the page.
     *
-    * It used to, so the results could be rendered once in the template rather than
-    * twice. That was wrong in a way that only shows up in use: a check starts by
+    * It used to reload, so the results could be rendered once in the template rather
+    * than twice. That was wrong in a way that only shows up in use: a check starts by
     * itself when the page loads, and the NetCDF upload posts over XMLHttpRequest.
     * If someone began an upload during the few seconds a check was running, the
     * reload tore the page down mid-request and the upload was aborted with its
     * progress bar still saying "Processing". Nothing the user did was wrong and
     * nothing told them what had happened.
     *
-    * So the counts update in place and the details wait to be asked for. Taking a
-    * page out from under someone is never worth saving them a click. */
-   function finish(state) {
-      showProgress(false);
+    * The counts then updated in place and the details waited behind a "Refresh to
+    * see the details" link, which asked someone to reload a page to be shown a
+    * result the server already had.
+    *
+    * So the new contents are fetched and swapped in. The rendering still happens
+    * once, in the template, and nothing else on the page is disturbed: an upload in
+    * flight stays in flight. */
+   function refreshPanel(state) {
+      if (!panelUrl) { return; }
+      fetch(panelUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+         .then(function (response) {
+            if (!response.ok) { throw new Error('panel ' + response.status); }
+            return response.text();
+         })
+         .then(function (html) {
+            var body = document.getElementById('preflight_body');
+            if (!body) { return; }
+            /* Parsed rather than assigned wholesale, so a reply that is not the panel
+             * (a login redirect, an error page) replaces nothing. */
+            var parsed = new DOMParser().parseFromString(html, 'text/html');
+            var fresh = parsed.getElementById('preflight_body');
+            if (!fresh) { return; }
+            body.innerHTML = fresh.innerHTML;
 
+            /* Bootstrap's tab and modal behaviour is delegated from the document, so
+             * the swapped-in tabs work without re-binding. Tooltips are not: they are
+             * instantiated per element. */
+            if (window.bootstrap && bootstrap.Tooltip) {
+               body.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(
+                  function (el) { bootstrap.Tooltip.getOrCreateInstance(el); });
+            }
+
+            /* Said after the swap, into the panel that is now on the page. Saying it
+             * before would be pointless: the swap replaces the element it is in. */
+            if (state) { announce(state); }
+         })
+         .catch(function () {
+            /* The counts in the banner are already correct and the button still
+             * works, so a failed refresh leaves a usable panel rather than a broken
+             * one. */
+         });
+   }
+
+   /* A short confirmation that something happened, for the case where the new panel
+    * looks much like the old one and the change would otherwise be easy to miss. */
+   function announce(state) {
       var summary = document.getElementById('preflight_summary_counts');
       if (summary) {
          summary.textContent = state.errors + ' error' + (state.errors === 1 ? '' : 's')
-            + ', ' + state.warnings + ' warning' + (state.warnings === 1 ? '' : 's');
+            + ', ' + state.warnings + ' warning' + (state.warnings === 1 ? '' : 's')
+            + '.';
       }
-
       var notice = document.getElementById('preflight_updated');
       if (notice) { notice.hidden = false; }
+   }
+
+   function finish(state) {
+      showProgress(false);
+      refreshPanel(state);
 
       /* state.blocking is the translated count, the same number the template rendered
        * into the badge. Using state.errors here instead would make the badge jump the
