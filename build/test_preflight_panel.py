@@ -281,3 +281,31 @@ class ExplainButtonTests(TestCase):
         """The assistant runs on a quota; an explanation per finding would exhaust it."""
         body = self.page().content.decode()
         self.assertNotIn('elsaAssistant.ask(', body.split('preflight-explain')[0])
+
+
+class NeverReloadsThePageTests(TestCase):
+    """The validation panel must never reload the page by itself.
+
+    It did, so the results could be rendered once in the template rather than twice.
+    That broke NetCDF uploads in a way only visible in use: a check starts by itself
+    on page load, the upload posts over XMLHttpRequest, and a reload during those few
+    seconds aborted the upload with its progress bar still saying "Processing". No
+    row was created and nothing told the user why.
+    """
+
+    def test_the_panel_script_does_not_reload_on_completion(self):
+        with open('templates/build/bundle/bundle.html', encoding='utf-8') as handle:
+            text = handle.read()
+
+        start = text.index('Pre-flight check: start a run')
+        end = text.index('</script>', start)
+        panel_script = text[start:end]
+
+        self.assertNotIn(
+            'window.location.reload', panel_script,
+            'the validation panel reloads the page, which aborts an upload in flight')
+
+    def test_the_upload_still_posts_over_xhr(self):
+        """The reason the reload mattered. If this ever changes, revisit the rule."""
+        with open('templates/build/bundle/bundle.html', encoding='utf-8') as handle:
+            self.assertIn('new XMLHttpRequest', handle.read())

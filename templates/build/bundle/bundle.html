@@ -5442,6 +5442,31 @@ so a page that was not just uploaded to never shows it.{% endcomment %}
       if (polling) { window.clearInterval(polling); polling = null; }
    }
 
+   /* Never reloads the page.
+    *
+    * It used to, so the results could be rendered once in the template rather than
+    * twice. That was wrong in a way that only shows up in use: a check starts by
+    * itself when the page loads, and the NetCDF upload posts over XMLHttpRequest.
+    * If someone began an upload during the few seconds a check was running, the
+    * reload tore the page down mid-request and the upload was aborted with its
+    * progress bar still saying "Processing". Nothing the user did was wrong and
+    * nothing told them what had happened.
+    *
+    * So the counts update in place and the details wait to be asked for. Taking a
+    * page out from under someone is never worth saving them a click. */
+   function finish(state) {
+      showProgress(false);
+
+      var summary = document.getElementById('preflight_summary_counts');
+      if (summary) {
+         summary.textContent = state.errors + ' error' + (state.errors === 1 ? '' : 's')
+            + ', ' + state.warnings + ' warning' + (state.warnings === 1 ? '' : 's');
+      }
+
+      var notice = document.getElementById('preflight_updated');
+      if (notice) { notice.hidden = false; }
+   }
+
    function poll() {
       fetch(statusUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
          .then(function (response) {
@@ -5453,9 +5478,7 @@ so a page that was not just uploaded to never shows it.{% endcomment %}
             render(state);
             if (state.finished) {
                stopPolling();
-               /* Reload so the results come from the template rather than being
-                * rebuilt here. Keeps one rendering of the findings, not two. */
-               window.location.reload();
+               finish(state);
             }
          })
          .catch(function () {
@@ -5484,7 +5507,7 @@ so a page that was not just uploaded to never shows it.{% endcomment %}
          })
          .then(function (state) {
             render(state);
-            if (state.finished) { window.location.reload(); return; }
+            if (state.finished) { finish(state); return; }
             polling = window.setInterval(poll, 1500);
          })
          .catch(function () {
