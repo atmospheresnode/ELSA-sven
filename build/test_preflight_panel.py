@@ -191,3 +191,29 @@ class PreflightPanelTests(TestCase):
         """Opening a bundle must not spawn a JVM."""
         self.page()
         self.assertEqual(ValidationRun.objects.filter(bundle=self.bundle).count(), 0)
+
+
+class TemplateHygieneTests(TestCase):
+    """Django's {# #} comment is single-line only.
+
+    A multi-line one is not a comment at all: it renders as visible text on the
+    page. This was live in the panel until the rendered output was actually read,
+    which is the argument for reading it rather than trusting the template.
+    """
+
+    TEMPLATES = [
+        'templates/build/validation/panel.html',
+        'templates/build/validation/report.html',
+        'templates/build/validation/runs.html',
+    ]
+
+    def test_no_multiline_hash_comments(self):
+        import re
+        for path in self.TEMPLATES:
+            with open(path, encoding='utf-8') as handle:
+                text = handle.read()
+            spans = re.findall(r'\{#(?:(?!#\}).)*?\n(?:(?!#\}).)*?#\}', text, re.S)
+            self.assertEqual(
+                spans, [],
+                '{} has a multi-line {{# #}} that will render as visible text; '
+                'use {{% comment %}}'.format(path))
