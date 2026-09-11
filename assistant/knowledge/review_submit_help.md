@@ -1,23 +1,29 @@
 <!-- watches: build/views.py#submit_bundle_internal, review/views.py, submit/views.py#submit_main, submit/views.py#upload_archive, submit/views.py#upload_external, tutorial/urls.py -->
 <!-- fingerprint:
-     build/views.py#submit_bundle_internal = 38fb2abcb00a
+     build/views.py#submit_bundle_internal = 5e1b847558a3
      review/views.py                       = b7483ad97eb6
      submit/views.py#submit_main           = 32904e6f1c1e
      submit/views.py#upload_archive        = d4b10fbe4906
      submit/views.py#upload_external       = 1f663bead378
      tutorial/urls.py                      = 7fdbf2eaa074
 -->
-<!-- reviewed: 2026-08-28 -->
-<!-- baseline: d8df4b96320a4636b7a95ac426bec7ff1a1fa839 -->
+<!-- reviewed: 2026-09-10 -->
+<!-- baseline: 53a876d190d2fda8754c58e5961ca30f356d9fbc -->
 # Review, Submission, and Getting Help
 
 Submitting a bundle: on the bundle page, the **Review & Submit** button opens a
-pre-flight checklist (required components on the left, bundle content, NetCDF
-files and documents, on the right). Once Modification History, Citation
-Information, and at least one Target are complete, the submit button activates.
-Submitting notifies the Atmospheres node staff by email; they review the bundle
-for PDS4 compliance and archive readiness. You can keep editing after
-submission and resubmit, the bundle page shows when it was last submitted.
+checklist (required components on the left, bundle content, NetCDF files and
+documents, on the right). Once Modification History, Citation Information, and
+at least one Target are complete, the submit button activates. Submitting
+notifies the Atmospheres node staff by email; they review the bundle for PDS4
+compliance and archive readiness. You can keep editing after submission and
+resubmit, the bundle page shows when it was last submitted.
+
+Submitting also starts a full PDS validation in the background, which reads
+inside the data files as well as checking the labels. It does not hold up the
+submission and does not block it: the result is recorded so node staff have it
+when they look. The quicker checks shown in the PDS Validation card while you
+work skip the data files, which is what makes them fast.
 
 There is also a Review area in ELSA with a bundle review form: reviewers fill
 it out, can save a draft and resume later (the draft is remembered in the
