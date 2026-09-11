@@ -144,6 +144,16 @@ def _environment():
     if java_home:
         environment['JAVA_HOME'] = java_home
         environment['PATH'] = os.path.join(java_home, 'bin') + os.pathsep + environment.get('PATH', '')
+
+    # Cap the heap. Left alone, Java sizes it from total system memory, so on a 62GB
+    # shared machine one validation can reserve far more than it will ever use -
+    # memory the services sharing the box then cannot have. validate reads JAVA_OPTS,
+    # and anything already there is kept ahead of the ceiling so a host can tune it.
+    max_heap = getattr(settings, 'VALIDATE_JAVA_MAX_HEAP', '')
+    if max_heap:
+        existing = environment.get('JAVA_OPTS', '')
+        environment['JAVA_OPTS'] = '{} -Xmx{}'.format(existing, max_heap).strip()
+
     return environment
 
 
@@ -510,6 +520,25 @@ def should_auto_check(bundle):
     return latest.is_stale()
 
 
+def at_capacity():
+    """True when as many validations are already running as this host allows.
+
+    Per-bundle deduplication stops one bundle starting two runs. It says nothing
+    about twenty people opening twenty bundles at once, and each run is a JVM on a
+    machine shared with other services - at the time of writing, two Tomcat
+    instances, Apache, MariaDB and other people's work. This is the ceiling for the
+    whole install rather than for one bundle.
+    """
+    limit = getattr(settings, 'VALIDATE_MAX_CONCURRENT', 2)
+    if not limit:
+        return False
+
+    reap_abandoned_runs()
+    running = ValidationRun.objects.filter(
+        status__in=[ValidationRun.STATUS_QUEUED, ValidationRun.STATUS_RUNNING]).count()
+    return running >= limit
+
+
 def start(bundle, tier=ValidationRun.TIER_STRUCTURE):
     """Queue a validation and launch it detached. Returns the ValidationRun.
 
@@ -535,6 +564,17 @@ def start(bundle, tier=ValidationRun.TIER_STRUCTURE):
         existing = active_run_for(bundle, tier)
         if existing is not None:
             return existing
+
+        # Refused rather than queued: a queue needs something to drain it, and there
+        # is no worker process here. The row records why, the panel shows it, and
+        # pressing Check again once the others finish is the whole recovery.
+        if at_capacity():
+            return ValidationRun.objects.create(
+                bundle=bundle, tier=tier, status=ValidationRun.STATUS_FAILED,
+                bundle_updated_at=bundle.updated_at, finished_at=timezone.now(),
+                failure_reason=(
+                    'The server is already running as many validations as it allows '
+                    'at once. Try the check again in a minute.'))
 
         validation_run = ValidationRun.objects.create(
             bundle=bundle, tier=tier, status=ValidationRun.STATUS_QUEUED,

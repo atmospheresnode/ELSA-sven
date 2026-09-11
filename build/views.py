@@ -5522,17 +5522,24 @@ def _process_single_netcdf(bundle, nc_path, collection_directory, NS, allowed_va
 
     if id_area is not None:
 
-        # Find Existing Element <pds:logical_identifier> and Append to It
+        # Build the identifier from the bundle rather than from the template.
+        #
+        # This used to append the collection and file name onto whatever the template
+        # already said, and the template says "urn:nasa:pds-ama:sample_bundle". So
+        # every NetCDF product ELSA has written carries sample_bundle where the real
+        # bundle id belongs: unfindable, and not the product the bundle's own
+        # Bundle_Member_Entry and collection inventory point at. PDS reports the
+        # member as missing, which is a confusing way to be told the label is wrong.
+        #
+        # Composed the same way AdditionalCollections.member_lidvids() composes it,
+        # so the inventory and the label it names cannot disagree.
         # (must be prefixed: unprefixed find() misses default-namespace elements
         # and the else branch would append a duplicate logical_identifier)
+        product_lid = f"{bundle.lid()}:{subdir_name.lower()}:{nc_filename}"
         lid_elem = id_area.find("pds:logical_identifier", namespaces=NS)
-        if lid_elem is not None and lid_elem.text:
-            # Append your suffix
-            lid_elem.text = f"{lid_elem.text}:{subdir_name.lower()}:{nc_filename}"
-        else:
-            # If missing or empty, just set it
+        if lid_elem is None:
             lid_elem = ET.SubElement(id_area, f"{{{NS['pds']}}}logical_identifier")
-            lid_elem.text = f"urn:nasa:pds-ama:sample_bundle:{subdir_name.lower()}:{nc_filename}"
+        lid_elem.text = product_lid
 
         # Find the <pds:title> Element and Populate
         title_elem = id_area.find("pds:title", namespaces=NS)

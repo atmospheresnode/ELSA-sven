@@ -200,3 +200,80 @@ class SubmissionTierTests(TestCase):
         self.assertIn(response.status_code, (200, 302))
         self.bundle.refresh_from_db()
         self.assertIsNotNone(self.bundle.submitted_at)
+
+
+class ResourceLimitTests(TestCase):
+    """Limits that exist because this runs on a machine shared with other services.
+
+    Per-bundle deduplication stops one bundle starting two JVMs. It says nothing
+    about many people opening many bundles, which is the case that would hurt
+    everything else on the box rather than just ELSA.
+    """
+
+    def setUp(self):
+        self.workdir = tempfile.mkdtemp(prefix='elsa-limits-')
+        self.addCleanup(shutil.rmtree, self.workdir, True)
+        self.user = User.objects.create_user('limits', password='pw')
+        self.bundle = Bundle.objects.create(
+            name='limit bundle', user=self.user, version='1O00')
+        home = os.path.join(self.workdir, 'validate-home')
+        os.makedirs(os.path.join(home, 'bin'))
+        open(os.path.join(home, 'bin', 'validate'), 'w').close()
+        self.home = home
+
+    def busy_with(self, count):
+        for index in range(count):
+            other = Bundle.objects.create(
+                name='busy {}'.format(index), user=self.user, version='1O00')
+            ValidationRun.objects.create(
+                bundle=other, status=ValidationRun.STATUS_RUNNING)
+
+    def test_the_heap_is_capped(self):
+        """Java sizes its heap from total system memory unless told otherwise."""
+        with override_settings(VALIDATE_JAVA_MAX_HEAP='2g'):
+            self.assertIn('-Xmx2g', validate_runner._environment().get('JAVA_OPTS', ''))
+
+    def test_an_existing_java_opts_is_kept(self):
+        os.environ['JAVA_OPTS'] = '-Dfoo=bar'
+        self.addCleanup(os.environ.pop, 'JAVA_OPTS', None)
+        with override_settings(VALIDATE_JAVA_MAX_HEAP='1g'):
+            opts = validate_runner._environment().get('JAVA_OPTS', '')
+        self.assertIn('-Dfoo=bar', opts)
+        self.assertIn('-Xmx1g', opts)
+
+    def test_capacity_is_reached_at_the_limit(self):
+        self.busy_with(2)
+        with override_settings(VALIDATE_MAX_CONCURRENT=2):
+            self.assertTrue(validate_runner.at_capacity())
+
+    def test_below_the_limit_is_not_capacity(self):
+        self.busy_with(1)
+        with override_settings(VALIDATE_MAX_CONCURRENT=2):
+            self.assertFalse(validate_runner.at_capacity())
+
+    def test_a_request_at_capacity_is_refused_not_queued(self):
+        """Queuing would need a worker to drain it, and there is none."""
+        from unittest import mock
+        self.busy_with(2)
+        launched = []
+        with override_settings(VALIDATE_MAX_CONCURRENT=2, VALIDATE_HOME=self.home,
+                               VALIDATE_WORK_DIR=self.workdir):
+            with mock.patch.object(validate_runner.subprocess, 'Popen',
+                                   side_effect=lambda *a, **k: launched.append(a)):
+                run = validate_runner.start(self.bundle)
+        self.assertEqual(run.status, ValidationRun.STATUS_FAILED)
+        self.assertIn('as many validations', run.failure_reason)
+        self.assertEqual(launched, [], 'a refused request still started a JVM')
+
+    def test_the_cap_can_be_lifted(self):
+        self.busy_with(5)
+        with override_settings(VALIDATE_MAX_CONCURRENT=0):
+            self.assertFalse(validate_runner.at_capacity())
+
+    def test_abandoned_runs_do_not_count_towards_capacity(self):
+        """Otherwise a couple of crashes would wedge validation for everyone."""
+        self.busy_with(2)
+        ValidationRun.objects.all().update(
+            requested_at=timezone.now() - timezone.timedelta(hours=6))
+        with override_settings(VALIDATE_MAX_CONCURRENT=2, VALIDATE_TIMEOUT_SECONDS=60):
+            self.assertFalse(validate_runner.at_capacity())

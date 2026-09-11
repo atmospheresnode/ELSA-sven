@@ -125,6 +125,15 @@ RULES = [
          path=('AMA', 'Model_Metadata', 'Simulation_Configuration'),
          message=(r'must be equal to one of the following values',)),
 
+    Rule('citation-author-blank', USER,
+         'An author or editor on the citation is missing details',
+         'Open Citation Information and fill in the name of each author and editor '
+         'you have added, or remove the ones you do not need. A blank entry is not '
+         'something PDS can record.',
+         card=CARD_CITATION,
+         path=('Citation_Information',),
+         message=(r"Value '' ", r"The value '' of element", r"length = '0'")),
+
     Rule('bad-filename', USER,
          'A file name contains a character PDS does not allow',
          'PDS file names may use letters, digits, dots, dashes and underscores. '
@@ -140,6 +149,17 @@ RULES = [
          types=('missing_file',)),
 
     # ---- ELSA's own output: never shown to a data provider ---------------------
+
+    Rule('elsa-empty-element', ELSA,
+         'An element ELSA wrote without a value',
+         'Every user-facing rule is tried first, so an empty element reaching here is '
+         'one ELSA emitted and never filled. Matched on the shape of the message '
+         'rather than on a list of paths, because the paths kept being ones nobody '
+         'had thought of and each new one arrived as unexplained noise in front of a '
+         'user. Generated labels carry these until they are rebuilt.',
+         message=(r"Value '' ", r"The value '' of element", r"with length = '0'",
+                  r"'' is not a valid value", r"must have no element \[children\]",
+                  r"is not complete")),
 
     Rule('elsa-version-stamp', ELSA,
          'Information model version does not match the schema referenced',
@@ -199,10 +219,11 @@ RULES = [
 
 
 UNMAPPED = Rule('unmapped', ADVISORY,
-                'Something PDS flagged that ELSA does not have wording for yet',
-                'Shown in full so it is not hidden. Reported to the ELSA team so a '
-                'plainer explanation can be written.',
-                collapse='finding')
+                'Other things PDS flagged',
+                'ELSA does not have plainer wording for these yet, so they are shown '
+                'as PDS reported them. They do not stop a submission, and the ELSA '
+                'team is told about them so they can be explained properly.',
+                collapse='rule')
 
 
 def classify(finding):
