@@ -1,6 +1,6 @@
 <!-- watches: build/models.py#Target, build/models.py#Investigation, build/models.py#Instrument, build/models.py#Instrument_Host, build/models.py#Facility, build/models.py#Telescope, build/views.py#context_search*, build/views.py#delete_target, build/views.py#delete_investigation, templates/build/context -->
 <!-- fingerprint:
-     build/models.py#Target              = 4d5a735a2b40
+     build/models.py#Target              = 508e7900ba81
      build/models.py#Investigation       = 6346b098b3f5
      build/models.py#Instrument          = 5f4031a2ca33
      build/models.py#Instrument_Host     = 803a80c9e890
@@ -12,7 +12,7 @@
      templates/build/context             = a8559e40f4ac
 -->
 <!-- reviewed: 2026-09-11 -->
-<!-- baseline: 66e63c0801aa5cb2a7e96e0f79d946a40832d093 -->
+<!-- baseline: cd1d702dbe5b7b2c176a8142b6bce02db53b244b -->
 # Targets and Context Products
 
 PDS4 Information Model (v1.24 / 1O00): the Target_Identification class provides

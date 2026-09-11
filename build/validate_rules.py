@@ -216,6 +216,27 @@ RULES = [
          types=('name_has_invalid_characters',),
          when=is_directory_finding),
 
+    Rule('file-name-needs-extension', USER,
+         'A file name in a document needs a file extension',
+         'PDS file names must end in a dot and an extension, like guide.pdf or '
+         'readme.txt. Open this document and rename its file so the name ends in '
+         'the extension the file actually has.',
+         card=CARD_DOCUMENT,
+         path=('File_Area_External/File/file_name', 'File_Area_Text/File/file_name',
+               'File_Area_Binary/File/file_name'),
+         message=(r"is not facet-valid with respect to pattern",
+                  r"of element 'file_name' is not valid"),
+         # One row per bad name, because two badly named documents are two edits.
+         subject='path'),
+
+    Rule('duplicate-member', USER,
+         'Two products in a collection have the same identifier',
+         'A collection cannot list the same product twice. This usually means two '
+         'documents were given the same name: rename one of them, or delete the '
+         'copy you do not need.',
+         card=CARD_DOCUMENT,
+         message=(r'Inventory contains \d+ instances of LIDVID',)),
+
     Rule('bad-filename', USER,
          'A file name contains a character PDS does not allow',
          'PDS file names may use letters, digits, dots, dashes and underscores. '

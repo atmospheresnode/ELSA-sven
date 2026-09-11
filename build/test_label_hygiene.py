@@ -31,7 +31,8 @@ from django.test import TestCase, SimpleTestCase
 
 from build.chocolate import write_collection_inventory
 from build.models import (Investigation, PDS_TARGET_TYPES, Product_Bundle,
-                          Version, pds_target_type, target_reference_type)
+                          Version, insert_in_context_area, pds_target_type,
+                          target_reference_type)
 
 PDS = 'http://pds.nasa.gov/pds4/pds/v1'
 NS = {'pds': PDS}
@@ -474,3 +475,64 @@ class TargetLabelTests(SimpleTestCase):
                 '<{0} xmlns="http://pds.nasa.gov/pds4/pds/v1"/>'.format(tag).encode())
             self.assertNotEqual(target_reference_type(root), 'is_target')
             self.assertTrue(target_reference_type(root).endswith('_to_target'))
+
+
+class ContextAreaOrderTests(SimpleTestCase):
+    """Context_Area is an xs:sequence, so its children have a fixed order.
+
+    Appending a Target_Identification was correct only while nothing that sorts
+    after it was present. AMA labels always carry a Discipline_Area, which sorts
+    last, so selecting a target on an AMA bundle put the target after it and every
+    data product reported "Invalid content was found starting with element
+    'Target_Identification'".
+    """
+
+    PDS = 'http://pds.nasa.gov/pds4/pds/v1'
+
+    def context_area(self, *children):
+        markup = '<Product_External xmlns="{}"><Context_Area>{}</Context_Area>' \
+                 '</Product_External>'.format(
+                     self.PDS, ''.join('<{}/>'.format(c) for c in children))
+        return etree.fromstring(markup.encode())[0]
+
+    def add(self, area, name):
+        insert_in_context_area(area, etree.SubElement(area, name))
+        return [etree.QName(c).localname for c in area]
+
+    def test_a_target_goes_before_the_discipline_area(self):
+        area = self.context_area('Investigation_Area', 'Discipline_Area')
+        self.assertEqual(self.add(area, 'Target_Identification'),
+                         ['Investigation_Area', 'Target_Identification',
+                          'Discipline_Area'])
+
+    def test_a_target_goes_after_the_investigation_area(self):
+        area = self.context_area('Investigation_Area')
+        self.assertEqual(self.add(area, 'Target_Identification'),
+                         ['Investigation_Area', 'Target_Identification'])
+
+    def test_a_target_goes_before_a_mission_area_too(self):
+        area = self.context_area('Investigation_Area', 'Mission_Area')
+        self.assertEqual(self.add(area, 'Target_Identification'),
+                         ['Investigation_Area', 'Target_Identification',
+                          'Mission_Area'])
+
+    def test_an_empty_context_area_just_takes_it(self):
+        area = self.context_area()
+        self.assertEqual(self.add(area, 'Target_Identification'),
+                         ['Target_Identification'])
+
+    def test_a_second_target_lands_beside_the_first(self):
+        area = self.context_area('Investigation_Area', 'Discipline_Area')
+        self.add(area, 'Target_Identification')
+        self.assertEqual(self.add(area, 'Target_Identification'),
+                         ['Investigation_Area', 'Target_Identification',
+                          'Target_Identification', 'Discipline_Area'])
+
+    def test_the_result_is_always_in_schema_order(self):
+        """Whatever is already there, the sequence has to come out sorted."""
+        from build.models import CONTEXT_AREA_ORDER
+        area = self.context_area('Time_Coordinates', 'Investigation_Area',
+                                 'Mission_Area', 'Discipline_Area')
+        names = self.add(area, 'Target_Identification')
+        positions = [CONTEXT_AREA_ORDER.index(n) for n in names]
+        self.assertEqual(positions, sorted(positions), names)

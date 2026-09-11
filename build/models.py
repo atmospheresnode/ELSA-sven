@@ -113,6 +113,39 @@ TARGET_REFERENCE_TYPES = {
 }
 
 
+# Context_Area is an xs:sequence in PDS4, so its children have a fixed order and a
+# child appended to the end is invalid wherever a later one already exists. AMA
+# labels always carry a Discipline_Area, which sorts after Target_Identification, so
+# appending a target to one produced "Invalid content was found starting with
+# element 'Target_Identification'" on every AMA product with a target selected.
+CONTEXT_AREA_ORDER = (
+    'comment', 'Time_Coordinates', 'Primary_Result_Summary', 'Investigation_Area',
+    'Observing_System', 'Target_Identification', 'Mission_Area', 'Discipline_Area',
+)
+
+
+def insert_in_context_area(Context_Area, element):
+    """Put element into Context_Area where the PDS4 sequence says it belongs.
+
+    Appends when nothing that sorts after it is present, which is the common case
+    and what the old code always did.
+    """
+    try:
+        position = CONTEXT_AREA_ORDER.index(etree.QName(element).localname)
+    except ValueError:
+        Context_Area.append(element)
+        return element
+
+    for existing in Context_Area:
+        name = etree.QName(existing).localname
+        if name in CONTEXT_AREA_ORDER and CONTEXT_AREA_ORDER.index(name) > position:
+            existing.addprevious(element)
+            return element
+
+    Context_Area.append(element)
+    return element
+
+
 def pds_target_type(value):
     """The PDS spelling of a stored target type.
 
@@ -1467,8 +1500,8 @@ class Target(models.Model):
 
         # Observing_System = Context_Area.find('{}Observing_System'.format(NAMESPACE))
 
-        Target_Identification = etree.SubElement(
-            Context_Area, 'Target_Identification')
+        Target_Identification = insert_in_context_area(
+            Context_Area, etree.SubElement(Context_Area, 'Target_Identification'))
         name = etree.SubElement(Target_Identification, 'name')
         name.text = self.name.title()
         target_type = etree.SubElement(Target_Identification, 'type')

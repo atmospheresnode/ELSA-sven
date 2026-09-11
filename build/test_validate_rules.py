@@ -334,3 +334,50 @@ class EmptyCollectionAdviceTests(SimpleTestCase):
         result = translate([self.empty('collection_x_document.xml'),
                             self.empty('collection_x_sims.xml')])
         self.assertEqual(len(result['user']), 2)
+
+
+class DocumentFindingsTests(SimpleTestCase):
+    """Findings that only appear once a collection actually has members in it.
+
+    Invisible until the inventory bug was fixed: while the document collection was
+    reported as empty, PDS never got as far as the document labels inside it.
+    """
+
+    def bad_file_name(self, label, value):
+        item = finding(
+            message="cvc-pattern-valid: Value '{}' is not facet-valid with respect "
+                    "to pattern '[a-zA-Z0-9]([a-zA-Z0-9]|[-]|[_]|[.])*[.]"
+                    "[a-zA-Z0-9]+' for type 'file_name'.".format(value),
+            path='Product_External/File_Area_External/File/file_name', label=label)
+        item['label_path'] = '/archive/u/b/document/' + label
+        return item
+
+    def test_a_file_name_with_no_extension_is_the_users_to_fix(self):
+        result = translate([self.bad_file_name('11.xml', '111')])
+        self.assertEqual(len(result['user']), 1)
+        self.assertIn('extension', result['user'][0]['title'])
+
+    def test_it_says_which_document(self):
+        result = translate([self.bad_file_name('11.xml', '111'),
+                            self.bad_file_name('aa.xml', 'aa')])
+        self.assertEqual({item['subject'] for item in result['user']},
+                         {'11.xml', 'aa.xml'})
+
+    def test_a_duplicate_member_is_reported_plainly(self):
+        item = finding(
+            message='Inventory contains 2 instances of LIDVID '
+                    'urn:nasa:pds-ama:b:document:11::1.0',
+            label='collection_b_document.xml')
+        result = translate([item])
+        self.assertEqual(len(result['user']), 1)
+        self.assertIn('same identifier', result['user'][0]['title'])
+        self.assertIn('rename', result['user'][0]['detail'])
+
+    def test_both_block_a_submission(self):
+        self.assertFalse(summarise([self.bad_file_name('11.xml', '111')])['can_submit'])
+
+    def test_neither_is_left_unmapped(self):
+        items = [self.bad_file_name('11.xml', '111'),
+                 finding(message='Inventory contains 2 instances of LIDVID x',
+                         label='collection_b_document.xml')]
+        self.assertEqual(translate(items)['unmapped'], [])

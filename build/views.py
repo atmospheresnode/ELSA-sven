@@ -41,6 +41,34 @@ from django.utils.timezone import localtime
 #
 # -------------------------------------------------------------------------------------------------- #
 @login_required
+def rebuild_collection_inventories(bundle):
+    """Rewrite every collection's inventory table and the record counts in its label.
+
+    A PDS4 collection is required to carry an inventory naming each of its members,
+    and the label declares how many records that table holds. Both are derived from
+    membership, so both are wrong the moment membership changes and nothing rewrites
+    them.
+
+    Five of the views that add a document did not. The document collection therefore
+    sat at records=0 with an empty inventory file no matter how many documents were
+    added, and PDS rejected it as an empty collection, which the validation panel
+    then reported as "the document collection has nothing in it" to someone who had
+    just put three documents in it.
+
+    Cheap and idempotent: it rewrites from the current membership every time, so
+    calling it more often than strictly necessary costs nothing and missing a call
+    is the only way to be wrong.
+    """
+    for collection in bundle_label_targets(bundle):
+        try:
+            collection.build_inventory()
+        except Exception as error:
+            # One collection failing must not lose the others, and must not take
+            # down the request that was only adding a document.
+            print('rebuild_collection_inventories: {} failed: {}'.format(
+                collection, error))
+
+
 def validation_context(bundle, user):
     """Everything the PDS validation panel needs to render.
 
@@ -3728,6 +3756,12 @@ def annex_collection_document(request, pk_bundle):
         product_bundle = Product_Bundle.objects.get(bundle=bundle)
         product_collections_list = bundle_label_targets(bundle)
 
+        # The collection now has a member it did not have a moment ago, and both the
+        # inventory table and the record count in the label are derived from
+        # membership. Without this the document collection stays at records=0 with
+        # an empty inventory however many documents are added to it.
+        rebuild_collection_inventories(bundle)
+
         if request.POST.get("source") == "bundle":
             return redirect(reverse("build:bundle", args=[pk_bundle]))
         else:
@@ -3766,6 +3800,8 @@ def collection_document(request, pk_bundle):
 
         product_bundle = Product_Bundle.objects.get(bundle=bundle)
         product_collections_list = bundle_label_targets(bundle)
+
+        rebuild_collection_inventories(bundle)
 
         return redirect(reverse('build:collection_additional', args=[pk_bundle]))
 
@@ -4125,6 +4161,8 @@ def document(request, pk_bundle):
         print(
             '\n----------------End Build Internal_Reference for Document-------------------')
 
+        rebuild_collection_inventories(bundle)
+
     return render(request, 'build/document/document.html', context_dict)
 
 def annex_product_document(request, pk_bundle, pk_product_document):
@@ -4201,6 +4239,9 @@ def annex_product_document(request, pk_bundle, pk_product_document):
             print(' ... Closing Label ... ')
             close_label(product_document.label(), label_root, label_list[2])
 
+        # An edit can change the document's identifier, which is what the inventory
+        # lists, so the table has to be rewritten here as well as on the add.
+        rebuild_collection_inventories(bundle)
 
         print('Changed: {}'.format(annex_form_product_document.changed_data))
 
@@ -4342,6 +4383,7 @@ def product_document(request, pk_bundle, pk_product_document):
             print(' ... Closing Label ... ')
             close_label(product_document.label(), label_root, label_list[2])
 
+        rebuild_collection_inventories(bundle)
 
         print('Changed: {}'.format(form_product_document.changed_data))
 
