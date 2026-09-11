@@ -28,6 +28,7 @@ import threading
 import time
 
 from django.conf import settings
+from django.core.mail import EmailMessage
 from django.db import transaction
 from django.utils import timezone
 
@@ -261,11 +262,7 @@ def run(run_id):
     try:
         command = build_command(validation_run, report_path)
     except ValidateUnavailable as error:
-        validation_run.status = ValidationRun.STATUS_FAILED
-        validation_run.failure_reason = str(error)
-        validation_run.finished_at = timezone.now()
-        validation_run.save()
-        return validation_run
+        return _fail(validation_run, str(error))
 
     timeout = getattr(settings, 'VALIDATE_TIMEOUT_SECONDS', 3600)
 
@@ -274,11 +271,7 @@ def run(run_id):
             command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
             env=_environment(), text=True, bufsize=1)
     except OSError as error:
-        validation_run.status = ValidationRun.STATUS_FAILED
-        validation_run.failure_reason = 'Could not run validate: {}'.format(error)
-        validation_run.finished_at = timezone.now()
-        validation_run.save()
-        return validation_run
+        return _fail(validation_run, 'Could not run validate: {}'.format(error))
 
     # Progress is read on its own thread so the timeout below actually covers a hang.
     # validate holds stdout open for as long as it lives, which makes reading that
@@ -295,13 +288,9 @@ def run(run_id):
     except subprocess.TimeoutExpired:
         process.kill()
         process.wait()
-        validation_run.status = ValidationRun.STATUS_FAILED
-        validation_run.failure_reason = (
-            'Validation ran longer than VALIDATE_TIMEOUT_SECONDS ({}s) and was '
-            'stopped.'.format(timeout))
-        validation_run.finished_at = timezone.now()
-        validation_run.save()
-        return validation_run
+        return _fail(validation_run,
+                     'Validation ran longer than VALIDATE_TIMEOUT_SECONDS ({}s) and '
+                     'was stopped.'.format(timeout))
 
     # Let the reader drain whatever is left in the pipe, but never wait on it
     # indefinitely: the process has already exited, so this is bounded work.
@@ -310,13 +299,9 @@ def run(run_id):
     # A non-zero exit means errors were found, which is a normal outcome and not a
     # failure of the run. Only a missing report means validate could not do its job.
     if not os.path.exists(report_path):
-        validation_run.status = ValidationRun.STATUS_FAILED
-        validation_run.failure_reason = (
-            'validate exited with status {} without writing a report.'.format(
-                process.returncode))
-        validation_run.finished_at = timezone.now()
-        validation_run.save()
-        return validation_run
+        return _fail(validation_run,
+                     'validate exited with status {} without writing a report.'.format(
+                         process.returncode))
 
     # The report is written by another program that may have been killed partway
     # through. A half-written file raises here, and letting that escape would leave
@@ -324,12 +309,8 @@ def run(run_id):
     try:
         parsed = parse_report(report_path)
     except (ValueError, OSError) as error:
-        validation_run.status = ValidationRun.STATUS_FAILED
-        validation_run.failure_reason = (
-            'validate wrote a report that could not be read: {}'.format(error))
-        validation_run.finished_at = timezone.now()
-        validation_run.save()
-        return validation_run
+        return _fail(validation_run,
+                     'validate wrote a report that could not be read: {}'.format(error))
 
     validation_run.report_path = report_path
     validation_run.findings = parsed['findings']
@@ -342,6 +323,7 @@ def run(run_id):
     validation_run.save()
 
     prune_reports(validation_run.bundle)
+    notify_if_slow(validation_run)
     return validation_run
 
 
@@ -413,6 +395,83 @@ def latest_run_for(bundle, tier=None):
     if tier is not None:
         runs = runs.filter(tier=tier)
     return runs.first()
+
+
+def notify_if_slow(validation_run):
+    """Email the bundle's owner, but only for a run they are unlikely to have watched.
+
+    A structure check takes a few seconds and its result is on the screen before an
+    email could arrive. Mailing every run would mean five messages during one
+    ten-minute fixing session, and a sender that does that gets filtered. So the
+    message goes out only when the run took long enough that its owner had probably
+    stopped waiting - a full content check on a large bundle, typically.
+
+    Failure to send is swallowed. The result is recorded on the run either way, and
+    a mail server having a bad afternoon must not turn a finished validation into a
+    failed one.
+    """
+    threshold = getattr(settings, 'VALIDATE_EMAIL_AFTER_SECONDS', 30)
+    duration = validation_run.duration_seconds()
+
+    if duration is None or duration < threshold:
+        return False
+
+    user = validation_run.bundle.user
+    if not getattr(user, 'email', ''):
+        return False
+
+    if validation_run.status == ValidationRun.STATUS_FAILED:
+        subject = 'Validation could not finish: {}'.format(validation_run.bundle.name)
+        body = (
+            'The validation check on your bundle "{}" did not finish.\n\n'
+            '{}\n\n'
+            'You can run it again from the bundle page.\n'
+        ).format(validation_run.bundle.name, validation_run.failure_reason)
+    else:
+        # Counts come from the translation, not from the raw totals: telling someone
+        # their bundle has 43 errors when 41 of them are ELSA's own is not useful.
+        from build import validate_rules
+        summary = validate_rules.summarise(validation_run.findings or [])
+        if summary['can_submit']:
+            subject = 'Validation passed: {}'.format(validation_run.bundle.name)
+            body = (
+                'Your bundle "{}" has been checked against the PDS validation '
+                'tool and nothing is blocking it from going for review.\n'
+            ).format(validation_run.bundle.name)
+        else:
+            subject = 'Validation finished: {}'.format(validation_run.bundle.name)
+            body = (
+                'Your bundle "{}" has been checked against the PDS validation tool.\n\n'
+                '{} item{} need{} your attention before it can be submitted. Open the '
+                'bundle page to see what they are; each one has a Fix button that '
+                'takes you to the right place.\n'
+            ).format(validation_run.bundle.name, summary['blocking'],
+                     '' if summary['blocking'] == 1 else 's',
+                     's' if summary['blocking'] == 1 else '')
+
+    try:
+        EmailMessage(subject=subject, body=body, from_email='atm-elsa@nmsu.edu',
+                     to=[user.email]).send()
+        return True
+    except Exception as error:
+        print('Could not email validation result: {}'.format(error))
+        return False
+
+
+def _fail(validation_run, reason):
+    """Put a run into its terminal failed state and tell its owner if it ran long.
+
+    Every failure exit goes through here rather than repeating four lines, so a new
+    one cannot quietly forget the notification or, worse, forget finished_at and
+    leave the row looking like work still in progress.
+    """
+    validation_run.status = ValidationRun.STATUS_FAILED
+    validation_run.failure_reason = reason
+    validation_run.finished_at = timezone.now()
+    validation_run.save()
+    notify_if_slow(validation_run)
+    return validation_run
+
 
 
 def should_auto_check(bundle):
