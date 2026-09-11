@@ -22,6 +22,7 @@ bundles, not from the message catalogue. Several match defects ELSA has since
 fixed, because labels written before those fixes are still on disk and will report
 them until they are rebuilt.
 """
+import os
 import re
 
 USER = 'user'
@@ -56,7 +57,8 @@ class Rule(object):
     """
 
     def __init__(self, key, audience, title, detail, card=CARD_NONE,
-                 types=(), path=(), message=(), collapse='rule'):
+                 types=(), path=(), message=(), collapse='rule', subject=None,
+                 when=None):
         self.key = key
         self.audience = audience
         self.title = title
@@ -66,6 +68,14 @@ class Rule(object):
         self.path = path
         self.message = message
         self.collapse = collapse
+        # 'path' means the finding is about a named thing on disk rather than about
+        # a place in a label, so the item has to say which thing. Without it a rule
+        # like bad-filename can only say "a file name", which is not actionable.
+        self.subject = subject
+        # An extra predicate for the cases the type/path/message triple cannot
+        # separate. Used where the same PDS message means two different things
+        # depending on what it is reported against.
+        self.when = when
 
     def matches(self, finding):
         if self.types and not any(finding['type'].endswith(t) for t in self.types):
@@ -75,7 +85,40 @@ class Rule(object):
         if self.message and not any(
                 re.search(m, finding['message'], re.I) for m in self.message):
             return False
+        if self.when is not None and not self.when(finding):
+            return False
         return bool(self.types or self.path or self.message)
+
+
+def reported_path(finding):
+    """The path validate says a finding is about, with its file: scheme removed."""
+    return (finding.get('label_path') or finding.get('label') or '').replace('file:', '').strip()
+
+
+def is_directory_finding(finding):
+    """Whether validate reported this against a directory rather than a file.
+
+    It appends a separator to directory paths, so the reported path ends in one and
+    its final segment is empty. That empty segment is itself an invalid PDS name,
+    which is why validate then reports a bad name for directories whose names are
+    perfectly legal: it fires on 8 of 25 sample reports, always on a collection
+    directory nobody named by hand.
+    """
+    return reported_path(finding).endswith('/')
+
+
+def subject_name(finding):
+    """The thing on disk a finding is about, as short a name as still identifies it.
+
+    PDS reports a bad name with the offending name nowhere in the message, so the
+    only handle on it is the path validate was looking at. That path is absolute and
+    can end in a separator when it is a directory, which is why it is stripped before
+    the basename is taken.
+    """
+    raw = reported_path(finding).rstrip('/')
+    if not raw:
+        return ''
+    return os.path.basename(raw) or raw
 
 
 # Order matters: the first rule that matches wins, so the specific ones come first.
@@ -99,22 +142,33 @@ RULES = [
          message=(r"Value '0' is not facet-valid", r"value '0' of element",
                   r"must have no element")),
 
-    Rule('target-type', USER,
-         'A target is missing its type, or the type is not one PDS recognises',
-         'Targets carry a fixed set of types, such as Planet, Satellite or '
-         'Laboratory Analog. Choose one from the list rather than typing a value.',
-         card=CARD_CONTEXT,
-         path=('Target_Identification',),
-         message=(r'must be equal to one of the following values',
-                  r'reference_type must be set to one of')),
+    # Everything about a context product's label is written by ELSA from the row the
+    # crawler stored. The person reading the panel chose a target from a list; they
+    # did not type its type, its reference_type, or its identifier, and no amount of
+    # choosing differently in the UI will change what ELSA writes. These used to be
+    # USER rules telling them to "choose one from the list rather than typing a
+    # value" for a value they had never been offered, let alone typed.
+    Rule('context-reference-type', ELSA,
+         'ELSA wrote a reference type PDS does not accept',
+         'The kind of link between this label and a context product is written by '
+         'ELSA, not chosen by you.',
+         path=('Target_Identification', 'Investigation_Area', 'Observing_System',
+               'Reference_List'),
+         message=(r'reference_type must be set to one of',)),
 
-    Rule('investigation-type', USER,
-         'The investigation type is not one PDS recognises',
-         'PDS accepts Individual Investigation, Mission, Observing Campaign or '
-         'Field Campaign here. Pick the closest match from the list.',
-         card=CARD_CONTEXT,
-         path=('Investigation_Area',),
+    Rule('context-vocabulary', ELSA,
+         'ELSA wrote a context value PDS does not accept',
+         'Target and investigation types come from the PDS registry through ELSA, '
+         'not from anything you entered.',
+         path=('Target_Identification', 'Investigation_Area'),
          message=(r'must be equal to one of the following values',)),
+
+    Rule('context-area-blank', ELSA,
+         'ELSA left part of the context area empty',
+         'A collection label carries its own copy of the investigation, and ELSA '
+         'shipped it blank.',
+         path=('Investigation_Area', 'Target_Identification', 'Observing_System'),
+         message=(r"The value '' of element", r"Value '' ", r"length = '0'")),
 
     Rule('ama-vocabulary', USER,
          'A model metadata value is not one PDS accepts',
@@ -134,12 +188,27 @@ RULES = [
          path=('Citation_Information',),
          message=(r"Value '' ", r"The value '' of element", r"length = '0'")),
 
+    # Reported against a directory, which means validate's own trailing separator
+    # rather than anything in the bundle. Never shown to the user: it appears on
+    # essentially every bundle and names a folder ELSA created, so the old wording
+    # told people to rename and re-upload a file that does not exist.
+    Rule('directory-name-artifact', ELSA,
+         'PDS reported a bad name against a directory',
+         'validate appends a separator to directory paths and then reads the empty '
+         'final segment as a name. Nothing in the bundle is wrong.',
+         types=('name_has_invalid_characters',),
+         when=is_directory_finding),
+
     Rule('bad-filename', USER,
          'A file name contains a character PDS does not allow',
          'PDS file names may use letters, digits, dots, dashes and underscores. '
-         'Rename the file and upload it again; spaces are the usual culprit.',
+         'Rename this file and upload it again; a space is the usual culprit.',
          card=CARD_NETCDF,
-         types=('name_has_invalid_characters',)),
+         types=('name_has_invalid_characters',),
+         # PDS puts the name nowhere in the message and leaves the element path
+         # empty, so the only handle on it is the path validate was looking at.
+         # Without showing it the row said "a file name" and nothing more.
+         subject='path'),
 
     Rule('missing-file', USER,
          'A file this label describes is not there',
@@ -219,10 +288,10 @@ RULES = [
 
 
 UNMAPPED = Rule('unmapped', ADVISORY,
-                'Other things PDS flagged',
-                'ELSA does not have plainer wording for these yet, so they are shown '
-                'as PDS reported them. They do not stop a submission, and the ELSA '
-                'team is told about them so they can be explained properly.',
+                'Other notes from PDS',
+                'None of these stop your bundle going for review. They are technical '
+                'notes rather than things to fix, and node staff will look at them '
+                'with you. The Validation output tab has them in full.',
                 collapse='rule')
 
 
@@ -250,7 +319,13 @@ def translate(findings):
         if rule is UNMAPPED:
             unmapped.append(finding)
 
-        if rule.collapse == 'rule':
+        named = subject_name(finding) if rule.subject == 'path' else ''
+
+        if rule.subject == 'path':
+            # One item per offending name: two badly named files are two things to
+            # rename, and collapsing them into one row hides the second.
+            key = (rule.key, named)
+        elif rule.collapse == 'rule':
             key = rule.key
         elif rule.collapse == 'finding':
             key = (rule.key, finding['message'])
@@ -266,6 +341,7 @@ def translate(findings):
                 'card': rule.card,
                 'anchor': rule.anchor,
                 'audience': rule.audience,
+                'subject': named,
                 'labels': [],
                 'findings': [],
             }

@@ -77,6 +77,54 @@ def get_most_current_version():
 
 
 
+# PDS4 Target_Identification/type is a closed list, spelled exactly this way in
+# the schematron. The context crawler stores whatever the PDS registry returned,
+# which is usually upper case: of 1548 stored targets, 1490 hold a value PDS
+# rejects ('ASTEROID', 'TRANS-NEPTUNIAN OBJECT'). Writing type_of straight through
+# therefore made almost every target a user could pick an error in their label,
+# reported against them as though they had typed it.
+PDS_TARGET_TYPES = (
+    'Asteroid', 'Astrophysical', 'Calibration', 'Calibration Field', 'Calibrator',
+    'Centaur', 'Comet', 'Dust', 'Dwarf Planet', 'Equipment', 'Exoplanet System',
+    'Galaxy', 'Globular Cluster', 'Laboratory Analog', 'Lunar Sample',
+    'Magnetic Field', 'Meteorite', 'Meteoroid', 'Meteoroid Stream', 'Nebula',
+    'Open Cluster', 'Planet', 'Planetary Nebula', 'Planetary System',
+    'Plasma Cloud', 'Plasma Stream', 'Ring', 'Sample', 'Satellite', 'Sky', 'Star',
+    'Star Cluster', 'Synthetic Sample', 'Terrestrial Sample',
+    'Trans-Neptunian Object',
+)
+
+_PDS_TARGET_TYPE_BY_KEY = {value.lower(): value for value in PDS_TARGET_TYPES}
+
+# Which reference_type a Target_Identification carries depends on what is doing the
+# referring. 'is_target', which this used to write for everything that was not a
+# Product_Observational, is not a PDS4 value at all and never has been.
+TARGET_REFERENCE_TYPES = {
+    'Product_Bundle': 'bundle_to_target',
+    'Product_Collection': 'collection_to_target',
+    'Product_Observational': 'data_to_target',
+    'Product_Document': 'document_to_target',
+}
+
+
+def pds_target_type(value):
+    """The PDS spelling of a stored target type.
+
+    Falls back to title case for a value not in the list, which keeps the label
+    closer to valid and leaves PDS to report the value as unknown, which it is.
+    """
+    if not value:
+        return value
+    cleaned = value.strip()
+    return _PDS_TARGET_TYPE_BY_KEY.get(cleaned.lower(), cleaned.title())
+
+
+def target_reference_type(label_root):
+    """The reference_type a Target_Identification needs in this kind of label."""
+    localname = etree.QName(label_root).localname
+    return TARGET_REFERENCE_TYPES.get(localname, 'collection_to_target')
+
+
 def context_container(Context_Area, tag):
     """Find a Context_Area child, creating it in the PDS namespace when absent.
 
@@ -1408,28 +1456,20 @@ class Target(models.Model):
 
         # Observing_System = Context_Area.find('{}Observing_System'.format(NAMESPACE))
 
-        # Add Facility to Observing System
-        Observing_System_Component = etree.SubElement(
+        Target_Identification = etree.SubElement(
             Context_Area, 'Target_Identification')
-        name = etree.SubElement(Observing_System_Component, 'name')
+        name = etree.SubElement(Target_Identification, 'name')
         name.text = self.name.title()
-        facility_type = etree.SubElement(
-            Observing_System_Component, 'type')
-        facility_type.text = self.type_of
+        target_type = etree.SubElement(Target_Identification, 'type')
+        target_type.text = pds_target_type(self.type_of)
         Internal_Reference = etree.SubElement(
-            Observing_System_Component, 'Internal_Reference')
+            Target_Identification, 'Internal_Reference')
         lid_reference = etree.SubElement(
             Internal_Reference, 'lid_reference')
         lid_reference.text = self.lid
-
-        if label_root.tag == '{http://pds.nasa.gov/pds4/pds/v1}Product_Observational':
-            reference_type = etree.SubElement(
-                Internal_Reference, 'reference_type')
-            reference_type.text = 'data_to_target'
-        else:
-            reference_type = etree.SubElement(
-                Internal_Reference, 'reference_type')
-            reference_type.text = 'is_target'
+        reference_type = etree.SubElement(
+            Internal_Reference, 'reference_type')
+        reference_type.text = target_reference_type(label_root)
 
         return label_root
 

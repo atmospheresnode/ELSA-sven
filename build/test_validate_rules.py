@@ -193,3 +193,108 @@ class RuleTableIntegrityTests(SimpleTestCase):
     def test_every_rule_has_a_known_audience(self):
         for rule in RULES:
             self.assertIn(rule.audience, (USER, ADVISORY, ELSA), rule.key)
+
+
+class ContextProductsAreNotTheUsersDoingTests(SimpleTestCase):
+    """Everything in a context label is written by ELSA from a crawled registry row.
+
+    The person reading the panel picked a target off a list. They did not type its
+    type, its reference_type or its identifier, so telling them to "choose one from
+    the list rather than typing a value" asked them to fix something they had no way
+    to reach. These rules used to do exactly that.
+    """
+
+    def test_an_invalid_target_reference_type_is_not_blamed_on_the_user(self):
+        # ELSA wrote 'is_target', which is not a PDS4 value and never was.
+        result = translate([finding(
+            message="The attribute reference_type must be set to one of the following "
+                    "values 'bundle_to_target'.",
+            path='Product_Bundle/Context_Area/Target_Identification/Internal_Reference')])
+        self.assertEqual(result['user'], [])
+        self.assertEqual(len(result['elsa']), 1)
+
+    def test_an_invalid_target_type_is_not_blamed_on_the_user(self):
+        # The registry stores 'ASTEROID'; PDS wants 'Asteroid'.
+        result = translate([finding(
+            message="The attribute pds:Target_Identification/pds:type must be equal to "
+                    "one of the following values 'Asteroid', 'Comet'.",
+            path='Product_Bundle/Context_Area/Target_Identification/type')])
+        self.assertEqual(result['user'], [])
+
+    def test_an_invalid_investigation_type_is_not_blamed_on_the_user(self):
+        result = translate([finding(
+            message="The attribute pds:Investigation_Area/pds:type must be equal to one "
+                    "of the following values 'Mission'.",
+            path='Product_Collection/Context_Area/Investigation_Area/type')])
+        self.assertEqual(result['user'], [])
+
+    def test_a_blank_investigation_area_is_not_blamed_on_the_user(self):
+        """Collection labels ship with empty stubs ELSA never filled."""
+        result = translate([finding(
+            message="cvc-type.3.1.3: The value '' of element 'type' is not valid.",
+            path='Product_Collection/Context_Area/Investigation_Area/type')])
+        self.assertEqual(result['user'], [])
+        self.assertEqual(len(result['elsa']), 1)
+
+    def test_none_of_them_block_a_submission(self):
+        findings = [
+            finding(message="reference_type must be set to one of the following values 'x'.",
+                    path='Product_Bundle/Context_Area/Target_Identification/Internal_Reference'),
+            finding(message="must be equal to one of the following values 'Asteroid'.",
+                    path='Product_Bundle/Context_Area/Target_Identification/type'),
+            finding(message="The value '' of element 'name' is not valid.",
+                    path='Product_Collection/Context_Area/Investigation_Area/name'),
+        ]
+        self.assertTrue(summarise(findings)['can_submit'])
+
+
+class BadNameFindingsTests(SimpleTestCase):
+    """PDS reports a bad name with the name nowhere in the message."""
+
+    def name_finding(self, path):
+        item = finding(message='File name uses invalid character',
+                       type_='error.file.name_has_invalid_characters', label='')
+        item['label_path'] = path
+        item['element_path'] = ''
+        return item
+
+    def test_a_real_bad_file_name_says_which_file(self):
+        result = translate([self.name_finding('file:/archive/u/b/data/my bad file.nc')])
+        self.assertEqual(len(result['user']), 1)
+        self.assertEqual(result['user'][0]['subject'], 'my bad file.nc')
+
+    def test_two_bad_names_are_two_things_to_rename(self):
+        result = translate([self.name_finding('file:/archive/u/b/data/one file.nc'),
+                            self.name_finding('file:/archive/u/b/data/two file.nc')])
+        self.assertEqual(len(result['user']), 2)
+        self.assertEqual({item['subject'] for item in result['user']},
+                         {'one file.nc', 'two file.nc'})
+
+    def test_the_same_bad_name_twice_is_one_thing_to_rename(self):
+        result = translate([self.name_finding('file:/archive/u/b/data/one file.nc'),
+                            self.name_finding('file:/archive/u/b/data/one file.nc')])
+        self.assertEqual(len(result['user']), 1)
+
+    def test_a_directory_is_not_reported_as_a_file_to_rename(self):
+        """validate appends a separator to directory paths, then reads the empty
+        final segment as an invalid name. It fires on almost every bundle and names
+        a folder ELSA created, which nobody can rename or re-upload."""
+        result = translate([self.name_finding('file:/archive/u/b/document//')])
+        self.assertEqual(result['user'], [])
+        self.assertEqual(len(result['elsa']), 1)
+
+    def test_a_directory_artifact_does_not_block_submission(self):
+        self.assertTrue(summarise(
+            [self.name_finding('file:/archive/u/b/document//')])['can_submit'])
+
+
+class UnmappedWordingTests(SimpleTestCase):
+    """The bucket a scientist actually reads, describing ELSA's own backlog."""
+
+    def test_it_does_not_talk_about_elsa_s_internal_state(self):
+        for phrase in ('plainer wording', 'the ELSA team is told', 'does not have'):
+            self.assertNotIn(phrase, UNMAPPED.detail,
+                             'the unmapped wording is written for the ELSA team')
+
+    def test_it_says_the_thing_that_matters_to_the_reader(self):
+        self.assertIn('stop', UNMAPPED.detail.lower())

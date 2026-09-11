@@ -30,7 +30,8 @@ from lxml import etree
 from django.test import TestCase, SimpleTestCase
 
 from build.chocolate import write_collection_inventory
-from build.models import Investigation, Product_Bundle, Version
+from build.models import (Investigation, PDS_TARGET_TYPES, Product_Bundle,
+                          Version, pds_target_type, target_reference_type)
 
 PDS = 'http://pds.nasa.gov/pds4/pds/v1'
 NS = {'pds': PDS}
@@ -408,3 +409,57 @@ class AMAContextLidTests(TestCase):
         if stored is None:
             self.skipTest('no pre-existing AMA investigation row in this database')
         self.assertEqual(stored.lid, self.REGISTERED_LID)
+
+
+class TargetLabelTests(SimpleTestCase):
+    """What ELSA writes into a label when someone picks a target off the list.
+
+    Both of these were wrong for every target in the registry: the type was written
+    in whatever case the crawler stored ('ASTEROID'), and the reference type was
+    'is_target', which is not a PDS4 value at all. Between them they meant that
+    selecting a target, the one action the UI invites, added errors to the bundle and
+    the panel then reported them as the user's doing.
+    """
+
+    def test_a_registry_type_is_written_in_the_spelling_pds_accepts(self):
+        self.assertEqual(pds_target_type('ASTEROID'), 'Asteroid')
+        self.assertEqual(pds_target_type('TRANS-NEPTUNIAN OBJECT'), 'Trans-Neptunian Object')
+        self.assertEqual(pds_target_type('CALIBRATION FIELD'), 'Calibration Field')
+
+    def test_a_type_already_correct_is_left_alone(self):
+        for value in ('Planet', 'Centaur', 'Laboratory Analog'):
+            self.assertEqual(pds_target_type(value), value)
+
+    def test_every_value_it_produces_for_a_known_type_is_one_pds_lists(self):
+        for value in PDS_TARGET_TYPES:
+            self.assertIn(pds_target_type(value.upper()), PDS_TARGET_TYPES)
+            self.assertIn(pds_target_type(value.lower()), PDS_TARGET_TYPES)
+
+    def test_an_unknown_type_is_passed_through_rather_than_guessed(self):
+        """PDS should report a value it does not know, not have ELSA invent one."""
+        self.assertEqual(pds_target_type('Some New Kind'), 'Some New Kind')
+
+    def test_a_missing_type_does_not_raise(self):
+        self.assertEqual(pds_target_type(''), '')
+        self.assertIsNone(pds_target_type(None))
+
+    def test_the_reference_type_depends_on_what_is_referring(self):
+        cases = {
+            'Product_Bundle': 'bundle_to_target',
+            'Product_Collection': 'collection_to_target',
+            'Product_Observational': 'data_to_target',
+            'Product_Document': 'document_to_target',
+        }
+        for tag, expected in cases.items():
+            root = etree.fromstring(
+                '<{0} xmlns="http://pds.nasa.gov/pds4/pds/v1"/>'.format(tag).encode())
+            self.assertEqual(target_reference_type(root), expected)
+
+    def test_is_target_is_never_written(self):
+        """It was the default for everything that was not a Product_Observational."""
+        for tag in ('Product_Bundle', 'Product_Collection', 'Product_Document',
+                    'Product_Something_Unexpected'):
+            root = etree.fromstring(
+                '<{0} xmlns="http://pds.nasa.gov/pds4/pds/v1"/>'.format(tag).encode())
+            self.assertNotEqual(target_reference_type(root), 'is_target')
+            self.assertTrue(target_reference_type(root).endswith('_to_target'))

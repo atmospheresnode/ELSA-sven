@@ -134,6 +134,14 @@ Nothing here starts work on page load. Running a check is an explicit action.
                <div class="d-flex justify-content-between align-items-start gap-2">
                   <div class="flex-grow-1">
                      <div class="small fw-semibold">{{ item.title }}</div>
+                     {% if item.subject %}
+                     {% comment %}
+                        Which file or folder. PDS names it nowhere in the message, so
+                        without this the row says "a file name" and leaves the reader
+                        to guess which of theirs it means.
+                     {% endcomment %}
+                     <div class="font-monospace" style="font-size:0.74rem; overflow-wrap:anywhere;">{{ item.subject }}</div>
+                     {% endif %}
                      <div class="text-muted" style="font-size:0.78rem;">{{ item.detail }}</div>
                      {% if item.labels|length > 1 %}
                      <div class="text-muted" style="font-size:0.72rem;">
