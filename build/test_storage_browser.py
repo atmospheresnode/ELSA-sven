@@ -226,8 +226,12 @@ class StorageDialogBrowserTests(test_ama_browser.AMABrowserTestCase):
                         lambda route: route.fulfill(status=500, body='boom'))
         with free_space(100 * GB):
             self.open_bundle(self.alpha)
-            with self.page.expect_request(
-                    lambda r: r.method == 'POST' and r.url.endswith(self.url('bundle'))):
+            # The response, not just the request: a test that ends while the upload is still
+            # being handled tears down its temporary MEDIA_ROOT under the server thread, and
+            # the file then lands in the real uploads/ folder, two per run.
+            with self.page.expect_response(
+                    lambda r: r.request.method == 'POST' and r.url.endswith(self.url('bundle')),
+                    timeout=30000):
                 self.upload()
         self.assertFalse(self.dialog().is_visible())
 
@@ -235,8 +239,12 @@ class StorageDialogBrowserTests(test_ama_browser.AMABrowserTestCase):
         self.page.route('**' + self.url('netcdf_storage_check'), lambda route: route.abort())
         with free_space(100 * GB):
             self.open_bundle(self.alpha)
-            with self.page.expect_request(
-                    lambda r: r.method == 'POST' and r.url.endswith(self.url('bundle'))):
+            # The response, not just the request: a test that ends while the upload is still
+            # being handled tears down its temporary MEDIA_ROOT under the server thread, and
+            # the file then lands in the real uploads/ folder, two per run.
+            with self.page.expect_response(
+                    lambda r: r.request.method == 'POST' and r.url.endswith(self.url('bundle')),
+                    timeout=30000):
                 self.upload()
         self.assertFalse(self.dialog().is_visible())
 
