@@ -228,8 +228,8 @@ Nothing here starts work on page load. Running a check is an explicit action.
             PDS often reports a problem twice, so these are
             {{ validation_raw_total }} distinct problem{{ validation_raw_total|pluralize }}.
             {% endif %}
-            {% if validation_summary.hidden %}
-            {{ validation_summary.hidden }} of these {{ validation_summary.hidden|pluralize:"is,are" }}
+            {% if validation_raw_elsa %}
+            {{ validation_raw_elsa }} of these {{ validation_raw_elsa|pluralize:"is,are" }}
             caused by ELSA, not by anything you entered.
             {% endif %}
             {% if user.is_staff %}

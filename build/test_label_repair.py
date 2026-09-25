@@ -182,3 +182,69 @@ class RepairLabelTests(SimpleTestCase):
         path = self.write('<Product_Bundle><oops')
         self.assertEqual(repair_label(path), [])
         self.assertIn('<oops', open(path, encoding='utf-8').read())
+
+
+class AmaInvestigationReferenceTests(SimpleTestCase):
+    """Old External labels reference the AMA investigation by a LID PDS does not know.
+    Migration 0075 fixed the database row and deliberately left labels alone."""
+
+    PDS = 'http://pds.nasa.gov/pds4/pds/v1'
+
+    def label(self, lid, name='Atmospheric Modeling Annex'):
+        return etree.fromstring(
+            '<Product_Bundle xmlns="{}"><Context_Area><Investigation_Area>'
+            '<name>{}</name><type>Individual Investigation</type><Internal_Reference>'
+            '<lid_reference>{}</lid_reference><reference_type>bundle_to_investigation'
+            '</reference_type></Internal_Reference></Investigation_Area>'
+            '<Investigation_Area><name>Cassini</name><type>Mission</type><Internal_Reference>'
+            '<lid_reference>urn:nasa:pds:context:investigation:mission.cassini-huygens'
+            '</lid_reference><reference_type>bundle_to_investigation</reference_type>'
+            '</Internal_Reference></Investigation_Area></Context_Area></Product_Bundle>'
+            .format(self.PDS, name, lid))
+
+    def texts(self, root, tag):
+        return [e.text for e in root.iter('{%s}%s' % (self.PDS, tag))]
+
+    def test_the_old_reference_and_its_name_are_corrected(self):
+        from build.label_repair import AMA_LID, AMA_NAME, AMA_WRONG_LID, fix_ama_investigation
+        root = self.label(AMA_WRONG_LID)
+        self.assertEqual(fix_ama_investigation(root), ['AMA investigation reference'])
+        self.assertIn(AMA_LID, self.texts(root, 'lid_reference'))
+        self.assertIn(AMA_NAME, self.texts(root, 'name'))
+        # The other investigation is left exactly as it was.
+        self.assertIn('Cassini', self.texts(root, 'name'))
+        self.assertIn('urn:nasa:pds:context:investigation:mission.cassini-huygens',
+                      self.texts(root, 'lid_reference'))
+
+    def test_a_correct_reference_is_left_alone_and_a_second_run_changes_nothing(self):
+        from build.label_repair import AMA_LID, AMA_WRONG_LID, fix_ama_investigation
+        self.assertEqual(fix_ama_investigation(self.label(AMA_LID, name='Kept as is')), [])
+        root = self.label(AMA_WRONG_LID)
+        fix_ama_investigation(root)
+        self.assertEqual(fix_ama_investigation(root), [])
+
+    def test_repair_label_writes_it_to_disk(self):
+        import tempfile
+        from build.label_repair import AMA_LID, AMA_WRONG_LID, repair_label
+        directory = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, directory, True)
+        path = os.path.join(directory, 'bundle_x.xml')
+        etree.ElementTree(self.label(AMA_WRONG_LID)).write(path, xml_declaration=True,
+                                                           encoding='utf-8')
+        self.assertIn('AMA investigation reference', repair_label(path))
+        self.assertIn(AMA_LID, open(path, encoding='utf-8').read())
+        self.assertNotIn(AMA_WRONG_LID, open(path, encoding='utf-8').read())
+
+
+class CommentsInLabelsTests(SimpleTestCase):
+    """Production labels carry XML comments. prune_blank_containers passed them to
+    etree.QName, which raises on a comment, and a run over every bundle crashed."""
+
+    def test_a_comment_does_not_crash_the_pruning_and_is_kept(self):
+        root = etree.fromstring(
+            '<Product_Bundle xmlns="http://pds.nasa.gov/pds4/pds/v1"><Context_Area>'
+            '<!-- written by hand --><Time_Coordinates><start_date_time/><stop_date_time/>'
+            '</Time_Coordinates></Context_Area></Product_Bundle>')
+        removed = prune_blank_containers(root)
+        self.assertIn('Time_Coordinates', removed)
+        self.assertIn('written by hand', etree.tostring(root).decode())

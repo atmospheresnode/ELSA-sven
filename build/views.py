@@ -191,6 +191,7 @@ def validation_context(bundle, user):
         'validation_advisory': [],
         'validation_raw': [],
         'validation_raw_total': 0,
+        'validation_raw_elsa': 0,
     }
 
     # A summary is built when there is anything at all to say, which now includes a
@@ -217,6 +218,13 @@ def validation_context(bundle, user):
         context['validation_raw'] = validate_rules.raw_groups(findings)
         context['validation_raw_total'] = sum(
             len(groups) for _label, groups in context['validation_raw'])
+        # Counted in the same unit as the total, distinct problems. The summary's
+        # "hidden" is a count of ELSA's rule categories, so the tab used to read
+        # "36 distinct problems. 8 of these are caused by ELSA" above 36 items that
+        # were all ELSA's.
+        context['validation_raw_elsa'] = sum(
+            1 for _label, groups in context['validation_raw']
+            for group in groups if group['audience'] == validate_rules.ELSA)
 
     return context
 
