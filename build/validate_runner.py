@@ -287,6 +287,22 @@ def run(run_id):
     """
     validation_run = ValidationRun.objects.get(pk=run_id)
 
+    # Anything unexpected is recorded on the row rather than escaping. The first time
+    # this ran in production, the work directory did not exist and apache could not
+    # create it: the PermissionError escaped, the child died with the row at RUNNING,
+    # and for the next hour the page said "Checking..." and the row held one of the
+    # two slots every other bundle was waiting on. A failed run says why, frees its
+    # slot at once, and is shown as "could not run".
+    try:
+        return _execute(validation_run)
+    except Exception as error:                       # noqa: BLE001 - see comment
+        return _fail(validation_run, 'The check stopped unexpectedly ({}: {}). Running '
+                     'it again is safe; if it keeps happening, the server needs '
+                     'looking at.'.format(type(error).__name__, error))
+
+
+def _execute(validation_run):
+    """The body of run(), for one ValidationRun already fetched."""
     validation_run.status = ValidationRun.STATUS_RUNNING
     validation_run.started_at = timezone.now()
     validation_run.bundle_updated_at = validation_run.bundle.updated_at

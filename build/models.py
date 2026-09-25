@@ -433,7 +433,7 @@ class Version(models.Model):
         #read the bundle and collection template files and store their contents in strings.
         #If the file is invalid a statement will be printed and the function will quit.
         try: 
-            fil = open(inFile,'r')
+            fil = open(inFile, 'r', encoding='utf-8')
 
             fileText = fil.read()
 
@@ -465,7 +465,7 @@ class Version(models.Model):
 
         # write the new bundle and collection to the xmls
 
-        fil = open(outFile, 'w')
+        fil = open(outFile, 'w', encoding='utf-8')
 
         fil.write(fileText)
 

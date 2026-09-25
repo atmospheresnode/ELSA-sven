@@ -42,7 +42,11 @@ def _make_chunk(name, text):
 
 
 def _load_chunks():
-    return [_make_chunk(path.stem, path.read_text(encoding="utf-8"))
+    # UTF-8 explicitly. Without it read_text() uses the locale's encoding, which is
+    # UTF-8 under runserver and ASCII under Apache/mod_wsgi, so one non-ASCII
+    # character in a chunk stopped ELSA starting in production (every page 500) while
+    # every local test passed. This runs at import time, from the URL configuration.
+    return [_make_chunk(path.stem, path.read_text(encoding='utf-8'))
             for path in sorted(KNOWLEDGE_DIR.glob('*.md'))]
 
 
