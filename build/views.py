@@ -4493,7 +4493,7 @@ def product_document(request, pk_bundle, pk_product_document):
                 'author_list':product_document.author_list,
                 'copyright':product_document.copyright,
                 'description':product_document.description,
-                'doi':product_document.doi,
+                # 'doi':product_document.doi,
                 'document_editions':product_document.document_editions,
                 'document_name':product_document.document_name,
                 'publication_date':product_document.publication_date,
@@ -4549,8 +4549,8 @@ def product_document(request, pk_bundle, pk_product_document):
                 elif change == 'revision_id':
                    product_document.revision_id = form_product_document['revision_id'].value()
 
-                elif change == 'doi':
-                    product_document.doi = form_product_document['doi'].value()
+                # elif change == 'doi':
+                #     product_document.doi = form_product_document['doi'].value()
                 
                 elif change == 'edition_name':
                     product_document.edition_name = form_product_document['edition_name'].value()

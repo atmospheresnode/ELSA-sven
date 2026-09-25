@@ -1304,14 +1304,14 @@ class ProductDocumentForm(forms.ModelForm):
             'rows': 3
         })
     )
-    doi = forms.CharField(
-        required=False,
-        max_length=100,
-        label_suffix = '',
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-        })
-    )
+    # doi = forms.CharField(
+    #     required=False,
+    #     max_length=100,
+    #     label_suffix = '',
+    #     widget=forms.TextInput(attrs={
+    #         'class': 'form-control',
+    #     })
+    # )
     revision_id = forms.CharField(
         required=False,
         max_length=100,
@@ -1393,7 +1393,7 @@ class ProductDocumentForm(forms.ModelForm):
             "author_list",
             "copyright",
             "description",
-            "doi",
+            # "doi",
             "revision_id",
             "document_editions",
             "edition_name",
