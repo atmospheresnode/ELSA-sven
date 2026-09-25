@@ -1,14 +1,14 @@
 <!-- watches: build/models.py#Alias, build/views.py#alias, build/views.py#alias_edit, build/views.py#alias_delete, build/forms.py#AliasForm, templates/build/alias -->
 <!-- fingerprint:
-     build/models.py#Alias       = 6def0ab2a895
+     build/models.py#Alias       = a70503dab702
      build/views.py#alias        = 394473fc18c1
      build/views.py#alias_edit   = bd3dbf12eb04
      build/views.py#alias_delete = 72d8092f7a75
      build/forms.py#AliasForm    = d4ac348db2ea
      templates/build/alias       = 3d835782d8f8
 -->
-<!-- reviewed: 2026-09-11 -->
-<!-- baseline: 66e63c0801aa5cb2a7e96e0f79d946a40832d093 -->
+<!-- reviewed: 2026-09-17 -->
+<!-- baseline: ab6b3482d9893d5e8b7e506fadff1e8125905f6a -->
 # Alias and Alias List
 
 PDS4 Information Model (v1.24 / 1O00): the Alias class provides a single

@@ -1,12 +1,12 @@
 <!-- watches: build/models.py#Version, build/models.py#Bundle, build/models.py#Product_Collection, build/models.py#Product_Bundle -->
 <!-- fingerprint:
      build/models.py#Version            = 0f76e3bfc42a
-     build/models.py#Bundle             = f0f1ab10d36c
+     build/models.py#Bundle             = 7e1c83a0d383
      build/models.py#Product_Collection = 0595895e042e
      build/models.py#Product_Bundle     = 066355abe899
 -->
-<!-- reviewed: 2026-09-11 -->
-<!-- baseline: 618b92907da0069495e21af468dcb703b045929f -->
+<!-- reviewed: 2026-09-25 -->
+<!-- baseline: ab6b3482d9893d5e8b7e506fadff1e8125905f6a -->
 # LIDs, VIDs, and the Identification Area
 
 PDS4 Information Model (v1.24 / 1O00): every PDS4 product label has an
@@ -24,9 +24,19 @@ Optional components of the Identification_Area: Alias_List,
 Citation_Information, Modification_History, and License_Information.
 
 In ELSA: the Bundle ID (shown under the bundle name on the bundle page) is the
-LID, auto-generated from the bundle name when the bundle is created, users do
-not type it by hand. Products within the bundle get LIDs that extend the bundle
-LID (e.g. urn:nasa:pds:mybundle:document:userguide).
+LID. It is generated from the bundle name when the bundle is created; the create
+form also offers an optional Bundle ID field for anyone who wants to set it
+themselves. Products within the bundle get LIDs that extend the bundle LID
+(e.g. urn:nasa:pds:mybundle:document:userguide).
+
+Users never have to worry about which characters are allowed. ELSA cleans every
+segment it builds a LID from, the bundle name or ID, the collection name, and an
+uploaded file's name, replacing anything outside the permitted set with an
+underscore and lowercasing the rest. A NetCDF uploaded as
+"00000.atmos_average_pstd_-_Copy.nc" keeps that name on disk and in the label's
+file_name, and its LID segment becomes
+"00000.atmos_average_pstd_-_copy.nc". A file does not need renaming to
+validate.
 
 Terminology: the LID IS a URN, so "URN", "LID", "logical identifier", and
 "Bundle ID" all refer to the same identifier for a bundle. Each bundle's

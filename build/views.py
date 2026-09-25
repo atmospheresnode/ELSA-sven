@@ -13,7 +13,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
 from django.http import HttpResponse, HttpRequest, JsonResponse
 
-from build import validate_report, validate_rules, validate_runner
+from build import preflight, validate_report, validate_rules, validate_runner
 from django.shortcuts import render, redirect, get_object_or_404
 from django.template import RequestContext
 from django.urls import reverse
@@ -72,16 +72,89 @@ def rebuild_collection_inventories(bundle):
 def _submission_status(bundle):
     """The three components the Review & Submit button checks, for the fragment view.
 
-    The bundle page builds a larger status_dict for its own progress bar; this is the
-    subset the extracted Submit button reads, computed the same way. Kept small on
-    purpose: a second, fuller copy of that dict would be a thing to keep in step for
-    no benefit, since nothing else in the fragments consults it.
+    Computed in build.preflight, which is also what the validation panel reads, so
+    the button and the panel cannot disagree about whether a bundle is ready. They
+    used to: the panel knew only what PDS reported, and PDS4 makes a target optional,
+    so a bundle with no target had a red "Targets" badge and a green "passed" panel
+    at the same time.
     """
-    return {
-        'Modification_History': bundle.modification_history_set.exists(),
-        'Citation_Information': bundle.citation_information_set.exists(),
-        'Targets': bundle.targets.exists(),
-    }
+    from build import preflight
+
+    return preflight.status(bundle)
+
+
+def validation_summary_for_email(bundle):
+    """What the node needs to know about a submitted bundle, in plain text.
+
+    The submission notification used to say only that a bundle had arrived, so
+    whoever opened it still had to find the bundle in ELSA and check it before
+    knowing whether there was anything to do. Since reducing that back-and-forth is
+    the point of running the validator at all, the answer belongs in the message.
+
+    Advisory items are listed because they are the ones that reach a reviewer: the
+    gate already refuses a submission with anything blocking. ELSA's own findings
+    are counted rather than listed; they are our backlog, and a number is enough for
+    someone to know whether to mention them.
+    """
+    from build import validate_rules
+
+    # The most recently *finished* run, not the most recent one. Submitting starts a
+    # full content check, so at the moment this message is composed the newest run
+    # is the one that has just been queued and knows nothing yet. What the node
+    # wants is the verdict the submission was judged on, which is the gate's tier:
+    # a full run refused at submission because the server was busy would otherwise
+    # be reported as "could not run" over a check that did.
+    run = ValidationRun.objects.filter(
+        bundle=bundle, tier=ValidationRun.TIER_STRUCTURE,
+        status__in=[ValidationRun.STATUS_DONE, ValidationRun.STATUS_FAILED],
+    ).order_by('-finished_at', '-requested_at').first()
+
+    if run is None:
+        in_flight = validate_runner.latest_run_for(bundle)
+        if in_flight is not None:
+            return 'PDS validation: still running when this was submitted.'
+        return 'PDS validation: not run for this bundle.'
+
+    if run.status == ValidationRun.STATUS_FAILED:
+        return ('PDS validation: could not run ({}). The bundle was accepted anyway; '
+                'being unable to check is not evidence of a problem.'.format(
+                    run.failure_reason or 'no reason recorded'))
+
+    findings = run.findings or []
+    translated = validate_rules.translate(findings)
+    lines = ['PDS validation: {} label(s) checked{}.'.format(
+        run.products_total, ', results out of date' if run.is_stale() else '')]
+
+    if not findings:
+        lines.append('  Nothing reported.')
+        return '\n'.join(lines)
+
+    if translated['user']:
+        lines.append('  Still outstanding for the submitter:')
+        for item in translated['user']:
+            # Some items name the thing they are about: three documents with bad
+            # file names are three identical lines otherwise, which tells a reader
+            # nothing about which ones.
+            subject = item.get('subject')
+            lines.append('    - {}{}'.format(
+                item['title'], ' ({})'.format(subject) if subject else ''))
+
+    if translated['advisory']:
+        lines.append('  Worth a look during review:')
+        for item in translated['advisory']:
+            lines.append('    - {} ({} finding{})'.format(
+                item['title'], len(item['findings']),
+                '' if len(item['findings']) == 1 else 's'))
+
+    hidden = sum(len(item['findings']) for item in translated['elsa'])
+    if hidden:
+        lines.append('  {} finding(s) caused by ELSA rather than the submitter, '
+                     'hidden from them.'.format(hidden))
+
+    if not translated['user'] and not translated['advisory']:
+        lines.append('  Nothing outstanding for the submitter.')
+
+    return '\n'.join(lines)
 
 
 def validation_context(bundle, user):
@@ -94,9 +167,18 @@ def validation_context(bundle, user):
     Read-only and cheap. The most recent run is looked up and its stored findings
     translated; nothing is started. Running a check is an explicit POST.
     """
+    from build import preflight
+
+    # ELSA's own requirements, checked against the database rather than the labels.
+    # Three EXISTS queries, so these are shown whenever the panel is open, including
+    # before any check has run and while one is in flight. A user who has not chosen
+    # a target does not have to wait for a JVM to be told so.
+    outstanding = preflight.requirements(bundle)
+
     latest_validation = validate_runner.latest_run_for(bundle)
     context = {
         'validation_run': latest_validation,
+        'validation_requirements': outstanding,
         # Whether the page should start a check for itself once it has loaded. The
         # view does not start one: rendering a bundle must never spawn a JVM, or a
         # crawler would.
@@ -111,20 +193,30 @@ def validation_context(bundle, user):
         'validation_raw_total': 0,
     }
 
-    if latest_validation is not None and latest_validation.findings:
-        findings = latest_validation.findings
-        context['validation_summary'] = validate_rules.summarise(findings)
-        context['validation_cards'] = validate_rules.cards(findings)
+    # A summary is built when there is anything at all to say, which now includes a
+    # bundle with no findings but an unmet requirement. Without the second clause the
+    # template fell through to its "PDS reported nothing, all labels passed" branch,
+    # which is how a bundle with no target was told it had passed.
+    # Findings come from the run the verdict rests on, which is the latest unless the
+    # latest failed while an earlier check still describes the bundle. Taking them
+    # from a failed run would empty the list while the gate, reading the earlier
+    # check, went on refusing, with nothing on screen to say why.
+    judged = validate_runner.judged_run(bundle)
+    findings = (judged.findings or []) if judged else []
+    if findings or outstanding:
+        context['validation_summary'] = validate_rules.summarise(findings, outstanding)
+        context['validation_cards'] = validate_rules.cards(findings, outstanding)
         context['validation_advisory'] = validate_rules.translate(findings)['advisory']
         # The raw output, for the second tab. Everything PDS reported, including the
-        # findings the translation hides, grouped by the label each came from. Shown
-        # to the bundle's owner, not just staff: the point of offering it is that
-        # nobody has to take the translation on trust.
-        raw = {}
-        for finding in findings:
-            raw.setdefault(finding['label'] or 'bundle', []).append(finding)
-        context['validation_raw'] = sorted(raw.items())
-        context['validation_raw_total'] = len(findings)
+        # findings the translation hides. Grouped by the thing each is about rather
+        # than listed one per line: PDS reports most defects twice, once as a pattern
+        # failure and once as a type failure on the same element and line, so a
+        # bundle with four problems read as eight errors and looked twice as bad as
+        # it was. Each group carries the plain-language item it became, which is what
+        # makes the tab worth opening rather than merely honest.
+        context['validation_raw'] = validate_rules.raw_groups(findings)
+        context['validation_raw_total'] = sum(
+            len(groups) for _label, groups in context['validation_raw'])
 
     return context
 
@@ -1055,7 +1147,8 @@ def bundle(request, pk_bundle):
         form_bundle = BundleForm(request.POST or None) 
         form_citation_information = CitationInformationForm(
             request.POST or None,
-            initial={'publication_year': timezone.now().year}
+            initial={'publication_year': timezone.now().year},
+            bundle=bundle,
         )
         form_modification_history = ModificationHistoryForm(request.POST or None)     
         form_data = DataForm(request.POST or None, pk_bun=pk_bundle)
@@ -1220,18 +1313,23 @@ def bundle(request, pk_bundle):
                 os.makedirs(netcdf_collection_directory, exist_ok=True)
 
 
-                # Refuse the upload up front if the disk can't hold it (plus a
-                # safety margin) - running out of space mid-write corrupts labels
-                # and used to leave the whole bundle 500ing.
-                import shutil as _shutil
+                # Refuse the upload if the disk can't hold it (plus a safety margin) - running out
+                # of space mid-write corrupts labels and used to leave the whole bundle 500ing.
+                # The page asks the same question before sending anything; this is the backstop
+                # for a browser without the script, or a disk that filled up in between. The code
+                # lets the page open its storage dialog instead of a bare error.
+                from build import storage_report
                 total_upload = sum(getattr(f, 'size', 0) for f in files)
-                free_bytes = _shutil.disk_usage(settings.ARCHIVE_DIR).free
-                margin = 2 * 1024 ** 3  # keep 2 GB headroom for labels and other users
-                if total_upload + margin > free_bytes:
-                    print('Upload rejected: needs {} bytes, only {} free'.format(total_upload, free_bytes))
+                space = storage_report.check_space(total_upload)
+                if not space['ok']:
+                    print('Upload rejected: needs {} bytes, {} usable'.format(total_upload, space['available']))
                     return JsonResponse(
                         {'error': 'The server does not have enough storage space for this upload right now. '
-                                  'The ELSA team has been made aware of storage issues; please try again later or contact us via the Contact page.'},
+                                  'Nothing was added to your bundle.',
+                         'code': 'insufficient_storage',
+                         'needed': storage_report.human_size(space['needed']),
+                         'available': storage_report.human_size(space['available']),
+                         'available_bytes': space['available']},
                         status=507
                     )
 
@@ -1365,6 +1463,14 @@ def bundle(request, pk_bundle):
 
             return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
 
+
+        # A citation that was posted and refused reopens its window, so the reason is on
+        # screen rather than in a closed modal. Only when the post was the citation
+        # form's: every form on this page is bound to every POST, so the citation form
+        # also "fails" whenever anything else is submitted.
+        if (request.method == 'POST' and 'number_of_authors_people' in request.POST
+                and not form_citation_information.is_valid()):
+            context_dict['reopen_citation_modal'] = True
 
         # After ELSAs friend hits submit, if the forms are completed correctly, we should enter
         # this conditional.
@@ -1506,11 +1612,13 @@ def bundle(request, pk_bundle):
             # return render(request, 'build/bundle/bundle.html', context_dict)
 
             # # fixes the refresh duplication issue - deric
-            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
+            # The fragment tells the page to open the new collection's tab instead of the
+            # Add New Collection form it was just created from.
+            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/#additional_collection_' + str(additional_collections.pk))
 
             # fixes the refresh duplication issue, use this one for offline testing - deric
             # return HttpResponseRedirect('/build/' + pk_bundle + '/')
-                    
+
         # After ELSAs friend hits submit, if the forms are completed correctly, we should enter
         # this conditional.  We must do [] things: 1. Create the Document model object, 2. Add a Product_Document label to the Document Collection, 3. Add the Document as an Internal_Reference to the proper labels (like Product_Bundle and Product_Collection).
         
@@ -1739,6 +1847,88 @@ def bulk_delete_netcdf(request, pk_bundle):
 
     else:
         return redirect('main:restricted_access')
+
+
+# ------------------------------------------------------------------------------------------------ #
+#                                    NetCDF storage check and report
+# ------------------------------------------------------------------------------------------------ #
+# The upload page asks netcdf_storage_check before sending any bytes, and when there is no room it
+# opens a dialog that fetches a drafted message from netcdf_storage_draft and posts the user's
+# reviewed version to netcdf_storage_report. All three answer JSON, since only the page's script
+# calls them, so a stranger's request gets a 403 rather than the restricted-access redirect.
+# The logic lives in build/storage_report.py.
+
+def _storage_request(request, pk_bundle):
+    """(bundle, payload, error_response) for the storage views, after the usual owner check."""
+    from build import storage_report
+    bundle = get_object_or_404(Bundle, pk=pk_bundle)
+    if request.user != bundle.user:
+        return None, None, JsonResponse({'error': 'Not your bundle.'}, status=403)
+    if request.method != 'POST':
+        return None, None, JsonResponse({'error': 'POST only.'}, status=405)
+    try:
+        payload = json.loads(request.body or b'{}')
+    except ValueError:
+        return None, None, JsonResponse({'error': 'Malformed request.'}, status=400)
+    if not isinstance(payload, dict):
+        return None, None, JsonResponse({'error': 'Malformed request.'}, status=400)
+    payload['files'] = storage_report.clean_files(payload.get('files'))
+    payload['collection'] = str(payload.get('collection', ''))[:200]
+    return bundle, payload, None
+
+
+@login_required
+def netcdf_storage_check(request, pk_bundle):
+    from build import storage_report
+    bundle, payload, error = _storage_request(request, pk_bundle)
+    if error:
+        return error
+    total = sum(f['size'] for f in payload['files'])
+    space = storage_report.check_space(total)
+    if not space['ok']:
+        print('Upload preflight refused for {}: needs {} bytes, {} usable'.format(
+            request.user.username, total, space['available']))
+    return JsonResponse({
+        'ok': space['ok'],
+        'needed': storage_report.human_size(space['needed']),
+        'available': storage_report.human_size(space['available']),
+        'available_bytes': space['available'],
+    })
+
+
+@login_required
+def netcdf_storage_draft(request, pk_bundle):
+    from build import storage_report
+    bundle, payload, error = _storage_request(request, pk_bundle)
+    if error:
+        return error
+    message, source = storage_report.draft_message(
+        request.user, bundle, payload['collection'], payload['files'])
+    return JsonResponse({'message': message, 'source': source})
+
+
+@login_required
+def netcdf_storage_report(request, pk_bundle):
+    from build import storage_report
+    bundle, payload, error = _storage_request(request, pk_bundle)
+    if error:
+        return error
+    message = str(payload.get('message', '')).strip()
+    if not message:
+        return JsonResponse({'error': 'Please write a message before sending.'}, status=400)
+    if len(message) > 5000:
+        return JsonResponse({'error': 'That message is too long. Please keep it under 5000 characters.'},
+                            status=400)
+    if storage_report.rate_limited('send', request.user, storage_report.SEND_LIMIT_PER_HOUR):
+        return JsonResponse({'error': 'You have already sent a few reports this hour. Team ELSA has '
+                                      'them and will be in touch.'}, status=429)
+    try:
+        storage_report.send_report(request.user, bundle, payload['collection'], payload['files'], message)
+    except Exception as e:
+        print('Storage report email failed: {}'.format(e))
+        return JsonResponse({'error': 'The report could not be sent just now. Please email '
+                                      'atm-elsa@nmsu.edu directly.'}, status=502)
+    return JsonResponse({'sent': True, 'email': request.user.email})
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -2661,16 +2851,9 @@ def submit_bundle_internal(request, pk_bundle):
             bundle.submitted_at = timezone.now()
             bundle.save()
 
-            # Submission is the one moment worth paying for a full check, including
-            # reading inside every data file. It runs in the background: the
-            # submission itself is not held up, and staff have the report by the time
-            # they look. The structure checks the user saw while working skipped
-            # content validation, which is the expensive part.
-            try:
-                validate_runner.start(bundle, ValidationRun.TIER_FULL)
-            except Exception as error:
-                # A submission must never fail because validation could not start.
-                print('Could not start submission validation: {}'.format(error))
+            # No second check is started here. The gate above has just confirmed a
+            # check that matches these exact files, and that check already reads
+            # inside data files, so another run would only repeat it.
 
             # Build email
             archive_path = bundle.directory()
@@ -2691,7 +2874,8 @@ def submit_bundle_internal(request, pk_bundle):
                 'Bundle Type: {}\n'
                 'Submitted: {}\n\n'
                 'Archive Path:\n{}\n\n'
-                'Download URL:\n{}\n'
+                'Download URL:\n{}\n\n'
+                '{}\n'
             ).format(
                 'resubmitted' if is_resubmission else 'submitted',
                 bundle.name,
@@ -2701,6 +2885,7 @@ def submit_bundle_internal(request, pk_bundle):
                 localtime(bundle.submitted_at).strftime('%B %d, %Y at %I:%M %p %Z'),
                 archive_path,
                 download_url,
+                validation_summary_for_email(bundle),
             )
 
             try:
@@ -2897,7 +3082,8 @@ def citation_information(request, pk_bundle):
         # }
         form_citation_information = CitationInformationForm(
             request.POST or None,
-            initial={'publication_year': timezone.now().year}
+            initial={'publication_year': timezone.now().year},
+            bundle=bundle,
         )
         # if form_citation_information and form_citation_information.has_changed:
         #     print('changed: {}', format(form_citation_information.changed_data))
@@ -3776,6 +3962,7 @@ def annex_collection_document(request, pk_bundle):
         # membership. Without this the document collection stays at records=0 with
         # an empty inventory however many documents are added to it.
         rebuild_collection_inventories(bundle)
+        mirror_citation_into_data_products(bundle)
 
         if request.POST.get("source") == "bundle":
             return redirect(reverse("build:bundle", args=[pk_bundle]))
@@ -3817,6 +4004,7 @@ def collection_document(request, pk_bundle):
         product_collections_list = bundle_label_targets(bundle)
 
         rebuild_collection_inventories(bundle)
+        mirror_citation_into_data_products(bundle)
 
         return redirect(reverse('build:collection_additional', args=[pk_bundle]))
 
@@ -4177,6 +4365,7 @@ def document(request, pk_bundle):
             '\n----------------End Build Internal_Reference for Document-------------------')
 
         rebuild_collection_inventories(bundle)
+        mirror_citation_into_data_products(bundle)
 
     return render(request, 'build/document/document.html', context_dict)
 
@@ -4257,6 +4446,7 @@ def annex_product_document(request, pk_bundle, pk_product_document):
         # An edit can change the document's identifier, which is what the inventory
         # lists, so the table has to be rewritten here as well as on the add.
         rebuild_collection_inventories(bundle)
+        mirror_citation_into_data_products(bundle)
 
         print('Changed: {}'.format(annex_form_product_document.changed_data))
 
@@ -4399,6 +4589,7 @@ def product_document(request, pk_bundle, pk_product_document):
             close_label(product_document.label(), label_root, label_list[2])
 
         rebuild_collection_inventories(bundle)
+        mirror_citation_into_data_products(bundle)
 
         print('Changed: {}'.format(form_product_document.changed_data))
 
@@ -5687,7 +5878,16 @@ def _process_single_netcdf(bundle, nc_path, collection_directory, NS, allowed_va
         # so the inventory and the label it names cannot disagree.
         # (must be prefixed: unprefixed find() misses default-namespace elements
         # and the else branch would append a duplicate logical_identifier)
-        product_lid = f"{bundle.lid()}:{subdir_name.lower()}:{nc_filename}"
+        # pds_lid_segment, not .lower(): PDS4 restricts a LID segment to lowercase
+        # letters, digits, hyphen, dot and underscore, and neither a collection
+        # directory nor an uploaded file name is bound by that. A file copied on
+        # Windows arrives as "... - Copy.nc" and produced a LID with a capital C in
+        # it, which PDS rejected and which the user had no way to act on. Applied on
+        # both segments, matching AdditionalCollections.member_lidvids exactly, so
+        # the inventory and this label cannot name the product differently.
+        product_lid = "{}:{}:{}".format(bundle.lid(),
+                                        pds_lid_segment(subdir_name),
+                                        pds_lid_segment(nc_filename))
         lid_elem = id_area.find("pds:logical_identifier", namespaces=NS)
         if lid_elem is None:
             lid_elem = ET.SubElement(id_area, f"{{{NS['pds']}}}logical_identifier")
@@ -6032,10 +6232,17 @@ def validation_status(request, pk_bundle):
     tier = request.GET.get('tier') or None
     validation_run = validate_runner.latest_run_for(bundle, tier)
 
-    if validation_run is None:
-        return JsonResponse({'status': 'none'})
+    # Whether the Review & Submit window should start a check when it opens: never
+    # checked, or changed since. Decided here rather than in the page so the page
+    # and the background check follow one rule.
+    needs = validate_runner.needs_check(bundle)
 
-    return JsonResponse(_validation_state(validation_run))
+    if validation_run is None:
+        return JsonResponse({'status': 'none', 'needs_check': needs})
+
+    state = _validation_state(validation_run)
+    state['needs_check'] = needs
+    return JsonResponse(state)
 
 
 @login_required
@@ -6094,13 +6301,24 @@ def _validation_state(validation_run):
         # raw error count is a different and much larger number (43 against 3 on a
         # real AMA bundle), so sending only that would make the badge jump the moment
         # a check finished, from what the page rendered to what the poll reported.
-        'blocking': validate_rules.summarise(validation_run.findings or [])['blocking'],
+        #
+        # ELSA's own requirements are counted too, exactly as the page counts them on
+        # load. Without them a clean check turned the badge to "Passed" on a bundle
+        # with no target, while the list inside said a target was missing, and only a
+        # reload brought back "1 to fix". PDS cannot see a missing target, so its
+        # silence is not a pass.
+        'blocking': validate_rules.summarise(
+            validation_run.findings or [],
+            preflight.requirements(validation_run.bundle))['blocking'],
         'finished': validation_run.status in (
             ValidationRun.STATUS_DONE, ValidationRun.STATUS_FAILED),
         # A completed run whose bundle has since changed still describes a real
         # bundle, just not this one. The client has to be able to say so.
         'stale': validation_run.is_stale(),
         'failure_reason': validation_run.failure_reason,
+        # Refused because the server was already running its limit. Never saved, so
+        # it has no id; the page waits and asks again rather than reporting a result.
+        'busy': validation_run.pk is None,
     }
 
 

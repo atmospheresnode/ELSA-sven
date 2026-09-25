@@ -4,6 +4,7 @@ from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
 from build.models import Bundle, ValidationRun
+from build.requirement_fixture import satisfy_requirements
 
 
 class ValidationViewTests(TestCase):
@@ -13,6 +14,10 @@ class ValidationViewTests(TestCase):
         self.staff = User.objects.create_user('staffer', password='pw', is_staff=True)
         self.bundle = Bundle.objects.create(
             name='view test bundle', user=self.owner, version='1O00', bundle_type='External')
+        # These tests are about how PDS's findings are counted. ELSA's own requirements
+        # are counted alongside them now, so the bundle meets those and only the
+        # findings below are left to count.
+        satisfy_requirements(self.bundle)
         self.run = ValidationRun.objects.create(
             bundle=self.bundle, tier=ValidationRun.TIER_STRUCTURE,
             status=ValidationRun.STATUS_DONE, error_count=3, warning_count=1,

@@ -1,0 +1,34 @@
+{% comment %}
+The Submit confirmation window's button, and whether it is offered.
+
+Its own partial, refreshed with the verdict, for the reason submit_action.html is: this
+was rendered once at page load and never again. A bundle that was out of date when the
+page loaded, then checked and cleared in the Review & Submit window, reached this
+window through an enabled Submit button and was refused here by the stale answer.
+display:contents so the wrapper adds nothing to the footer's layout.
+{% endcomment %}
+<div id="submit_confirm_action" style="display:contents;">
+            {% if validation_block %}
+            {% comment %}
+               The PDS validation check found something, or has not run against this
+               version of the bundle. Disabling the button is only the visible half:
+               submit_bundle_internal refuses the same cases, because a disabled
+               button stops nobody who reloads or has the page open from before.
+            {% endcomment %}
+            <div class="alert alert-warning py-2 px-3 small text-start mb-2">
+               <strong>Not ready to submit.</strong> {{ validation_block.1 }}
+            </div>
+            <button type="button" class="btn btn-secondary" disabled>
+               <i class="bi bi-send me-1"></i>
+               {% if bundle.submitted_at %}Resubmit{% else %}Submit{% endif %} for Review
+            </button>
+            {% else %}
+            <form action="{% url 'build:submit_bundle_internal' bundle.pk %}" method="post" class="mb-0">
+               {% csrf_token %}
+               <button type="submit" class="btn btn-success">
+                  <i class="bi bi-send me-1"></i>
+                  {% if bundle.submitted_at %}Resubmit{% else %}Submit{% endif %} for Review
+               </button>
+            </form>
+            {% endif %}
+</div><!-- /submit_confirm_action -->

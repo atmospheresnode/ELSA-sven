@@ -31,8 +31,8 @@ from django.test import TestCase, SimpleTestCase
 
 from build.chocolate import write_collection_inventory
 from build.models import (Investigation, PDS_TARGET_TYPES, Product_Bundle,
-                          Version, insert_in_context_area, pds_target_type,
-                          target_reference_type)
+                          Version, insert_in_context_area, pds_context_title,
+                          pds_target_type, target_reference_type)
 
 PDS = 'http://pds.nasa.gov/pds4/pds/v1'
 NS = {'pds': PDS}
@@ -141,7 +141,8 @@ class EmptyContainerTests(SimpleTestCase):
                       lid='urn:nasa:pds:context:investigation:individual.demo').fill_label(root)
         area = root.find('pds:Context_Area/pds:Investigation_Area', NS)
         self.assertIsNotNone(area, 'fill_label must build the area it no longer finds')
-        self.assertEqual(area.find('pds:name', NS).text, 'Demo Investigation')
+        self.assertEqual(area.find('pds:name', NS).text,
+                         'Demo Investigation Individual Investigation')
         self.assertEqual(
             area.find('pds:Internal_Reference/pds:reference_type', NS).text,
             'bundle_to_investigation')
@@ -377,7 +378,10 @@ class AMAContextLidTests(TestCase):
     def test_investigation_area_is_no_longer_blank(self):
         """C3: name, type and reference_type shipped empty in collection labels."""
         area = self.build_collection_label(self.investigation)
-        self.assertEqual(area.find('pds:name', NS).text, 'Atmospheric Modeling Annex')
+        # The published title, not the stored name: validate compares this against
+        # the registered context product's title, which PDS forms as "<name> <type>".
+        self.assertEqual(area.find('pds:name', NS).text,
+                         'Atmospheric Modeling Annex Individual Investigation')
         self.assertEqual(area.find('pds:type', NS).text, 'Individual Investigation')
         self.assertEqual(
             area.find('pds:Internal_Reference/pds:reference_type', NS).text,
@@ -536,3 +540,44 @@ class ContextAreaOrderTests(SimpleTestCase):
         names = self.add(area, 'Target_Identification')
         positions = [CONTEXT_AREA_ORDER.index(n) for n in names]
         self.assertEqual(positions, sorted(positions), names)
+
+
+class ContextTitleTests(SimpleTestCase):
+    """The name PDS publishes for a context product, which is what it checks against.
+
+    validate compares Investigation_Area/name to the title of the registered
+    context product. PDS titles those "<name> <type>", so the AMA investigation is
+    published as "Atmospheric Modeling Annex Individual Investigation" while ELSA's
+    crawler stored only "Atmospheric Modeling Annex". Every AMA bundle therefore
+    carried a warning the user could do nothing about, and the panel explained it
+    without naming an action, because there was none.
+
+    Confirmed by the corpus: writing the published title removes the warning
+    entirely, and seven bundle shapes went to zero findings of any kind.
+    """
+
+    def test_the_type_is_appended_to_make_the_published_title(self):
+        self.assertEqual(
+            pds_context_title('Atmospheric Modeling Annex', 'Individual Investigation'),
+            'Atmospheric Modeling Annex Individual Investigation')
+
+    def test_a_name_that_already_ends_in_its_type_is_left_alone(self):
+        """Otherwise a second pass appends it twice."""
+        title = 'Atmospheric Modeling Annex Individual Investigation'
+        self.assertEqual(pds_context_title(title, 'Individual Investigation'), title)
+
+    def test_it_is_idempotent(self):
+        once = pds_context_title('Cassini', 'Mission')
+        self.assertEqual(pds_context_title(once, 'Mission'), once)
+
+    def test_case_does_not_defeat_the_check(self):
+        self.assertEqual(
+            pds_context_title('Cassini MISSION', 'Mission'), 'Cassini MISSION')
+
+    def test_a_missing_type_leaves_the_name_as_it_is(self):
+        self.assertEqual(pds_context_title('Cassini', ''), 'Cassini')
+        self.assertEqual(pds_context_title('Cassini', None), 'Cassini')
+
+    def test_a_missing_name_produces_nothing_rather_than_a_bare_type(self):
+        self.assertEqual(pds_context_title('', 'Mission'), '')
+        self.assertEqual(pds_context_title(None, 'Mission'), '')

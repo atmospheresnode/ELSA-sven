@@ -18,6 +18,7 @@ from django.urls import reverse
 
 from build.models import Bundle, ValidationRun
 from build import validate_runner
+from build.requirement_fixture import satisfy_requirements
 
 
 CITATION_FINDING = {
@@ -49,6 +50,10 @@ class SubmissionGateTests(TestCase):
             'gateowner', password='pw', email='owner@example.com')
         self.bundle = Bundle.objects.create(
             name='gate bundle', user=self.owner, version='1O00', bundle_type='External')
+        # This module is about the validation half of the gate. Without ELSA's own
+        # requirements met, every bundle here would be blocked before validation was
+        # consulted at all, and the holes being tested would never be reached.
+        satisfy_requirements(self.bundle)
         self.client.login(username='gateowner', password='pw')
 
     def checked_with(self, findings, status=ValidationRun.STATUS_DONE, stale=False):

@@ -164,6 +164,17 @@ class CollectionTypeE2ETests(TestCase):
         self.assertIsNotNone(collection, 'the collection was not created')
         self.assertEqual(self.collection_types(bundle)['mydata'], 'External')
 
+    def test_creating_a_collection_lands_on_its_tab(self):
+        """The redirect names the new collection's tab, not the Add New Collection form."""
+        bundle = self.build_bundle('coltype lands on tab', 'External')
+        response = self.client.post(reverse('build:bundle', kwargs={'pk_bundle': bundle.pk}),
+                                    {'collection_name': 'mydata', 'collection_type': 'External'})
+
+        collection = AdditionalCollections.objects.get(bundle=bundle, collection_name='mydata')
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response['Location'].endswith(
+            '/#additional_collection_{}'.format(collection.pk)), response['Location'])
+
     # -- the guard that catches any future drift ---------------------------------------------------
 
     def test_no_bundle_emits_a_value_outside_the_enumeration(self):

@@ -22,6 +22,7 @@ an indeterminate loading phase instead of a bar sitting at zero.
 """
 import os
 import re
+import signal
 import subprocess
 import sys
 import threading
@@ -29,7 +30,7 @@ import time
 
 from django.conf import settings
 from django.core.mail import EmailMessage
-from django.db import transaction
+from django.db import models, transaction
 from django.utils import timezone
 
 from build.models import Bundle, ValidationRun
@@ -69,6 +70,12 @@ def _track_progress(process, validation_run):
 
     try:
         for line in process.stdout:
+            if validation_run is None:
+                # Recording failed earlier. Keep reading anyway: validate blocks once
+                # the pipe buffer fills, and a reader that stops would hang it until
+                # the timeout.
+                continue
+
             match = PROGRESS.search(line)
             if not match:
                 continue
@@ -90,11 +97,16 @@ def _track_progress(process, validation_run):
             # indicator shows in words, and there are only ever a few of them.
             now = time.monotonic()
             if changed_phase or now - last_write >= PROGRESS_WRITE_INTERVAL_SECONDS:
-                validation_run.save(update_fields=['phase', 'products_done'])
+                try:
+                    validation_run.save(update_fields=['phase', 'products_done'])
+                except Exception as error:           # noqa: BLE001 - see docstring
+                    print('validate progress tracking stopped: {}'.format(error))
+                    validation_run = None
+                    continue
                 last_write = now
                 pending = False
 
-        if pending:
+        if pending and validation_run is not None:
             validation_run.save(update_fields=['phase', 'products_done'])
     except Exception as error:                       # noqa: BLE001 - see docstring
         print('validate progress tracking stopped: {}'.format(error))
@@ -145,14 +157,18 @@ def _environment():
         environment['JAVA_HOME'] = java_home
         environment['PATH'] = os.path.join(java_home, 'bin') + os.pathsep + environment.get('PATH', '')
 
-    # Cap the heap. Left alone, Java sizes it from total system memory, so on a 62GB
-    # shared machine one validation can reserve far more than it will ever use -
-    # memory the services sharing the box then cannot have. validate reads JAVA_OPTS,
-    # and anything already there is kept ahead of the ceiling so a host can tune it.
+    # Cap the heap. validate's launcher does not read JAVA_OPTS: it hard-codes
+    # -Xms2048m -Xmx4096m on the java command line, so every run started at 2GB and
+    # could grow to 4GB whatever this was set to. _JAVA_OPTIONS is read by the JVM
+    # itself and applied after the command line, so it is the one place a host can
+    # still win. -Xms has to come down with it: a ceiling below the launcher's 2GB
+    # floor stops the JVM starting at all.
     max_heap = getattr(settings, 'VALIDATE_JAVA_MAX_HEAP', '')
-    if max_heap:
-        existing = environment.get('JAVA_OPTS', '')
-        environment['JAVA_OPTS'] = '{} -Xmx{}'.format(existing, max_heap).strip()
+    # Skipped when a ceiling is already there: the web process builds this for the
+    # child, and the child builds it again for validate from what it inherited.
+    existing = environment.get('_JAVA_OPTIONS', '')
+    if max_heap and '-Xmx' not in existing:
+        environment['_JAVA_OPTIONS'] = '{} -Xms64m -Xmx{}'.format(existing, max_heap).strip()
 
     return environment
 
@@ -242,9 +258,21 @@ def build_command(run, report_path):
         # pds.nasa.gov being reachable. Built by `manage.py build_schema_catalog`.
         command += ['-C', catalog]
 
-    if run.tier == ValidationRun.TIER_STRUCTURE:
-        # Skips reading inside data files. This is the difference between a few
-        # seconds and, on a large NetCDF bundle, potentially minutes.
+    # Content validation used to be skipped on the structure tier, on the assumption
+    # that reading inside data files was the expensive part. Measured against real
+    # bundles, it is not: 6s against 7s on a 184MB NetCDF bundle, and within noise on
+    # both Archive bundles. An AMA data product is a Product_External, which only
+    # references its file, so there is nothing inside for validate to read.
+    #
+    # What the skip did cost was a whole class of error. error.label.missing_file --
+    # a label naming a file that is not there -- only appears with content
+    # validation, and every ELSA document does this today, because a document can be
+    # declared but its file cannot be uploaded. Skipping meant nobody was told until
+    # PDS staff found it, which is the exact round trip this feature exists to avoid.
+    #
+    # The escape hatch remains for a host that meets a bundle with large tables,
+    # where reading every field really would be slow.
+    if getattr(settings, 'VALIDATE_SKIP_CONTENT', False):
         command.append('--skip-content-validation')
 
     return command
@@ -281,9 +309,18 @@ def run(run_id):
     timeout = getattr(settings, 'VALIDATE_TIMEOUT_SECONDS', 3600)
 
     try:
+        # errors='replace' because a file name validate echoes back is not
+        # guaranteed to be UTF-8, and one undecodable byte would otherwise end the
+        # progress reader and leave the pipe to fill.
+        #
+        # Its own session because bin/validate is a shell script that runs java as a
+        # child rather than exec-ing it. Killing the script alone on timeout left the
+        # JVM running, orphaned and outside VALIDATE_MAX_CONCURRENT; killing the
+        # group takes both.
         process = subprocess.Popen(
             command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-            env=_environment(), text=True, bufsize=1)
+            env=_environment(), text=True, errors='replace', bufsize=1,
+            start_new_session=True)
     except OSError as error:
         return _fail(validation_run, 'Could not run validate: {}'.format(error))
 
@@ -300,7 +337,10 @@ def run(run_id):
     try:
         process.wait(timeout=timeout)
     except subprocess.TimeoutExpired:
-        process.kill()
+        try:
+            os.killpg(process.pid, signal.SIGKILL)
+        except OSError:
+            process.kill()
         process.wait()
         return _fail(validation_run,
                      'Validation ran longer than VALIDATE_TIMEOUT_SECONDS ({}s) and '
@@ -341,6 +381,12 @@ def run(run_id):
     return validation_run
 
 
+QUEUED_GRACE_SECONDS = 300
+
+BUSY_REASON = ('The server is already running as many validations as it allows at '
+               'once.')
+
+
 def reap_abandoned_runs(bundle=None):
     """Fail runs that cannot still be in flight, and say why.
 
@@ -358,9 +404,15 @@ def reap_abandoned_runs(bundle=None):
     # starting, so a queued run on a busy machine is not reaped out from under itself.
     cutoff = timezone.now() - timezone.timedelta(seconds=timeout + 300)
 
+    # A run still QUEUED is one whose child never got as far as marking it RUNNING,
+    # which takes seconds. Past this it is a child that died on startup (a database
+    # refusing connections, say), and waiting out the full timeout for it would hold
+    # the bundle, and a slot under VALIDATE_MAX_CONCURRENT, for over an hour.
+    queued_cutoff = timezone.now() - timezone.timedelta(seconds=QUEUED_GRACE_SECONDS)
+
     runs = ValidationRun.objects.filter(
-        status__in=[ValidationRun.STATUS_QUEUED, ValidationRun.STATUS_RUNNING],
-        requested_at__lt=cutoff)
+        models.Q(status=ValidationRun.STATUS_RUNNING, requested_at__lt=cutoff)
+        | models.Q(status=ValidationRun.STATUS_QUEUED, requested_at__lt=queued_cutoff))
     if bundle is not None:
         runs = runs.filter(bundle=bundle)
 
@@ -493,6 +545,7 @@ def _fail(validation_run, reason):
 BLOCK_NOT_CHECKED = 'not_checked'
 BLOCK_STALE = 'stale'
 BLOCK_FINDINGS = 'findings'
+BLOCK_REQUIREMENTS = 'requirements'
 
 
 def submission_block(bundle, user=None):
@@ -501,7 +554,10 @@ def submission_block(bundle, user=None):
     Returns (reason_code, message) so the page can explain and the view can refuse
     with the same words.
 
-    Three deliberate holes in the gate:
+    ELSA's own requirements (a citation, a modification history, a target) are
+    checked first and unconditionally. Everything below concerns validation only.
+
+    Three deliberate holes in the validation part of the gate:
 
     Staff are never blocked. The people who would have to open the gate when a rule
     is wrong are the people operating it, and making them edit a setting to accept
@@ -514,13 +570,27 @@ def submission_block(bundle, user=None):
 
     And the whole thing can be turned off with VALIDATE_BLOCKS_SUBMISSION.
     """
+    from build import preflight, validate_rules
+
+    # ELSA's own requirements come first and are not subject to either hole below.
+    # They are not part of the validate feature: the Review & Submit button has
+    # refused a bundle without a citation, a modification history or a target since
+    # long before validate existed, and turning validation off, or being staff, was
+    # never meant to waive them. Enforcing them only by disabling the button left
+    # them unenforced for anyone who posted the form anyway.
+    outstanding = preflight.requirements(bundle)
+    if outstanding:
+        return (BLOCK_REQUIREMENTS,
+                '{} still needed before this bundle can go for review: {}.'.format(
+                    'One thing is' if len(outstanding) == 1 else
+                    '{} things are'.format(len(outstanding)),
+                    '; '.join(item['title'] for item in outstanding)))
+
     if not getattr(settings, 'VALIDATE_BLOCKS_SUBMISSION', False):
         return None
 
     if user is not None and getattr(user, 'is_staff', False):
         return None
-
-    from build import validate_rules
 
     latest = latest_run_for(bundle, ValidationRun.TIER_STRUCTURE)
 
@@ -533,7 +603,8 @@ def submission_block(bundle, user=None):
         return (BLOCK_NOT_CHECKED,
                 'The validation check is still running. It takes a few seconds.')
 
-    if latest.status == ValidationRun.STATUS_FAILED:
+    latest = judged_run(bundle)
+    if latest is None:
         # Cannot check is not the same as found a problem.
         return None
 
@@ -542,6 +613,8 @@ def submission_block(bundle, user=None):
                 'This bundle changed after it was last checked. Run the check again '
                 'so the result describes what you are submitting.')
 
+    # No requirement items passed: they are handled above and would be counted
+    # twice here.
     summary = validate_rules.summarise(latest.findings or [])
     if not summary['can_submit']:
         count = summary['blocking']
@@ -551,6 +624,47 @@ def submission_block(bundle, user=None):
                     count, '' if count == 1 else 's', 's' if count == 1 else ''))
 
     return None
+
+
+def judged_run(bundle):
+    """The finished check a bundle's verdict rests on, or None if there is none.
+
+    Normally the latest structure run. When that one failed, a failure is not
+    evidence of no problem: the previous finished check still describes the bundle
+    if nothing has changed since, so it still decides. The gate and the list of
+    things to fix both read this, so they cannot disagree about which run counts.
+    """
+    latest = latest_run_for(bundle, ValidationRun.TIER_STRUCTURE)
+    if latest is None or latest.status != ValidationRun.STATUS_FAILED:
+        return latest
+
+    previous = bundle.validation_runs.filter(
+        tier=ValidationRun.TIER_STRUCTURE, status=ValidationRun.STATUS_DONE).first()
+    if previous is None or previous.is_stale():
+        return None
+    return previous
+
+
+def needs_check(bundle):
+    """Whether the bundle's result no longer answers "can this be submitted".
+
+    True when it has never been checked or has changed since it was. False while a
+    check is in flight, and false after a failed check: whatever stopped it will
+    almost certainly stop the next one too, so it waits to be asked.
+
+    The one rule both callers use: the bundle page, which checks quietly in the
+    background, and the Review & Submit window, which checks before it offers
+    Submit.
+    """
+    if active_run_for(bundle) is not None:
+        return False
+
+    latest = latest_run_for(bundle, ValidationRun.TIER_STRUCTURE)
+    if latest is None:
+        return True
+    if latest.status == ValidationRun.STATUS_FAILED:
+        return False
+    return latest.is_stale()
 
 
 def should_auto_check(bundle):
@@ -567,7 +681,7 @@ def should_auto_check(bundle):
     if not getattr(settings, 'VALIDATE_AUTO_CHECK', False):
         return False
 
-    if active_run_for(bundle) is not None:
+    if not needs_check(bundle):
         return False
 
     latest = latest_run_for(bundle, ValidationRun.TIER_STRUCTURE)
@@ -596,14 +710,7 @@ def should_auto_check(bundle):
                 seconds=debounce):
             return False
 
-    # A failed run is not retried automatically. Whatever stopped it - validate
-    # missing, a crash - will almost certainly stop the next one too, and a page
-    # that silently retries a broken thing every five minutes is worse than one
-    # that reports the failure and waits to be asked.
-    if latest.status == ValidationRun.STATUS_FAILED:
-        return False
-
-    return latest.is_stale()
+    return True
 
 
 def at_capacity():
@@ -652,15 +759,17 @@ def start(bundle, tier=ValidationRun.TIER_STRUCTURE):
             return existing
 
         # Refused rather than queued: a queue needs something to drain it, and there
-        # is no worker process here. The row records why, the panel shows it, and
-        # pressing Check again once the others finish is the whole recovery.
+        # is no worker process here. The page waits and asks again.
+        #
+        # Not saved. A refusal says the server was busy, not anything about the
+        # bundle, and stored as the latest run it was read as a result: the badge
+        # stuck at "Could not run", the panel dropped the findings of the check
+        # before it, and nothing retried because failed runs are not retried.
         if at_capacity():
-            return ValidationRun.objects.create(
+            return ValidationRun(
                 bundle=bundle, tier=tier, status=ValidationRun.STATUS_FAILED,
                 bundle_updated_at=bundle.updated_at, finished_at=timezone.now(),
-                failure_reason=(
-                    'The server is already running as many validations as it allows '
-                    'at once. Try the check again in a minute.'))
+                failure_reason=BUSY_REASON)
 
         validation_run = ValidationRun.objects.create(
             bundle=bundle, tier=tier, status=ValidationRun.STATUS_QUEUED,

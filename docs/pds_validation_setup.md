@@ -65,6 +65,12 @@ The optional settings and what they do:
 - `VALIDATE_TIMEOUT_SECONDS` — how long one run may take before it is treated as
   hung. Defaults to an hour, deliberately generous because content validation
   against a large NetCDF bundle has not been timed against real data yet.
+- `VALIDATE_JAVA_MAX_HEAP`: heap ceiling for each validate JVM, default `'2g'`.
+  Applied through `_JAVA_OPTIONS`, not `JAVA_OPTS`: `bin/validate` ignores
+  `JAVA_OPTS` and hard-codes `-Xms2048m -Xmx4096m`, and `_JAVA_OPTIONS` is the only
+  thing the JVM applies after its command line. The floor is lowered to 64MB
+  along with it, because a ceiling below the launcher's 2GB floor stops Java
+  starting at all. Each run logs a harmless "Picked up _JAVA_OPTIONS" line.
 - `VALIDATE_AUTO_CHECK_DEBOUNCE_SECONDS` — how long after a check finishes before
   the page may start another by itself. Defaults to 0, meaning a change is acted
   on immediately. It is a safety valve and should stay at 0 unless a host has a

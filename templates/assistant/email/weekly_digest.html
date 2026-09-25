@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>ELSA Assistant weekly review</title>
+</head>
+<!-- Email clients ignore <style> blocks unevenly, so every rule is inline and
+     the layout is tables. Autoescape stays on: everything below the header is
+     users' own words or the model's. -->
+<body style="margin:0;padding:0;background-color:#eef2f4;font-family:Roboto,'Helvetica Neue',Helvetica,Arial,sans-serif;color:#1f2937;">
+  <!-- Preview line shown next to the subject in the inbox -->
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">{{ preheader }}</div>
+
+  <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background-color:#eef2f4;padding:28px 12px;">
+    <tr>
+      <td align="center">
+        <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="max-width:640px;background-color:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 4px 18px rgba(15,23,42,0.08);">
+
+          <!-- Header: same teal band and inline logo as ELSA's other emails -->
+          <tr>
+            <td style="background-color:#008080;padding:26px 32px;border-bottom:4px solid #2bbbad;">
+              <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+                <tr>
+                  <td align="left" valign="middle">
+                    <p style="margin:0;color:#d5f0ee;font-size:11px;letter-spacing:1.2px;text-transform:uppercase;font-weight:bold;">ELSA Assistant &middot; Weekly review</p>
+                    <h1 style="margin:8px 0 4px;color:#ffffff;font-size:24px;line-height:1.25;font-weight:bold;">{{ total }} answer{{ total|pluralize }} to review</h1>
+                    <p style="margin:0;color:#d5f0ee;font-size:13px;">{{ period }}</p>
+                  </td>
+                  {% if logo_cid %}
+                  <td align="right" valign="middle" width="110" style="padding-left:16px;">
+                    <img src="cid:{{ logo_cid }}" alt="ELSA" width="110" height="62" style="display:block;border:0;outline:none;width:110px;height:62px;">
+                  </td>
+                  {% endif %}
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- At a glance -->
+          <tr>
+            <td style="padding:24px 32px 4px;">
+              <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+                <tr>
+                  <td width="33%" style="padding-right:6px;">
+                    <div style="background-color:#fef3f2;border-radius:10px;padding:14px 12px;">
+                      <p style="margin:0;font-size:26px;font-weight:bold;color:#b42318;line-height:1;">{{ total }}</p>
+                      <p style="margin:6px 0 0;white-space:nowrap;font-size:12px;color:#7a271a;">Voted down</p>
+                    </div>
+                  </td>
+                  <td width="33%" style="padding:0 3px;">
+                    <div style="background-color:#f0fdfa;border-radius:10px;padding:14px 12px;">
+                      <p style="margin:0;font-size:26px;font-weight:bold;color:#0f766e;line-height:1;">{{ ups }}</p>
+                      <p style="margin:6px 0 0;white-space:nowrap;font-size:12px;color:#115e59;">Voted up</p>
+                    </div>
+                  </td>
+                  <td width="33%" style="padding-left:6px;">
+                    <div style="background-color:#f4f6f8;border-radius:10px;padding:14px 12px;">
+                      <p style="margin:0;font-size:26px;font-weight:bold;color:#334155;line-height:1;">{{ replies }}</p>
+                      <p style="margin:6px 0 0;white-space:nowrap;font-size:12px;color:#475569;">All replies</p>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Why they were voted down, and what the bad answers had in common -->
+          <tr>
+            <td style="padding:16px 32px 0;">
+              <p style="margin:0 0 8px;font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:0.8px;font-weight:bold;">Why</p>
+              {% for reason in reasons %}
+                <span style="display:inline-block;white-space:nowrap;margin:0 6px 6px 0;padding:4px 11px;border-radius:999px;font-size:12px;font-weight:bold;background-color:{{ reason.bg }};color:{{ reason.fg }};">{{ reason.label }} &nbsp;{{ reason.count }}</span>
+              {% endfor %}
+              {% if top_chunks %}
+              <p style="margin:14px 0 8px;font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:0.8px;font-weight:bold;">Knowledge behind the bad answers</p>
+              {% for chunk in top_chunks %}
+                <span style="display:inline-block;margin:0 6px 6px 0;padding:3px 9px;border-radius:6px;font-size:12px;font-family:Menlo,Consolas,monospace;background-color:#f1f5f9;color:#334155;border:1px solid #e2e8f0;">{{ chunk.name }}.md &times;{{ chunk.count }}</span>
+              {% endfor %}
+              {% endif %}
+            </td>
+          </tr>
+
+          <tr><td style="padding:18px 32px 0;"><div style="border-top:1px solid #e5e7eb;"></div></td></tr>
+
+          <!-- One card per answer -->
+          {% for row in rows %}
+          <tr>
+            <td style="padding:18px 32px 0;">
+              <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border:1px solid #e5e7eb;border-radius:12px;">
+                <tr>
+                  <td style="padding:16px 18px;">
+                    <!-- Pill and details share one line that wraps whole on a phone -->
+                    <p style="margin:0;font-size:12px;line-height:22px;color:#94a3b8;">
+                      <span style="display:inline-block;white-space:nowrap;margin-right:8px;padding:0 10px;border-radius:999px;font-size:11px;font-weight:bold;background-color:{{ row.style.bg }};color:{{ row.style.fg }};">{{ row.style.label }}</span><span style="white-space:nowrap;">{{ row.rated|date:"M j, g:i A" }}</span> &middot; {{ row.username }} &middot; #{{ row.id }}
+                    </p>
+
+                    {% if row.question %}
+                    <p style="margin:14px 0 0;font-size:16px;line-height:1.45;color:#0f172a;font-weight:bold;">&ldquo;{{ row.question|truncatechars:300 }}&rdquo;</p>
+                    {% endif %}
+
+                    <p style="margin:14px 0 6px;font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:0.8px;font-weight:bold;">Assistant answered</p>
+                    <div style="background-color:#f4f6f8;border-radius:4px 12px 12px 12px;padding:12px 14px;font-size:14px;line-height:1.55;color:#334155;">{{ row.answer|truncatechars:700|linebreaksbr }}</div>
+
+                    {% if row.comment %}
+                    <p style="margin:14px 0 6px;font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:0.8px;font-weight:bold;">User said</p>
+                    <div style="background-color:#fffbeb;border-radius:12px 4px 12px 12px;padding:12px 14px;font-size:14px;line-height:1.55;color:#78350f;">{{ row.comment|linebreaksbr }}</div>
+                    {% endif %}
+
+                    <p style="margin:14px 0 6px;font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:0.8px;font-weight:bold;">Built from</p>
+                    {% for chunk in row.chunks %}
+                      <span style="display:inline-block;margin:0 5px 5px 0;padding:2px 8px;border-radius:6px;font-size:12px;font-family:Menlo,Consolas,monospace;background-color:#f1f5f9;color:#334155;border:1px solid #e2e8f0;">{{ chunk }}.md</span>
+                    {% empty %}
+                      <span style="font-size:13px;color:#94a3b8;">No knowledge chunks recorded</span>
+                    {% endfor %}
+
+                    {% if row.hint %}
+                    <div style="margin-top:12px;background-color:#f0fdfa;border-left:3px solid #14b8a6;border-radius:4px;padding:10px 14px;font-size:13px;line-height:1.5;color:#115e59;">
+                      <strong>Where to look:</strong> {{ row.hint }}
+                    </div>
+                    {% endif %}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          {% endfor %}
+
+          {% if more %}
+          <tr>
+            <td style="padding:14px 32px 0;font-size:13px;color:#475569;">
+              {{ more }} more in the admin: Messages, filtered by rating = Thumbs down.
+            </td>
+          </tr>
+          {% endif %}
+
+          <!-- Closing the loop -->
+          <tr>
+            <td style="padding:26px 32px 28px;">
+              <div style="background-color:#f8fafc;border-radius:12px;padding:16px 18px;">
+                <p style="margin:0 0 8px;font-size:13px;font-weight:bold;color:#0f172a;">Closing the loop</p>
+                <p style="margin:0;font-size:13px;line-height:1.7;color:#475569;">
+                  <strong style="color:#0f766e;">1.</strong> Fix the knowledge chunk, the prompt, or retrieval.<br>
+                  <strong style="color:#0f766e;">2.</strong> Run <span style="font-family:Menlo,Consolas,monospace;font-size:12px;background-color:#e2e8f0;border-radius:4px;padding:1px 5px;">assistant_stats --export-evals drafts.json</span> to turn each question into an eval case.<br>
+                  <strong style="color:#0f766e;">3.</strong> Run <span style="font-family:Menlo,Consolas,monospace;font-size:12px;background-color:#e2e8f0;border-radius:4px;padding:1px 5px;">assistant_eval</span> so it stays fixed.
+                </p>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color:#f8f8f8;padding:16px 32px;border-top:1px solid #eeeeee;">
+              <p style="margin:0;font-size:12px;line-height:1.5;color:#9ca3af;">Sent weekly by ELSA, Educational Labeling System @Atmospheres, Planetary Data System Atmospheres Node, New Mexico State University. Only weeks with a thumbs-down send an email.</p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

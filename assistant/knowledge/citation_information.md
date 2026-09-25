@@ -1,15 +1,15 @@
 <!-- watches: build/models.py#Citation_Information, build/views.py#citation_information, build/views.py#edit_citation_information, build/views.py#delete_citation_information, build/forms.py#CitationInformationForm, build/forms.py#EditCitationInformationForm, templates/build/citation_information -->
 <!-- fingerprint:
-     build/models.py#Citation_Information       = a8ddb01f7012
-     build/views.py#citation_information        = 39fef0014289
+     build/models.py#Citation_Information       = 9455d0d634ca
+     build/views.py#citation_information        = 824a33253675
      build/views.py#edit_citation_information   = 589c768f0597
      build/views.py#delete_citation_information = 42b60db2375b
-     build/forms.py#CitationInformationForm     = e8db3aa1ac79
-     build/forms.py#EditCitationInformationForm = 01577ec8a08f
+     build/forms.py#CitationInformationForm     = 5f7964a89b9a
+     build/forms.py#EditCitationInformationForm = a398ac165e27
      templates/build/citation_information       = b26336432488
 -->
-<!-- reviewed: 2026-09-11 -->
-<!-- baseline: bdd986231edc6cc2536bb7cb90679e0fd764c357 -->
+<!-- reviewed: 2026-09-25 -->
+<!-- baseline: ab6b3482d9893d5e8b7e506fadff1e8125905f6a -->
 # Citation Information
 
 PDS4 Information Model (v1.24 / 1O00): the Citation_Information class provides the
@@ -43,8 +43,16 @@ State University), recorded with their ORCIDs; these two are fixed and cannot be
 changed. Users can optionally add MORE editors of their own: enter how many
 additional editor persons/organizations on the citation form, then fill in
 their names on the citation details page (Editors tab). Citation Information is
-one of the three required components before an External bundle can be
-submitted.
+required before a bundle can be submitted.
+
+An External bundle's citation needs at least one author, a person or an
+organization. PDS4 lets a citation leave authors out, so the validation tool does
+not report it, but a citation with no one to credit cannot be cited or given a
+DOI. The author count is set only when the citation is created (the details page
+fills in names but cannot change how many there are), so for an External bundle
+the form refuses a count of zero people and zero organizations and says why. A
+citation that already has no authors has to be deleted and created again with at
+least one.
 
 A bundle holds one Citation Information section (PDS4 allows exactly one per
 bundle). Once it exists, the modal shows the current citation with edit and
@@ -56,6 +64,13 @@ held only in the XML labels. ELSA copies the citation into the bundle label,
 into every collection label (its own and any the user added), and into every
 data product label, so all of them agree. The bundle label is the source of
 truth: adding, editing or deleting a citation mirrors it outward from there.
+
+Author and editor names must be plain unaccented Latin letters. PDS4 holds them
+in ASCII_* types, every one of which is restricted to Basic Latin, so "Raul" and
+"Morales-Juberias" are refused however correctly they are spelled. The citation
+form says so and suggests the unaccented spelling; this is a limitation of the
+archive format rather than a judgement about the name. Descriptions are not
+restricted this way and accept degrees, microns and the like.
 
 If someone reports that an author "did not save", the form almost certainly did
 submit. What used to happen is that only some labels were updated, and PDS

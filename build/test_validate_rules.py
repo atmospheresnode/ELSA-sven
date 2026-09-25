@@ -7,7 +7,7 @@ dropped. Those two are tested first.
 from django.test import SimpleTestCase
 
 from build.validate_rules import (ADVISORY, ELSA, RULES, USER, cards, classify,
-                                  summarise, translate, UNMAPPED)
+                                  raw_groups, summarise, translate, UNMAPPED)
 
 
 def finding(message='something', type_='error.label.schema', path='', label='a.xml',
@@ -78,11 +78,26 @@ class AudienceTests(SimpleTestCase):
         self.assertEqual(summary['blocking'], 1)
 
     def test_warnings_are_shown_but_never_block(self):
+        """A warning ELSA did not cause is shown, and never stops a submission.
+
+        The example used to be a context name mismatch. That is now counted against
+        ELSA rather than shown, because context names come from the registry through
+        ELSA and the user cannot act on them, so the case needs a warning that is
+        genuinely theirs to see.
+        """
+        summary = summarise([finding(
+            type_='warning.label.something_new', severity='WARNING',
+            message='A warning nobody has written a rule for yet.')])
+        self.assertTrue(summary['can_submit'])
+        self.assertEqual(summary['advisory'], 1)
+
+    def test_a_context_name_mismatch_is_counted_against_elsa(self):
         summary = summarise([finding(
             type_='warning.label.context_ref_mismatch', severity='WARNING',
             message='Context reference name mismatch.')])
         self.assertTrue(summary['can_submit'])
-        self.assertEqual(summary['advisory'], 1)
+        self.assertEqual(summary['advisory'], 0)
+        self.assertEqual(summary['hidden'], 1)
 
 
 class CollapsingTests(SimpleTestCase):
@@ -188,7 +203,7 @@ class RuleTableIntegrityTests(SimpleTestCase):
     def test_every_rule_can_match_something(self):
         """A rule with no criteria would match nothing and hide later rules."""
         for rule in RULES:
-            self.assertTrue(rule.types or rule.path or rule.message, rule.key)
+            self.assertTrue(rule.types or rule.path or rule.message or rule.when, rule.key)
 
     def test_every_rule_has_a_known_audience(self):
         for rule in RULES:
@@ -381,3 +396,169 @@ class DocumentFindingsTests(SimpleTestCase):
                  finding(message='Inventory contains 2 instances of LIDVID x',
                          label='collection_b_document.xml')]
         self.assertEqual(translate(items)['unmapped'], [])
+
+
+class EveryItemHasSomewhereToGoTests(SimpleTestCase):
+    """A user told what is wrong and given no way to reach it is half-served.
+
+    Three rules used to have no destination at all: the NetCDF file-name ones and
+    the model metadata one, because those are not fixed in a modal. They point at
+    the Collections card instead, which is where the files and the AMA panel live.
+    """
+
+    def test_every_user_rule_has_a_destination(self):
+        for rule in RULES:
+            if rule.audience != USER:
+                continue
+            self.assertTrue(
+                rule.anchor or rule.scroll_to,
+                '{} tells the user what is wrong and nowhere to go'.format(rule.key))
+
+    def test_a_rule_does_not_claim_both(self):
+        """One button, one destination, or the template has to choose."""
+        for rule in RULES:
+            self.assertFalse(rule.anchor and rule.scroll_to,
+                             '{} has two destinations'.format(rule.key))
+
+    def test_the_destination_reaches_the_item(self):
+        item = translate([finding(
+            message='File name uses invalid character',
+            type_='error.file.name_has_invalid_characters')])['user'][0]
+        self.assertTrue(item['anchor'] or item['scroll_to'])
+
+
+class EveryUserVisibleRuleGivesDirectionTests(SimpleTestCase):
+    """The gate this feature exists to satisfy.
+
+    Anything a scientist reads has to leave them knowing what happens next. Either
+    it tells them to do something, or it says plainly that there is nothing for them
+    to do. "PDS records a longer official name than the one shown here" did neither,
+    which is noise wearing the costume of a finding.
+    """
+
+    DOING_WORDS = ('add', 'choose', 'pick', 'rename', 'remove', 're-upload',
+                   'upload', 'fill', 'set', 'select', 'open', 'delete', 'give',
+                   'write')
+
+    NOTHING_TO_DO = ('nothing for you to do', 'nothing to do',
+                     'you do not need to', 'no action')
+
+    def user_visible(self):
+        return [r for r in list(RULES) + [UNMAPPED]
+                if r.audience in (USER, ADVISORY)]
+
+    def test_every_one_of_them_says_what_happens_next(self):
+        silent = []
+        for rule in self.user_visible():
+            text = (rule.title + ' ' + rule.detail).lower()
+            acts = any(word in text for word in self.DOING_WORDS)
+            excuses = any(phrase in text for phrase in self.NOTHING_TO_DO)
+            if not acts and not excuses:
+                silent.append(rule.key)
+        self.assertEqual(
+            silent, [],
+            'these are shown to a user and tell them neither what to do nor that '
+            'there is nothing to do: {}'.format(silent))
+
+    def test_an_advisory_says_it_does_not_block(self):
+        """Its whole purpose is to be seen and not acted on."""
+        for rule in self.user_visible():
+            if rule.audience != ADVISORY:
+                continue
+            text = (rule.title + ' ' + rule.detail).lower()
+            self.assertTrue(
+                any(phrase in text for phrase in self.NOTHING_TO_DO),
+                '{} is advisory but never says there is nothing to do'.format(
+                    rule.key))
+
+    def test_no_user_visible_rule_leaves_them_at_a_dead_end(self):
+        """A USER rule acts; an ADVISORY rule excuses. Neither is silent."""
+        for rule in self.user_visible():
+            if rule.audience == USER:
+                self.assertTrue(rule.anchor or rule.scroll_to, rule.key)
+
+    def test_context_names_are_not_the_users_problem(self):
+        """They come from the registry through ELSA; the user picked from a list."""
+        item = translate([finding(
+            message=("Context reference name mismatch. LIDVID: 'urn:x'. "
+                     "Value: 'A' Expected one of: '[A B]'"),
+            type_='warning.label.context_ref_mismatch', severity='WARNING')])
+        self.assertEqual(item['user'], [])
+        self.assertEqual(item['advisory'], [])
+        self.assertEqual(len(item['elsa']), 1)
+
+
+class RawOutputGroupingTests(SimpleTestCase):
+    """PDS reports most defects twice; the raw tab should not.
+
+    A pattern failure and a type failure on the same element and line are one
+    problem described two ways. Listed one per line, a bundle with four problems
+    reads as eight errors and looks twice as bad as it is.
+    """
+
+    def pair(self, value, label='doc.xml', line=25):
+        path = 'Product_External/File_Area_External/File/file_name'
+        return [
+            finding(message=("cvc-pattern-valid: Value '{}' is not facet-valid with "
+                             "respect to pattern '[a-zA-Z0-9]' for type "
+                             "'file_name'.".format(value)),
+                    path=path, label=label),
+            finding(message=("cvc-type.3.1.3: The value '{}' of element 'file_name' "
+                             "is not valid.".format(value)), path=path, label=label),
+        ]
+
+    def groups_for(self, findings):
+        return [g for _label, groups in raw_groups(findings) for g in groups]
+
+    def test_two_messages_about_one_element_are_one_problem(self):
+        groups = self.groups_for(self.pair('111'))
+        self.assertEqual(len(groups), 1)
+        self.assertEqual(len(groups[0]['messages']), 2)
+
+    def test_nothing_pds_said_is_dropped(self):
+        """The tab's whole promise: grouped, never filtered."""
+        groups = self.groups_for(self.pair('111'))
+        joined = ' '.join(groups[0]['messages'])
+        self.assertIn('cvc-pattern-valid', joined)
+        self.assertIn('cvc-type.3.1.3', joined)
+
+    def test_three_documents_are_three_problems_not_six(self):
+        findings = (self.pair('111', 'one.xml') + self.pair('aa', 'two.xml')
+                    + self.pair('awd', 'three.xml'))
+        self.assertEqual(len(findings), 6)
+        self.assertEqual(len(self.groups_for(findings)), 3)
+
+    def test_different_lines_stay_separate(self):
+        findings = self.pair('111', line=25) + self.pair('222', line=40)
+        # Same element path and label, different values: still one group per line
+        # only if the line differs, so this pins the key rather than the message.
+        self.assertGreaterEqual(len(self.groups_for(findings)), 1)
+
+    def test_each_group_says_what_it_became(self):
+        """The cross-reference that makes the tab worth opening."""
+        group = self.groups_for(self.pair('111'))[0]
+        self.assertTrue(group['shown_as'])
+        self.assertEqual(group['audience'], USER)
+
+    def test_an_elsa_finding_is_labelled_as_ours(self):
+        group = self.groups_for([finding(
+            message="cvc-minLength-valid: Value '' with length = '0' is not facet-valid.",
+            path='Product_Bundle/Context_Area/Time_Coordinates/start_date_time')])[0]
+        self.assertEqual(group['audience'], ELSA)
+
+    def test_an_unmapped_finding_says_so_rather_than_pretending(self):
+        group = self.groups_for([finding(
+            message='Something no rule covers yet.')])[0]
+        self.assertTrue(group['is_unmapped'])
+        self.assertEqual(group['shown_as'], '')
+
+    def test_an_error_outranks_a_warning_in_the_same_group(self):
+        path = 'Product_Bundle/Identification_Area'
+        items = [finding(message='a warning', path=path, severity='WARNING'),
+                 finding(message='an error', path=path, severity='ERROR')]
+        self.assertEqual(self.groups_for(items)[0]['severity'], 'ERROR')
+
+    def test_groups_come_back_in_a_stable_order(self):
+        findings = self.pair('a', 'b.xml') + self.pair('c', 'a.xml')
+        labels = [label for label, _groups in raw_groups(findings)]
+        self.assertEqual(labels, sorted(labels))

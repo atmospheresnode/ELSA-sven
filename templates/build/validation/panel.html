@@ -19,7 +19,8 @@ Nothing here starts work on page load. Running a check is an explicit action.
 {% endcomment %}
 <div id="preflight_body">
 
-{% if validation_run and validation_run.is_stale %}
+{% comment %}Not said when the page is about to check by itself: the answer is seconds away.{% endcomment %}
+{% if validation_run and validation_run.is_stale and not validation_auto_check %}
       <div class="alert alert-warning py-2 px-3 small mb-3" id="preflight_stale">
          <strong>These results are out of date.</strong>
          The bundle changed after this check ran, so some items may already be fixed.
@@ -62,7 +63,12 @@ Nothing here starts work on page load. Running a check is an explicit action.
          <span id="preflight_summary_counts"></span>
       </div>
 
-      {% if validation_summary %}
+      {% comment %}
+         Keyed on there being raw output, not on there being a verdict. ELSA's own
+         requirements produce a verdict with nothing behind it in the PDS report, and
+         a "Validation output" tab that opens on an empty list is worse than no tab.
+      {% endcomment %}
+      {% if validation_raw_total %}
       {% comment %}
          Two tabs rather than two panes side by side. A split view would imply that a
          row on one side lines up with a row on the other, and it does not: on a real
@@ -97,6 +103,13 @@ Nothing here starts work on page load. Running a check is an explicit action.
 
       <div id="preflight_results">
 
+         {% comment %}
+            Whether a check has run is its own statement, not a branch of the results.
+            ELSA's own requirements are checked against the database and need no run,
+            so an unchecked bundle can have items to show underneath this note; before
+            requirements existed, "not checked yet" and "here is what to fix" could
+            never both be true and this was the first arm of the chain below.
+         {% endcomment %}
          {% if not validation_run %}
          <p class="small text-muted mb-3">
             {% if validation_auto_check %}
@@ -106,8 +119,15 @@ Nothing here starts work on page load. Running a check is an explicit action.
             and tells you what PDS would say about it today.
             {% endif %}
          </p>
+         {% endif %}
 
-         {% elif validation_summary %}
+         {% if validation_summary %}
+         {% comment %}
+            The counts row needs a run to have happened: "Labels checked" has no
+            honest value before one. ELSA's own requirements do not, so the items
+            below can appear without it.
+         {% endcomment %}
+         {% if validation_run %}
          <div class="d-flex text-center border rounded overflow-hidden mb-3">
             <div class="flex-fill py-2 px-1 border-end">
                <div class="fw-bold {% if validation_summary.blocking %}text-danger{% else %}text-success{% endif %}"
@@ -123,6 +143,7 @@ Nothing here starts work on page load. Running a check is an explicit action.
                <div class="text-muted" style="font-size:0.7rem;">Labels checked</div>
             </div>
          </div>
+         {% endif %}
 
          {% if validation_summary.can_submit %}
          <div class="d-flex align-items-center gap-2 p-2 rounded mb-3"
@@ -132,53 +153,7 @@ Nothing here starts work on page load. Running a check is an explicit action.
          </div>
          {% endif %}
 
-         {% for card_name, items in validation_cards %}
-         <div class="d-flex align-items-center gap-2 mb-2">
-            <span class="text-muted fw-semibold text-nowrap"
-                  style="font-size:0.7rem; letter-spacing:0.07em; text-transform:uppercase;">{{ card_name }}</span>
-            <hr class="flex-grow-1 my-0 opacity-50">
-         </div>
-         <div class="list-group rounded overflow-hidden mb-3">
-            {% for item in items %}
-            <div class="list-group-item py-2">
-               <div class="d-flex justify-content-between align-items-start gap-2">
-                  <div class="flex-grow-1">
-                     <div class="small fw-semibold">{{ item.title }}</div>
-                     {% if item.subject %}
-                     {% comment %}
-                        Which file or folder. PDS names it nowhere in the message, so
-                        without this the row says "a file name" and leaves the reader
-                        to guess which of theirs it means.
-                     {% endcomment %}
-                     <div class="font-monospace" style="font-size:0.74rem; overflow-wrap:anywhere;">{{ item.subject }}</div>
-                     {% endif %}
-                     <div class="text-muted" style="font-size:0.78rem;">{{ item.detail }}</div>
-                     {% if item.labels|length > 1 %}
-                     <div class="text-muted" style="font-size:0.72rem;">
-                        Affects {{ item.labels|length }} labels in this bundle.
-                     </div>
-                     {% endif %}
-                  </div>
-                  {% if item.anchor %}
-                  <button type="button" class="btn btn-sm btn-outline-secondary flex-shrink-0"
-                          data-bs-toggle="modal" data-bs-target="#{{ item.anchor }}">Fix</button>
-                  {% endif %}
-               </div>
-               {% comment %}
-                  Asks the existing assistant, and only when someone presses it. The
-                  assistant runs on a model chain with a daily quota, so generating an
-                  explanation for every finding automatically would exhaust it and the
-                  feature would fail intermittently. User-initiated keeps the cost
-                  bounded and means nobody pays for an explanation they did not want.
-               {% endcomment %}
-               <button type="button"
-                       class="btn btn-link btn-sm p-0 mt-1 text-decoration-none preflight-explain"
-                       style="font-size:0.75rem;"
-                       data-question="In ELSA, my bundle's PDS validation says: {{ item.title|escapejs }}. Why does this matter for a PDS4 archive, and what exactly should I do about it?">Why does this matter?</button>
-            </div>
-            {% endfor %}
-         </div>
-         {% endfor %}
+         {% include 'build/validation/fix_list.html' %}
 
          {% if validation_advisory %}
          <div class="d-flex align-items-center gap-2 mb-2">
@@ -217,7 +192,7 @@ Nothing here starts work on page load. Running a check is an explicit action.
             </span>
          </div>
 
-         {% elif validation_run.status != 'f' %}
+         {% elif validation_run and validation_run.status != 'f' %}
          <p class="small text-muted mb-3">
             The last check finished without storing any findings. Run it again.
          </p>
@@ -230,7 +205,7 @@ Nothing here starts work on page load. Running a check is an explicit action.
          {% endif %}
       </div>
 
-      {% if validation_summary %}
+      {% if validation_raw_total %}
       </div>{# /pane: what to fix #}
 
       <div class="tab-pane fade" id="preflight_pane_raw" role="tabpanel"
@@ -240,16 +215,23 @@ Nothing here starts work on page load. Running a check is an explicit action.
             the other tab: this tab is the technical detail, and two doors to the same
             room made the panel look unsure of itself.
          {% endcomment %}
+         <p class="small text-muted mb-1">
+            <strong>You do not need this tab to fix anything.</strong> It shows
+            PDS's unfiltered output, so you can double-check the other tab.
+         </p>
          <p class="small text-muted">
-            PDS validate reported
-            {{ validation_run.error_count }} error{{ validation_run.error_count|pluralize }}
-            and {{ validation_run.warning_count }} warning{{ validation_run.warning_count|pluralize }}
-            across {{ validation_run.products_total }} label{{ validation_run.products_total|pluralize }},
-            in its own words and including the
-            {{ validation_summary.hidden }} item{{ validation_summary.hidden|pluralize }}
-            caused by ELSA rather than by anything you entered. Nothing is hidden from
-            you here; the other tab is this same output with the parts you can act on
-            explained.
+            {{ validation_run.products_total }} label{{ validation_run.products_total|pluralize }}
+            checked:
+            {{ validation_run.error_count }} error{{ validation_run.error_count|pluralize }},
+            {{ validation_run.warning_count }} warning{{ validation_run.warning_count|pluralize }}.
+            {% if validation_run.error_count|add:validation_run.warning_count > validation_raw_total %}
+            PDS often reports a problem twice, so these are
+            {{ validation_raw_total }} distinct problem{{ validation_raw_total|pluralize }}.
+            {% endif %}
+            {% if validation_summary.hidden %}
+            {{ validation_summary.hidden }} of these {{ validation_summary.hidden|pluralize:"is,are" }}
+            caused by ELSA, not by anything you entered.
+            {% endif %}
             {% if user.is_staff %}
             <a href="{% url 'build:validation_report' validation_run.pk %}">Full report</a>
             {% endif %}
@@ -268,13 +250,29 @@ Nothing here starts work on page load. Running a check is an explicit action.
          </div>
          <div>
             {% for finding in findings %}
-            <div class="d-flex gap-2 py-1 border-bottom" style="font-size:0.74rem;">
+            <div class="d-flex gap-2 py-2 border-bottom" style="font-size:0.74rem;">
                <span class="badge rounded-pill flex-shrink-0
                   {% if finding.severity == 'ERROR' %}bg-danger{% else %}bg-warning text-dark{% endif %}"
                   style="font-size:0.6rem;">{{ finding.severity|title }}</span>
                <div class="flex-grow-1" style="min-width:0;">
+                  {% comment %}
+                     The cross-reference. Without it the two tabs are two unrelated
+                     lists and the reader has to guess which raw line became which
+                     item, which is exactly the trust this tab is meant to earn.
+                  {% endcomment %}
+                  {% if finding.audience == 'elsa' %}
+                  <div class="mb-1"><span class="badge bg-secondary"
+                       style="font-size:0.6rem;">ELSA's to fix</span>
+                     <span class="text-muted">{{ finding.shown_as }}</span></div>
+                  {% elif finding.is_unmapped %}
+                  <div class="mb-1"><span class="badge bg-light text-dark border"
+                       style="font-size:0.6rem;">No plain-language wording yet</span></div>
+                  {% else %}
+                  <div class="mb-1">Shown to you as
+                     <span class="fw-semibold">{{ finding.shown_as }}</span></div>
+                  {% endif %}
                   <div class="font-monospace text-muted" style="font-size:0.68rem;">
-                     {{ finding.type }}{% if finding.line %} &middot; line {{ finding.line }}{% endif %}
+                     {{ finding.element_path|default:"the bundle" }}{% if finding.line %} &middot; line {{ finding.line }}{% endif %}
                   </div>
                   {% comment %}
                      A schema message can be a three-kilobyte regular expression: the
@@ -283,20 +281,17 @@ Nothing here starts work on page load. Running a check is an explicit action.
                      not truncated. The opening words are what identifies the problem,
                      and the rest is one click away rather than gone.
                   {% endcomment %}
-                  {% if finding.message|length > 220 %}
-                  <details>
-                     <summary style="cursor:pointer; overflow-wrap:anywhere;">{{ finding.message|truncatechars:200 }}</summary>
+                  {% for message in finding.messages %}
+                  {% if message|length > 220 %}
+                  <details class="mt-1">
+                     <summary style="cursor:pointer; overflow-wrap:anywhere;">{{ message|truncatechars:200 }}</summary>
                      <div class="mt-1 p-2 bg-light rounded"
-                          style="overflow-wrap:anywhere; font-size:0.7rem;">{{ finding.message }}</div>
+                          style="overflow-wrap:anywhere; font-size:0.7rem;">{{ message }}</div>
                   </details>
                   {% else %}
-                  <div style="overflow-wrap:anywhere;">{{ finding.message }}</div>
+                  <div class="mt-1" style="overflow-wrap:anywhere;">{{ message }}</div>
                   {% endif %}
-                  {% if finding.element_path %}
-                  <div class="font-monospace text-muted" style="font-size:0.68rem; overflow-wrap:anywhere;">
-                     {{ finding.element_path }}
-                  </div>
-                  {% endif %}
+                  {% endfor %}
                </div>
             </div>
             {% endfor %}

@@ -17,6 +17,7 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
+from build.requirement_fixture import satisfy_requirements
 from build.models import Bundle, Investigation, ValidationRun
 from build import validate_runner
 
@@ -40,14 +41,27 @@ class TierSelectionTests(TestCase):
         with override_settings(VALIDATE_HOME=self.home, VALIDATE_WORK_DIR=self.workdir):
             return validate_runner.build_command(run, os.path.join(self.workdir, 'r.json'))
 
-    def test_the_working_tier_skips_reading_data_files(self):
-        """This is what makes it cheap enough to run while someone works."""
-        self.assertIn('--skip-content-validation',
-                      self.command_for(ValidationRun.TIER_STRUCTURE))
+    def test_the_working_tier_no_longer_skips_reading_data_files(self):
+        """Skipping saved nothing and hid a whole class of error.
+
+        Measured against real bundles, content validation costs 6s against 7s on a
+        184MB NetCDF bundle and is within noise on both Archive bundles: an AMA data
+        product only references its file, so there is nothing inside to read. What
+        the skip did cost was error.label.missing_file, which only appears with
+        content validation and which every ELSA document currently produces.
+        """
+        self.assertNotIn('--skip-content-validation',
+                         self.command_for(ValidationRun.TIER_STRUCTURE))
 
     def test_the_submission_tier_reads_the_data(self):
         self.assertNotIn('--skip-content-validation',
                          self.command_for(ValidationRun.TIER_FULL))
+
+    def test_a_host_can_still_turn_content_validation_off(self):
+        """The escape hatch, for a bundle with large tables where it is slow."""
+        with override_settings(VALIDATE_SKIP_CONTENT=True):
+            self.assertIn('--skip-content-validation',
+                          self.command_for(ValidationRun.TIER_STRUCTURE))
 
     def test_both_tiers_check_references_between_products(self):
         for tier in (ValidationRun.TIER_STRUCTURE, ValidationRun.TIER_FULL):
@@ -199,11 +213,13 @@ class SubmissionTierTests(TestCase):
             name='submit bundle', user=self.user, version='1O00', bundle_type='External')
 
     def passing_check(self):
-        """A clean structure check, so the submission gate lets the request through.
+        """Everything the submission gate wants, so the request gets through.
 
         These tests are about which tier a submission runs, not about the gate, and
-        a bundle that has never been checked cannot be submitted at all now.
+        a bundle that has never been checked, or that has not met ELSA's own
+        requirements, cannot be submitted at all now.
         """
+        satisfy_requirements(self.bundle)
         ValidationRun.objects.create(
             bundle=self.bundle, tier=ValidationRun.TIER_STRUCTURE,
             status=ValidationRun.STATUS_DONE, findings=[],
@@ -213,15 +229,19 @@ class SubmissionTierTests(TestCase):
         return self.client.post(
             reverse('build:submit_bundle_internal', args=[self.bundle.pk]))
 
-    def test_submitting_starts_a_full_check(self):
+    def test_submitting_starts_no_second_check(self):
+        """The gate has just accepted a check matching these exact files, and that
+        check already reads inside data files, so another would only repeat it."""
         from unittest import mock
         self.passing_check()
-        with mock.patch.object(validate_runner.subprocess, 'Popen'):
+        with mock.patch.object(validate_runner.subprocess, 'Popen') as popen:
             with override_settings(VALIDATE_HOME='', VALIDATE_WORK_DIR=self.archive):
                 self.submit()
-        full = ValidationRun.objects.filter(
-            bundle=self.bundle, tier=ValidationRun.TIER_FULL).first()
-        self.assertIsNotNone(full, 'submitting did not start a full check')
+        self.bundle.refresh_from_db()
+        self.assertIsNotNone(self.bundle.submitted_at)
+        self.assertFalse(ValidationRun.objects.filter(
+            bundle=self.bundle, tier=ValidationRun.TIER_FULL).exists())
+        popen.assert_not_called()
 
     def test_a_submission_succeeds_even_if_validation_cannot_start(self):
         """Validation is a service to the submission, never a gate on it."""
@@ -262,17 +282,29 @@ class ResourceLimitTests(TestCase):
                 bundle=other, status=ValidationRun.STATUS_RUNNING)
 
     def test_the_heap_is_capped(self):
-        """Java sizes its heap from total system memory unless told otherwise."""
+        """Through _JAVA_OPTIONS, because bin/validate ignores JAVA_OPTS and hard-codes
+        -Xms2048m -Xmx4096m; _JAVA_OPTIONS is the only thing the JVM applies after it."""
         with override_settings(VALIDATE_JAVA_MAX_HEAP='2g'):
-            self.assertIn('-Xmx2g', validate_runner._environment().get('JAVA_OPTS', ''))
+            opts = validate_runner._environment().get('_JAVA_OPTIONS', '')
+        self.assertIn('-Xmx2g', opts)
+        # Without a lower floor, any ceiling under the launcher's 2GB stops the JVM.
+        self.assertIn('-Xms64m', opts)
 
-    def test_an_existing_java_opts_is_kept(self):
-        os.environ['JAVA_OPTS'] = '-Dfoo=bar'
-        self.addCleanup(os.environ.pop, 'JAVA_OPTS', None)
+    def test_an_existing_java_options_is_kept(self):
+        os.environ['_JAVA_OPTIONS'] = '-Dfoo=bar'
+        self.addCleanup(os.environ.pop, '_JAVA_OPTIONS', None)
         with override_settings(VALIDATE_JAVA_MAX_HEAP='1g'):
-            opts = validate_runner._environment().get('JAVA_OPTS', '')
+            opts = validate_runner._environment().get('_JAVA_OPTIONS', '')
         self.assertIn('-Dfoo=bar', opts)
         self.assertIn('-Xmx1g', opts)
+
+    def test_the_cap_is_not_applied_twice(self):
+        """The child inherits the web process's environment and builds its own."""
+        with override_settings(VALIDATE_JAVA_MAX_HEAP='2g'):
+            os.environ['_JAVA_OPTIONS'] = validate_runner._environment()['_JAVA_OPTIONS']
+            self.addCleanup(os.environ.pop, '_JAVA_OPTIONS', None)
+            opts = validate_runner._environment()['_JAVA_OPTIONS']
+        self.assertEqual(opts.count('-Xmx'), 1)
 
     def test_capacity_is_reached_at_the_limit(self):
         self.busy_with(2)

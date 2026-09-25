@@ -22,16 +22,20 @@ Matches the other rows in that card exactly: a name, a badge, and a modal.
          someone reading it. "Out of date" outranks a pass: results that no longer
          describe the bundle are not a pass, and saying so is the difference between
          a panel people trust and one they learn to ignore.
+
+         Except when the page is about to check by itself (validation_auto_check): the
+         answer is seconds away, so it says Checking… from the start rather than
+         flashing "Out of date" first. That is most edits, since each one reloads the
+         page with a bundle that no longer matches its last check.
       {% endcomment %}
       <span class="badge rounded-pill
-         {% if not validation_run or validation_run.is_active %}bg-secondary
+         {% if not validation_run or validation_run.is_active or validation_auto_check %}bg-secondary
          {% elif validation_run.status == 'f' %}bg-warning text-dark
          {% elif validation_run.is_stale %}bg-warning text-dark
          {% elif validation_summary.blocking %}bg-danger
          {% else %}bg-success{% endif %}" id="preflight_row_badge">
-         {% if not validation_run %}
-            {% if validation_auto_check %}Checking…{% else %}Not checked{% endif %}
-         {% elif validation_run.is_active %}Checking…
+         {% if validation_auto_check or validation_run.is_active %}Checking…
+         {% elif not validation_run %}Not checked
          {% elif validation_run.status == 'f' %}Could not run
          {% elif validation_run.is_stale %}Out of date
          {% elif validation_summary.blocking %}{{ validation_summary.blocking }} to fix

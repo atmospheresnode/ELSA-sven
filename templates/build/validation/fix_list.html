@@ -1,0 +1,85 @@
+{% comment %}
+The list of things to fix, grouped by the card that fixes each one.
+
+One partial, rendered in two places: the PDS Validation window and the Review & Submit
+window. The Review & Submit window used to keep a checklist of its own, which could
+tick Citation Information green while this list said an author on it had no name.
+Now both show this list, so they cannot say different things.
+
+`switch_from` names the modal it is rendered inside when that is not the validation
+window. Bootstrap cannot open one modal over another, so from there a Fix button has
+to close this window before opening the form, which is what switchToModal does.
+{% endcomment %}
+         {% for card_name, items in validation_cards %}
+         <div class="d-flex align-items-center gap-2 mb-2">
+            <span class="text-muted fw-semibold text-nowrap"
+                  style="font-size:0.7rem; letter-spacing:0.07em; text-transform:uppercase;">{{ card_name }}</span>
+            <hr class="flex-grow-1 my-0 opacity-50">
+         </div>
+         <div class="list-group rounded overflow-hidden mb-3">
+            {% for item in items %}
+            <div class="list-group-item py-2">
+               <div class="d-flex justify-content-between align-items-start gap-2">
+                  <div class="flex-grow-1">
+                     <div class="small fw-semibold">{{ item.title }}</div>
+                     {% if item.source == 'elsa' %}
+                     {% comment %}
+                        PDS4 allows this to be missing, so the validation tool says
+                        nothing about it and the Validation output tab has no line
+                        for it. Saying so is what stops the item looking invented.
+                     {% endcomment %}
+                     <div class="text-muted" style="font-size:0.7rem;">
+                        ELSA requires this. PDS4 allows it to be left out, so the
+                        validation tool does not report it.
+                     </div>
+                     {% endif %}
+                     {% if item.subject %}
+                     {% comment %}
+                        Which file or folder. PDS names it nowhere in the message, so
+                        without this the row says "a file name" and leaves the reader
+                        to guess which of theirs it means.
+                     {% endcomment %}
+                     <div class="font-monospace" style="font-size:0.74rem; overflow-wrap:anywhere;">{{ item.subject }}</div>
+                     {% endif %}
+                     <div class="text-muted" style="font-size:0.78rem;">{{ item.detail }}</div>
+                     {% if item.labels|length > 1 %}
+                     <div class="text-muted" style="font-size:0.72rem;">
+                        Affects {{ item.labels|length }} labels in this bundle.
+                     </div>
+                     {% endif %}
+                  </div>
+                  {% comment %}
+                     Every item a user is asked to act on gets somewhere to go. Most
+                     are fixed in a modal; the NetCDF and model metadata ones are
+                     reached from the Collections card instead, so those close the
+                     window and scroll there rather than opening anything.
+                  {% endcomment %}
+                  {% if item.anchor %}
+                  {% if switch_from %}
+                  <button type="button" class="btn btn-sm btn-outline-secondary flex-shrink-0"
+                          onclick="switchToModal('{{ switch_from }}', '{{ item.anchor }}')">Fix</button>
+                  {% else %}
+                  <button type="button" class="btn btn-sm btn-outline-secondary flex-shrink-0"
+                          data-bs-toggle="modal" data-bs-target="#{{ item.anchor }}">Fix</button>
+                  {% endif %}
+                  {% elif item.scroll_to %}
+                  <button type="button" class="btn btn-sm btn-outline-secondary flex-shrink-0
+                          preflight-goto" data-target="{{ item.scroll_to }}"
+                          data-bs-dismiss="modal">Show me</button>
+                  {% endif %}
+               </div>
+               {% comment %}
+                  Asks the existing assistant, and only when someone presses it. The
+                  assistant runs on a model chain with a daily quota, so generating an
+                  explanation for every finding automatically would exhaust it and the
+                  feature would fail intermittently. User-initiated keeps the cost
+                  bounded and means nobody pays for an explanation they did not want.
+               {% endcomment %}
+               <button type="button"
+                       class="btn btn-link btn-sm p-0 mt-1 text-decoration-none preflight-explain"
+                       style="font-size:0.75rem;"
+                       data-question="In ELSA, my bundle's PDS validation says: {{ item.title|escapejs }}. Why does this matter for a PDS4 archive, and what exactly should I do about it?">Why does this matter?</button>
+            </div>
+            {% endfor %}
+         </div>
+         {% endfor %}

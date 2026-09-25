@@ -18,6 +18,7 @@ citation is incomplete" from "this collection is empty".
 """
 import json
 import os
+from urllib.parse import unquote
 
 from lxml import etree
 
@@ -77,7 +78,9 @@ def parse_report(report_path):
 
     for key in RESULT_KEYS:
         for result in report.get(key) or []:
-            label_path = (result.get('label') or '').replace('file:', '')
+            # validate reports a file: URI, so a space arrives as %20. Left encoded,
+            # the label cannot be opened and every finding in it loses its path.
+            label_path = unquote((result.get('label') or '').replace('file:', ''))
             label_name = os.path.basename(label_path)
 
             if label_path and label_path not in line_indexes:
@@ -102,7 +105,9 @@ def parse_report(report_path):
                 # The same problem is reported once per result key when a label is
                 # both a product and a bundle member, and the schema and schematron
                 # can each flag one bad value. Identical findings are noise.
-                fingerprint = (finding['label'], finding['type'], finding['line'],
+                # Keyed on the full path: two collections can each hold a label with
+                # the same file name, and those are two problems, not one.
+                fingerprint = (finding['label_path'], finding['type'], finding['line'],
                                finding['message'])
                 if fingerprint in seen:
                     continue

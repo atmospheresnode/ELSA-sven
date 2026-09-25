@@ -276,6 +276,32 @@
     .elsa-rate-btn:hover { background: #e2e8f0; color: #0f766e; }
     .elsa-rate-btn.active { color: #0f766e; }
 
+    .elsa-reason {
+        margin-top: 6px; padding: 8px 10px; background: #fff; border: 1px solid #e2e8f0;
+        border-radius: 12px; font-size: 0.75rem; color: #334155; animation: elsaFadeIn .18s ease;
+    }
+    .elsa-reason-title { font-weight: 600; margin-bottom: 6px; }
+    .elsa-reason-title span { font-weight: 400; color: #94a3b8; }
+    .elsa-reason-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px; }
+    .elsa-reason-chip {
+        border: 1px solid #cbd5e1; background: #f8fafc; color: #475569;
+        border-radius: 999px; padding: 2px 9px; font-size: 0.72rem; cursor: pointer;
+    }
+    .elsa-reason-chip:hover { border-color: #14b8a6; }
+    .elsa-reason-chip[aria-pressed="true"] { background: #0f766e; border-color: #0f766e; color: #fff; }
+    .elsa-reason-comment {
+        width: 100%; border: 1px solid #e2e8f0; border-radius: 8px; padding: 5px 8px;
+        font-size: 0.75rem; font-family: inherit; resize: vertical; outline: none;
+    }
+    .elsa-reason-comment:focus { border-color: #14b8a6; }
+    .elsa-reason-actions { display: flex; justify-content: flex-end; align-items: center; gap: 6px; margin-top: 6px; }
+    .elsa-reason-error { color: #b91c1c; margin-right: auto; }
+    .elsa-reason-actions button { border: none; border-radius: 8px; padding: 3px 10px; font-size: 0.72rem; }
+    .elsa-reason-skip { background: none; color: #64748b; }
+    .elsa-reason-send { background: #0f766e; color: #fff; }
+    .elsa-reason-send:disabled { opacity: 0.6; }
+    .elsa-reason-thanks { margin-top: 4px; color: #64748b; font-size: 0.72rem; }
+
     .elsa-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 12px 34px; animation: elsaFadeIn .25s ease; }
     .elsa-chip {
         border: 1px solid #99f6e4; background: #f0fdfa; color: #0f766e;
@@ -305,6 +331,83 @@
     #elsaAssistantSend:hover:not(:disabled) { transform: scale(1.06); }
     #elsaAssistantSend:disabled { opacity: 0.5; }
     .elsa-disclaimer { text-align: center; color: #94a3b8; font-size: 0.64rem; margin: 6px 0 0; }
+
+    /* Thread title in the header, and the chat list that slides over the messages */
+    .elsa-header-name { min-width: 0; }
+    #elsaAssistantSub { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #elsaAssistantSub.elsa-titled { animation: elsaFadeIn .3s ease; }
+    .elsa-icon-btn:disabled { opacity: 0.4; pointer-events: none; }
+    .elsa-note-link { border: none; background: none; padding: 0; color: #0f766e; font-size: inherit; text-decoration: underline; cursor: pointer; }
+
+    #elsaAssistantChats { height: 400px; overflow-y: auto; background: #f4f6f8; padding: 12px; transition: height .2s ease; }
+    .elsa-chats-head { display: flex; align-items: center; justify-content: space-between; margin: 0 2px 10px; }
+    .elsa-chats-head span { font-size: 0.72rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: .5px; }
+    .elsa-chats-new {
+        border: 1px solid #99f6e4; background: #f0fdfa; color: #0f766e;
+        border-radius: 999px; padding: 3px 11px; font-size: 0.75rem;
+    }
+    .elsa-chats-new:hover { background: #ccfbf1; }
+    .elsa-chat-item {
+        display: flex; align-items: center; gap: 2px; margin-bottom: 6px;
+        background: #fff; border-radius: 10px; border: 1.5px solid transparent;
+        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+    }
+    .elsa-chat-item:hover { border-color: #ccfbf1; }
+    .elsa-chat-item.active { border-color: #14b8a6; }
+    .elsa-chat-open {
+        flex: 1; min-width: 0; border: none; background: none; text-align: left;
+        padding: 8px 4px 8px 12px; display: flex; flex-direction: column;
+    }
+    .elsa-chat-title { font-size: 0.82rem; color: #1f2937; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .elsa-chat-when { font-size: 0.68rem; color: #94a3b8; }
+    .elsa-chat-rename {
+        flex: 1; min-width: 0; margin: 6px 4px 6px 8px; font-size: 0.82rem;
+        border: 1.5px solid #14b8a6; border-radius: 8px; padding: 4px 8px; outline: none;
+    }
+    .elsa-chat-act { flex: none; border: none; background: none; color: #94a3b8; width: 28px; height: 28px; border-radius: 6px; font-size: 0.78rem; }
+    .elsa-chat-act:hover { background: #f1f5f9; color: #0f766e; }
+    .elsa-chat-act.danger:hover { color: #b91c1c; }
+    .elsa-chats-empty { text-align: center; color: #94a3b8; font-size: 0.8rem; margin-top: 2rem; }
+    .elsa-chats-search {
+        width: 100%; margin-bottom: 10px; font-size: 0.8rem; padding: 6px 12px;
+        border: 1.5px solid #e2e8f0; border-radius: 999px; outline: none; background: #fff;
+    }
+    .elsa-chats-search:focus { border-color: #14b8a6; box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.15); }
+
+    /* What the assistant can see, when the user is on one of their bundles */
+    .elsa-context {
+        display: flex; align-items: center; gap: 6px; padding: 5px 16px;
+        background: #f0fdfa; border-bottom: 1px solid #ccfbf1;
+        font-size: 0.72rem; color: #0f766e; white-space: nowrap; overflow: hidden;
+    }
+    .elsa-context strong { overflow: hidden; text-overflow: ellipsis; }
+
+    /* Retry on a failed reply, and follow-up suggestions after an answer */
+    .elsa-retry {
+        margin-top: 6px; border: 1px solid #99f6e4; background: #f0fdfa; color: #0f766e;
+        border-radius: 999px; padding: 3px 11px; font-size: 0.75rem;
+    }
+    .elsa-retry:hover { background: #ccfbf1; }
+    .elsa-chips.elsa-followups { margin-top: -4px; }
+
+    /* Reopened on a new page: it was already open, so no slide-in */
+    #elsaAssistantPanel.elsa-restored .elsa-card { animation: none; }
+
+    /* A reply finished while the panel was closed */
+    #elsaAssistantToggle.elsa-unread::after {
+        content: ''; position: absolute; top: 4px; right: 6px;
+        width: 11px; height: 11px; border-radius: 50%;
+        background: #f97316; border: 2px solid #fff;
+    }
+
+    /* Phones and short screens: the panel takes the whole screen */
+    @media (max-width: 576px), (max-height: 560px) {
+        #elsaAssistantPanel { inset: 0; width: 100% !important; max-width: none; }
+        #elsaAssistantPanel .elsa-card { height: 100%; display: flex; flex-direction: column; border-radius: 0; }
+        #elsaAssistantMessages, #elsaAssistantChats { flex: 1; height: auto !important; min-height: 0; }
+        #elsaAssistantExpand { display: none; }
+        #elsaAssistantToggle.elsa-panel-open { display: none; }
+    }
     </style>
 
     <button type="button" id="elsaAssistantToggle" aria-label="Open the ELSA Assistant">
@@ -318,14 +421,27 @@
                     <div class="elsa-avatar"><i class="bi bi-stars"></i></div>
                     <div class="elsa-header-name">
                         <strong>ELSA Assistant</strong>
-                        <span class="elsa-header-sub"><span class="elsa-online-dot"></span> PDS4 &amp; bundle helper · Beta</span>
+                        <span class="elsa-header-sub"><span class="elsa-online-dot"></span> <span id="elsaAssistantSub">PDS4 &amp; bundle helper · Beta</span></span>
                     </div>
                 </div>
                 <div class="elsa-header-actions">
+                    <button type="button" class="elsa-icon-btn" id="elsaAssistantChatsBtn" aria-label="Your chats" title="Your chats" aria-expanded="false"><i class="bi bi-clock-history"></i></button>
                     <button type="button" class="elsa-icon-btn" id="elsaAssistantNew" aria-label="New chat" title="New chat"><i class="bi bi-plus-lg"></i></button>
                     <button type="button" class="elsa-icon-btn" id="elsaAssistantExpand" aria-label="Expand" title="Expand"><i class="bi bi-arrows-angle-expand"></i></button>
                     <button type="button" class="elsa-icon-btn" id="elsaAssistantClose" aria-label="Close" title="Close"><i class="bi bi-x-lg"></i></button>
                 </div>
+            </div>
+            <div id="elsaAssistantContext" class="elsa-context d-none" title="The assistant can see this bundle's details when you ask about it.">
+                <i class="bi bi-eye"></i> Looking at: <strong></strong>
+            </div>
+            <div id="elsaAssistantChats" class="d-none" aria-label="Your chats">
+                <div class="elsa-chats-head">
+                    <span>Your chats</span>
+                    <button type="button" class="elsa-chats-new" id="elsaAssistantChatsNew"><i class="bi bi-plus-lg"></i> New chat</button>
+                </div>
+                <input type="search" class="elsa-chats-search" id="elsaAssistantChatSearch"
+                       placeholder="Search your chats" aria-label="Search your chats" maxlength="100">
+                <div id="elsaAssistantChatList"></div>
             </div>
             <div id="elsaAssistantMessages" role="log" aria-live="polite" aria-label="Conversation with the ELSA Assistant"></div>
             <div class="elsa-inputbar">
@@ -337,6 +453,25 @@
                     <button type="submit" id="elsaAssistantSend" aria-label="Send"><i class="bi bi-send-fill"></i></button>
                 </form>
                 <p class="elsa-disclaimer">AI-generated, so verify important details. Chats are stored to help improve ELSA.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="elsaDeleteChatModal" tabindex="-1" aria-labelledby="elsaDeleteChatLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="elsaDeleteChatLabel">Delete this chat?</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-1"><strong id="elsaDeleteChatName"></strong></p>
+                    <p class="mb-0 text-muted small">The conversation and its messages are removed for good.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-keep-bg" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger btn-keep-bg" id="elsaDeleteChatConfirm">Delete</button>
+                </div>
             </div>
         </div>
     </div>
@@ -355,22 +490,108 @@
         const sendBtn = document.getElementById('elsaAssistantSend');
         const csrfToken = form.querySelector('[name=csrfmiddlewaretoken]').value;
 
-        // Suggestions follow the page: on a bundle page they target that bundle.
-        const SUGGESTIONS = /^\/build\/\d+\//.test(window.location.pathname) ? [
-            "What is still missing in this bundle?",
-            "What's inside my uploaded files?",
-            "How do I submit this bundle?",
-            "I found a bug",
-        ] : [
-            "What does my bundle still need?",
-            "Bundle ID vs Alias?",
-            "What goes in Citation Information?",
-            "I found a bug",
+        // Suggestions follow the page: the first pattern that matches wins, so
+        // the specific form pages come before the bundle page itself.
+        const PAGE_SUGGESTIONS = [
+            [/^\/build\/\d+\/citation_information/, [
+                "What goes in Citation Information?",
+                "What are keywords for?",
+                "Who should I list as editors?",
+            ]],
+            [/^\/build\/\d+\/alias/, [
+                "Bundle ID vs Alias?",
+                "Do I need an Alias?",
+                "What makes a good Alias?",
+            ]],
+            [/^\/build\/\d+\/modification_history/, [
+                "What is Modification History for?",
+                "What version number should I use?",
+                "When should I add a new entry?",
+            ]],
+            [/^\/build\/\d+\/context/, [
+                "How do I add a target?",
+                "What are context products?",
+                "My target isn't listed. What now?",
+            ]],
+            [/^\/build\/\d+\/netcdf\/\d+\/ama/, [
+                "What is AMA metadata?",
+                "Which AMA fields are required?",
+                "Can I copy AMA metadata from another file?",
+            ]],
+            [/^\/build\/\d+\/document/, [
+                "Which documents should I include?",
+                "What goes in a document's description?",
+                "How do documents appear in the bundle?",
+            ]],
+            [/^\/build\/\d+\//, [
+                "What is still missing in this bundle?",
+                "What's inside my uploaded files?",
+                "How do I submit this bundle?",
+            ]],
+            [/^\/accounts\/bundles/, [
+                "Archive vs External bundle?",
+                "How do I start a new bundle?",
+                "What does my bundle still need?",
+            ]],
+            [/.*/, [
+                "What does my bundle still need?",
+                "Bundle ID vs Alias?",
+                "What goes in Citation Information?",
+            ]],
         ];
+        const SUGGESTIONS = PAGE_SUGGESTIONS
+            .find(([pattern]) => pattern.test(window.location.pathname))[1]
+            .concat(["I found a bug"]);
         const TYPING_HTML = '<span class="elsa-typing"><span class="elsa-typing-dots"><span></span><span></span><span></span></span><span class="elsa-typing-label"></span></span>';
 
+        const chatsBtn = document.getElementById('elsaAssistantChatsBtn');
+        const chatsEl = document.getElementById('elsaAssistantChats');
+        const chatListEl = document.getElementById('elsaAssistantChatList');
+        const subEl = document.getElementById('elsaAssistantSub');
+        const TAGLINE = subEl.textContent;
+
+        const contextEl = document.getElementById('elsaAssistantContext');
+        const searchEl = document.getElementById('elsaAssistantChatSearch');
+
         let conversationId = null;
-        let historyLoaded = false;
+        let titleSource = '';
+        let historyReady = null;  // the first history load, once started
+
+        // The panel stays open (and expanded) as the user moves between pages
+        // in this tab, e.g. after following a link in an answer. Storage can be
+        // unavailable (private windows, blocked site data); the panel then just
+        // starts closed, as before.
+        function remember(key, on) {
+            try {
+                if (on) sessionStorage.setItem(key, '1'); else sessionStorage.removeItem(key);
+            } catch (e) {}
+        }
+        function remembered(key) {
+            try { return sessionStorage.getItem(key) === '1'; } catch (e) { return false; }
+        }
+
+        function setLookingAt(label) {
+            contextEl.querySelector('strong').textContent = label || '';
+            contextEl.classList.toggle('d-none', !label);
+        }
+
+        function postJson(url, body) {
+            return fetch(url, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken},
+                body: JSON.stringify(body || {}),
+            }).then(r => r.json());
+        }
+
+        // The header shows the thread's name once the AI (or the user) has
+        // given it one; until then, the usual tagline.
+        function setThreadTitle(title, source) {
+            titleSource = source || '';
+            const named = title && (source === 'ai' || source === 'user');
+            subEl.textContent = named ? title : TAGLINE;
+            subEl.title = named ? title : '';
+            subEl.classList.toggle('elsa-titled', !!named);
+        }
 
         function renderText(text) {
             if (window.marked && window.DOMPurify) {
@@ -442,6 +663,23 @@
                 });
                 bar.appendChild(copyBtn);
             }
+            // One reply's rating requests go out in order, so a quick
+            // thumbs-down, reason, undo can never land out of sequence.
+            let chain = Promise.resolve();
+            function send(body) {
+                const request = chain.then(function () {
+                    return fetch("{% url 'assistant:rate' %}", {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken},
+                        body: JSON.stringify(Object.assign({message_id: messageId}, body)),
+                    });
+                }).then(function (r) {
+                    if (!r.ok) throw new Error('rate failed');
+                    return r;
+                });
+                chain = request.catch(function () {});
+                return request;
+            }
             [[1, 'bi-hand-thumbs-up'], [-1, 'bi-hand-thumbs-down']].forEach(function ([value, icon]) {
                 const btn = document.createElement('button');
                 btn.type = 'button';
@@ -450,17 +688,72 @@
                 btn.innerHTML = '<i class="bi ' + icon + '"></i>';
                 btn.addEventListener('click', function () {
                     const newValue = btn.classList.contains('active') ? 0 : value;
-                    fetch("{% url 'assistant:rate' %}", {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken},
-                        body: JSON.stringify({message_id: messageId, rating: newValue}),
-                    }).catch(function () {});
+                    send({rating: newValue}).catch(function () {});
                     bar.querySelectorAll('.elsa-rate-btn').forEach(b => b.classList.remove('active'));
                     if (newValue !== 0) btn.classList.add('active');
+                    col.querySelectorAll('.elsa-reason, .elsa-reason-thanks').forEach(el => el.remove());
+                    if (newValue === -1) addReasonPanel(col, send);
                 });
                 bar.appendChild(btn);
             });
             col.appendChild(bar);
+        }
+
+        // Asked after a thumbs-down: the vote is already recorded, this only
+        // says why, which is what tells the team what to fix.
+        const REASONS = [
+            ['wrong', 'Wrong info'],
+            ['unanswered', "Didn't answer my question"],
+            ['outdated', 'Out of date'],
+            ['other', 'Other'],
+        ];
+
+        function addReasonPanel(col, send) {
+            const box = document.createElement('div');
+            box.className = 'elsa-reason';
+            box.innerHTML =
+                '<div class="elsa-reason-title">What went wrong? <span>(optional)</span></div>' +
+                '<div class="elsa-reason-chips"></div>' +
+                '<textarea class="elsa-reason-comment" rows="2" maxlength="1000" ' +
+                'aria-label="Tell us more" placeholder="Tell us more (optional)"></textarea>' +
+                '<div class="elsa-reason-actions"><span class="elsa-reason-error"></span>' +
+                '<button type="button" class="elsa-reason-skip">Skip</button>' +
+                '<button type="button" class="elsa-reason-send">Send</button></div>';
+            let reason = '';
+            const chips = box.querySelector('.elsa-reason-chips');
+            REASONS.forEach(function ([key, label]) {
+                const chip = document.createElement('button');
+                chip.type = 'button';
+                chip.className = 'elsa-reason-chip';
+                chip.dataset.reason = key;
+                chip.textContent = label;
+                chip.setAttribute('aria-pressed', 'false');
+                chip.addEventListener('click', function () {
+                    reason = reason === key ? '' : key;
+                    chips.querySelectorAll('.elsa-reason-chip').forEach(function (c) {
+                        c.setAttribute('aria-pressed', c.dataset.reason === reason ? 'true' : 'false');
+                    });
+                });
+                chips.appendChild(chip);
+            });
+            box.querySelector('.elsa-reason-skip').addEventListener('click', function () { box.remove(); });
+            const submitBtn = box.querySelector('.elsa-reason-send');
+            submitBtn.addEventListener('click', function () {
+                const comment = box.querySelector('.elsa-reason-comment').value.trim();
+                if (!reason && !comment) { box.remove(); return; }
+                submitBtn.disabled = true;
+                send({rating: -1, reason: reason, comment: comment}).then(function () {
+                    const thanks = document.createElement('div');
+                    thanks.className = 'elsa-reason-thanks';
+                    thanks.textContent = 'Thanks. The ELSA team reviews these to improve the assistant.';
+                    box.replaceWith(thanks);
+                }).catch(function () {
+                    submitBtn.disabled = false;
+                    box.querySelector('.elsa-reason-error').textContent = 'Could not send. Please try again.';
+                });
+            });
+            col.appendChild(box);
+            box.scrollIntoView({block: 'nearest'});
         }
 
         function addSystemNote(text) {
@@ -471,10 +764,10 @@
             scrollDown();
         }
 
-        function addChips() {
+        function addChips(questions, extraClass) {
             const chips = document.createElement('div');
-            chips.className = 'elsa-chips';
-            SUGGESTIONS.forEach(function (q) {
+            chips.className = 'elsa-chips' + (extraClass ? ' ' + extraClass : '');
+            questions.forEach(function (q) {
                 const chip = document.createElement('button');
                 chip.type = 'button';
                 chip.className = 'elsa-chip';
@@ -489,59 +782,294 @@
             scrollDown();
         }
 
-        function greet() {
+        function greet(hasPrevious) {
             addBubble('model', renderText(
                 "Hi {{ user }}! I'm the ELSA Assistant. I can help you build and submit " +
                 "bundles, explain PDS4 concepts, and pass feedback to the ELSA team."
             ));
-            addChips();
+            addChips(SUGGESTIONS);
+            if (hasPrevious) {
+                const note = document.createElement('p');
+                note.className = 'elsa-note';
+                const link = document.createElement('button');
+                link.type = 'button';
+                link.className = 'elsa-note-link';
+                link.textContent = 'Pick up an earlier chat';
+                link.addEventListener('click', function () { showChats(true); });
+                note.appendChild(link);
+                messagesEl.appendChild(note);
+            }
         }
 
-        function openPanel() {
+        function resetThread() {
+            conversationId = null;
+            setThreadTitle('', '');
+            messagesEl.innerHTML = '';
+        }
+
+        // Without an id this restores the thread that is active in this login
+        // (a fresh login has none, so it greets); with one it opens a past chat.
+        function loadThread(id) {
+            let url = "{% url 'assistant:history' %}?page=" + encodeURIComponent(window.location.pathname);
+            if (id) url += '&conversation_id=' + encodeURIComponent(id);
+            return fetch(url)
+                .then(r => r.json())
+                .then(function (data) {
+                    resetThread();
+                    conversationId = data.conversation_id;
+                    setThreadTitle(data.title, data.title_source);
+                    setLookingAt(data.looking_at);
+                    if (data.messages && data.messages.length) {
+                        data.messages.forEach(function (m) {
+                            const {col} = addBubble(m.role, renderText(m.text));
+                            if (m.role === 'model') addRating(col, m.id, m.rating, m.text);
+                        });
+                    } else {
+                        greet(data.has_previous);
+                    }
+                })
+                .catch(function () { resetThread(); greet(false); });
+        }
+
+        // Resolves once the saved thread is on screen. Anything that sends a
+        // message right after opening waits for it, or the history arriving
+        // late would wipe the new question and its streaming reply.
+        function openPanel(options) {
+            panel.classList.toggle('elsa-restored', !!(options && options.restore));
             panel.classList.remove('d-none');
-            if (!historyLoaded) {
-                historyLoaded = true;
-                fetch("{% url 'assistant:history' %}")
-                    .then(r => r.json())
-                    .then(function (data) {
-                        conversationId = data.conversation_id;
-                        if (data.messages && data.messages.length) {
-                            data.messages.forEach(function (m) {
-                                const {col} = addBubble(m.role, renderText(m.text));
-                                if (m.role === 'model') addRating(col, m.id, m.rating, m.text);
-                            });
-                        } else {
-                            greet();
-                        }
-                    })
-                    .catch(greet);
-            }
-            input.focus();
+            toggle.classList.add('elsa-panel-open');
+            toggle.classList.remove('elsa-unread');
+            toggle.setAttribute('aria-label', 'Open the ELSA Assistant');
+            remember('elsaAssistantOpen', true);
+            if (!historyReady) historyReady = loadThread(null);
+            // Restoring the panel on page load must not steal focus (or pop up
+            // the keyboard on a phone); a click on the toggle should.
+            if (!(options && options.restore)) input.focus();
+            return historyReady;
+        }
+
+        function closePanel() {
+            panel.classList.add('d-none');
+            toggle.classList.remove('elsa-panel-open');
+            remember('elsaAssistantOpen', false);
         }
 
         toggle.addEventListener('click', function () {
-            panel.classList.contains('d-none') ? openPanel() : panel.classList.add('d-none');
+            panel.classList.contains('d-none') ? openPanel() : closePanel();
         });
-        closeBtn.addEventListener('click', function () { panel.classList.add('d-none'); });
+        closeBtn.addEventListener('click', function () { closePanel(); toggle.focus(); });
 
-        newBtn.addEventListener('click', function () {
-            conversationId = null;
-            messagesEl.innerHTML = '';
-            greet();
-            input.focus();
+        // Escape closes the panel, unless it is closing something inside it
+        // first (the delete modal, or a rename in progress, handle their own).
+        document.addEventListener('keydown', function (e) {
+            if (e.key !== 'Escape' || panel.classList.contains('d-none')) return;
+            if (document.querySelector('.modal.show')) return;
+            closePanel();
+            toggle.focus();
         });
+
+        function startNewChat() {
+            const hadThread = conversationId !== null;
+            showChats(false);
+            resetThread();
+            greet(hadThread);
+            // Forget the active thread server-side too, so moving to another
+            // page before sending anything doesn't bring the old chat back.
+            postJson("{% url 'assistant:new_chat' %}").catch(function () {});
+            input.focus();
+        }
+        newBtn.addEventListener('click', startNewChat);
+        document.getElementById('elsaAssistantChatsNew').addEventListener('click', startNewChat);
+
+        /* ----- Chat list: open, rename, delete past threads ----- */
+        function showChats(open) {
+            if (open && aborter) return;  // not while a reply is streaming
+            chatsEl.classList.toggle('d-none', !open);
+            messagesEl.classList.toggle('d-none', open);
+            chatsBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+            chatsBtn.title = open ? 'Back to chat' : 'Your chats';
+            if (open) {
+                searchEl.value = '';
+                refreshChats();
+            }
+        }
+        chatsBtn.addEventListener('click', function () {
+            showChats(chatsEl.classList.contains('d-none'));
+        });
+
+        // Only the newest request paints the list, so a slow search for "cit"
+        // can't overwrite the results for "citation" that came back first.
+        let chatsRequest = 0;
+        function refreshChats() {
+            const query = searchEl.value.trim();
+            const ticket = ++chatsRequest;
+            fetch("{% url 'assistant:conversations' %}?q=" + encodeURIComponent(query))
+                .then(r => r.json())
+                .then(function (data) {
+                    if (ticket === chatsRequest) renderChats(data.conversations || [], query);
+                })
+                .catch(function () {
+                    if (ticket !== chatsRequest) return;
+                    chatListEl.innerHTML = '<p class="elsa-chats-empty">Could not load your chats. Please try again.</p>';
+                });
+        }
+
+        let searchTimer = null;
+        searchEl.addEventListener('input', function () {
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(refreshChats, 250);
+        });
+        searchEl.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && searchEl.value) {
+                e.preventDefault();
+                e.stopPropagation();
+                searchEl.value = '';
+                refreshChats();
+            }
+        });
+
+        function renderChats(items, query) {
+            chatListEl.innerHTML = '';
+            if (!items.length) {
+                const empty = document.createElement('p');
+                empty.className = 'elsa-chats-empty';
+                empty.textContent = query ? 'No chats mention "' + query + '".' : 'No past chats yet.';
+                chatListEl.appendChild(empty);
+                return;
+            }
+            items.forEach(function (c) {
+                const row = document.createElement('div');
+                row.className = 'elsa-chat-item' + (c.id === conversationId ? ' active' : '');
+
+                const open = document.createElement('button');
+                open.type = 'button';
+                open.className = 'elsa-chat-open';
+                const titleEl = document.createElement('span');
+                titleEl.className = 'elsa-chat-title';
+                titleEl.textContent = c.title;
+                titleEl.title = c.title;
+                const whenEl = document.createElement('span');
+                whenEl.className = 'elsa-chat-when';
+                whenEl.textContent = c.when;
+                open.append(titleEl, whenEl);
+                open.addEventListener('click', function () {
+                    showChats(false);
+                    if (c.id !== conversationId) loadThread(c.id);
+                    input.focus();
+                });
+
+                const rename = document.createElement('button');
+                rename.type = 'button';
+                rename.className = 'elsa-chat-act';
+                rename.title = 'Rename';
+                rename.setAttribute('aria-label', 'Rename ' + c.title);
+                rename.innerHTML = '<i class="bi bi-pencil"></i>';
+                rename.addEventListener('click', function () { startRename(row, open, c); });
+
+                const del = document.createElement('button');
+                del.type = 'button';
+                del.className = 'elsa-chat-act danger';
+                del.title = 'Delete';
+                del.setAttribute('aria-label', 'Delete ' + c.title);
+                del.innerHTML = '<i class="bi bi-trash3"></i>';
+                del.addEventListener('click', function () { askDelete(c); });
+
+                row.append(open, rename, del);
+                chatListEl.appendChild(row);
+            });
+        }
+
+        function startRename(row, open, c) {
+            const field = document.createElement('input');
+            field.type = 'text';
+            field.className = 'elsa-chat-rename';
+            field.maxLength = 80;
+            field.value = c.title;
+            field.setAttribute('aria-label', 'Chat name');
+            row.replaceChild(field, open);
+            field.focus();
+            field.select();
+
+            let done = false;
+            function finish(save) {
+                if (done) return;
+                done = true;
+                const name = field.value.trim();
+                if (!save || !name || name === c.title) { refreshChats(); return; }
+                postJson("{% url 'assistant:rename_conversation' %}", {conversation_id: c.id, title: name})
+                    .then(function (data) {
+                        if (data.success && c.id === conversationId) setThreadTitle(data.title, 'user');
+                    })
+                    .catch(function () {})
+                    .finally(refreshChats);
+            }
+            field.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') { e.preventDefault(); finish(true); }
+                if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); finish(false); }
+            });
+            field.addEventListener('blur', function () { finish(true); });
+        }
+
+        const deleteModalEl = document.getElementById('elsaDeleteChatModal');
+        let pendingDelete = null;
+        function askDelete(c) {
+            pendingDelete = c;
+            document.getElementById('elsaDeleteChatName').textContent = c.title;
+            bootstrap.Modal.getOrCreateInstance(deleteModalEl).show();
+        }
+        document.getElementById('elsaDeleteChatConfirm').addEventListener('click', function () {
+            const c = pendingDelete;
+            bootstrap.Modal.getOrCreateInstance(deleteModalEl).hide();
+            if (!c) return;
+            postJson("{% url 'assistant:delete_conversation' %}", {conversation_id: c.id})
+                .then(function (data) {
+                    if (data.success && c.id === conversationId) { resetThread(); greet(false); }
+                })
+                .catch(function () {})
+                .finally(refreshChats);
+        });
+
+        // After each reply, ask the server whether this thread is due a name.
+        // It answers from the question and the reply together, so the title
+        // reflects the kind of help asked for, and it is a no-op otherwise.
+        function requestTitle(id) {
+            if (!id || titleSource === 'user') return;
+            postJson("{% url 'assistant:auto_title' %}", {conversation_id: id})
+                .then(function (data) {
+                    if (data.success && id === conversationId) setThreadTitle(data.title, data.title_source);
+                })
+                .catch(function () {});
+        }
 
         const expandBtn = document.getElementById('elsaAssistantExpand');
         let expanded = false;
-        expandBtn.addEventListener('click', function () {
-            expanded = !expanded;
+        function setExpanded(on) {
+            expanded = on;
+            remember('elsaAssistantExpanded', on);
             panel.style.width = expanded ? 'min(760px, calc(100vw - 2rem))' : '390px';
             messagesEl.style.height = expanded ? 'min(65vh, 640px)' : '400px';
+            chatsEl.style.height = messagesEl.style.height;
             expandBtn.querySelector('i').className = expanded ? 'bi bi-arrows-angle-contract' : 'bi bi-arrows-angle-expand';
             expandBtn.title = expanded ? 'Shrink' : 'Expand';
             scrollDown();
+        }
+        expandBtn.addEventListener('click', function () {
+            setExpanded(!expanded);
             input.focus();
         });
+
+        // The answer ends with a <followups> line that the server turns into
+        // chips; keep it (and a tag that is still arriving, "<fol...") out of
+        // the bubble while the reply streams in.
+        const FOLLOWUPS_TAG = '<followups>';
+        function withoutFollowups(text) {
+            const at = text.indexOf(FOLLOWUPS_TAG);
+            if (at !== -1) return text.slice(0, at);
+            for (let k = Math.min(FOLLOWUPS_TAG.length - 1, text.length); k > 0; k--) {
+                if (FOLLOWUPS_TAG.startsWith(text.slice(-k))) return text.slice(0, -k);
+            }
+            return text;
+        }
 
         async function readSseStream(response, reply) {
             const reader = response.body.getReader();
@@ -562,9 +1090,11 @@
                     let ev;
                     try { ev = JSON.parse(line.slice(6)); } catch (err) { continue; }
 
-                    if (ev.type === 'delta') {
+                    if (ev.type === 'start') {
+                        conversationId = ev.conversation_id;
+                    } else if (ev.type === 'delta') {
                         acc += ev.text;
-                        reply.bubble.innerHTML = renderText(acc);
+                        reply.bubble.innerHTML = renderText(withoutFollowups(acc));
                         scrollDown();
                     } else if (ev.type === 'status') {
                         const label = reply.bubble.querySelector('.elsa-typing-label');
@@ -575,6 +1105,8 @@
                         reply.bubble.innerHTML = renderText(ev.reply);
                         addRating(reply.col, ev.message_id, 0, ev.reply);
                         if (ev.feedback_sent) addSystemNote('✓ Feedback sent to the ELSA team');
+                        if (ev.followups && ev.followups.length) addChips(ev.followups, 'elsa-followups');
+                        requestTitle(ev.conversation_id);
                     } else if (ev.type === 'error') {
                         reader.cancel();
                         throw new Error(ev.error);
@@ -594,10 +1126,32 @@
             sendBtn.setAttribute('aria-label', on ? 'Stop generating' : 'Send');
             sendBtn.title = on ? 'Stop generating' : '';
             sendBtn.querySelector('i').className = on ? 'bi bi-stop-fill' : 'bi bi-send-fill';
+            // Switching threads mid-reply would attach the reply to the wrong chat.
+            newBtn.disabled = on;
+            chatsBtn.disabled = on;
         }
 
-        function sendMessage(text) {
-            addBubble('user', renderText(text));
+        // A failed reply offers to ask again. The question is already on screen
+        // (and saved), so the retry only replaces the failed reply.
+        function addRetry(reply, text) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'elsa-retry';
+            btn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Try again';
+            btn.addEventListener('click', function () {
+                if (aborter) return;
+                reply.row.remove();
+                sendMessage(text, {retry: true});
+            });
+            reply.col.appendChild(btn);
+        }
+
+        function sendMessage(text, options) {
+            const retry = !!(options && options.retry);
+            showChats(false);
+            // Old suggestions and retry buttons belong to earlier replies.
+            messagesEl.querySelectorAll('.elsa-followups, .elsa-retry').forEach(el => el.remove());
+            if (!retry) addBubble('user', renderText(text));
             setStreaming(true);
             aborter = new AbortController();
 
@@ -611,6 +1165,7 @@
                     conversation_id: conversationId,
                     message: text,
                     page: window.location.pathname,
+                    retry: retry,
                 }),
             })
             .then(async (r) => {
@@ -631,12 +1186,24 @@
                     addSystemNote('Stopped.');
                     return;
                 }
-                reply.bubble.innerHTML = renderText(err.message || 'Network error. Please try again.');
+                // fetch() reports a dropped connection as a bare TypeError
+                // ("Failed to fetch"); say what happened in plain words.
+                const message = err instanceof TypeError
+                    ? 'Could not reach ELSA. Please check your connection and try again.'
+                    : err.message;
+                reply.bubble.innerHTML = renderText(message || 'Network error. Please try again.');
+                addRetry(reply, text);
             })
             .finally(() => {
                 aborter = null;
                 setStreaming(false);
-                input.focus();
+                // Closed while the reply was coming in: flag it on the toggle.
+                if (panel.classList.contains('d-none')) {
+                    toggle.classList.add('elsa-unread');
+                    toggle.setAttribute('aria-label', 'Open the ELSA Assistant (new reply)');
+                } else {
+                    input.focus();
+                }
             });
         }
 
@@ -676,12 +1243,19 @@
         window.elsaAssistant = {
             ask: function (question) {
                 if (!question) { return; }
-                openPanel();
-                input.value = question;
-                autoGrow();
-                form.dispatchEvent(new Event('submit', {cancelable: true}));
+                openPanel().then(function () {
+                    // Mid-reply, a submit would press Stop instead of asking.
+                    if (sendBtn.dataset.mode === 'stop') { return; }
+                    input.value = question;
+                    autoGrow();
+                    form.dispatchEvent(new Event('submit', {cancelable: true}));
+                });
             }
         };
+
+        // Put the panel back the way the user left it on the previous page.
+        if (remembered('elsaAssistantExpanded')) setExpanded(true);
+        if (remembered('elsaAssistantOpen')) openPanel({restore: true});
     })();
     </script>
     {% endif %}

@@ -3,10 +3,10 @@
      templates/base-derk.html#nav      = 568cd6ce6baa
      friends/views.py#bundle_hub       = 02a643915c11
      templates/friends/bundle_hub.html = 1769e80d5787
-     build/urls.py                     = 6226f790128d
+     build/urls.py                     = d97e97aeb9bb
 -->
-<!-- reviewed: 2026-09-11 -->
-<!-- baseline: 4e0bb4b450ce5c2b934c567a62ac47485cca1529 -->
+<!-- reviewed: 2026-09-25 -->
+<!-- baseline: ab6b3482d9893d5e8b7e506fadff1e8125905f6a -->
 # Navigating ELSA
 
 Key pages:
@@ -26,7 +26,8 @@ Key pages:
 - Contact page, reach the ELSA / Atmospheres node team directly.
 - ELSA Assistant, the chat widget at the bottom right of every page (this
   assistant); it answers questions about using ELSA and can pass feedback to
-  the team. Replies can be copied and rated (thumbs up/down). Enter sends a
+  the team. Replies can be copied and rated (thumbs up/down); a thumbs-down
+  asks what went wrong, and the ELSA team reviews those. Enter sends a
   message, Shift+Enter starts a new line, and the send button becomes a stop
   button while a reply is streaming. Chats are stored to help improve ELSA.
 

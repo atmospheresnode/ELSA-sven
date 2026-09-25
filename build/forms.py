@@ -9,6 +9,7 @@ from django.utils.safestring import mark_safe
 from lxml import etree
 import json
 import re
+import unicodedata
 import urllib.request
 import urllib.error
 import urllib.parse
@@ -287,6 +288,9 @@ class CitationInformationForm(forms.ModelForm):
         exclude = ('bundle',)
 
     def __init__(self, *args, **kwargs):
+        # The bundle the citation is for, when the caller knows it. Only used to
+        # decide whether an author is required (External bundles, for now).
+        self.bundle = kwargs.pop('bundle', None)
         super().__init__(*args, **kwargs)
 
         # Add fields for authors (people)
@@ -342,6 +346,19 @@ class CitationInformationForm(forms.ModelForm):
         for f in ('number_of_editors_people', 'number_of_editors_organization'):
             if cleaned_data.get(f) is None:
                 cleaned_data[f] = 0
+
+        # An External bundle needs an author (build.preflight), and this is the only
+        # moment one can be added: the edit form fills in names but cannot change
+        # how many there are. A citation created with none could only be fixed by
+        # deleting it and starting again, so it is refused here instead.
+        if self.bundle is not None and self.bundle.bundle_type == 'External':
+            people = cleaned_data.get('number_of_authors_people') or 0
+            organizations = cleaned_data.get('number_of_authors_organization') or 0
+            if people + organizations < 1:
+                raise forms.ValidationError(
+                    'Add at least one author, a person or an organization. A citation '
+                    'needs someone to credit, and the number of authors cannot be '
+                    'changed once the citation has been created.')
         return cleaned_data
     
 
@@ -364,6 +381,33 @@ class EditCitationInformationForm(forms.Form):
         # Neakrase, Lyle Huber) are never editable and get no form fields.
         self._add_person_fields('editor', self.citation_information.number_of_editors_people)
         self._add_organization_fields('editor', self.citation_information.number_of_editors_organization)
+
+    def clean(self):
+        """Names PDS cannot store, caught here rather than by the validator.
+
+        PDS4 holds author and editor names in ASCII_* types, all of which are
+        restricted to Basic Latin, so an accented name is refused however correctly
+        it is spelled. Catching it on the form means the user is told while they are
+        looking at the field, and told what spelling does work, rather than finding
+        out later from a validation report about a label they cannot see.
+        """
+        cleaned = super(EditCitationInformationForm, self).clean()
+
+        for name, value in list(cleaned.items()):
+            if not isinstance(value, str) or not value:
+                continue
+            if name.endswith('_given_name'):
+                label = 'given name'
+            elif name.endswith('_family_name'):
+                label = 'family name'
+            else:
+                continue
+            try:
+                clean_pds_person_name(value, label)
+            except forms.ValidationError as error:
+                self.add_error(name, error)
+
+        return cleaned
 
     def _add_person_fields(self, prefix, count):
         """Helper method to add fields for a person (author or editor)."""
@@ -1007,12 +1051,43 @@ PE_STD_ID = [
 PDS_FILE_NAME = re.compile(r'^[a-zA-Z0-9]([a-zA-Z0-9]|[-]|[_]|[.])*[.][a-zA-Z0-9]+$')
 
 
+# The extension each declared file format implies. The document form already asks
+# for the format, so a name with no extension is a question ELSA can answer rather
+# than a mistake to report: a user who types "User_Guide" and chooses PDF/A has said
+# everything needed to write "User_Guide.pdf".
+EXTENSION_FOR_FORMAT = {
+    'PDF/A': 'pdf',
+    'ASCII': 'txt',
+    '7-Bit ASCII': 'txt',
+}
+
+
+def extension_for_format(document_std_id):
+    """The file extension a declared format implies, or '' if it implies none."""
+    return EXTENSION_FOR_FORMAT.get((document_std_id or '').strip(), '')
+
+
+def apply_format_extension(file_name, document_std_id):
+    """Give a bare file name the extension its declared format implies.
+
+    Returns the name unchanged when it already has an extension, or when the format
+    does not imply one. PDS requires an extension and rejects a name without one,
+    and telling someone to go back and add ".pdf" to a name when they have already
+    said the file is a PDF is asking them to repeat themselves.
+    """
+    file_name = (file_name or '').strip()
+    if not file_name or '.' in file_name.strip('.'):
+        return file_name
+    extension = extension_for_format(document_std_id)
+    return '{}.{}'.format(file_name, extension) if extension else file_name
+
+
 def clean_pds_file_name(value):
     """Reject a document file name PDS would reject, while the user is still here.
 
-    Both of these reached a real bundle and were only caught by the validator, by
-    which point the document was written, labelled, listed in an inventory and shown
-    to its owner as an error they had to go back and undo.
+    Only reached for a name ELSA could not complete itself: the forms fill in the
+    extension implied by the declared format first, so what gets here is a name with
+    a genuine problem, such as a space or a leading dot.
     """
     value = (value or '').strip()
     if not value:
@@ -1061,6 +1136,40 @@ def clean_unique_document_name(form, value):
             'twice, so give this one a different name.',
             params={'value': value})
     return value
+
+
+# PDS4 stores author and editor names in ASCII_* types, every one of which is
+# restricted to '\p{IsBasicLatin}*'. An accented name is refused however correctly
+# it is spelled, which is a limitation of the archive format rather than anything
+# the user did wrong, so the message says so and offers the spelling that works.
+PDS_BASIC_LATIN = re.compile(r'^[\x00-\x7F]*$')
+
+
+def ascii_suggestion(value):
+    """The nearest unaccented spelling: Morales-Juberias for Morales-Juberias."""
+    decomposed = unicodedata.normalize('NFKD', value or '')
+    stripped = ''.join(c for c in decomposed if not unicodedata.combining(c))
+    return ''.join(c for c in stripped if ord(c) < 128)
+
+
+def clean_pds_person_name(value, label):
+    """Reject a name PDS cannot store, and say what to write instead."""
+    value = (value or '').strip()
+    if not value or PDS_BASIC_LATIN.match(value):
+        return value
+
+    suggestion = ascii_suggestion(value)
+    if suggestion and suggestion != value:
+        raise forms.ValidationError(
+            'PDS can only store unaccented letters in a %(label)s, so '
+            '"%(value)s" cannot be recorded as written. Try "%(suggestion)s". '
+            'This is a limit of the archive format, not a judgement about the name.',
+            params={'label': label, 'value': value, 'suggestion': suggestion})
+
+    raise forms.ValidationError(
+        'PDS can only store unaccented Latin letters in a %(label)s, and '
+        '"%(value)s" uses characters outside that set.',
+        params={'label': label, 'value': value})
 
 
 class AnnexProductDocumentForm(forms.ModelForm):
@@ -1137,7 +1246,11 @@ class AnnexProductDocumentForm(forms.ModelForm):
         super(AnnexProductDocumentForm, self).__init__(*args, **kwargs)
 
     def clean_file_name(self):
-        return clean_pds_file_name(self.cleaned_data.get('file_name'))
+        # The format is cleaned before file_name only if it is declared earlier in
+        # the form, so read it from the raw data rather than from cleaned_data.
+        return clean_pds_file_name(apply_format_extension(
+            self.cleaned_data.get('file_name'),
+            self.data.get('document_std_id')))
 
     def clean_document_name(self):
         return clean_unique_document_name(self, self.cleaned_data.get('document_name'))
@@ -1291,7 +1404,11 @@ class ProductDocumentForm(forms.ModelForm):
         super(ProductDocumentForm, self).__init__(*args, **kwargs)
 
     def clean_file_name(self):
-        return clean_pds_file_name(self.cleaned_data.get('file_name'))
+        # The format is cleaned before file_name only if it is declared earlier in
+        # the form, so read it from the raw data rather than from cleaned_data.
+        return clean_pds_file_name(apply_format_extension(
+            self.cleaned_data.get('file_name'),
+            self.data.get('document_std_id')))
 
     def clean_document_name(self):
         return clean_unique_document_name(self, self.cleaned_data.get('document_name'))

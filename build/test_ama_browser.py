@@ -415,6 +415,251 @@ class AMABrowserTestCase(StaticLiveServerTestCase):
         copied = ModelMetadata.objects.get(netcdf_file=self.nc_one)
         self.assertEqual(copied.name, 'LMD')
 
+    # -- the validation panel on the same page ---------------------------------------------------
+
+    @override_settings(VALIDATE_AUTO_CHECK=False)
+    def test_a_second_validation_check_on_the_same_page_shows_its_progress(self):
+        """The panel replaces its own contents when a check finishes, progress bar
+        included. The script used to hold the elements it found at page load, so a
+        second check ran with its progress bar hidden and its errors written nowhere."""
+        from unittest import mock
+        from django.utils import timezone
+        from build.models import ValidationRun
+
+        calls = []
+
+        def fake_start(bundle, tier=ValidationRun.TIER_STRUCTURE):
+            calls.append(tier)
+            status = ValidationRun.STATUS_DONE if len(calls) == 1 else ValidationRun.STATUS_RUNNING
+            return ValidationRun.objects.create(
+                bundle=bundle, tier=tier, status=status, findings=[], products_total=4,
+                content_fingerprint=bundle.content_fingerprint(),
+                finished_at=timezone.now() if status == ValidationRun.STATUS_DONE else None)
+
+        with mock.patch('build.validate_runner.start', side_effect=fake_start):
+            self.open_bundle()
+            self.page.evaluate("document.getElementById('preflight_run').click()")
+            self.page.wait_for_function(
+                "!document.getElementById('preflight_run').disabled", timeout=10000)
+            # Let the finished check swap the panel before starting the next one.
+            self.page.wait_for_timeout(1500)
+            self.page.evaluate("document.getElementById('preflight_run').click()")
+            self.page.wait_for_function(
+                "document.getElementById('preflight_run').disabled", timeout=10000)
+            self.wait_for_calls(calls, 2)
+        self.assertFalse(self.page.evaluate(
+            "document.getElementById('preflight_progress').hidden"))
+
+    # -- Review & Submit: checks the bundle as it is now, then offers Submit ----------------------
+
+    def wait_for_calls(self, calls, count, timeout=10):
+        """The page reacts to a click at once, but the request it sends arrives later."""
+        import time
+        deadline = time.monotonic() + timeout
+        while len(calls) < count and time.monotonic() < deadline:
+            self.page.wait_for_timeout(100)
+        self.assertEqual(len(calls), count)
+
+    def open_review(self):
+        self.page.evaluate(
+            "bootstrap.Modal.getOrCreateInstance(document.getElementById('reviewBundleModal')).show()")
+        self.page.locator('#reviewBundleModal').wait_for(state='visible')
+
+    def submit_enabled(self):
+        return self.page.evaluate(
+            "!document.querySelector('#review_submit_action button').disabled")
+
+    def finish_run(self):
+        from django.utils import timezone
+        from build.models import ValidationRun
+        ValidationRun.objects.filter(bundle=self.bundle).update(
+            status=ValidationRun.STATUS_DONE, findings=[], finished_at=timezone.now(),
+            phase=ValidationRun.PHASE_DONE)
+
+    def running_run(self, bundle, tier):
+        from build.models import ValidationRun
+        return ValidationRun.objects.create(
+            bundle=bundle, tier=tier, status=ValidationRun.STATUS_RUNNING,
+            content_fingerprint=bundle.content_fingerprint(), products_total=4)
+
+    @override_settings(VALIDATE_AUTO_CHECK=False, VALIDATE_BLOCKS_SUBMISSION=True)
+    def test_review_checks_a_bundle_never_checked_then_offers_submit(self):
+        from unittest import mock
+        from build.models import ValidationRun
+        from build.requirement_fixture import satisfy_requirements
+        satisfy_requirements(self.bundle)
+        calls = []
+
+        def fake_start(bundle, tier=ValidationRun.TIER_STRUCTURE):
+            calls.append(tier)
+            return self.running_run(bundle, tier)
+
+        with mock.patch('build.validate_runner.start', side_effect=fake_start):
+            self.open_bundle()
+            self.open_review()
+            self.page.locator('#verdict_checking').wait_for(state='visible', timeout=10000)
+            self.wait_for_calls(calls, 1)
+            self.assertFalse(self.submit_enabled())
+
+            self.finish_run()
+            self.page.wait_for_function(
+                "!document.getElementById('verdict_result').hidden && "
+                "document.getElementById('verdict_result').innerText.includes('ready to submit')",
+                timeout=10000)
+
+        self.assertTrue(self.submit_enabled())
+        self.assertTrue(self.page.locator('#verdict_checking').is_hidden())
+        # The confirmation window was refreshed too, so Submit leads to a form.
+        self.assertEqual(self.page.locator('#submit_confirm_action form').count(), 1)
+        self.assertIn('Nothing needs changing', self.page.locator('#review_findings').inner_text())
+
+    @override_settings(VALIDATE_AUTO_CHECK=False, VALIDATE_BLOCKS_SUBMISSION=True)
+    def test_review_waits_for_a_busy_server_rather_than_failing(self):
+        from unittest import mock
+        from django.utils import timezone
+        from build import validate_runner
+        from build.models import ValidationRun
+        from build.requirement_fixture import satisfy_requirements
+        satisfy_requirements(self.bundle)
+        calls = []
+
+        def fake_start(bundle, tier=ValidationRun.TIER_STRUCTURE):
+            calls.append(tier)
+            if len(calls) == 1:
+                return ValidationRun(bundle=bundle, tier=tier,
+                                     status=ValidationRun.STATUS_FAILED,
+                                     finished_at=timezone.now(),
+                                     failure_reason=validate_runner.BUSY_REASON)
+            return self.running_run(bundle, tier)
+
+        with mock.patch('build.validate_runner.start', side_effect=fake_start):
+            self.open_bundle()
+            self.open_review()
+            self.page.wait_for_function(
+                "document.getElementById('verdict_phase').innerText"
+                ".includes('Waiting for another check')", timeout=10000)
+            self.assertNotIn('Could not run', self.page.locator('#preflight_row_badge').inner_text())
+
+            # The page asks again by itself, gets a slot, and follows the check.
+            self.wait_for_calls(calls, 2, timeout=15)
+            self.finish_run()
+            self.page.wait_for_function(
+                "document.getElementById('verdict_result').innerText.includes('ready to submit')",
+                timeout=10000)
+        self.assertTrue(self.submit_enabled())
+
+    @override_settings(VALIDATE_AUTO_CHECK=False, VALIDATE_BLOCKS_SUBMISSION=True)
+    def test_review_on_a_current_result_starts_nothing(self):
+        from unittest import mock
+        from django.utils import timezone
+        from build.models import ValidationRun
+        from build.requirement_fixture import satisfy_requirements
+        satisfy_requirements(self.bundle)
+        ValidationRun.objects.create(
+            bundle=self.bundle, status=ValidationRun.STATUS_DONE, findings=[],
+            finished_at=timezone.now(), content_fingerprint=self.bundle.content_fingerprint())
+
+        with mock.patch('build.validate_runner.start') as start:
+            self.open_bundle()
+            self.open_review()
+            self.page.wait_for_timeout(2000)
+            start.assert_not_called()
+        self.assertTrue(self.submit_enabled())
+        self.assertIn('ready to submit', self.page.locator('#verdict_result').inner_text())
+
+    # -- the Bundle Components badge after a background check ------------------------------
+
+    @override_settings(VALIDATE_AUTO_CHECK=True, VALIDATE_BLOCKS_SUBMISSION=True)
+    def test_the_badge_counts_elsas_requirements_after_a_background_check(self):
+        """Reported: delete the target, the page checks again, and the badge says Passed
+        while the list inside says a target is missing. A hard refresh then showed
+        "1 to fix". PDS cannot see a missing target, so a clean check is not a pass."""
+        from unittest import mock
+        from django.utils import timezone
+        from build.models import ValidationRun
+        from build.requirement_fixture import satisfy_requirements
+        satisfy_requirements(self.bundle)
+        self.bundle.targets.clear()
+
+        def fake_start(bundle, tier=ValidationRun.TIER_STRUCTURE):
+            return ValidationRun.objects.create(
+                bundle=bundle, tier=tier, status=ValidationRun.STATUS_DONE, findings=[],
+                finished_at=timezone.now(), content_fingerprint=bundle.content_fingerprint())
+
+        with mock.patch('build.validate_runner.start', side_effect=fake_start):
+            self.open_bundle()
+            badge = self.page.locator('#preflight_row_badge')
+            self.page.wait_for_function(
+                "document.getElementById('preflight_row_badge').innerText.trim() !== 'Checking…'",
+                timeout=10000)
+        self.assertEqual(badge.inner_text().strip(), '1 to fix')
+
+        # And the same page, loaded fresh, agrees with it.
+        self.open_bundle()
+        self.assertEqual(self.page.locator('#preflight_row_badge').inner_text().strip(), '1 to fix')
+
+    # -- External requirements: an author and a NetCDF file -----------------------------------
+
+    @override_settings(VALIDATE_AUTO_CHECK=False, VALIDATE_BLOCKS_SUBMISSION=True)
+    def test_the_netcdf_item_shows_you_the_collections_card(self):
+        """An item with nowhere to click is advice nobody can follow. This one closes the
+        Review & Submit window and brings the Collections card, where files are uploaded,
+        into view."""
+        from django.utils import timezone
+        from build.models import NetCDFFile, ValidationRun
+        from build.requirement_fixture import satisfy_requirements
+        satisfy_requirements(self.bundle)
+        NetCDFFile.objects.filter(bundle=self.bundle).update(processed=False)
+        ValidationRun.objects.create(
+            bundle=self.bundle, status=ValidationRun.STATUS_DONE, findings=[],
+            finished_at=timezone.now(), content_fingerprint=self.bundle.content_fingerprint())
+
+        self.open_bundle()
+        self.page.evaluate('window.scrollTo(0, 0)')
+        self.open_review()
+        item = self.page.locator('#review_findings .list-group-item',
+                                 has_text='Upload at least one NetCDF file')
+        self.assertEqual(item.count(), 1)
+        self.assertFalse(self.submit_enabled())
+
+        item.locator('.preflight-goto').click()
+        self.page.locator('#reviewBundleModal').wait_for(state='hidden', timeout=10000)
+        self.page.wait_for_function(
+            "(function () { var r = document.getElementById('collections_card')"
+            ".getBoundingClientRect(); return r.top < window.innerHeight && r.bottom > 0; })()",
+            timeout=10000)
+
+    @override_settings(VALIDATE_AUTO_CHECK=False)
+    def test_a_citation_with_no_author_is_refused_and_the_reason_is_shown(self):
+        """Refused where an author can still be added, and said on screen: the window
+        reopens with the reason instead of the page quietly reloading without it."""
+        from build.models import Citation_Information
+        self.open_bundle()
+        self.page.evaluate(
+            "bootstrap.Modal.getOrCreateInstance(document.getElementById('citation_information_modal')).show()")
+        form = self.page.locator('#citation_information_modal form#form_citation_information')
+        form.wait_for(state='visible')
+        form.locator('[name="number_of_authors_people"]').fill('0')
+        form.locator('[name="number_of_authors_organization"]').fill('0')
+        form.locator('[name="description"]').fill('Model output from a test')
+        with self.page.expect_navigation():
+            form.locator('button[type="submit"]').click()
+
+        self.page.locator('#citation_information_modal').wait_for(state='visible', timeout=10000)
+        self.assertIn('Add at least one author',
+                      self.page.locator('#citation_information_modal').inner_text())
+        self.assertFalse(Citation_Information.objects.filter(bundle=self.bundle).exists())
+
+        # One author, and it goes through.
+        form = self.page.locator('#citation_information_modal form#form_citation_information')
+        form.locator('[name="number_of_authors_people"]').fill('1')
+        form.locator('[name="description"]').fill('Model output from a test')
+        with self.page.expect_navigation():
+            form.locator('button[type="submit"]').click()
+        self.page.wait_for_load_state('domcontentloaded')
+        self.assertTrue(Citation_Information.objects.filter(
+            bundle=self.bundle, number_of_authors_people=1).exists())
+
     # -- end to end: the property the whole design exists for -----------------------------------
 
     def test_a_shared_section_reaches_every_file_in_the_collection_but_not_the_next_one(self):
@@ -437,9 +682,12 @@ class AMABrowserTestCase(StaticLiveServerTestCase):
         # one file clears the nudge for its whole collection, because the others inherit it.
         for netcdf_file in (self.nc_one, self.nc_two):
             with self.subTest(netcdf_file=netcdf_file.title):
+                # The save reloads the page, and this can be evaluated before the new
+                # tree is parsed. A missing row has to read as "not yet" rather than
+                # throw, or the wait gives up instead of retrying.
                 self.page.wait_for_function(
-                    'document.querySelector(\'.eft-item[data-netcdf-id="{}"]\')'
-                    '.innerText.includes("2 of 28")'.format(netcdf_file.pk), timeout=10000)
+                    '(document.querySelector(\'.eft-item[data-netcdf-id="{}"]\') || {{}})'
+                    '.innerText?.includes("2 of 28")'.format(netcdf_file.pk), timeout=10000)
         self.assertIn('No AMA metadata yet', self.tree_row(self.nc_beta).inner_text())
 
         # Stored once, on the collection, not copied onto each file.
@@ -634,6 +882,49 @@ class AMABrowserTestCase(StaticLiveServerTestCase):
                 tab = self.page.locator(
                     'button[data-bs-target="#additional_collection_{}"]'.format(collection.pk))
                 self.assertTrue(tab.count() >= 1)
+
+    def test_creating_a_collection_opens_its_tab(self):
+        """The page used to come back on the Add New Collection form it was submitted from."""
+        # Creating a collection writes a member entry into the bundle label, which the fixture
+        # does not otherwise need on disk.
+        Product_Bundle.objects.get(bundle=self.bundle).build_base_case()
+        self.open_bundle()
+        self.page.locator('#collections_card button[data-bs-target="#add_a_collection"]').click()
+        form = self.page.locator('#form_collections')
+        form.locator('[name="collection_name"]').fill('gamma')
+        form.locator('[name="collection_type"]').select_option('External')
+        with self.page.expect_navigation():
+            form.locator('button[type="submit"]').click()
+        self.page.wait_for_load_state('domcontentloaded')
+
+        gamma = AdditionalCollections.objects.get(bundle=self.bundle, collection_name='gamma')
+        self.pane(gamma).wait_for(state='visible')
+        self.assertFalse(self.page.locator('#add_a_collection').is_visible())
+        # The fragment is spent: a later reload goes back to whatever tab is open then.
+        self.assertNotIn('#', self.page.url)
+
+    def test_creating_an_archive_collection_opens_its_tab(self):
+        """Same as above on the Archive branch, which has its own tabs and no tab memory."""
+        archive = Bundle.objects.create(
+            name='archive_tab_bundle', user=self.user, version='1800', bundle_type='Archive')
+        os.makedirs(archive.directory(), exist_ok=True)
+        Product_Bundle.objects.create(bundle=archive).build_base_case()
+
+        self.page.goto(
+            self.live_server_url + reverse('build:bundle', kwargs={'pk_bundle': archive.pk}))
+        self.page.wait_for_load_state('domcontentloaded')
+        self.page.locator('#collectionsCard button[data-bs-target="#add_a_collection"]').click()
+        form = self.page.locator('#collectionsCard #form_collections')
+        form.locator('[name="collection_name"]').fill('gamma')
+        form.locator('[name="collection_type"]').select_option('Data')
+        with self.page.expect_navigation():
+            form.locator('button[type="submit"]').click()
+        self.page.wait_for_load_state('domcontentloaded')
+
+        gamma = AdditionalCollections.objects.get(bundle=archive, collection_name='gamma')
+        self.page.locator('#additional_collection_{}'.format(gamma.pk)).wait_for(state='visible')
+        self.assertFalse(self.page.locator('#doc_collection').is_visible())
+        self.assertNotIn('#', self.page.url)
 
     # -- post-upload notice ---------------------------------------------------------------------
 

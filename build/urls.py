@@ -123,6 +123,11 @@ urlpatterns = [
     #delete net cdf file
     re_path(r'^(?P<pk_bundle>\d+)/netcdf/bulk_delete/$', views.bulk_delete_netcdf, name='bulk_delete_netcdf'),
 
+    # Disk-space check before a NetCDF upload, and the report a user can send when it fails
+    re_path(r'^(?P<pk_bundle>\d+)/netcdf/storage/check/$', views.netcdf_storage_check, name='netcdf_storage_check'),
+    re_path(r'^(?P<pk_bundle>\d+)/netcdf/storage/draft/$', views.netcdf_storage_draft, name='netcdf_storage_draft'),
+    re_path(r'^(?P<pk_bundle>\d+)/netcdf/storage/report/$', views.netcdf_storage_report, name='netcdf_storage_report'),
+
     # One generated label's XML, fetched on demand by the Files tree
     re_path(r'^(?P<pk_bundle>\d+)/label_content/$', views.label_content, name='label_content'),
 

@@ -9,43 +9,59 @@ since been answered and a Submit button disabled on it.
 {% endcomment %}
 <div id="validation_verdict">
             {% comment %}
-               The verdict comes from one place.
+               Two parts. The checking band is shown while a check runs, including one
+               this window starts for itself when it opens on a bundle that has changed
+               since its last check. The result replaces it when the check finishes.
 
-               This modal used to reach its own conclusion about whether the bundle
-               was ready, from whether Modification History, Citation Information and
-               Targets existed. PDS validation now answers a strictly better version
-               of that question, and the two could disagree in a way nobody could
-               resolve: Citation Information can be present, and so tick green in the
-               list below, while validation reports that an author on it has no name.
-
-               So the band states where the bundle stands, and the list below it is an
-               inventory of what is being sent plus the fastest route to editing each
-               piece. It is no longer the thing that decides.
+               The result reads the submission gate (validation_block), the same answer
+               the Submit button and submit_bundle_internal use, so the band cannot say
+               "ready" while the button refuses, or the other way round.
             {% endcomment %}
-            {% if not validation_run %}
+            <div id="verdict_checking" class="alert alert-secondary py-2 px-3 small mb-4"
+                 {% if not validation_run.is_active %}hidden{% endif %}>
+               <div class="d-flex align-items-baseline justify-content-between mb-1">
+                  <span class="fw-semibold" id="verdict_phase">Checking this bundle against the PDS validation tool…</span>
+                  <span class="text-muted" id="verdict_counts"></span>
+               </div>
+               <div class="progress" style="height: 6px;">
+                  <div id="verdict_bar" class="progress-bar progress-bar-striped progress-bar-animated"
+                       role="progressbar" style="width: 100%;"
+                       aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+               </div>
+            </div>
+
+            <div id="verdict_result" {% if validation_run.is_active %}hidden{% endif %}>
+            {% if validation_block.0 == 'not_checked' or validation_block.0 == 'stale' %}
             <div class="alert alert-secondary py-2 px-3 small d-flex align-items-center gap-2 mb-4">
                <i class="bi bi-hourglass-split"></i>
-               <span class="flex-grow-1">This bundle has not been checked against the PDS
-                  validation tool yet. The check takes a few seconds.</span>
-               <button type="button" class="btn btn-sm btn-outline-secondary flex-shrink-0"
-                       onclick="switchToModal('reviewBundleModal', 'validation_modal')">Check it</button>
+               <span class="flex-grow-1">
+                  {% if validation_block.0 == 'stale' %}The bundle changed since its last check,
+                  so it needs checking again before it can be submitted.{% else %}This bundle
+                  needs checking against the PDS validation tool before it can be submitted.{% endif %}
+                  It takes a few seconds.
+               </span>
+               <button type="button" class="btn btn-sm btn-outline-secondary flex-shrink-0 verdict-run-check">Check now</button>
             </div>
-            {% elif validation_run.is_stale %}
-            <div class="alert alert-warning py-2 px-3 small d-flex align-items-center gap-2 mb-4">
-               <i class="bi bi-exclamation-triangle-fill"></i>
-               <span class="flex-grow-1">The bundle changed since it was last validated,
-                  so those results no longer describe what you are about to send.</span>
-               <button type="button" class="btn btn-sm btn-outline-secondary flex-shrink-0"
-                       onclick="switchToModal('reviewBundleModal', 'validation_modal')">Check again</button>
-            </div>
-            {% elif validation_summary.blocking %}
+            {% elif validation_block %}
             <div class="alert alert-danger py-2 px-3 small d-flex align-items-center gap-2 mb-4">
                <i class="bi bi-x-circle-fill"></i>
-               <span class="flex-grow-1">PDS validation found
-                  {{ validation_summary.blocking }} thing{{ validation_summary.blocking|pluralize }}
-                  to fix before this bundle can go for review.</span>
-               <button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0"
-                       onclick="switchToModal('reviewBundleModal', 'validation_modal')">See what</button>
+               {% comment %}
+                  Counted from the list below, not quoted from the gate: the gate stops at
+                  ELSA's own requirements and names only those, so a bundle missing a target
+                  and carrying two PDS findings read "One thing is still needed" above a
+                  list of three.
+               {% endcomment %}
+               <span class="flex-grow-1">{% if validation_summary.blocking %}
+                  {{ validation_summary.blocking }} thing{{ validation_summary.blocking|pluralize }} to change before this bundle can be submitted.
+                  Each one is listed below with a Fix button.{% else %}{{ validation_block.1 }}{% endif %}</span>
+            </div>
+            {% elif not validation_run or validation_run.is_stale %}
+            {% comment %}Only reachable with VALIDATE_BLOCKS_SUBMISSION off, where an unchecked bundle may still go.{% endcomment %}
+            <div class="alert alert-secondary py-2 px-3 small d-flex align-items-center gap-2 mb-4">
+               <i class="bi bi-hourglass-split"></i>
+               <span class="flex-grow-1">This version of the bundle has not been checked
+                  against the PDS validation tool. You can still submit it.</span>
+               <button type="button" class="btn btn-sm btn-outline-secondary flex-shrink-0 verdict-run-check">Check now</button>
             </div>
             {% elif validation_run.status == 'f' %}
             <div class="alert alert-warning py-2 px-3 small d-flex align-items-center gap-2 mb-4">
@@ -53,12 +69,22 @@ since been answered and a Submit button disabled on it.
                <span class="flex-grow-1">The validation check could not run, so this
                   bundle has not been checked. You can still submit it.</span>
             </div>
+            {% elif validation_summary.blocking %}
+            {% comment %}Only reachable with VALIDATE_BLOCKS_SUBMISSION off: worth saying, not blocking.{% endcomment %}
+            <div class="alert alert-warning py-2 px-3 small d-flex align-items-center gap-2 mb-4">
+               <i class="bi bi-exclamation-triangle-fill"></i>
+               <span class="flex-grow-1">PDS validation found
+                  {{ validation_summary.blocking }} thing{{ validation_summary.blocking|pluralize }}
+                  worth fixing, listed below. You can still submit.</span>
+            </div>
             {% else %}
             <div class="alert alert-success py-2 px-3 small d-flex align-items-center gap-2 mb-4">
                <i class="bi bi-check-circle-fill"></i>
-               <span class="flex-grow-1">PDS validation found nothing blocking this bundle.</span>
+               <span class="flex-grow-1">Checked against the PDS validation tool, and unchanged since.
+                  Nothing is blocking it, so it is ready to submit.</span>
                <button type="button" class="btn btn-sm btn-outline-success flex-shrink-0"
                        onclick="switchToModal('reviewBundleModal', 'validation_modal')">See the report</button>
             </div>
             {% endif %}
+            </div>
 </div><!-- /validation_verdict -->

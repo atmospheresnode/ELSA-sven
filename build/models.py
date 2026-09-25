@@ -10,6 +10,7 @@ from queue import Empty
 from enum import unique
 from queue import Empty
 from django.db import models
+from django.utils import timezone
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.validators import MaxValueValidator, MinValueValidator, FileExtensionValidator
@@ -146,6 +147,62 @@ def insert_in_context_area(Context_Area, element):
     return element
 
 
+# PDS4 Document_Edition/language is a closed list of one: the schematron asserts
+# it "must be equal to the value 'English'". A free-text field in front of a rule
+# like that only produces errors, so what the user typed is normalised to the value
+# PDS accepts when it plainly means the same thing, and passed through otherwise so
+# PDS can report a value ELSA has no business guessing about.
+def _require_text(parent, tag, value, fallback):
+    """Give a required element a value, creating it if the template lacks one.
+
+    PDS4 has no notion of an empty required element: a blank one is reported the
+    same way a wrong one is, so a field the form left optional still needs
+    something defensible written into it.
+    """
+    if parent is None:
+        return None
+    element = parent.find('{}{}'.format(NAMESPACE, tag))
+    if element is None:
+        element = etree.SubElement(parent, '{}{}'.format(NAMESPACE, tag))
+    text = (value or '').strip() if isinstance(value, str) else value
+    element.text = text or fallback
+    return element
+
+
+PDS_DOCUMENT_LANGUAGE = 'English'
+
+_LANGUAGE_ALIASES = ('english', 'en', 'eng', 'en-us', 'en_us')
+
+
+def pds_document_language(value):
+    """The spelling PDS accepts for a document's language."""
+    cleaned = (value or '').strip()
+    if not cleaned or cleaned.lower() in _LANGUAGE_ALIASES:
+        return PDS_DOCUMENT_LANGUAGE
+    return cleaned
+
+
+def pds_context_title(name, type_of):
+    """The title PDS publishes for a context product, which is what it checks against.
+
+    validate compares Investigation_Area/name to the title of the registered context
+    product and warns when they differ. PDS titles those products "<name> <type>":
+    the registered title for the AMA investigation is "Atmospheric Modeling Annex
+    Individual Investigation", while ELSA's crawler stored only "Atmospheric
+    Modeling Annex", so every AMA bundle carried a warning nobody could act on.
+
+    Idempotent, so a crawled name that already includes its type is left alone
+    rather than having it appended twice.
+    """
+    name = (name or '').strip()
+    type_of = (type_of or '').strip()
+    if not name or not type_of:
+        return name
+    if name.lower().endswith(type_of.lower()):
+        return name
+    return '{} {}'.format(name, type_of)
+
+
 def pds_target_type(value):
     """The PDS spelling of a stored target type.
 
@@ -156,6 +213,34 @@ def pds_target_type(value):
         return value
     cleaned = value.strip()
     return _PDS_TARGET_TYPE_BY_KEY.get(cleaned.lower(), cleaned.title())
+
+
+# PDS4 constrains every segment of a logical identifier to this set, via the pattern
+# urn(:[\p{Ll}\p{Nd}\-._]+){3,5} on the logical_identifier type: lowercase letters,
+# digits, hyphen, dot and underscore. Nothing else, and in particular no uppercase.
+_LID_ALLOWED = re.compile(r'[^a-z0-9._-]')
+
+
+def pds_lid_segment(value):
+    """One segment of a logical identifier, made to satisfy the PDS4 pattern.
+
+    A NetCDF uploaded as "00000.atmos_average_pstd_-_Copy.nc" produced the LID
+    urn:nasa:pds-ama:sept_ama:new:00000.atmos_average_pstd_-_Copy.nc, which PDS
+    rejects: \p{Ll} is lowercase-only and the file name carried a capital C and P.
+    The user had done nothing wrong. A file name may be mixed case in PDS4, and
+    file_name in the label keeps it; only the identifier built from it may not.
+
+    So the derivation is fixed here rather than asked of the user, the same way the
+    document format decides its own extension. Anything outside the permitted set
+    becomes an underscore instead of being dropped, because dropping characters can
+    collide two distinct names into one identifier.
+
+    Callers must apply this on *segments*, never on a whole LID: the colons that
+    separate them are not permitted inside one.
+    """
+    if not value:
+        return value
+    return _LID_ALLOWED.sub('_', value.strip().lower())
 
 
 def target_reference_type(label_root):
@@ -920,7 +1005,7 @@ class Investigation(models.Model):
         name = Investigation_Area.find('{}name'.format(NAMESPACE))
         if name is None:
             name = etree.SubElement(Investigation_Area, '{}name'.format(NAMESPACE))
-        name.text = self.name
+        name.text = pds_context_title(self.name, self.type_of)
 
         investigation_type = Investigation_Area.find('{}type'.format(NAMESPACE))
         if investigation_type is None:
@@ -1032,6 +1117,9 @@ class Investigation(models.Model):
 
     def remove_xml(self, label_root):
         Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE))
+        if Context_Area is None:
+            # This label never got a Context_Area, so there is nothing to take out.
+            return label_root
 
         Investigation_Area = Context_Area.find('{}Investigation_Area'.format(NAMESPACE))
 
@@ -1347,6 +1435,9 @@ class Instrument(models.Model):
 
     def remove_xml(self, label_root):
         Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE))
+        if Context_Area is None:
+            # This label never got a Context_Area, so there is nothing to take out.
+            return label_root
 
         Observing_System = Context_Area.find('{}Observing_System'.format(NAMESPACE))
         if Observing_System is None:
@@ -1761,6 +1852,9 @@ class Instrument_Host(models.Model):
 
     def remove_xml(self, label_root):
         Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE))
+        if Context_Area is None:
+            # This label never got a Context_Area, so there is nothing to take out.
+            return label_root
 
         Observing_System = Context_Area.find('{}Observing_System'.format(NAMESPACE))
         if Observing_System is None:
@@ -1931,6 +2025,9 @@ class Facility(models.Model):
 
     def remove_xml(self, label_root):
         Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE))
+        if Context_Area is None:
+            # This label never got a Context_Area, so there is nothing to take out.
+            return label_root
 
         Observing_System = Context_Area.find('{}Observing_System'.format(NAMESPACE))
         if Observing_System is None:
@@ -2305,6 +2402,13 @@ class Bundle(models.Model):
         else:
             bundle_id = self.name_lid_case()
 
+        # The bundle name and ID are free text on the form, bounded only in length.
+        # "Mars & Venus" or "test#1" would otherwise put a character in the LID that
+        # PDS4 does not permit there, and the user would be told about it in terms of
+        # a pattern they never saw. With this, nothing a user can type reaches a LID
+        # unpermitted, so the rule for that error is ELSA's own bug, not theirs.
+        bundle_id = pds_lid_segment(bundle_id)
+
         if self.bundle_type == 'External':
             return 'urn:nasa:pds-ama:{0}'.format(bundle_id)
         else:
@@ -2368,12 +2472,13 @@ class Bundle(models.Model):
     def get_status(self):
         if self.submitted_at is not None:
             return 'submitted'
-        required_complete = all([
-            self.modification_history_set.exists(),
-            self.citation_information_set.exists(),
-            self.targets.exists(),
-        ])
-        return 'ready' if required_complete else 'in_progress'
+        # ELSA's requirements are written down once, in build.preflight, which the
+        # panel and the submission gate also read. This used to keep its own copy of
+        # the first three, so the Bundle Hub would have said "Ready" on a bundle the
+        # gate refuses for having no author or no NetCDF file. Imported here because
+        # preflight reads these models.
+        from build import preflight
+        return 'ready' if preflight.met(self) else 'in_progress'
 
     def update(self, product):
 
@@ -2463,6 +2568,39 @@ class Collections(models.Model):
         make_directory(collection_directory)
 
 
+def _local_name(element):
+    return etree.QName(element).localname if isinstance(element.tag, str) else ''
+
+
+def bundle_member_entries(label_root):
+    """The Bundle_Member_Entry elements of a bundle label, as (element, lid_reference).
+
+    Matched on the local name, because an entry added in this request has no namespace
+    (build_additional_bundle_member_entry creates it bare) while one read back from
+    disk is in the PDS namespace.
+    """
+    entries = []
+    for element in label_root:
+        if _local_name(element) != 'Bundle_Member_Entry':
+            continue
+        lid = ''
+        for child in element:
+            if _local_name(child) == 'lid_reference':
+                lid = (child.text or '').strip()
+        entries.append((element, lid))
+    return entries
+
+
+def remove_bundle_member_entries(label_root, lid):
+    """Remove every Bundle_Member_Entry naming this LID. Returns how many went."""
+    removed = 0
+    for element, entry_lid in bundle_member_entries(label_root):
+        if entry_lid == lid:
+            label_root.remove(element)
+            removed += 1
+    return removed
+
+
 class AdditionalCollections(models.Model):
     #External Data Collections should only be of type external
     ADDITIONAL_COLLECTION_CHOICES = (
@@ -2524,6 +2662,22 @@ class AdditionalCollections(models.Model):
         # return name_edit
         
 
+    def bundle_member_lid(self):
+        """The lid_reference this collection has in the bundle label, and its own LID."""
+        return '{}:{}'.format(self.bundle.lid(), self.collection_name.lower())
+
+    def remove_xml(self, label_root):
+        """Take this collection out of a label: its entry in the bundle's member list.
+
+        delete_collection calls this through remove_from_label, and it used not to
+        exist. The AttributeError was caught and printed, so every deleted collection
+        stayed listed in the bundle label: PDS then reported a member that could not
+        be found, and creating a collection of the same name again listed it twice.
+        The collection labels passed alongside carry no such entry and are unchanged.
+        """
+        remove_bundle_member_entries(label_root, self.bundle_member_lid())
+        return label_root
+
     def label(self):
         return os.path.join(self.directory(), self.name_label_case())
     
@@ -2552,9 +2706,13 @@ class AdditionalCollections(models.Model):
         # logical_identifier: the bundle LID, the collection's directory name, then the
         # file's basename with its extension intact. Both sides read the same directory,
         # so the inventory cannot drift from the labels it points at.
-        collection_segment = os.path.basename(self.directory())
+        # pds_lid_segment on both, exactly as views._process_single_netcdf applies
+        # it: a collection directory or a file name may carry characters a LID may
+        # not, and if only one side cleaned them the inventory would name products
+        # whose labels call themselves something else.
+        collection_segment = pds_lid_segment(os.path.basename(self.directory()))
         return ['{}:{}:{}::1.0'.format(self.bundle.lid(), collection_segment,
-                                       os.path.basename(nc.file.name))
+                                       pds_lid_segment(os.path.basename(nc.file.name)))
                 for nc in self.netcdf_files.filter(processed=True).order_by('id')]
 
     def build_inventory(self):
@@ -3035,10 +3193,18 @@ class Product_Bundle(models.Model):
         print('Root: {}'.format(root))
 
         
+        lid = '{}:{}'.format(self.bundle.lid(), collection.collection_name.lower())
+
+        # Once per collection. A collection deleted and created again under the same
+        # name used to be appended a second time, and PDS rejects a bundle listing one
+        # member twice.
+        if any(entry_lid == lid for _element, entry_lid in bundle_member_entries(root)):
+            return root
+
         Bundle_Member_Entry = etree.SubElement(root, 'Bundle_Member_Entry')
 
         lid_reference = etree.SubElement(Bundle_Member_Entry, 'lid_reference')
-        lid_reference.text = '{}:{}'.format(self.bundle.lid(), collection.collection_name.lower())
+        lid_reference.text = lid
 
         member_status = etree.SubElement(Bundle_Member_Entry, 'member_status')
         member_status.text = 'Primary'
@@ -4530,9 +4696,16 @@ class Product_Document(models.Model):
             # if self.doi:
             #     doi = etree.SubElement(Document, 'doi')
             #     doi.text = self.doi
-            if self.author_list:
-                author_list = Document.find('{}author_list'.format(NAMESPACE))
-                author_list.text = self.author_list
+            # author_list is deprecated in PDS4 and validate says so on every
+            # document that carries one: "pds:Document/pds:author_list is
+            # deprecated and should not be used." The field stays on the model and
+            # on the form, because it is how a user records who wrote the document
+            # and removing it would lose that; it simply no longer goes into the
+            # label. The template's empty element is dropped so it does not become
+            # an empty-value error in its place.
+            author_list = Document.find('{}author_list'.format(NAMESPACE))
+            if author_list is not None:
+                Document.remove(author_list)
             # if self.editor_list:
             #     editor_list = etree.SubElement(Document, 'editor_list')
             #     editor_list.text = self.editor_list
@@ -4557,9 +4730,16 @@ class Product_Document(models.Model):
                 edition_name = Document_Edition.find(
                     '{}edition_name'.format(NAMESPACE))
                 edition_name.text = self.edition_name
-            if self.language:
-                language = Document_Edition.find('{}language'.format(NAMESPACE))
-                language.text = self.language
+            # PDS4 accepts exactly one value here: "pds:Document_Edition/pds:language
+            # must be equal to the value 'English'." Anything else a user types,
+            # including "english" or "EN", is rejected. language is required by the
+            # schema, so it is always written rather than only when the model has a
+            # value.
+            language = Document_Edition.find('{}language'.format(NAMESPACE))
+            if language is None:
+                language = etree.SubElement(
+                    Document_Edition, '{}language'.format(NAMESPACE))
+            language.text = pds_document_language(self.language)
             if self.files:
                 files = Document_Edition.find('{}files'.format(NAMESPACE))
                 files.text = self.files
@@ -4582,10 +4762,42 @@ class Product_Document(models.Model):
             file_count = int(self.files)
         except (TypeError, ValueError):
             file_count = 0
-        for i in range(file_count - 1):
-            cloned_file = copy.deepcopy(Files)
-            Document_Edition.append(cloned_file)
-        
+
+        # Both of these belong to the Archive shape of the label. An External
+        # document has a File_Area_External and no Document_Edition at all, so
+        # neither Document_Edition nor Files exists on that path.
+        if self.bundle.bundle_type != 'External':
+            for i in range(file_count - 1):
+                cloned_file = copy.deepcopy(Files)
+                Document_Edition.append(cloned_file)
+
+            # PDS4 requires these three and the form does not, so a document saved
+            # without them shipped a label with empty required elements. An empty
+            # value is not a valid value, so each has to carry something: the
+            # edition being described is the first unless the user says otherwise,
+            # a document is one file unless it says otherwise, and language has
+            # exactly one accepted value.
+            # publication_date is required by PDS4 and by the Archive document form,
+            # but not by the annex form, which is what an AMA bundle's documents go
+            # through. A document added that way had an empty required element.
+            _require_text(Document, 'publication_date', self.publication_date,
+                          timezone.localdate().isoformat())
+            _require_text(Document_Edition, 'edition_name', self.edition_name, '1.0')
+            _require_text(Document_Edition, 'files', self.files,
+                          str(max(file_count, 1)))
+            _require_text(Document_Edition, 'language',
+                          pds_document_language(self.language),
+                          PDS_DOCUMENT_LANGUAGE)
+
+        # Everything the template offers that this document has nothing to say
+        # about. Optional in PDS4 and therefore better absent than blank: a document
+        # with no copyright line is not a document with an empty copyright.
+        # Imported here rather than at module scope: label_repair imports from
+        # chocolate, which models already imports, and a top-level import would
+        # close that loop.
+        from build.label_repair import prune_blank_containers
+        prune_blank_containers(root)
+
         return root
     
     def build_internal_reference(self, root, relation):
@@ -4609,10 +4821,10 @@ class Product_Document(models.Model):
             if logical_identifier is not None and logical_identifier.text == self.lid():
                 Identification_Area.remove(logical_identifier)
 
-    # Remove the title if it matches the document_name
-        title = Identification_Area.find('{}title'.format(NAMESPACE))
-        if title is not None and title.text == self.document_name:
-            Identification_Area.remove(title)
+            # Remove the title if it matches the document_name
+            title = Identification_Area.find('{}title'.format(NAMESPACE))
+            if title is not None and title.text == self.document_name:
+                Identification_Area.remove(title)
 
         return label_root
 
@@ -4737,6 +4949,11 @@ class Alias(models.Model):
 
         # Add Alias information
         Alias = Alias_List.find('{}Alias'.format(NAMESPACE))
+        if Alias is None:
+            # A freshly made Alias_List has no Alias in it yet, and a label that
+            # was written before this alias existed has nothing here to edit.
+            # fill_label is what puts an Alias in; this only ever updates one.
+            return label_root
         if self.alternate_id:
             alternate_id = Alias.find('{}alternate_id'.format(NAMESPACE))
             alternate_id.text = self.alternate_id
@@ -4751,12 +4968,28 @@ class Alias(models.Model):
 
     def remove_xml(self, label_root):
         Identification_Area = label_root.find('{}Identification_Area'.format(NAMESPACE))
+        if Identification_Area is None:
+            return label_root
 
         Alias_List = Identification_Area.find('{}Alias_List'.format(NAMESPACE))
+        if Alias_List is None:
+            # Collection labels do not ship an Alias_List; fill_label adds one the
+            # first time an alias is written. A collection made after that alias
+            # therefore has no Alias_List at all, and there is nothing to remove.
+            return label_root
 
-        for alias in Alias_List:
-            if alias and alias[0].text and alias[0].text.title() == self.alternate_id.title():
-                alias.getparent().remove(alias)
+        for alias in Alias_List.findall('{}Alias'.format(NAMESPACE)):
+            # By tag, not by position: alternate_id is optional, so it is not
+            # reliably the first child.
+            alternate_id = alias.find('{}alternate_id'.format(NAMESPACE))
+            if alternate_id is None or not alternate_id.text or not self.alternate_id:
+                continue
+            if alternate_id.text.title() == self.alternate_id.title():
+                Alias_List.remove(alias)
+
+        # An Alias_List with nothing left in it is not valid PDS4, so it goes too.
+        if not len(Alias_List):
+            Identification_Area.remove(Alias_List)
 
         return label_root
 
@@ -4860,10 +5093,21 @@ def mirror_citation_into_data_products(bundle):
     source = source_root.find(
         '{0}Identification_Area/{0}Citation_Information'.format(NAMESPACE))
 
+    # Every product label in the bundle, not only the NetCDF ones. A document is a
+    # product too, and its label carries a Citation_Information the schematron asks
+    # for; leaving documents out meant adding one to an Archive bundle produced a
+    # label the panel then reported as missing its citation, on a bundle whose
+    # citation was filled in.
+    products = list(NetCDFFile.objects.filter(bundle=bundle))
+    products.extend(Product_Document.objects.filter(bundle=bundle))
+
     changed = 0
-    for netcdf_file in NetCDFFile.objects.filter(bundle=bundle):
-        label_path = netcdf_file.label()
-        if not os.path.exists(label_path):
+    for product in products:
+        try:
+            label_path = product.label()
+        except (AttributeError, ValueError):
+            continue
+        if not label_path or not os.path.exists(label_path):
             continue
         try:
             target_list = open_label_with_tree(label_path)
@@ -5332,6 +5576,8 @@ class Citation_Information(models.Model):
     
     def remove_xml(self, label_root):
         Identification_Area = label_root.find('{}Identification_Area'.format(NAMESPACE))
+        if Identification_Area is None:
+            return label_root
 
         Citation_Information = Identification_Area.find('{}Citation_Information'.format(NAMESPACE))
         
@@ -5404,23 +5650,31 @@ class Modification_History(models.Model):
 
     def remove_xml(self, label_root):
         Identification_Area = label_root.find('{}Identification_Area'.format(NAMESPACE))
+        if Identification_Area is None:
+            return label_root
 
-        Modification_History = Identification_Area.find('{}Modification_History'.format(NAMESPACE))
+        Modification_History = Identification_Area.find(
+            '{}Modification_History'.format(NAMESPACE))
+        if Modification_History is None:
+            # Collection labels do not ship a Modification_History; fill_label adds
+            # one the first time an entry is written. A collection made after that
+            # entry therefore has none, and there is nothing to remove.
+            return label_root
 
-        # Modification_History.getparent().remove(Modification_History)
+        for modification_detail in Modification_History.findall(
+                '{}Modification_Detail'.format(NAMESPACE)):
+            # By tag, not by position: version_id is optional, so description is
+            # not reliably the third child and indexing it raises IndexError on
+            # every entry saved without a version.
+            description = modification_detail.find('{}description'.format(NAMESPACE))
+            if description is None or not description.text or not self.description:
+                continue
+            if description.text.title() == self.description.title():
+                Modification_History.remove(modification_detail)
 
-        # for tag in Modification_History.iter():
-        #     modification_detail = Modification_History.find('{}Modification_Detail'.format(NAMESPACE))
-        #     if tag == modification_detail:
-        #         print(tag[2].text.title())
-        #         print(self.description.title())
-        #         print(tag)
-        #         if(tag[2].text.title() == self.description.title()):
-        #             tag.getparent().remove(tag)
-
-        for modification_detail in Modification_History:
-            if modification_detail[2].text.title() == self.description.title():
-                modification_detail.getparent().remove(modification_detail)
+        # A Modification_History with nothing left in it is not valid PDS4.
+        if not len(Modification_History):
+            Identification_Area.remove(Modification_History)
 
         return label_root
 

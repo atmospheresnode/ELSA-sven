@@ -1,6 +1,7 @@
 import json
 import os
 import tempfile
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from django.contrib.auth.models import User
@@ -10,7 +11,9 @@ from django.test import SimpleTestCase, TestCase, override_settings
 from .models import Conversation, Message
 from .prompts import _bundle_summary, _page_context, _user_data, build_system_prompt
 from .retriever import retrieve
-from .views import _send_feedback_email
+from .views import ACTIVE_SESSION_KEY, _question_title, _send_feedback_email
+
+EVALS_FILE = Path(__file__).parent / 'evals.json'
 
 
 class FakeUpstream:
@@ -125,6 +128,82 @@ class ChatEndpointTests(TestCase):
         done = [e for e in sse_events(self.post_chat(
             {'message': 'hi', 'conversation_id': other_conv.pk})) if e['type'] == 'done'][0]
         self.assertNotEqual(done['conversation_id'], other_conv.pk)
+
+    @patch('assistant.llm.requests.post')
+    def test_new_thread_is_active_and_titled_from_the_question(self, mock_post):
+        mock_post.return_value = FakeUpstream(['ok'])
+        done = [e for e in sse_events(self.post_chat({'message': 'What goes in Citation Information?'}))
+                if e['type'] == 'done'][0]
+        conv = Conversation.objects.get(pk=done['conversation_id'])
+        self.assertEqual((conv.title, conv.title_source),
+                         ('What goes in Citation Information?', 'question'))
+        self.assertEqual(self.client.session[ACTIVE_SESSION_KEY], conv.pk)
+
+    @patch('assistant.llm.requests.post')
+    def test_stream_starts_with_the_thread_id(self, mock_post):
+        # Even when the reply then fails, the widget knows which thread to retry in.
+        mock_post.return_value = FakeUpstream([], status_code=503)
+        events = sse_events(self.post_chat({'message': 'hi'}))
+        self.assertEqual(events[0]['type'], 'start')
+        conv = Conversation.objects.get(user=self.user)
+        self.assertEqual(events[0]['conversation_id'], conv.pk)
+        self.assertEqual(events[-1]['type'], 'error')
+
+    @patch('assistant.llm.requests.post')
+    def test_retry_does_not_save_the_question_twice(self, mock_post):
+        mock_post.return_value = FakeUpstream([], status_code=503)
+        start = sse_events(self.post_chat({'message': 'What is a LID?'}))[0]
+        cache.clear()  # the failed attempt put the model on cooldown
+        mock_post.return_value = FakeUpstream(['A logical identifier.'])
+        sse_events(self.post_chat({'message': 'What is a LID?', 'retry': True,
+                                   'conversation_id': start['conversation_id']}))
+        conv = Conversation.objects.get(pk=start['conversation_id'])
+        self.assertEqual(conv.messages.filter(role='user').count(), 1)
+        sent = mock_post.call_args.kwargs['json']['contents']
+        self.assertEqual([c['role'] for c in sent], ['user'])
+
+    @patch('assistant.llm.requests.post')
+    def test_retry_flag_after_an_answer_is_a_normal_message(self, mock_post):
+        mock_post.return_value = FakeUpstream(['A logical identifier.'])
+        done = [e for e in sse_events(self.post_chat({'message': 'What is a LID?'}))
+                if e['type'] == 'done'][0]
+        mock_post.return_value = FakeUpstream(['Again.'])
+        sse_events(self.post_chat({'message': 'What is a LID?', 'retry': True,
+                                   'conversation_id': done['conversation_id']}))
+        conv = Conversation.objects.get(pk=done['conversation_id'])
+        self.assertEqual(conv.messages.filter(role='user').count(), 2)
+
+    @patch('assistant.llm.requests.post')
+    def test_followups_become_chips_and_are_not_saved(self, mock_post):
+        mock_post.return_value = FakeUpstream([
+            'Add authors in Citation Information.\n\n<follow',
+            'ups>How do I add an editor?|What are keywords for?| - Can I edit it later? ',
+            '|What is ORCID?</followups>',
+        ])
+        events = sse_events(self.post_chat({'message': 'How do I add authors?'}))
+        done = [e for e in events if e['type'] == 'done'][0]
+        self.assertEqual(done['reply'], 'Add authors in Citation Information.')
+        self.assertEqual(done['followups'], ['How do I add an editor?', 'What are keywords for?',
+                                             'Can I edit it later?'])
+        reply = Message.objects.get(pk=done['message_id'])
+        self.assertEqual(reply.text, 'Add authors in Citation Information.')
+        system = mock_post.call_args.kwargs['json']['system_instruction']['parts'][0]['text']
+        self.assertIn('<followups>', system)
+
+    @patch('assistant.llm.requests.post')
+    def test_cut_off_followups_are_dropped_and_the_length_note_kept(self, mock_post):
+        mock_post.return_value = FakeUpstream(['A long answer.\n<followups>How do I', {'__finish__': 'MAX_TOKENS'}])
+        done = [e for e in sse_events(self.post_chat({'message': 'explain'})) if e['type'] == 'done'][0]
+        self.assertTrue(done['reply'].startswith('A long answer.'))
+        self.assertIn('cut short', done['reply'])
+        self.assertNotIn('followups', done['reply'])
+        self.assertEqual(done['followups'], ['How do I'])
+
+    @patch('assistant.llm.requests.post')
+    def test_no_followups_line_means_no_chips(self, mock_post):
+        mock_post.return_value = FakeUpstream(['Hello!'])
+        done = [e for e in sse_events(self.post_chat({'message': 'hi'})) if e['type'] == 'done'][0]
+        self.assertEqual(done['followups'], [])
 
     @patch('assistant.views.EmailMessage')
     @patch('assistant.llm.requests.post')
@@ -265,17 +344,69 @@ class HistoryAndRatingTests(TestCase):
         self.msg_user = self.conv.messages.create(role='user', text='hi')
         self.msg_model = self.conv.messages.create(role='model', text='hello!')
 
-    def test_history_returns_latest_conversation(self):
-        resp = self.client.get('/assistant/history/')
-        data = resp.json()
+    def activate(self, conv):
+        session = self.client.session
+        session[ACTIVE_SESSION_KEY] = conv.pk
+        session.save()
+
+    def test_history_restores_the_active_thread(self):
+        self.activate(self.conv)
+        data = self.client.get('/assistant/history/').json()
         self.assertEqual(data['conversation_id'], self.conv.pk)
         self.assertEqual([m['role'] for m in data['messages']], ['user', 'model'])
+
+    def test_new_login_lands_on_a_fresh_chat(self):
+        self.activate(self.conv)
+        self.client.logout()
+        self.client.force_login(self.user)
+        data = self.client.get('/assistant/history/').json()
+        self.assertIsNone(data['conversation_id'])
+        self.assertEqual(data['messages'], [])
+        self.assertTrue(data['has_previous'])  # so the widget can offer the old chats
 
     def test_history_empty_for_new_user(self):
         self.client.force_login(User.objects.create_user(username='fresh', password='pw'))
         data = self.client.get('/assistant/history/').json()
         self.assertIsNone(data['conversation_id'])
         self.assertEqual(data['messages'], [])
+        self.assertFalse(data['has_previous'])
+
+    def test_opening_a_past_thread_makes_it_active(self):
+        data = self.client.get(f'/assistant/history/?conversation_id={self.conv.pk}').json()
+        self.assertEqual(data['conversation_id'], self.conv.pk)
+        self.assertEqual(self.client.session[ACTIVE_SESSION_KEY], self.conv.pk)
+
+    def test_cannot_open_someone_elses_thread(self):
+        other = User.objects.create_user(username='other', password='pw')
+        theirs = Conversation.objects.create(user=other)
+        theirs.messages.create(role='user', text='secret')
+        data = self.client.get(f'/assistant/history/?conversation_id={theirs.pk}').json()
+        self.assertIsNone(data['conversation_id'])
+        self.assertEqual(data['messages'], [])
+
+    def test_history_names_the_bundle_being_viewed(self):
+        from build.models import Bundle
+        with tempfile.TemporaryDirectory() as media, tempfile.TemporaryDirectory() as archive:
+            with override_settings(MEDIA_ROOT=media, ARCHIVE_DIR=archive):
+                mine = Bundle.objects.create(user=self.user, name='Mars dust', bundle_type='External',
+                                             version='1800')
+                theirs = Bundle.objects.create(user=User.objects.create_user(username='o2', password='pw'),
+                                               name='Secret', bundle_type='Archive', version='1800')
+
+                def looking_at(page):
+                    return self.client.get('/assistant/history/', {'page': page}).json()['looking_at']
+                self.assertEqual(looking_at(f'/build/{mine.pk}/citation_information/'),
+                                 'Mars dust (External)')
+                self.assertEqual(looking_at(f'/build/{theirs.pk}/'), '')
+                self.assertEqual(looking_at('/accounts/bundles/'), '')
+                self.activate(self.conv)  # also on a restored thread
+                self.assertEqual(looking_at(f'/build/{mine.pk}/'), 'Mars dust (External)')
+
+    def test_new_chat_forgets_the_active_thread(self):
+        self.activate(self.conv)
+        self.assertEqual(self.client.post('/assistant/conversations/new/').status_code, 200)
+        self.assertNotIn(ACTIVE_SESSION_KEY, self.client.session)
+        self.assertIsNone(self.client.get('/assistant/history/').json()['conversation_id'])
 
     def test_rate_message(self):
         resp = self.client.post('/assistant/rate/',
@@ -297,6 +428,201 @@ class HistoryAndRatingTests(TestCase):
                                 data=json.dumps({'message_id': self.msg_model.pk, 'rating': -1}),
                                 content_type='application/json')
         self.assertEqual(resp.status_code, 404)
+
+
+class ChatListTests(TestCase):
+
+    def setUp(self):
+        cache.clear()
+        self.user = User.objects.create_user(username='tester', password='pw')
+        self.client.force_login(self.user)
+        self.older = Conversation.objects.create(user=self.user, title='Citation help', title_source='ai')
+        self.newer = Conversation.objects.create(user=self.user)
+        self.other = Conversation.objects.create(
+            user=User.objects.create_user(username='other', password='pw'), title='Not yours')
+
+    def post(self, url, payload):
+        return self.client.post(url, data=json.dumps(payload), content_type='application/json')
+
+    def test_lists_only_own_threads_newest_first(self):
+        session = self.client.session
+        session[ACTIVE_SESSION_KEY] = self.older.pk
+        session.save()
+        items = self.client.get('/assistant/conversations/').json()['conversations']
+        self.assertEqual([c['id'] for c in items], [self.newer.pk, self.older.pk])
+        self.assertEqual(items[0]['title'], 'Untitled chat')
+        self.assertEqual([c['active'] for c in items], [False, True])
+        self.assertTrue(all(c['when'] for c in items))
+
+    def test_rename_is_final_and_does_not_reorder(self):
+        resp = self.post('/assistant/conversations/rename/',
+                         {'conversation_id': self.older.pk, 'title': '  My   citation  thread '})
+        self.assertEqual(resp.json()['title'], 'My citation thread')
+        self.older.refresh_from_db()
+        self.assertEqual((self.older.title, self.older.title_source), ('My citation thread', 'user'))
+        items = self.client.get('/assistant/conversations/').json()['conversations']
+        self.assertEqual(items[0]['id'], self.newer.pk)
+
+    def test_rename_rejects_blank_and_foreign(self):
+        self.assertEqual(self.post('/assistant/conversations/rename/',
+                                   {'conversation_id': self.older.pk, 'title': '   '}).status_code, 400)
+        self.assertEqual(self.post('/assistant/conversations/rename/',
+                                   {'conversation_id': self.other.pk, 'title': 'Mine now'}).status_code, 404)
+        self.other.refresh_from_db()
+        self.assertEqual(self.other.title, 'Not yours')
+
+    def test_delete_removes_thread_and_clears_active(self):
+        self.older.messages.create(role='user', text='hi')
+        session = self.client.session
+        session[ACTIVE_SESSION_KEY] = self.older.pk
+        session.save()
+        self.assertEqual(self.post('/assistant/conversations/delete/',
+                                   {'conversation_id': self.older.pk}).status_code, 200)
+        self.assertFalse(Conversation.objects.filter(pk=self.older.pk).exists())
+        self.assertFalse(Message.objects.filter(conversation_id=self.older.pk).exists())
+        self.assertNotIn(ACTIVE_SESSION_KEY, self.client.session)
+
+    def test_cannot_delete_someone_elses_thread(self):
+        self.assertEqual(self.post('/assistant/conversations/delete/',
+                                   {'conversation_id': self.other.pk}).status_code, 404)
+        self.assertTrue(Conversation.objects.filter(pk=self.other.pk).exists())
+
+    def test_search_matches_titles_and_message_text(self):
+        self.newer.messages.create(role='user', text='How do I add ORCID ids for authors?')
+        self.newer.messages.create(role='model', text='Use the ORCID field.')
+        self.other.messages.create(role='user', text='orcid question from someone else')
+
+        def ids(q):
+            return [c['id'] for c in self.client.get('/assistant/conversations/', {'q': q})
+                    .json()['conversations']]
+        self.assertEqual(ids('citation'), [self.older.pk])   # by title
+        self.assertEqual(ids('orcid'), [self.newer.pk])      # by message, once, own only
+        self.assertEqual(ids('nothing like this'), [])
+        self.assertEqual(ids('  '), [self.newer.pk, self.older.pk])
+
+    def test_list_endpoints_need_login_and_post(self):
+        self.assertEqual(self.client.get('/assistant/conversations/new/').status_code, 405)
+        self.assertEqual(self.client.get('/assistant/conversations/title/').status_code, 405)
+        self.client.logout()
+        self.assertEqual(self.client.get('/assistant/conversations/').status_code, 302)
+
+
+@override_settings(GEMINI_API_KEY='test-key')
+class AutoTitleTests(TestCase):
+
+    def setUp(self):
+        cache.clear()
+        self.user = User.objects.create_user(username='tester', password='pw')
+        self.client.force_login(self.user)
+        self.conv = Conversation.objects.create(
+            user=self.user, title='How do I fill in the citation', title_source='question')
+        self.exchange('How do I fill in the citation info for my bundle?',
+                      'Open Citation Information and add authors, editors, and keywords.')
+
+    def exchange(self, question, answer):
+        self.conv.messages.create(role='user', text=question)
+        self.conv.messages.create(role='model', text=answer)
+
+    def request_title(self):
+        return self.client.post('/assistant/conversations/title/',
+                                data=json.dumps({'conversation_id': self.conv.pk}),
+                                content_type='application/json').json()
+
+    @patch('assistant.llm.requests.post')
+    def test_names_the_thread_from_question_and_answer(self, mock_post):
+        mock_post.return_value = FakeUpstream(['Citation Information help'])
+        data = self.request_title()
+        self.assertEqual((data['title'], data['title_source']), ('Citation Information help', 'ai'))
+        self.conv.refresh_from_db()
+        self.assertEqual(self.conv.title_source, 'ai')
+
+        body = mock_post.call_args.kwargs['json']
+        self.assertIn('gemini-2.5-flash-lite', mock_post.call_args.args[0])
+        sent = body['contents'][0]['parts'][0]['text']
+        self.assertIn('User: How do I fill in the citation info', sent)
+        self.assertIn('Assistant: Open Citation Information', sent)
+        self.assertNotIn('tools', body)
+
+    @patch('assistant.llm.requests.post')
+    def test_one_attempt_per_exchange(self, mock_post):
+        mock_post.return_value = FakeUpstream(['SKIP'])
+        self.request_title()
+        self.request_title()
+        self.assertEqual(mock_post.call_count, 1)
+
+    @patch('assistant.llm.requests.post')
+    def test_small_talk_is_skipped_then_retried_on_the_next_exchange(self, mock_post):
+        mock_post.return_value = FakeUpstream(['SKIP'])
+        data = self.request_title()
+        self.assertEqual((data['title'], data['title_source']),
+                         ('How do I fill in the citation', 'question'))
+
+        self.exchange('Also, what is an Alias?', 'An Alias is an alternate name.')
+        mock_post.return_value = FakeUpstream(['Citation and Alias help'])
+        self.assertEqual(self.request_title()['title'], 'Citation and Alias help')
+
+    @patch('assistant.llm.requests.post')
+    def test_user_title_is_never_replaced(self, mock_post):
+        Conversation.objects.filter(pk=self.conv.pk).update(title='Mine', title_source='user')
+        data = self.request_title()
+        self.assertEqual((data['title'], data['title_source']), ('Mine', 'user'))
+        mock_post.assert_not_called()
+
+    @patch('assistant.llm.requests.post')
+    def test_not_before_the_reply_arrives(self, mock_post):
+        self.conv.messages.create(role='user', text='and one more thing')
+        self.request_title()
+        mock_post.assert_not_called()
+
+    @patch('assistant.llm.requests.post')
+    def test_refreshes_once_when_the_thread_has_settled(self, mock_post):
+        Conversation.objects.filter(pk=self.conv.pk).update(title='Citation help', title_source='ai')
+        self.exchange('q2', 'a2')
+        self.request_title()  # turn 2: already named, not due
+        mock_post.assert_not_called()
+        self.exchange('q3', 'a3')
+        self.exchange('Actually, how do I submit?', 'Use Review & Submit.')
+        mock_post.return_value = FakeUpstream(['Submitting a bundle'])
+        self.assertEqual(self.request_title()['title'], 'Submitting a bundle')  # turn 4
+        self.exchange('q5', 'a5')
+        self.request_title()
+        self.assertEqual(mock_post.call_count, 1)
+
+    @patch('assistant.llm.requests.post')
+    def test_gives_up_after_three_turns_of_small_talk(self, mock_post):
+        self.exchange('hi', 'hello')
+        self.exchange('hey', 'hello again')
+        self.exchange('yo', 'hi there')  # turn 4, never named
+        self.request_title()
+        mock_post.assert_not_called()
+
+    @patch('assistant.llm.requests.post')
+    def test_model_output_is_tidied(self, mock_post):
+        mock_post.return_value = FakeUpstream(['Title: "**Bundle ID — Alias** difference."\nExtra line'])
+        self.assertEqual(self.request_title()['title'], 'Bundle ID, Alias difference')
+
+    @patch('assistant.llm.requests.post')
+    def test_pds4_underscores_survive_tidying(self, mock_post):
+        mock_post.return_value = FakeUpstream(['Citation_Information fields'])
+        self.assertEqual(self.request_title()['title'], 'Citation_Information fields')
+
+    @patch('assistant.llm.requests.post')
+    def test_quota_failure_keeps_the_placeholder(self, mock_post):
+        mock_post.return_value = FakeUpstream([], status_code=429)
+        data = self.request_title()
+        self.assertEqual(data['title_source'], 'question')
+
+    @override_settings(ASSISTANT_GLOBAL_DAILY_CAP=0)
+    @patch('assistant.llm.requests.post')
+    def test_counts_against_the_global_cap(self, mock_post):
+        self.request_title()
+        mock_post.assert_not_called()
+
+    def test_question_placeholder(self):
+        self.assertEqual(_question_title('  What   is a LID? '), 'What is a LID?')
+        long = _question_title('word ' * 30)
+        self.assertLessEqual(len(long), 51)
+        self.assertTrue(long.endswith('…'))
 
 
 class FeedbackEmailTests(SimpleTestCase):
@@ -802,3 +1128,321 @@ class KnowledgeCheckTests(SimpleTestCase):
         self.assertEqual(broken, [], 'knowledge chunks watch paths that no longer resolve')
         self.assertEqual(unwatched, [], 'knowledge chunks with no watches declared')
         self.assertEqual([chunk for chunk, _ in stale], [])
+
+
+@override_settings(GEMINI_API_KEY='test-key')
+class KnowledgeUsedTests(TestCase):
+    """Each reply records the knowledge chunks it was built from, so a bad
+    answer can be traced to retrieval, the chunk, or the prompt."""
+
+    def setUp(self):
+        cache.clear()
+        self.user = User.objects.create_user(username='tester', password='pw')
+        self.client.force_login(self.user)
+
+    def post_chat(self, message):
+        return self.client.post('/assistant/chat/', data=json.dumps({'message': message}),
+                                content_type='application/json')
+
+    @patch('assistant.llm.requests.post')
+    def test_reply_records_the_chunks_it_used(self, mock_post):
+        mock_post.return_value = FakeUpstream(['Authors and a year.'])
+        done = [e for e in sse_events(self.post_chat('What goes in Citation Information?'))
+                if e['type'] == 'done'][0]
+        reply = Message.objects.get(pk=done['message_id'])
+        names = reply.knowledge_used.split(',')
+        self.assertEqual(names[0], 'citation_information')
+        # The chunks recorded are exactly the ones put in the prompt
+        sent_prompt = mock_post.call_args.kwargs['json']['system_instruction']['parts'][0]['text']
+        for chunk in retrieve('What goes in Citation Information?'):
+            self.assertIn(f'--- {chunk["title"]} ---', sent_prompt)
+            self.assertIn(chunk['name'], names)
+
+    @patch('assistant.llm.requests.post')
+    def test_failed_reply_still_records_the_chunks(self, mock_post):
+        mock_post.return_value = FakeUpstream([], status_code=429)
+        sse_events(self.post_chat('What goes in Citation Information?'))
+        reply = Message.objects.get(role='model')
+        self.assertEqual(reply.error, 'QuotaExhausted')
+        self.assertIn('citation_information', reply.knowledge_used)
+
+    @patch('assistant.llm.requests.post')
+    def test_no_matching_chunk_records_nothing(self, mock_post):
+        mock_post.return_value = FakeUpstream(['?'])
+        sse_events(self.post_chat('xqzv blorptangle'))
+        self.assertEqual(Message.objects.get(role='model').knowledge_used, '')
+
+    def test_prompt_uses_given_chunks_over_the_query(self):
+        prompt = build_system_prompt(self.user, query='What is citation information?', chunks=[])
+        self.assertNotIn('REFERENCE MATERIAL', prompt)
+
+
+class RatingReasonTests(TestCase):
+
+    def setUp(self):
+        self.user = User.objects.create_user(username='tester', password='pw')
+        self.client.force_login(self.user)
+        conv = Conversation.objects.create(user=self.user)
+        conv.messages.create(role='user', text='hi')
+        self.reply = conv.messages.create(role='model', text='hello!')
+
+    def rate(self, **payload):
+        payload.setdefault('message_id', self.reply.pk)
+        resp = self.client.post('/assistant/rate/', data=json.dumps(payload),
+                                content_type='application/json')
+        self.reply.refresh_from_db()
+        return resp
+
+    def test_thumbs_down_then_reason_and_comment(self):
+        self.assertEqual(self.rate(rating=-1).status_code, 200)
+        self.assertEqual(self.reply.rating, -1)
+        self.assertIsNotNone(self.reply.rated_at)
+        self.assertEqual(self.reply.rating_reason, '')
+
+        self.assertEqual(self.rate(rating=-1, reason='wrong', comment='  The year is wrong.  ').status_code, 200)
+        self.assertEqual(self.reply.rating_reason, 'wrong')
+        self.assertEqual(self.reply.rating_comment, 'The year is wrong.')
+
+    def test_a_late_bare_vote_keeps_the_reason(self):
+        # The widget's two requests can arrive in either order
+        self.rate(rating=-1, reason='outdated', comment='old')
+        self.rate(rating=-1)
+        self.assertEqual((self.reply.rating_reason, self.reply.rating_comment), ('outdated', 'old'))
+
+    def test_changing_the_vote_clears_the_reason(self):
+        self.rate(rating=-1, reason='wrong', comment='nope')
+        self.rate(rating=1)
+        self.assertEqual((self.reply.rating, self.reply.rating_reason, self.reply.rating_comment),
+                         (1, '', ''))
+        self.assertIsNotNone(self.reply.rated_at)
+        self.rate(rating=-1, reason='other', comment='x')
+        self.rate(rating=0)
+        self.assertEqual((self.reply.rating, self.reply.rating_reason, self.reply.rating_comment),
+                         (0, '', ''))
+        self.assertIsNone(self.reply.rated_at)
+
+    def test_reason_on_a_thumbs_up_is_ignored(self):
+        self.rate(rating=1, reason='wrong', comment='ignored')
+        self.assertEqual((self.reply.rating_reason, self.reply.rating_comment), ('', ''))
+
+    def test_reason_only_comment_only_both_accepted(self):
+        self.rate(rating=-1, reason='unanswered')
+        self.assertEqual((self.reply.rating_reason, self.reply.rating_comment), ('unanswered', ''))
+        self.rate(rating=-1, comment='just words')
+        self.assertEqual((self.reply.rating_reason, self.reply.rating_comment), ('', 'just words'))
+
+    def test_bad_input_rejected(self):
+        self.assertEqual(self.rate(rating=-1, reason='rude').status_code, 400)
+        self.assertEqual(self.rate(rating=-1, reason=['wrong']).status_code, 400)
+        resp = self.client.post('/assistant/rate/', data='[1, 2]', content_type='application/json')
+        self.assertEqual(resp.status_code, 400)
+        self.assertEqual(self.reply.rating, 0)
+
+    def test_comment_is_capped(self):
+        self.rate(rating=-1, comment='x' * 5000)
+        self.assertEqual(len(self.reply.rating_comment), 1000)
+
+    def test_cannot_set_a_reason_on_someone_elses_reply(self):
+        self.client.force_login(User.objects.create_user(username='other', password='pw'))
+        self.assertEqual(self.rate(rating=-1, reason='wrong', comment='hijack').status_code, 404)
+        self.assertEqual((self.reply.rating, self.reply.rating_comment), (0, ''))
+
+
+class FeedbackLoopCommandTests(TestCase):
+    """assistant_stats reports, emails and exports thumbs-downs; assistant_eval
+    refuses a case with nothing to check; assistant_purge keeps rated threads."""
+
+    def setUp(self):
+        from django.core import mail
+        from django.utils import timezone
+        self.mail = mail
+        self.now = timezone.now()
+        self.user = User.objects.create_user(username='rater', password='pw')
+
+    def thread(self, *turns, rating=0, reason='', comment='', knowledge='', rated_days_ago=0,
+               created_days_ago=0):
+        """A conversation of alternating user/model turns; the last reply gets the rating."""
+        from datetime import timedelta
+        conv = Conversation.objects.create(user=self.user)
+        reply = None
+        for i, text in enumerate(turns):
+            msg = conv.messages.create(role='user' if i % 2 == 0 else 'model', text=text)
+            Message.objects.filter(pk=msg.pk).update(
+                created_at=self.now - timedelta(days=created_days_ago, seconds=len(turns) - i))
+            reply = msg
+        Message.objects.filter(pk=reply.pk).update(
+            rating=rating, rating_reason=reason, rating_comment=comment, knowledge_used=knowledge,
+            rated_at=(self.now - timedelta(days=rated_days_ago)) if rating else None)
+        return conv, Message.objects.get(pk=reply.pk)
+
+    def stats(self, *args):
+        from io import StringIO
+        from django.core.management import call_command
+        out = StringIO()
+        call_command('assistant_stats', *args, stdout=out)
+        return out.getvalue()
+
+    def test_report_shows_reason_comment_chunks_and_hint(self):
+        self.thread('Is the Alias required?', 'Yes, always.', rating=-1, reason='wrong',
+                    comment='It is optional.', knowledge='alias,bundle_structure')
+        out = self.stats()
+        self.assertIn('Q: Is the Alias required?', out)
+        self.assertIn('A: Yes, always.', out)
+        self.assertIn('Reason: Wrong information', out)
+        self.assertIn('Comment: It is optional.', out)
+        self.assertIn('Knowledge used: alias, bundle_structure', out)
+        self.assertIn('Look at: Check the knowledge chunks', out)
+
+    def test_window_follows_when_it_was_rated(self):
+        self.thread('old reply, rated yesterday', 'a1', rating=-1, created_days_ago=30, rated_days_ago=1)
+        self.thread('old reply, rated long ago', 'a2', rating=-1, created_days_ago=30, rated_days_ago=20)
+        conv, legacy = self.thread('legacy rating, no timestamp', 'a3', rating=-1, created_days_ago=2)
+        Message.objects.filter(pk=legacy.pk).update(rated_at=None)
+        out = self.stats('--days', '7')
+        self.assertIn('rated yesterday', out)
+        self.assertIn('legacy rating', out)
+        self.assertNotIn('rated long ago', out)
+        self.assertIn('rated in this window: 2', out)
+
+    def test_email_goes_to_staff_escaped(self):
+        self.thread('<b>bold question</b>', 'answer <script>x</script>', rating=-1,
+                    reason='other', comment='<img src=x onerror=alert(1)>')
+        self.thread('fine', 'good', rating=1)
+        out = self.stats('--email')
+        self.assertIn('Emailed 1 thumbs-down', out)
+        self.assertEqual(len(self.mail.outbox), 1)
+        sent = self.mail.outbox[0]
+        self.assertEqual(sent.to, ['lneakras@nmsu.edu', 'rupakdey@nmsu.edu'])
+        self.assertEqual(sent.from_email, 'atm-elsa@nmsu.edu')
+        self.assertEqual(sent.subject, '[ELSA Assistant] 1 thumbs-down answer to review')
+        # HTML part: users' words and the model's are escaped, never markup
+        html, mimetype = sent.alternatives[0]
+        self.assertEqual(mimetype, 'text/html')
+        self.assertNotIn('<script>', html)
+        self.assertNotIn('<img src=x', html)
+        self.assertNotIn('<b>bold', html)
+        self.assertIn('&lt;img src=x', html)
+        # Plain-text part reads as the user wrote it
+        self.assertIn('<img src=x onerror=alert(1)>', sent.body)
+        for part in (html, sent.body):
+            self.assertNotIn('\u2014', part)
+            self.assertNotIn('{{', part)
+            self.assertNotIn('{%', part)
+
+    def test_email_summarises_reasons_and_chunks(self):
+        self.thread('q1', 'a1', rating=-1, reason='wrong', knowledge='alias,bundle_structure')
+        self.thread('q2', 'a2', rating=-1, reason='wrong', knowledge='alias')
+        self.thread('q3', 'a3', rating=-1, reason='outdated', knowledge='review_submit_help')
+        self.thread('q4', 'a4', rating=-1)
+        self.thread('q5', 'a5', rating=1)
+        self.stats('--email')
+        sent = self.mail.outbox[0]
+        html = sent.alternatives[0][0]
+        self.assertIn('4 answers to review', html)
+        self.assertIn('Wrong information &nbsp;2', html)
+        self.assertIn('Out of date &nbsp;1', html)
+        self.assertIn('No reason given &nbsp;1', html)
+        self.assertIn('alias.md &times;2', html)
+        self.assertIn('No knowledge chunks recorded', html)
+        self.assertIn('Why: Wrong information 2, Out of date 1, No reason given 1', sent.body)
+        self.assertIn('alias.md x2', sent.body)
+        # The ELSA logo travels inline, as in the sign-in emails
+        if sent.attachments:
+            self.assertIn('cid:elsa_logo', html)
+            self.assertEqual(sent.mixed_subtype, 'related')
+
+    def test_no_email_for_a_quiet_week(self):
+        self.thread('fine', 'good', rating=1)
+        out = self.stats('--email')
+        self.assertIn('no email sent', out)
+        self.assertEqual(len(self.mail.outbox), 0)
+
+    def test_long_weeks_are_capped_and_counted(self):
+        from assistant.management.commands import assistant_stats
+        with patch.object(assistant_stats, 'MAX_LISTED', 2):
+            for i in range(3):
+                self.thread(f'q{i}', f'a{i}', rating=-1)
+            out = self.stats('--email')
+        self.assertIn('rated in this window: 3', out)
+        self.assertIn('1 more in the admin', out)
+        self.assertIn('3 thumbs-down answers to review', self.mail.outbox[0].subject)
+        self.assertIn('1 more in the', self.mail.outbox[0].body)
+
+    def test_export_evals_drafts(self):
+        existing = json.loads(Path(EVALS_FILE).read_text())[0]['question']
+        self.thread('How do I add a target?', 'Click Targets.', rating=-1, reason='unanswered',
+                    comment='Where?', knowledge='targets_context_products')
+        # A follow-up: the draft carries the exchange before it
+        self.thread('What is an Alias?', 'An optional second name.', 'Is it required?', 'Yes.',
+                    rating=-1, reason='wrong')
+        self.thread(existing.upper(), 'whatever', rating=-1)  # already an eval case
+        self.thread('How do I add a target?', 'Again.', rating=-1)  # repeated question
+
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, 'drafts.json')
+            out = self.stats('--export-evals', path)
+            drafts = json.loads(Path(path).read_text())
+            self.assertIn('Wrote 2 draft eval case(s)', out)
+            self.assertIn('2 skipped', out)
+
+            by_q = {d['question']: d for d in drafts}
+            target = by_q['How do I add a target?']
+            self.assertEqual(target['must_include'], [])
+            self.assertNotIn('history', target)
+            self.assertEqual(target['_review']['comment'], 'Where?')
+            self.assertEqual(target['_review']['knowledge_used'], 'targets_context_products')
+            follow = by_q['Is it required?']
+            self.assertEqual(follow['history'], ['What is an Alias?', 'An optional second name.'])
+            self.assertEqual(follow['_review']['bad_answer'], 'Yes.')
+
+            # Never overwrites
+            from django.core.management.base import CommandError
+            with self.assertRaises(CommandError):
+                self.stats('--export-evals', path)
+
+    @override_settings(GEMINI_API_KEY='test-key')
+    def test_eval_refuses_a_case_with_nothing_to_check(self):
+        from django.core.management import call_command
+        from django.core.management.base import CommandError
+        from assistant.management.commands import assistant_eval
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / 'evals.json'
+            path.write_text(json.dumps([
+                {'question': 'Checked', 'must_include': ['x']},
+                {'question': 'Unfinished draft', 'must_include': [], 'must_not_include': []},
+            ]))
+            with patch.object(assistant_eval, 'EVALS_PATH', path), \
+                    patch('assistant.llm.requests.post') as mock_post:
+                with self.assertRaisesMessage(CommandError, 'Unfinished draft'):
+                    call_command('assistant_eval', stdout=open(os.devnull, 'w'))
+                mock_post.assert_not_called()  # refused before spending any quota
+
+    def test_purge_keeps_rated_threads_longer(self):
+        from datetime import timedelta
+        from io import StringIO
+        from django.core.management import call_command
+
+        def idle(conv, days):
+            Conversation.objects.filter(pk=conv.pk).update(updated_at=self.now - timedelta(days=days))
+
+        unrated, _ = self.thread('q', 'a')
+        rated_recent, _ = self.thread('q', 'a', rating=-1)
+        rated_ancient, _ = self.thread('q', 'a', rating=1)
+        fresh, _ = self.thread('q', 'a')
+        idle(unrated, 120)
+        idle(rated_recent, 120)
+        idle(rated_ancient, 400)
+        idle(fresh, 10)
+
+        out = StringIO()
+        call_command('assistant_purge', stdout=out)
+        self.assertIn('2 conversation(s)', out.getvalue())
+        self.assertIn('1 idle conversation(s) with ratings are kept', out.getvalue())
+
+        call_command('assistant_purge', '--delete', stdout=StringIO())
+        remaining = set(Conversation.objects.values_list('pk', flat=True))
+        self.assertEqual(remaining, {rated_recent.pk, fresh.pk})
+
+        from django.core.management.base import CommandError
+        with self.assertRaises(CommandError):
+            call_command('assistant_purge', '--days', '90', '--rated-days', '30', stdout=StringIO())

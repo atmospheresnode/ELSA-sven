@@ -21,7 +21,6 @@ DEFAULT_MODELS = [
     'gemini-3.5-flash',
     'gemini-2.5-flash-lite',
     'gemini-flash-lite-latest',
-    'gemini-2.0-flash',
 ]
 
 # The newest model often stalls under free-tier congestion. A short read

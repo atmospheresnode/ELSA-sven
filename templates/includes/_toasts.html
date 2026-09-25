@@ -1,0 +1,114 @@
+{% comment %}
+Django messages, as toasts.
+
+Replaces the full-width dismissible alert that used to be pushed in at the top of the
+page body. That pattern had three problems, all of them worse because the AMA save
+ends in window.location.reload(): the notice appeared at the top of the document,
+nowhere near the modal the user had just been working in; it shifted the whole page
+down as it arrived; and it sat there until dismissed by hand.
+
+A toast is the modern form of the same thing. It overlays rather than displaces, it
+appears in a consistent corner whatever page it is on, and a success can take itself
+away. Placed outside every card, column and theme wrapper, for the same reason the
+project's modals are: a fixed element nested inside a themed container inherits
+button recolouring it has no business inheriting.
+
+Severity decides whether it leaves on its own. A success is confirmation of something
+the user just did deliberately and needs no acknowledgement, so it goes after a few
+seconds. A warning or an error is news, usually about something that did not happen,
+which is exactly the case where a notice that vanishes is how a user comes to believe
+the save worked. Those stay until dismissed.
+{% endcomment %}
+{% if messages %}
+<div class="toast-container position-fixed bottom-0 end-0 p-3 elsa-toasts" id="elsaToasts">
+   {% for message in messages %}
+   <div class="toast elsa-toast border-0"
+        {% if message.tags == 'error' or message.tags == 'warning' %}
+        role="alert" aria-live="assertive" data-autohide="false"
+        {% else %}
+        role="status" aria-live="polite" data-autohide="true" data-delay="6500"
+        {% endif %}
+        aria-atomic="true">
+      <div class="toast-body d-flex align-items-start gap-2">
+         {% if message.tags == 'error' %}
+         <i class="bi bi-x-circle-fill text-danger flex-shrink-0 elsa-toast-icon"></i>
+         {% elif message.tags == 'warning' %}
+         <i class="bi bi-exclamation-triangle-fill text-warning flex-shrink-0 elsa-toast-icon"></i>
+         {% elif message.tags == 'info' %}
+         <i class="bi bi-info-circle-fill text-info flex-shrink-0 elsa-toast-icon"></i>
+         {% else %}
+         <i class="bi bi-check-circle-fill text-success flex-shrink-0 elsa-toast-icon"></i>
+         {% endif %}
+         <div class="flex-grow-1 small elsa-toast-text">{{ message }}</div>
+         {% comment %}Sized down in CSS below; Bootstrap has no small variant of
+         btn-close.{% endcomment %}
+         <button type="button" class="btn-close flex-shrink-0"
+                 data-bs-dismiss="toast" aria-label="Close"></button>
+      </div>
+   </div>
+   {% endfor %}
+</div>
+
+{% comment %}
+Without JavaScript a .toast is display:none, so the message would simply be lost.
+The old alert did not need scripting to be seen, and a notice is the last thing that
+should depend on it.
+{% endcomment %}
+<noscript>
+   <div class="container-fluid pt-3">
+      {% for message in messages %}
+      <div class="alert {% if message.tags == 'error' %}alert-danger{% elif message.tags == 'warning' %}alert-warning{% elif message.tags == 'info' %}alert-info{% else %}alert-success{% endif %}">
+         {{ message }}
+      </div>
+      {% endfor %}
+   </div>
+</noscript>
+
+<style>
+   /* Prefixed elsa-toast- so nothing here reaches the rest of the page. */
+   .elsa-toasts {
+      /* Above a Bootstrap modal backdrop (1050) and dialog (1055): the AMA editor
+         closes itself before reloading, but a toast that can appear over an open
+         dialog is one less thing that can be hidden by one. */
+      z-index: 1090;
+      max-width: min(92vw, 26rem);
+   }
+   .elsa-toast {
+      background-color: #fff;
+      box-shadow: 0 .5rem 1.25rem rgba(16, 24, 40, .16);
+      border-radius: .6rem;
+   }
+   .elsa-toast + .elsa-toast { margin-top: .5rem; }
+   .elsa-toast-icon { font-size: 1.05rem; line-height: 1.35; }
+   /* Long collection and file names appear in these, and a name with no spaces in it
+      would otherwise push the toast wider than the screen. */
+   .elsa-toast-text { overflow-wrap: anywhere; }
+   .elsa-toast .btn-close { font-size: .65rem; margin-top: .2rem; }
+
+   @media (prefers-reduced-motion: reduce) {
+      .elsa-toast { transition: none; }
+   }
+</style>
+
+<script>
+   /* Toasts are hidden until shown, so each one has to be started. Guarded on
+      bootstrap being present: this include sits on pages whose scripts load at the
+      end of the body, and a notice must never be what breaks a page. */
+   (function () {
+      function start() {
+         if (!window.bootstrap || !window.bootstrap.Toast) return;
+         document.querySelectorAll('#elsaToasts .elsa-toast').forEach(function (el) {
+            new window.bootstrap.Toast(el, {
+               autohide: el.dataset.autohide !== 'false',
+               delay: parseInt(el.dataset.delay || '6500', 10)
+            }).show();
+         });
+      }
+      if (document.readyState === 'loading') {
+         document.addEventListener('DOMContentLoaded', start);
+      } else {
+         start();
+      }
+   })();
+</script>
+{% endif %}

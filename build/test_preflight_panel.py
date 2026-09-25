@@ -13,6 +13,7 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from build.models import Bundle, Investigation, ValidationRun
+from build.requirement_fixture import satisfy_requirements
 
 
 def finding(message, type_='error.label.schema', path='', label='bundle_x.xml'):
@@ -66,6 +67,10 @@ class PreflightPanelTests(TestCase):
             'version': '1O00', 'bundleID': ''})
         self.assertIn(response.status_code, (200, 302))
         self.bundle = Bundle.objects.get(name='panel bundle')
+        # This module asserts on how findings are presented. ELSA's own requirements
+        # are a separate source of items, covered in test_preflight_requirements; met
+        # here so the panel under test shows only what the findings put there.
+        satisfy_requirements(self.bundle)
 
     def page(self):
         response = self.client.get(reverse('build:bundle', args=[self.bundle.pk]))
@@ -157,7 +162,12 @@ class PreflightPanelTests(TestCase):
         run = self.run_with([CITATION])
         self.bundle.save()                      # auto_now bumps updated_at
         run.refresh_from_db()
-        self.assertContains(self.page(), 'out of date')
+        with override_settings(VALIDATE_AUTO_CHECK=False):
+            self.assertContains(self.page(), 'out of date')
+        # With the page about to check by itself, the answer is seconds away and the
+        # warning would only flash before being replaced.
+        with override_settings(VALIDATE_AUTO_CHECK=True):
+            self.assertNotContains(self.page(), 'These results are out of date')
 
     def test_a_failed_run_explains_itself(self):
         self.run_with([], status=ValidationRun.STATUS_FAILED,
@@ -233,7 +243,7 @@ class PreflightPanelTests(TestCase):
         huge = 'cvc-pattern-valid: Value is not facet-valid with respect to ' + 'A|' * 1600
         self.run_with([finding(huge)])
         pane = self.raw_pane()
-        self.assertIn('<details>', pane)
+        self.assertIn('<details', pane)
         self.assertIn(huge[:120], pane)         # the opening words identify it
         self.assertIn(huge[-60:], pane)         # and the whole thing is still there
 
@@ -241,7 +251,7 @@ class PreflightPanelTests(TestCase):
         self.run_with([finding('Modification_History is not complete.')])
         pane = self.raw_pane()
         self.assertIn('Modification_History is not complete.', pane)
-        self.assertNotIn('<details>', pane)
+        self.assertNotIn('<details', pane)
 
     def test_the_raw_tab_counts_every_finding_not_just_the_shown_ones(self):
         self.run_with([CITATION, ELSA_DEFECT, ADVISORY])
@@ -311,9 +321,18 @@ class PreflightPanelTests(TestCase):
         """Results that no longer describe the bundle are not a pass."""
         self.run_with([ADVISORY])
         self.bundle.save()                      # auto_now bumps updated_at
-        body = self.page().content.decode()
+        with override_settings(VALIDATE_AUTO_CHECK=False):
+            body = self.page().content.decode()
         badge = body.split('id="preflight_row_badge"')[1].split('</span>')[0]
         self.assertIn('Out of date', badge)
+        self.assertNotIn('Passed', badge)
+
+        # When the page is about to check by itself it says so from the start, rather
+        # than flashing "Out of date" for the second before the check begins.
+        with override_settings(VALIDATE_AUTO_CHECK=True):
+            body = self.page().content.decode()
+        badge = body.split('id="preflight_row_badge"')[1].split('</span>')[0]
+        self.assertIn('Checking', badge)
         self.assertNotIn('Passed', badge)
 
     def test_the_row_badge_says_not_checked_before_a_run(self):
@@ -343,17 +362,16 @@ class PreflightPanelTests(TestCase):
     def test_the_review_modal_states_the_validation_verdict(self):
         self.run_with([CITATION, EMPTY_COLLECTION])
         page = self.page()
-        self.assertContains(page, 'PDS validation found')
-        self.assertContains(page, '2 things')
+        self.assertContains(page, '2 things to change before this bundle can be submitted')
 
     def test_the_review_modal_says_so_when_nothing_blocks(self):
         self.run_with([ADVISORY])
-        self.assertContains(self.page(), 'found nothing blocking this bundle')
+        self.assertContains(self.page(), 'Nothing is blocking it, so it is ready to submit.')
 
     def test_the_review_modal_flags_stale_results_before_sending(self):
         self.run_with([ADVISORY])
         self.bundle.save()
-        self.assertContains(self.page(), 'no longer describe what you are about to send')
+        self.assertContains(self.page(), 'needs checking again before it can be submitted')
 
     def test_the_review_modal_no_longer_renders_its_own_verdict_heading(self):
         """The component list is an inventory now, not the thing that decides."""
@@ -515,7 +533,7 @@ class PreflightPanelTests(TestCase):
         self.run_with([CITATION], products_total=7)
         page = self.page()
         self.assertNotContains(page, 'Technical detail')
-        self.assertIn('across 7 labels', self.raw_pane(page))
+        self.assertIn('7 labels', self.raw_pane(page))
 
     def test_the_full_report_link_is_staff_only(self):
         run = self.run_with([CITATION])

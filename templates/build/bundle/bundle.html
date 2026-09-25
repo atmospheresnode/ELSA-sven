@@ -152,17 +152,10 @@
 
 {% block body_block %}
 
-<!-- Messages (AMA metadata saves, label refresh warnings) -->
-{% if messages %}
-<div class="container-fluid pt-3">
-   {% for message in messages %}
-   <div class="alert {% if message.tags == 'error' %}alert-danger{% elif message.tags == 'warning' %}alert-warning{% elif message.tags == 'info' %}alert-info{% else %}alert-success{% endif %} alert-dismissible fade show">
-      {{ message }}
-      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-   </div>
-   {% endfor %}
-</div>
-{% endif %}
+<!-- Messages (AMA metadata saves, label refresh warnings). Rendered as toasts:
+     an AMA save ends in a full page reload, and a banner at the top of the document
+     was arriving a long way from the dialog the user had just been working in. -->
+{% include "includes/_toasts.html" %}
 
 <!-- Archive Contents -->
 {% if bundle_type == "Archive" %}
@@ -727,6 +720,22 @@
          });
       </script>
       {% endif %}
+
+      <script>
+         // Creating a collection redirects here with the new collection's tab in the fragment;
+         // open it rather than leaving the page on the document tab it renders with.
+         document.addEventListener('DOMContentLoaded', function () {
+            var card = document.getElementById('collectionsCard');
+            var target = window.location.hash;
+            if (!card || !/^#additional_collection_\d+$/.test(target)) return;
+            var button = card.querySelector('[data-bs-toggle="tab"][data-bs-target="' + target + '"]');
+            if (!button || !window.bootstrap || !bootstrap.Tab) return;
+            bootstrap.Tab.getOrCreateInstance(button).show();
+            // Dropped from the URL so a later reload does not reopen it.
+            try { history.replaceState(null, '', window.location.pathname + window.location.search); } catch (err) {}
+            card.scrollIntoView({ block: 'start' });
+         });
+      </script>
       
       <!-- Context Modal -->
       <div class="modal fade" id="context_modal">
@@ -2309,7 +2318,7 @@
 
                   <!-- Submit -->
                   <button type="button" id="externalSubmitBtn"
-                  class="btn {% if status_dict.Modification_History and status_dict.Citation_Information and status_dict.Targets %}btn-success{% else %}btn-outline-secondary{% endif %} w-100 mt-3"
+                  class="btn {% if not validation_requirements %}btn-success{% else %}btn-outline-secondary{% endif %} w-100 mt-3"
                   data-bs-toggle="modal" data-bs-target="#reviewBundleModal"
                   title="Complete all required sections to submit your bundle."
                   data-bs-placement="top">
@@ -3142,7 +3151,48 @@ also follows the project's own rule: modals go outside the card structure they b
       var uploadStatusText = form.querySelector('#uploadStatusText');
       var uploadSuccessMsg = form.querySelector('#uploadSuccessMsg');
       var cancelBtn      = form.querySelector('#uploadCancelBtn');
-      
+
+      // Ask the server whether it has room before sending a single byte. Refusing afterwards is
+      // too late: the whole file has crossed the network and been buffered to disk by then, which
+      // on a nearly full disk is exactly what fails. If the check itself cannot be made, upload
+      // anyway; the view repeats it once the files arrive.
+      var fileInput = form.querySelector('input[name="netcdf_files"]');
+      var picked = fileInput && fileInput.files ? Array.prototype.slice.call(fileInput.files) : [];
+      var collectionInput = form.querySelector('input[name="collection"]');
+      var storageCtx = {
+         form: form,
+         collection: collectionInput ? collectionInput.value : '',
+         files: picked.map(function (f) { return { name: f.name, size: f.size }; })
+      };
+      if (!picked.length) { startUpload(); return; }
+
+      if (uploadBtn) { uploadBtn.disabled = true; uploadBtn.textContent = 'Checking space...'; }
+      fetch('{% url "build:netcdf_storage_check" pk_bundle=bundle.id %}', {
+         method: 'POST',
+         credentials: 'same-origin',
+         headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': (form.querySelector('input[name="csrfmiddlewaretoken"]') || {}).value || ''
+         },
+         body: JSON.stringify({ collection: storageCtx.collection, files: storageCtx.files })
+      })
+         .then(function (r) { return r.ok ? r.json() : null; })
+         .catch(function () { return null; })
+         .then(function (space) {
+            if (space && space.ok === false && window.elsaOpenStorageDialog) {
+               if (uploadBtn) { uploadBtn.disabled = false; uploadBtn.textContent = 'Upload'; }
+               storageCtx.needed = space.needed;
+               storageCtx.available = space.available;
+               storageCtx.availableBytes = space.available_bytes;
+               storageCtx.stage = 'before';
+               window.elsaOpenStorageDialog(storageCtx);
+               return;
+            }
+            startUpload();
+         });
+
+      function startUpload() {
       var formData = new FormData(form);
       var xhr = new XMLHttpRequest();
       
@@ -3205,9 +3255,20 @@ also follows the project's own rule: modals go outside the card structure they b
          if (cancelBtn) cancelBtn.style.display = 'none';
          if (xhr.status >= 400) {
             var errorMsg = 'Upload failed.';
-            try { errorMsg = JSON.parse(xhr.responseText).error; } catch (err) {}
+            var reply = null;
+            try { reply = JSON.parse(xhr.responseText); errorMsg = reply.error; } catch (err) {}
             if (progressWrapper) progressWrapper.style.display = 'none';
             if (uploadBtn) { uploadBtn.disabled = false; uploadBtn.textContent = 'Upload'; }
+            // The view's own storage check refused the files after they arrived (the disk filled
+            // up after the preflight, or the preflight could not run). Same dialog, same offer.
+            if (reply && reply.code === 'insufficient_storage' && window.elsaOpenStorageDialog) {
+               storageCtx.needed = reply.needed;
+               storageCtx.available = reply.available;
+               storageCtx.availableBytes = reply.available_bytes;
+               storageCtx.stage = 'after';
+               window.elsaOpenStorageDialog(storageCtx);
+               return;
+            }
             var alertBox = form.querySelector('.netcdf-upload-error');
             if (!alertBox) {
                alertBox = document.createElement('div');
@@ -3260,6 +3321,7 @@ also follows the project's own rule: modals go outside the card structure they b
       // with a redirect that carries nothing the post-upload notice can be built from.
       xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
       xhr.send(formData);
+      }
    });
    
    // Cancel an in-flight upload. Delegated for the same reason the submit handler is: the
@@ -3312,29 +3374,7 @@ also follows the project's own rule: modals go outside the card structure they b
          </div>
          <div class="modal-footer border-0">
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-            {% if validation_block %}
-            {% comment %}
-               The PDS validation check found something, or has not run against this
-               version of the bundle. Disabling the button is only the visible half:
-               submit_bundle_internal refuses the same cases, because a disabled
-               button stops nobody who reloads or has the page open from before.
-            {% endcomment %}
-            <div class="alert alert-warning py-2 px-3 small text-start mb-2">
-               <strong>Not ready to submit.</strong> {{ validation_block.1 }}
-            </div>
-            <button type="button" class="btn btn-secondary" disabled>
-               <i class="bi bi-send me-1"></i>
-               {% if bundle.submitted_at %}Resubmit{% else %}Submit{% endif %} for Review
-            </button>
-            {% else %}
-            <form action="{% url 'build:submit_bundle_internal' bundle.pk %}" method="post" class="mb-0">
-               {% csrf_token %}
-               <button type="submit" class="btn btn-success">
-                  <i class="bi bi-send me-1"></i>
-                  {% if bundle.submitted_at %}Resubmit{% else %}Submit{% endif %} for Review
-               </button>
-            </form>
-            {% endif %}
+            {% include 'build/validation/submit_confirm.html' %}
          </div>
       </div>
    </div>
@@ -3363,120 +3403,70 @@ also follows the project's own rule: modals go outside the card structure they b
 
             <div class="row g-4">
                
-               <!-- Left column: Required + Optional -->
+               <!-- Left column: what stands between this bundle and submission. The same list
+                    the PDS Validation window shows, not a checklist of this window's own. -->
                <div class="col-md-6">
-                  <p class="text-uppercase text-muted small fw-semibold mb-2">What you are sending</p>
-                  <div class="list-group mb-4">
-                     
-                     <!-- Modification History -->
-                     <div class="list-group-item d-flex justify-content-between align-items-start py-3">
-                        <div class="me-auto">
-                           <div class="d-flex align-items-center gap-2 mb-1">
-                              {% if status_dict.Modification_History %}
-                              <i class="bi bi-check-circle-fill text-success"></i>
-                              {% else %}
-                              <i class="bi bi-x-circle-fill text-danger"></i>
-                              {% endif %}
-                              <span class="fw-semibold">Modification History</span>
-                           </div>
-                           <p class="text-muted small mb-1">
-                              {% if status_dict.Modification_History %}
-                              {{ modification_history_set_count }} entr{% if modification_history_set_count == 1 %}y{% else %}ies{% endif %}
-                              {% if modification_history_set_count == 1 %}&mdash; auto-created when your bundle was built{% endif %}
-                              {% else %}
-                              <span class="text-danger">Not added</span>
-                              {% endif %}
-                           </p>
-                           <p class="text-muted small mb-0">A log of changes made to this bundle over time. An initial entry is auto-created when you first build your bundle; you can add more to record edits before submission.</p>
-                        </div>
-                        <button type="button" class="btn btn-sm btn-outline-secondary ms-3 flex-shrink-0"
-                        onclick="switchToModal('reviewBundleModal', 'mod_history_modal')">
-                        Add <i class="bi bi-arrow-right ms-1"></i>
-                     </button>
-                  </div>
-                  
-                  <!-- Citation Information -->
-                  <div class="list-group-item d-flex justify-content-between align-items-start py-3">
-                     <div class="me-auto">
-                        <div class="d-flex align-items-center gap-2 mb-1">
-                           {% if status_dict.Citation_Information %}
-                           <i class="bi bi-check-circle-fill text-success"></i>
-                           {% else %}
-                           <i class="bi bi-x-circle-fill text-danger"></i>
-                           {% endif %}
-                           <span class="fw-semibold">Citation Information</span>
-                        </div>
-                        <p class="text-muted small mb-0">
-                           {% if status_dict.Citation_Information %}Added{% else %}<span class="text-danger">Not added</span>{% endif %}
-                        </p>
-                     </div>
-                     <button type="button" class="btn btn-sm btn-outline-secondary ms-3 flex-shrink-0"
-                     onclick="switchToModal('reviewBundleModal', 'citation_information_modal')">
-                     {% if status_dict.Citation_Information %}Edit{% else %}Add{% endif %} <i class="bi bi-arrow-right ms-1"></i>
-                  </button>
+                  {% include 'build/validation/review_findings.html' %}
                </div>
                
-               <!-- Targets -->
-               <div class="list-group-item d-flex justify-content-between align-items-start py-3">
-                  <div class="me-auto">
-                     <div class="d-flex align-items-center gap-2 mb-1">
-                        {% if status_dict.Targets %}
-                        <i class="bi bi-check-circle-fill text-success"></i>
-                        {% else %}
-                        <i class="bi bi-x-circle-fill text-danger"></i>
-                        {% endif %}
-                        <span class="fw-semibold">Targets</span>
-                     </div>
-                     <p class="text-muted small mb-0">
-                        {% with tc=targets|length %}
-                        {% if tc %}{{ tc }} target{% if tc != 1 %}s{% endif %} selected{% else %}<span class="text-danger">No targets added</span>{% endif %}
-                        {% endwith %}
-                     </p>
-                  </div>
-                  <button type="button" class="btn btn-sm btn-outline-secondary ms-3 flex-shrink-0"
-                  onclick="switchToModal('reviewBundleModal', 'context_modal')">
-                  Edit <i class="bi bi-arrow-right ms-1"></i>
-               </button>
-            </div>
-            
-         </div>
-         
-         <p class="text-uppercase text-muted small fw-semibold mb-2">Optional</p>
-         <div class="list-group">
-            
-            <!-- Alias -->
-            <div class="list-group-item d-flex justify-content-between align-items-start py-3">
-               <div class="me-auto">
-                  <div class="d-flex align-items-center gap-2 mb-1">
-                     {% if status_dict.Alias %}
-                     <i class="bi bi-check-circle-fill text-success"></i>
-                     {% else %}
-                     <i class="bi bi-exclamation-triangle-fill text-warning"></i>
-                     {% endif %}
-                     <span class="fw-semibold">Alias</span>
-                  </div>
-                  <p class="text-muted small mb-1">
-                     {% if status_dict.Alias %}
-                     {{ alias_set_count }} alias{% if alias_set_count != 1 %}es{% endif %} added
-                     {% else %}
-                     Not added
-                     {% endif %}
-                  </p>
-                  <p class="text-muted small mb-0">An alternate name or identifier for this bundle, such as a short name used in publications or a prior archive identifier.</p>
-               </div>
-               <button type="button" class="btn btn-sm btn-outline-secondary ms-3 flex-shrink-0"
-               onclick="switchToModal('reviewBundleModal', 'alias_modal')">
-               {% if status_dict.Alias %}Edit{% else %}Add{% endif %} <i class="bi bi-arrow-right ms-1"></i>
-            </button>
-         </div>
-         
-      </div>
-   </div>
-   
-   <!-- Right column: Content -->
+   <!-- Right column: what is being sent. An inventory with the quickest route to
+        editing each piece, not a verdict: whether any of it needs changing is the
+        left column's job, so nothing here is marked red or green. -->
    <div class="col-md-6">
-      <p class="text-uppercase text-muted small fw-semibold mb-2">Content</p>
+      <p class="text-uppercase text-muted small fw-semibold mb-2">What you are sending</p>
       <div class="list-group">
+         <div class="list-group-item d-flex justify-content-between align-items-start py-3">
+            <div class="me-auto">
+               <div class="d-flex align-items-center gap-2 mb-1">
+                  <i class="bi bi-quote text-muted"></i>
+                  <span class="fw-semibold">Citation Information</span>
+               </div>
+               <p class="text-muted small mb-0">{% if citation_information_set %}Added{% else %}Not added yet{% endif %}</p>
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-secondary ms-3 flex-shrink-0"
+            onclick="switchToModal('reviewBundleModal', 'citation_information_modal')">
+            {% if citation_information_set %}Edit{% else %}Add{% endif %} <i class="bi bi-arrow-right ms-1"></i>
+         </button>
+      </div>
+         <div class="list-group-item d-flex justify-content-between align-items-start py-3">
+            <div class="me-auto">
+               <div class="d-flex align-items-center gap-2 mb-1">
+                  <i class="bi bi-clock-history text-muted"></i>
+                  <span class="fw-semibold">Modification History</span>
+               </div>
+               <p class="text-muted small mb-0">{% if modification_history_set_count %}{{ modification_history_set_count }} entr{{ modification_history_set_count|pluralize:'y,ies' }}{% else %}None yet{% endif %}</p>
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-secondary ms-3 flex-shrink-0"
+            onclick="switchToModal('reviewBundleModal', 'mod_history_modal')">
+            Add <i class="bi bi-arrow-right ms-1"></i>
+         </button>
+      </div>
+         <div class="list-group-item d-flex justify-content-between align-items-start py-3">
+            <div class="me-auto">
+               <div class="d-flex align-items-center gap-2 mb-1">
+                  <i class="bi bi-bullseye text-muted"></i>
+                  <span class="fw-semibold">Targets</span>
+               </div>
+               <p class="text-muted small mb-0">{% for target in targets %}{{ target.name }}{% if not forloop.last %}, {% endif %}{% empty %}None selected yet{% endfor %}</p>
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-secondary ms-3 flex-shrink-0"
+            onclick="switchToModal('reviewBundleModal', 'context_modal')">
+            Edit <i class="bi bi-arrow-right ms-1"></i>
+         </button>
+      </div>
+         <div class="list-group-item d-flex justify-content-between align-items-start py-3">
+            <div class="me-auto">
+               <div class="d-flex align-items-center gap-2 mb-1">
+                  <i class="bi bi-tag text-muted"></i>
+                  <span class="fw-semibold">Alias <span class="text-muted fw-normal small">(optional)</span></span>
+               </div>
+               <p class="text-muted small mb-0">{% if alias_set_count %}{{ alias_set_count }} alias{{ alias_set_count|pluralize:'es' }}{% else %}None{% endif %}</p>
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-secondary ms-3 flex-shrink-0"
+            onclick="switchToModal('reviewBundleModal', 'alias_modal')">
+            {% if alias_set_count %}Edit{% else %}Add{% endif %} <i class="bi bi-arrow-right ms-1"></i>
+         </button>
+      </div>
          
          <!-- Document Collection -->
          <div class="list-group-item d-flex justify-content-between align-items-start py-3">
@@ -3593,6 +3583,20 @@ also follows the project's own rule: modals go outside the card structure they b
 <script type="text/javascript">
    $(document).ready(function(){
       $("#context_modal").modal('show');
+   });
+</script>
+{% endif %}
+
+{% comment %}
+   A citation the form refused (for now, only an External citation with no author)
+   reopens its window, where the form's errors are rendered. Left closed, the refusal
+   was invisible: the page reloaded and simply had no citation on it.
+{% endcomment %}
+{% if reopen_citation_modal %}
+<script type="text/javascript">
+   document.addEventListener('DOMContentLoaded', function () {
+      var el = document.getElementById('citation_information_modal');
+      if (el && window.bootstrap) { bootstrap.Modal.getOrCreateInstance(el).show(); }
    });
 </script>
 {% endif %}
@@ -5165,6 +5169,277 @@ so a page that was not just uploaded to never shows it.{% endcomment %}
    </div>
 </div>
 
+<style>
+   /* Storage dialog. Colours come from Bootstrap's own variables so the dialog follows the
+      page's light or dark theme without a second set of rules. */
+   .ess-icon {
+      width: 48px; height: 48px; flex: none; border-radius: 50%;
+      display: inline-flex; align-items: center; justify-content: center; font-size: 1.35rem;
+      background: var(--bs-danger-bg-subtle); color: var(--bs-danger-text-emphasis);
+   }
+   .ess-icon-ok { background: var(--bs-success-bg-subtle); color: var(--bs-success-text-emphasis); }
+   .ess-stats { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+   .ess-stat { border: 1px solid var(--bs-border-color); border-radius: .5rem; padding: .75rem 1rem; }
+   .ess-stat-label {
+      font-size: .7rem; text-transform: uppercase; letter-spacing: .05em;
+      color: var(--bs-secondary-color);
+   }
+   .ess-stat-value { font-size: 1.3rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+   .ess-stat-short { background: var(--bs-danger-bg-subtle); border-color: var(--bs-danger-border-subtle); }
+   .ess-stat-short .ess-stat-value { color: var(--bs-danger-text-emphasis); }
+   .ess-draft-wrap { position: relative; }
+   .ess-drafting {
+      position: absolute; inset: 0; border-radius: var(--bs-border-radius);
+      display: flex; align-items: center; justify-content: center; gap: .5rem;
+      background: var(--bs-tertiary-bg); color: var(--bs-secondary-color); font-size: .9rem;
+   }
+</style>
+
+{% comment %}Opened by the upload script when the server has no room for the picked files, either
+before the upload (the usual case) or when the view's own check refuses it afterwards. The message
+is drafted by the server (Gemini, or a template when Gemini is unavailable) and is the user's to
+edit; the email adds the technical details itself, so nothing here has to be trusted for them.
+Kept outside every card for the same reason as the dialog above.{% endcomment %}
+<div class="modal fade" id="netcdfStorageModal" tabindex="-1" aria-hidden="true"
+   aria-labelledby="netcdfStorageModalTitle" data-user-email="{{ user.email }}">
+   <div class="modal-dialog modal-dialog-centered modal-lg modal-fullscreen-sm-down">
+      <div class="modal-content">
+         <div class="modal-header border-0 pb-0 align-items-start">
+            <div class="d-flex align-items-center gap-3">
+               <span class="ess-icon"><i class="bi bi-device-hdd"></i></span>
+               <div>
+                  <h5 class="modal-title mb-0" id="netcdfStorageModalTitle">Not enough space on the server</h5>
+                  <p class="small text-muted mb-0 ess-lede"></p>
+               </div>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+         </div>
+         <div class="modal-body">
+            <div class="ess-form">
+               <div class="ess-stats mb-3">
+                  <div class="ess-stat">
+                     <div class="ess-stat-label">This upload</div>
+                     <div class="ess-stat-value ess-needed"></div>
+                     <div class="small text-muted ess-count"></div>
+                  </div>
+                  <div class="ess-stat ess-stat-short">
+                     <div class="ess-stat-label">Room right now</div>
+                     <div class="ess-stat-value ess-available"></div>
+                     <div class="small text-muted">largest upload accepted</div>
+                  </div>
+               </div>
+               <p class="small mb-3 ess-tip"></p>
+
+               <hr class="my-3">
+
+               <h6 class="mb-1"><i class="bi bi-envelope-paper me-1"></i>Let Team ELSA know</h6>
+               <p class="small text-muted mb-2">
+                  We wrote the report for you. Read it over, change anything you like, and send.
+                  File sizes and server details are attached automatically.
+               </p>
+               <div class="ess-draft-wrap">
+                  <label class="visually-hidden" for="essMessage">Message to Team ELSA</label>
+                  <textarea id="essMessage" class="form-control" rows="9" maxlength="5000"></textarea>
+                  <div class="ess-drafting" aria-live="polite">
+                     <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                     <span>Drafting your message...</span>
+                  </div>
+               </div>
+               <div class="d-flex flex-wrap justify-content-between gap-2 mt-1 small text-muted">
+                  <span class="ess-source"></span>
+                  <span class="ess-replyto"></span>
+               </div>
+               <div class="alert alert-danger small py-2 mt-2 mb-0 d-none ess-error" role="alert"></div>
+            </div>
+
+            <div class="ess-sent d-none text-center py-4">
+               <span class="ess-icon ess-icon-ok mb-3"><i class="bi bi-check-lg"></i></span>
+               <h5 class="mb-1">Report sent</h5>
+               <p class="text-muted mb-0 ess-sent-text"></p>
+            </div>
+         </div>
+         <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary btn-keep-bg ess-close"
+               data-bs-dismiss="modal">Not now</button>
+            <button type="button" class="btn btn-keep-bg text-white ess-send" style="background-color: teal;">
+               <span class="spinner-border spinner-border-sm me-1 d-none" aria-hidden="true"></span>
+               <i class="bi bi-send me-1"></i>Send to Team ELSA
+            </button>
+         </div>
+      </div>
+   </div>
+</div>
+
+<script>
+(function () {
+   var modalEl = document.getElementById('netcdfStorageModal');
+   if (!modalEl) return;
+
+   var DRAFT_URL  = '{% url "build:netcdf_storage_draft" pk_bundle=bundle.id %}';
+   var REPORT_URL = '{% url "build:netcdf_storage_report" pk_bundle=bundle.id %}';
+   var email      = modalEl.getAttribute('data-user-email') || '';
+
+   var q = function (sel) { return modalEl.querySelector(sel); };
+   var formPane = q('.ess-form'), sentPane = q('.ess-sent');
+   var textarea = q('#essMessage'), drafting = q('.ess-drafting');
+   var sendBtn  = q('.ess-send'), sendSpin = sendBtn.querySelector('.spinner-border');
+   var closeBtn = q('.ess-close'), errorBox = q('.ess-error');
+
+   var ctx = null;
+   // Bootstrap only displays the dialog once its backdrop has faded in, so a draft that arrives
+   // before then (the template is instant) cannot take focus yet. Whichever comes second, the
+   // draft or the dialog being shown, puts the user at the start of the message.
+   var shown = false;
+
+   function focusDraft() {
+      if (!shown || drafting.style.display !== 'none') return;
+      textarea.setSelectionRange(0, 0);
+      textarea.focus();
+      textarea.scrollTop = 0;
+   }
+
+   modalEl.addEventListener('shown.bs.modal', function () { shown = true; focusDraft(); });
+   modalEl.addEventListener('hidden.bs.modal', function () { shown = false; });
+   // Bumped on every open, so a draft that arrives after the dialog was closed and reopened for
+   // a different selection cannot overwrite the newer one.
+   var generation = 0;
+
+   function post(url, body) {
+      var token = (ctx.form.querySelector('input[name="csrfmiddlewaretoken"]') || {}).value || '';
+      return fetch(url, {
+         method: 'POST',
+         credentials: 'same-origin',
+         headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': token
+         },
+         body: JSON.stringify(body)
+      }).then(function (r) {
+         // An expired session does not fail: login_required redirects, fetch follows it, and the
+         // login page comes back as a 200. Anything that is not this view's JSON is treated as
+         // that, so a report is never shown as sent when it was not.
+         var isJson = (r.headers.get('Content-Type') || '').indexOf('application/json') !== -1;
+         if (r.redirected || !isJson) {
+            throw new Error('Your session may have expired. Please sign in again in another tab, '
+                          + 'then come back and press Send.');
+         }
+         return r.json().then(function (data) {
+            if (!r.ok) throw new Error(data.error || 'Something went wrong. Please try again.');
+            return data;
+         });
+      });
+   }
+
+   function showError(message) {
+      errorBox.textContent = message;
+      errorBox.classList.toggle('d-none', !message);
+   }
+
+   function setSending(on) {
+      sendBtn.disabled = on || drafting.style.display !== 'none';
+      sendSpin.classList.toggle('d-none', !on);
+      textarea.readOnly = on;
+   }
+
+   function setDrafting(on) {
+      drafting.style.display = on ? '' : 'none';
+      textarea.readOnly = on;
+      sendBtn.disabled = on;
+   }
+
+   function fillSummary() {
+      var count = ctx.files.length;
+      var stage = ctx.stage === 'after'
+         ? 'The files reached the server but could not be stored, so nothing was added to this bundle.'
+         : 'Your upload was stopped before anything was sent, so nothing was added to this bundle.';
+      q('.ess-lede').textContent = stage;
+      q('.ess-needed').textContent = ctx.needed || '';
+      q('.ess-count').textContent = count + (count === 1 ? ' file' : ' files');
+      q('.ess-available').textContent = ctx.available || '';
+
+      var tip;
+      if (!ctx.availableBytes) {
+         tip = 'The server has no room for new files at the moment. Your files are safe on your '
+             + 'computer, and you can upload them once Team ELSA has made space.';
+      } else if (count > 1) {
+         tip = 'Uploading fewer files at a time may work: anything up to ' + ctx.available
+             + ' can go through right now.';
+      } else {
+         tip = 'You can upload it once Team ELSA has made space. Your file is safe on your computer.';
+      }
+      q('.ess-tip').textContent = tip;
+      q('.ess-replyto').textContent = email ? 'Replies go to ' + email : '';
+   }
+
+   function loadDraft() {
+      var mine = ++generation;
+      textarea.value = '';
+      q('.ess-source').textContent = '';
+      setDrafting(true);
+      post(DRAFT_URL, { collection: ctx.collection, files: ctx.files })
+         .then(function (data) {
+            if (mine !== generation) return;
+            textarea.value = data.message || '';
+            q('.ess-source').innerHTML = data.source === 'ai'
+               ? '<i class="bi bi-stars me-1"></i>Drafted by ELSA Assistant. Please check it before sending.'
+               : '<i class="bi bi-pencil me-1"></i>Prefilled for you. Please check it before sending.';
+         })
+         .catch(function () {
+            if (mine !== generation) return;
+            q('.ess-source').textContent = 'We could not prepare a draft. Please describe the problem in your own words.';
+         })
+         .then(function () {
+            if (mine !== generation) return;
+            setDrafting(false);
+            // Setting the value leaves the caret at the end, and focus scrolls to the caret, so
+            // the user would land on the sign-off. focusDraft starts them at the greeting.
+            focusDraft();
+         });
+   }
+
+   window.elsaOpenStorageDialog = function (context) {
+      ctx = context;
+      formPane.classList.remove('d-none');
+      sentPane.classList.add('d-none');
+      sendBtn.classList.remove('d-none');
+      closeBtn.textContent = 'Not now';
+      showError('');
+      setSending(false);
+      fillSummary();
+      loadDraft();
+      if (window.bootstrap) bootstrap.Modal.getOrCreateInstance(modalEl).show();
+   };
+
+   sendBtn.addEventListener('click', function () {
+      var message = textarea.value.trim();
+      if (!message) { showError('Please write a short message before sending.'); textarea.focus(); return; }
+      showError('');
+      setSending(true);
+      post(REPORT_URL, { collection: ctx.collection, files: ctx.files, message: message })
+         .then(function (data) {
+            if (!data.sent) throw new Error('The report could not be sent just now. Please try again.');
+            formPane.classList.add('d-none');
+            sentPane.classList.remove('d-none');
+            sendBtn.classList.add('d-none');
+            closeBtn.textContent = 'Done';
+            q('.ess-sent-text').textContent = data.email
+               ? 'Team ELSA has your report and will reply to ' + data.email + ', usually within 24 to 48 hours.'
+               : 'Team ELSA has your report and will be in touch.';
+            closeBtn.focus();
+         })
+         .catch(function (err) {
+            showError(err.message);
+            // Send was disabled while it worked, which drops focus out of the dialog, and
+            // Bootstrap only hears Escape from inside it. Hand focus back to the message.
+            setSending(false);
+            textarea.focus();
+         })
+         .then(function () { setSending(false); });
+   });
+})();
+</script>
+
 <script>
 (function () {
    var BUNDLE   = '{{ bundle.id }}';
@@ -5198,14 +5473,26 @@ so a page that was not just uploaded to never shows it.{% endcomment %}
       });
    }
 
+   function tabButton(target) {
+      if (!card || !target || !SAFE_ID.test(target)) return null;
+      return card.querySelector('[data-bs-toggle="tab"][data-bs-target="' + target + '"]');
+   }
+
    function restoreTab() {
-      var target = readStore(TAB_KEY, false);
+      // Creating a collection redirects here with the new collection's tab in the fragment. It
+      // wins over the remembered tab, which is the Add New Collection form it was made from.
+      var fresh = tabButton(window.location.hash);
       // A collection deleted since the tab was remembered leaves a target that matches nothing,
       // in which case the page keeps the document tab it rendered with.
-      if (!card || !target || !SAFE_ID.test(target)) return;
-      var button = card.querySelector('[data-bs-toggle="tab"][data-bs-target="' + target + '"]');
+      var button = fresh || tabButton(readStore(TAB_KEY, false));
       if (button && window.bootstrap && bootstrap.Tab) {
          bootstrap.Tab.getOrCreateInstance(button).show();
+      }
+      if (fresh) {
+         rememberTab(window.location.hash);
+         // Dropped from the URL so a later reload goes back to whatever tab is open by then.
+         try { history.replaceState(null, '', window.location.pathname + window.location.search); } catch (err) {}
+         card.scrollIntoView({ block: 'start' });
       }
    }
 
@@ -5396,11 +5683,26 @@ so a page that was not just uploaded to never shows it.{% endcomment %}
    var button = document.getElementById('preflight_run');
    if (!button) { return; }
 
-   var progress = document.getElementById('preflight_progress');
-   var bar      = document.getElementById('preflight_bar');
-   var phase    = document.getElementById('preflight_phase');
-   var counts   = document.getElementById('preflight_counts');
-   var results  = document.getElementById('preflight_results');
+   /* These live inside #preflight_body, which refreshPanel replaces. Held from page
+    * load they pointed at the replaced elements, so a second check on the same page
+    * ran with no visible progress. Looked up again before each use instead. */
+   var progress, bar, phase, counts, results;
+   /* The same progress, shown a second time in the Review & Submit window's verdict
+    * band, so someone who opened that window sees the check it is waiting on. */
+   var vChecking, vResult, vBar, vPhase, vCounts;
+   function lookup() {
+      progress = document.getElementById('preflight_progress');
+      bar      = document.getElementById('preflight_bar');
+      phase    = document.getElementById('preflight_phase');
+      counts   = document.getElementById('preflight_counts');
+      results  = document.getElementById('preflight_results');
+      vChecking = document.getElementById('verdict_checking');
+      vResult   = document.getElementById('verdict_result');
+      vBar      = document.getElementById('verdict_bar');
+      vPhase    = document.getElementById('verdict_phase');
+      vCounts   = document.getElementById('verdict_counts');
+   }
+   lookup();
    /* The badge on the Bundle Components row. The results now live in a modal, so a
     * check that runs on page load happens entirely out of sight; without this the
     * row would still read "Checking…" long after it finished. */
@@ -5423,36 +5725,65 @@ so a page that was not just uploaded to never shows it.{% endcomment %}
    }
 
    function showProgress(on) {
+      lookup();
       if (progress) { progress.hidden = !on; }
       if (results)  { results.style.opacity = on ? '0.5' : ''; }
       button.disabled = on;
       button.textContent = on ? 'Checking…' : 'Run check again';
-      if (on) { setBadge('Checking…', 'bg-secondary'); }
+      if (on) {
+         setBadge('Checking…', 'bg-secondary');
+         if (vChecking) { vChecking.hidden = false; }
+         if (vResult)   { vResult.hidden = true; }
+      }
+   }
+
+   function showVerdictResult() {
+      lookup();
+      if (vChecking) { vChecking.hidden = true; }
+      if (vResult)   { vResult.hidden = false; }
    }
 
    function render(state) {
-      if (phase)  { phase.textContent = state.phase_label || 'Working…'; }
+      lookup();
+      var label = state.phase_label || 'Working…';
+      [phase, vPhase].forEach(function (el) { if (el) { el.textContent = label; } });
 
       /* percent is null while validate compiles schemas, which takes a few seconds
        * and produces no output at all. An indeterminate striped bar is honest about
        * that; a bar sitting at 0 looks like a hang. */
-      if (bar) {
+      [bar, vBar].forEach(function (el) {
+         if (!el) { return; }
          if (state.percent === null || state.percent === undefined) {
-            bar.classList.add('progress-bar-striped', 'progress-bar-animated');
-            bar.style.width = '100%';
-            bar.setAttribute('aria-valuenow', 0);
+            el.classList.add('progress-bar-striped', 'progress-bar-animated');
+            el.style.width = '100%';
+            el.setAttribute('aria-valuenow', 0);
          } else {
-            bar.classList.remove('progress-bar-animated');
-            bar.style.width = state.percent + '%';
-            bar.setAttribute('aria-valuenow', state.percent);
+            el.classList.remove('progress-bar-animated');
+            el.style.width = state.percent + '%';
+            el.setAttribute('aria-valuenow', state.percent);
          }
-      }
+      });
 
-      if (counts) {
-         counts.textContent = state.products_total
-            ? state.products_done + ' of ' + state.products_total
-            : '';
-      }
+      var tally = state.products_total
+         ? state.products_done + ' of ' + state.products_total
+         : '';
+      [counts, vCounts].forEach(function (el) { if (el) { el.textContent = tally; } });
+   }
+
+   /* A check that stopped without a result. Said where the progress was, with the
+    * bar stopped, because hiding the progress area hid the message along with it:
+    * "Could not reach the server" used to be written into an element nobody saw. */
+   function stopWithMessage(message) {
+      stopPolling();
+      lookup();
+      button.disabled = false;
+      button.textContent = 'Run check again';
+      [phase, vPhase].forEach(function (el) { if (el) { el.textContent = message; } });
+      [bar, vBar].forEach(function (el) {
+         if (el) { el.classList.remove('progress-bar-animated'); el.style.width = '0%'; }
+      });
+      [counts, vCounts].forEach(function (el) { if (el) { el.textContent = ''; } });
+      setBadge('Could not run', 'bg-warning text-dark');
    }
 
    function stopPolling() {
@@ -5494,7 +5825,8 @@ so a page that was not just uploaded to never shows it.{% endcomment %}
              * at page load, so a check that answered a stale result left the review
              * window still refusing to submit. */
             var swapped = false;
-            ['preflight_body', 'validation_verdict', 'review_submit_action'].forEach(
+            ['preflight_body', 'validation_verdict', 'review_submit_action',
+             'review_findings', 'submit_confirm_action'].forEach(
                function (id) {
                   var target = document.getElementById(id);
                   var fresh = parsed.getElementById(id);
@@ -5521,7 +5853,9 @@ so a page that was not just uploaded to never shows it.{% endcomment %}
          .catch(function () {
             /* The counts in the banner are already correct and the button still
              * works, so a failed refresh leaves a usable panel rather than a broken
-             * one. */
+             * one. The verdict band goes back to the result it last had rather than
+             * saying "checking" forever. */
+            showVerdictResult();
          });
    }
 
@@ -5561,7 +5895,9 @@ so a page that was not just uploaded to never shows it.{% endcomment %}
             return response.json();
          })
          .then(function (state) {
-            if (state.status === 'none') { stopPolling(); showProgress(false); return; }
+            if (state.status === 'none') {
+               stopPolling(); showProgress(false); refreshPanel(); return;
+            }
             render(state);
             if (state.finished) {
                stopPolling();
@@ -5569,16 +5905,25 @@ so a page that was not just uploaded to never shows it.{% endcomment %}
             }
          })
          .catch(function () {
-            stopPolling();
-            showProgress(false);
-            if (phase) { phase.textContent = 'Could not reach the server. Try again.'; }
+            stopWithMessage('Could not reach the server. Try again.');
          });
    }
 
+   /* How many times a busy server has been asked again, and the limit: every five
+    * seconds for two minutes. Checks take seconds, so a slot is normally free long
+    * before this runs out. */
+   var busyTries = 0;
+   var BUSY_RETRY_MS = 5000;
+   var BUSY_MAX_TRIES = 24;
+
    button.addEventListener('click', function () {
+      busyTries = 0;
       showProgress(true);
       render({ percent: null, phase_label: 'Starting…' });
+      startCheck();
+   });
 
+   function startCheck() {
       fetch(startUrl, {
          method: 'POST',
          headers: {
@@ -5593,25 +5938,82 @@ so a page that was not just uploaded to never shows it.{% endcomment %}
             return response.json();
          })
          .then(function (state) {
+            /* Refused because the server is already running its limit. That says
+             * nothing about the bundle, so it is not shown as a failed check: the
+             * page waits for a slot and asks again. */
+            if (state.busy) {
+               if (busyTries < BUSY_MAX_TRIES) {
+                  busyTries += 1;
+                  render({ percent: null,
+                           phase_label: 'Waiting for another check on the server to finish…' });
+                  window.setTimeout(startCheck, BUSY_RETRY_MS);
+               } else {
+                  stopWithMessage('The server is busy. Try the check again in a few minutes.');
+               }
+               return;
+            }
             render(state);
             if (state.finished) { finish(state); return; }
             polling = window.setInterval(poll, 1500);
          })
          .catch(function () {
-            showProgress(false);
-            if (phase) { phase.textContent = 'Could not start the check. Try again.'; }
+            stopWithMessage('Could not start the check. Try again.');
          });
+   }
+
+   /* "Check now" in the Review & Submit window's verdict band. Delegated, because
+    * the band is replaced whenever a check finishes. */
+   document.addEventListener('click', function (event) {
+      if (!event.target.closest('.verdict-run-check')) { return; }
+      if (!button.disabled) { button.click(); }
    });
 
-   /* Opening the Review & Submit window refreshes the verdict first.
+   /* "Show me" for the items that are not fixed in a modal. Delegated from the
+    * document, so it keeps working after the panel swaps its own contents. */
+   document.addEventListener('click', function (event) {
+      var trigger = event.target.closest('.preflight-goto');
+      if (!trigger) { return; }
+      var target = document.getElementById(trigger.getAttribute('data-target'));
+      if (!target) { return; }
+      /* After the modal has finished closing, or the scroll fights the backdrop. */
+      window.setTimeout(function () {
+         target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 200);
+   });
+
+   /* Opening the Review & Submit window makes sure it answers about the bundle as
+    * it is now.
     *
-    * A check can finish, or the bundle can change, between the page loading and
-    * someone deciding to submit. Without this the window answers with whatever was
-    * true when the page was rendered, which is how it came to refuse a submission
-    * over a stale result that had already been re-checked. */
+    * If the last check still matches the files, the window just refreshes and Submit
+    * is offered at once. If the bundle was never checked or has changed since, the
+    * window starts the check itself and shows its progress in the verdict band,
+    * rather than sending the person off to another window to press a button. A
+    * check already running, usually the one the page started on load, is followed
+    * rather than duplicated.
+    *
+    * Whether a check is needed is the server's call (validate_runner.needs_check),
+    * the same rule the page's background check follows. */
    var reviewModal = document.getElementById('reviewBundleModal');
    if (reviewModal) {
-      reviewModal.addEventListener('show.bs.modal', function () { refreshPanel(); });
+      reviewModal.addEventListener('show.bs.modal', function () {
+         fetch(statusUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function (response) {
+               if (!response.ok) { throw new Error('status ' + response.status); }
+               return response.json();
+            })
+            .then(function (state) {
+               if (state.status === 'q' || state.status === 'r') {
+                  showProgress(true);
+                  render(state);
+                  if (!polling) { polling = window.setInterval(poll, 1500); }
+               } else if (state.needs_check && !button.disabled) {
+                  button.click();
+               } else if (!button.disabled) {
+                  refreshPanel();
+               }
+            })
+            .catch(function () { refreshPanel(); });
+      });
    }
 
    /* A run already in flight when the page loaded: pick it up rather than showing

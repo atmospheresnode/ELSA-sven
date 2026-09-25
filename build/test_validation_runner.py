@@ -119,8 +119,16 @@ class CommandBuildingTests(TestCase):
         with override_settings(VALIDATE_HOME=self.home, VALIDATE_WORK_DIR=self.workdir):
             return validate_runner.build_command(run, os.path.join(self.workdir, 'r.json'))
 
-    def test_structure_run_skips_content_validation(self):
-        self.assertIn('--skip-content-validation', self.build(ValidationRun.TIER_STRUCTURE))
+    def test_content_validation_is_not_skipped_by_default(self):
+        """It is free on every bundle shape ELSA produces, and catches missing files."""
+        self.assertNotIn('--skip-content-validation',
+                         self.build(ValidationRun.TIER_STRUCTURE))
+
+    def test_a_host_can_turn_content_validation_off(self):
+        from django.test import override_settings
+        with override_settings(VALIDATE_SKIP_CONTENT=True):
+            self.assertIn('--skip-content-validation',
+                          self.build(ValidationRun.TIER_STRUCTURE))
 
     def test_full_run_does_not_skip_content_validation(self):
         self.assertNotIn('--skip-content-validation', self.build(ValidationRun.TIER_FULL))

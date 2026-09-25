@@ -25,6 +25,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from build import validate_runner
+from build.requirement_fixture import satisfy_requirements
 from build.models import (AdditionalCollections, Bundle, Citation_Information,
                           Investigation, ValidationRun)
 
@@ -51,6 +52,9 @@ class AutoRecheckOnChangeTests(TestCase):
             'name': 'recheck bundle', 'bundle_type': 'External',
             'version': '1O00', 'bundleID': ''})
         self.bundle = Bundle.objects.get(name='recheck bundle')
+        # The citation is left outstanding: adding one is the change these tests use
+        # to trigger a recheck, and supplying it here would give them two.
+        satisfy_requirements(self.bundle, skip=['citation-missing'])
 
     # -- helpers -----------------------------------------------------------------
 
@@ -244,6 +248,11 @@ class PanelRefreshesItselfTests(AutoRecheckOnChangeTests):
 
     def test_the_fetched_panel_shows_the_newest_run(self):
         """The whole point: what comes back is the result, not a prompt to reload."""
+        # The citation is what these tests leave outstanding, and ELSA now asks for
+        # one whether or not PDS mentioned it. Supplying it here leaves the finding
+        # as the only thing that can put this wording on the page, which is what
+        # makes its disappearance evidence that the newest run is being shown.
+        satisfy_requirements(self.bundle)
         citation = {
             'severity': 'ERROR', 'type': 'error.label.schematron',
             'message': 'In Product_Bundle both Citation_Information and its '
