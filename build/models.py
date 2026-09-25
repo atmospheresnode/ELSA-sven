@@ -4142,10 +4142,9 @@ class Product_Document(models.Model):
     copyright = models.CharField(max_length=MAX_CHAR_FIELD)
     comment = models.CharField(max_length=MAX_CHAR_FIELD, default='')
     description = models.CharField(max_length=MAX_CHAR_FIELD)
-    doi = models.CharField(max_length=MAX_CHAR_FIELD, default='')
+    # doi = models.CharField(max_length=MAX_CHAR_FIELD, default='')
     document_editions = models.CharField(max_length=MAX_CHAR_FIELD)
     document_name = models.CharField(max_length=MAX_CHAR_FIELD)
-    # doi = models.CharField(max_length=MAX_CHAR_FIELD) #in reference list but not document
     # editor_list = models.CharField(max_length=MAX_CHAR_FIELD) #doesn't exist on lockwood.xml
     publication_date = models.CharField(max_length=MAX_CHAR_FIELD)
     revision_id = models.CharField(max_length=MAX_CHAR_FIELD)

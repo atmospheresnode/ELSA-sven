@@ -486,10 +486,6 @@
                                              <strong>Publication Date:</strong><br>
                                              <span class="text-muted">{{ document.publication_date|default:"—" }}</span>
                                           </div>
-                                          <div class="mb-2">
-                                             <strong>DOI:</strong><br>
-                                             <span class="text-muted">{{ document.doi|default:"—" }}</span>
-                                          </div>
                                           <div class="mb-3">
                                              <strong>Description:</strong><br>
                                              <span class="text-muted">{{ document.description|default:"—" }}</span>
@@ -1774,12 +1770,6 @@
                   <div class="mt-3">
                      <label for="description">Description</label>
                      {{ form_document.description }}
-                  </div>
-
-                  <!-- DOI-->
-                   <div class="mt-3">
-                     <label for="doi">DOI</label>
-                     {{ form_document.doi }}
                   </div>
                   
                   <!-- Revision ID-->
