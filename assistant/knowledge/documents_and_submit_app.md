@@ -2,24 +2,25 @@
 <!-- fingerprint:
      build/models.py#Product_Document      = 3938f8b5aa26
      build/views.py#document               = 3a1c3f98dc02
-     build/views.py#product_document       = 9360f923e650
-     build/views.py#annex_product_document = 4f76187a1bf9
-     build/forms.py#ProductDocumentForm    = 661a3b67a67e
+     build/views.py#product_document       = a9324b7ee4e0
+     build/views.py#annex_product_document = b624d3c8f4c2
+     build/forms.py#ProductDocumentForm    = 628c27309201
      submit/views.py                       = 1146328cfb92
-     templates/build/document              = 91025e910e28
+     templates/build/document              = 76acde04fe65
      templates/submit                      = ab2d66cdde1f
 -->
 <!-- reviewed: 2026-09-25 -->
-<!-- baseline: 76f3f4b06c6f49212ee49c59521969d3c7d1699c -->
+<!-- baseline: 7294b1cab0ba188a0fba03e8de9f5e8367bf1b5a -->
 # Uploading Documents and the Submit Uploads Area
 
 Documents in a bundle: bundles have a document collection for user guides and
 descriptive documents. On the bundle page, the document form collects the
-document name, author list, publication date, description, files, and related
-identification details; ELSA stores the document in the bundle's document
-collection and generates its PDS4 label. External (AMA) bundles use a simpler
-annex document form (document name, ID, file name, comment, document standard).
-Deleting a document also removes its XML label from disk.
+document name, author list, publication date, description, the document file
+itself, and related identification details; ELSA stores the document and its file
+in the bundle's document collection and generates its PDS4 label. External (AMA)
+bundles use a simpler annex document form (document name, ID, comment, and the
+document file). Deleting a document also removes its XML label and its file from
+disk.
 
 Adding, editing or deleting a document rewrites the collection's inventory: the
 table listing its members and the record count in the collection label, both of
@@ -27,18 +28,36 @@ which PDS checks. A collection whose label says it has zero members is rejected
 as empty however many documents are actually in it. It also copies the bundle's
 citation into the document's own label, which carries one of its own.
 
-ELSA cannot attach a file to a document. The document forms record a document and
-its file name, but neither carries a file upload field and no page offers one; the
-only upload in ELSA is for NetCDF. So a document's label names a file that is not
-in the bundle, and PDS reports error.label.missing_file for it. This is counted as
-an ELSA gap and reported to node staff rather than shown to the submitter, who has
-no way to act on it, and it does not block a submission. Anyone asking how to
-attach a document file should be told plainly that ELSA does not do that yet.
+Every document is uploaded with its file, in both Archive and External bundles.
+The file is required when adding a document. PDS accepts only two formats for
+documents, so those are the only two ELSA accepts:
 
-The file name a user types is completed from the declared File Format when it has
-no extension: PDF/A gives .pdf and ASCII gives .txt, so "User_Guide" becomes
-"User_Guide.pdf". A name that already has an extension is left alone, including a
-different one.
+- PDF/A-1 (.pdf), the archival kind of PDF. An ordinary PDF, or a newer PDF/A-2
+  or PDF/A-3, is refused with instructions. To make one: in Microsoft Word on
+  Windows, File > Export > Create PDF/XPS and tick "ISO 19005-1 compliant
+  (PDF/A)"; in LibreOffice, File > Export as PDF, tick "Archive (PDF/A, ISO
+  19005)" and choose PDF/A-1b; in Adobe Acrobat, save as PDF/A-1b. If an editor
+  offers no PDF/A option, LibreOffice (free) can open the file and export it.
+- Plain text (.txt) saved as UTF-8. Recorded as "7-Bit ASCII Text" when every
+  character is plain ASCII and "UTF-8 Text" otherwise.
+
+Word (.docx), Markdown, HTML and other formats are not accepted; export them to
+PDF/A-1b first. The maximum size is 100 MB.
+
+The uploaded file's own name becomes the file name in the label, so there is no
+separate file name to type. Spaces become underscores and accents are dropped, so
+"My Guide.pdf" is stored as My_Guide.pdf. Two documents in one bundle cannot use
+the same file name.
+
+To replace a document's file, open the document with Edit (in the Collections
+card, under the document collection) and upload the new one; the old file is
+removed. Leaving the upload empty on the Edit page keeps the current file.
+
+Documents added before uploads existed have no file. The validation panel lists
+each one as "Attach the file for this document"; the fix is to open that document
+with Edit and upload its file. If the validation tool reports "A document's PDF is
+not PDF/A-1", the file claims to be PDF/A-1 but does not conform: export it again
+as PDF/A-1b from the original and upload it with Edit.
 
 What ELSA fills in for a document when the form does not ask for it, because
 PDS4 requires a value and an empty one is not a value: the publication date
@@ -49,12 +68,9 @@ written empty. author_list is no longer written at all: PDS4 deprecated it, and
 validate says so on every document that carries one. The field is still on the
 form, since it is how a user records who wrote the document.
 
-Two rules on document names, both PDS4's, now checked by the document form when
-it is submitted rather than later by the validator:
+A rule on document names, PDS4's, checked by the document form when it is
+submitted rather than later by the validator:
 
-- The file name needs a real extension: User_Guide.pdf, not User_Guide. It must
-  also start with a letter or digit and use only letters, digits, dots, dashes
-  and underscores, so a space in it is refused too.
 - Two documents in one bundle cannot share a name. The name becomes the product
   identifier that the collection inventory lists, and a collection cannot list
   the same identifier twice. The same name in a different bundle is fine, since

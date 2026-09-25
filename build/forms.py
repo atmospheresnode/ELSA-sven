@@ -1043,68 +1043,6 @@ PE_STD_ID = [
     ('ASCII', '7-Bit ASCII')
 ]
 
-# Nov. 24, 2025 -- External Bundles are supposed to have some different fields for document collections.
-# PDS4 file_name: must start alphanumeric, may then contain letters, digits, dots,
-# dashes and underscores, and must end in a dot and an extension. Taken from the
-# pattern in the PDS4 schema rather than approximated, because a form that accepts
-# something validate then rejects is worse than no check at all.
-PDS_FILE_NAME = re.compile(r'^[a-zA-Z0-9]([a-zA-Z0-9]|[-]|[_]|[.])*[.][a-zA-Z0-9]+$')
-
-
-# The extension each declared file format implies. The document form already asks
-# for the format, so a name with no extension is a question ELSA can answer rather
-# than a mistake to report: a user who types "User_Guide" and chooses PDF/A has said
-# everything needed to write "User_Guide.pdf".
-EXTENSION_FOR_FORMAT = {
-    'PDF/A': 'pdf',
-    'ASCII': 'txt',
-    '7-Bit ASCII': 'txt',
-}
-
-
-def extension_for_format(document_std_id):
-    """The file extension a declared format implies, or '' if it implies none."""
-    return EXTENSION_FOR_FORMAT.get((document_std_id or '').strip(), '')
-
-
-def apply_format_extension(file_name, document_std_id):
-    """Give a bare file name the extension its declared format implies.
-
-    Returns the name unchanged when it already has an extension, or when the format
-    does not imply one. PDS requires an extension and rejects a name without one,
-    and telling someone to go back and add ".pdf" to a name when they have already
-    said the file is a PDF is asking them to repeat themselves.
-    """
-    file_name = (file_name or '').strip()
-    if not file_name or '.' in file_name.strip('.'):
-        return file_name
-    extension = extension_for_format(document_std_id)
-    return '{}.{}'.format(file_name, extension) if extension else file_name
-
-
-def clean_pds_file_name(value):
-    """Reject a document file name PDS would reject, while the user is still here.
-
-    Only reached for a name ELSA could not complete itself: the forms fill in the
-    extension implied by the declared format first, so what gets here is a name with
-    a genuine problem, such as a space or a leading dot.
-    """
-    value = (value or '').strip()
-    if not value:
-        return value
-    if '.' not in value.strip('.'):
-        raise forms.ValidationError(
-            'PDS needs a file extension here, like User_Guide.pdf. '
-            '"%(value)s" has none.',
-            params={'value': value})
-    if not PDS_FILE_NAME.match(value):
-        raise forms.ValidationError(
-            'PDS file names may use letters, digits, dots, dashes and underscores, '
-            'must start with a letter or digit, and must end in an extension. '
-            '"%(value)s" does not.',
-            params={'value': value})
-    return value
-
 
 def clean_unique_document_name(form, value):
     """Refuse a document name already used in this bundle.
@@ -1172,6 +1110,49 @@ def clean_pds_person_name(value, label):
         params={'label': label, 'value': value})
 
 
+def document_file_field():
+    """The file a document is. Declared on each document form, not on a mixin, because
+    Django's form metaclass ignores fields declared on a plain mixin."""
+    return forms.FileField(
+        required=False,
+        label='Document File',
+        label_suffix='',
+        help_text=('A PDF/A-1 (.pdf) or plain text (.txt) file. Its name becomes the '
+                   'file name in the label.'),
+        widget=forms.ClearableFileInput(attrs={
+            'class': 'form-control',
+            'accept': '.pdf,.txt,application/pdf,text/plain',
+        }))
+
+
+def clean_document_upload(form):
+    """Check the uploaded document file for either document form.
+
+    A new document must come with its file. An edit may leave it out and keep the file
+    it has, or upload a replacement. What is accepted, and why, is in document_files.
+    The checked upload is kept on form.prepared_file for the view to store.
+    """
+    from build import document_files
+
+    form.prepared_file = None
+    uploaded = form.cleaned_data.get('document_file')
+    if not uploaded:
+        if form.editing is None:
+            raise forms.ValidationError(
+                'Attach the document itself: a PDF/A-1 (.pdf) or a plain text (.txt) file.')
+        return None
+
+    prepared = document_files.prepare(uploaded)
+    if form.bundle is not None and document_files.name_taken(
+            form.bundle, prepared.file_name, excluding=form.editing):
+        raise forms.ValidationError(
+            'Another document in this bundle already uses the file name "{}". Rename '
+            'the file and upload it again.'.format(prepared.file_name))
+    form.prepared_file = prepared
+    return uploaded
+
+
+# Nov. 24, 2025 -- External Bundles are supposed to have some different fields for document collections.
 class AnnexProductDocumentForm(forms.ModelForm):
 
     document_name = forms.CharField(
@@ -1205,34 +1186,16 @@ class AnnexProductDocumentForm(forms.ModelForm):
         })
     )
 
-    file_name = forms.CharField(
-        required = True,
-        max_length=100,
-        label='File Name',
-        label_suffix='',
-        widget=forms.TextInput(attrs={
-            "class":"form-control",
-            "placeholder": "Enter file name (e.g. User_Guide.pdf)",
-        })
-    )
+    # The file itself. Its name and format (PDF/A or plain text) are taken from the
+    # upload, so there is no typed file name to disagree with it any more.
+    document_file = document_file_field()
 
-    document_std_id = forms.ChoiceField(
-        required=False,
-        choices=PE_STD_ID,
-        label='File Format',
-        label_suffix = '',
-        widget=forms.Select(attrs={
-            'class': 'form-control custom-select'
-        })
-    )
     class Meta:
         model = Product_Document
         fields = [
             "document_name",
             "document_id",
-            "file_name",
             "comment",
-            "document_std_id",
         ]
 
     def __init__(self, *args, **kwargs):
@@ -1244,13 +1207,10 @@ class AnnexProductDocumentForm(forms.ModelForm):
         # add, so the duplicate-name check can tell it apart from a real clash.
         self.editing = kwargs.pop('editing', None)
         super(AnnexProductDocumentForm, self).__init__(*args, **kwargs)
+        self.prepared_file = None
 
-    def clean_file_name(self):
-        # The format is cleaned before file_name only if it is declared earlier in
-        # the form, so read it from the raw data rather than from cleaned_data.
-        return clean_pds_file_name(apply_format_extension(
-            self.cleaned_data.get('file_name'),
-            self.data.get('document_std_id')))
+    def clean_document_file(self):
+        return clean_document_upload(self)
 
     def clean_document_name(self):
         return clean_unique_document_name(self, self.cleaned_data.get('document_name'))
@@ -1349,23 +1309,9 @@ class ProductDocumentForm(forms.ModelForm):
             #'placeholder': 'Language'
         })
     )
-    files = forms.IntegerField(
-        required=False,
-        label_suffix = '',
-        widget=forms.NumberInput(attrs={
-            'class': 'form-control',
-           # 'placeholder': 'Number of Files'
-        })
-    )
-    file_name = forms.CharField(
-        required=False,
-        max_length=100,
-        label_suffix = '',
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            #'placeholder': 'File Name'
-        })
-    )
+    # The file itself. Its name, its format and the edition's file count (always one:
+    # the label has one Document_File) are taken from the upload.
+    document_file = document_file_field()
     local_id = forms.CharField(
         required=False,
         max_length=100,
@@ -1375,15 +1321,6 @@ class ProductDocumentForm(forms.ModelForm):
             #'placeholder': 'Local ID'
         })
     )
-    document_std_id = forms.ChoiceField(
-        required=False,
-        choices=STD_ID,
-        label_suffix = '',
-        widget=forms.Select(attrs={
-            'class': 'form-control custom-select'
-        })
-    )
-
     class Meta:
         model = Product_Document
         #exclude = ('bundle',)
@@ -1398,10 +1335,7 @@ class ProductDocumentForm(forms.ModelForm):
             "document_editions",
             "edition_name",
             "language",
-            "files",
-            "file_name",
             "local_id",
-            "document_std_id",
         ]
 
     def __init__(self, *args, **kwargs):
@@ -1410,13 +1344,16 @@ class ProductDocumentForm(forms.ModelForm):
         # add, so the duplicate-name check can tell it apart from a real clash.
         self.editing = kwargs.pop('editing', None)
         super(ProductDocumentForm, self).__init__(*args, **kwargs)
+        self.prepared_file = None
 
-    def clean_file_name(self):
-        # The format is cleaned before file_name only if it is declared earlier in
-        # the form, so read it from the raw data rather than from cleaned_data.
-        return clean_pds_file_name(apply_format_extension(
-            self.cleaned_data.get('file_name'),
-            self.data.get('document_std_id')))
+    def clean_document_file(self):
+        return clean_document_upload(self)
+
+    def clean_document_editions(self):
+        # Optional on the form but NOT NULL in the table, so a blank field was a 500.
+        # ELSA writes exactly one Document_Edition, so one is the true count.
+        value = self.cleaned_data.get('document_editions')
+        return 1 if value is None else value
 
     def clean_document_name(self):
         return clean_unique_document_name(self, self.cleaned_data.get('document_name'))

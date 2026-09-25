@@ -54,13 +54,14 @@
                 <!-- Document Collection Section -->
 
                     <div class="card-body">
-                        <form method="post" action="{% url 'build:collection_document' bundle.pk %}">
+                        <form method="post" action="{% url 'build:collection_document' bundle.pk %}" enctype="multipart/form-data">
                             {% csrf_token %}
                             <input type="hidden" name="form_name" value="document_form">
                             {% for field in form_document %}
                                 <div class="mb-3">
                                     {{ field.label_tag }}
                                     {{ field }}
+                                    {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
                                     {% if field.errors %}
                                         <div class="text-danger">{{ field.errors }}</div>
                                     {% endif %}

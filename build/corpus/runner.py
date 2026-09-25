@@ -17,7 +17,9 @@ from __future__ import unicode_literals
 
 import json
 import os
+import shutil
 import subprocess
+import tempfile
 
 from django.conf import settings
 
@@ -56,8 +58,16 @@ def run_validate(directory, report_path, catalog=None):
         environment['PATH'] = os.path.join(java_home, 'bin') + os.pathsep + \
             environment.get('PATH', '')
 
-    subprocess.run(command, env=environment, stdout=subprocess.DEVNULL,
-                   stderr=subprocess.DEVNULL, timeout=600)
+    # Its own java.io.tmpdir, as the application gives each run, or veraPDF leaves a
+    # copy of every document PDF in /tmp.
+    java_tmpdir = tempfile.mkdtemp(prefix='elsa-corpus-java-')
+    environment['_JAVA_OPTIONS'] = '{} -Djava.io.tmpdir={}'.format(
+        environment.get('_JAVA_OPTIONS', ''), java_tmpdir).strip()
+    try:
+        subprocess.run(command, env=environment, stdout=subprocess.DEVNULL,
+                       stderr=subprocess.DEVNULL, timeout=600)
+    finally:
+        shutil.rmtree(java_tmpdir, ignore_errors=True)
 
     if not os.path.exists(report_path):
         raise RuntimeError('validate produced no report for ' + directory)

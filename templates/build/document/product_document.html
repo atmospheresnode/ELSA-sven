@@ -112,7 +112,7 @@ Product Document Editor
                                     <h4>Product Document Editor</h4>
                                 </div>
                                 <div class="card-body">
-                                    <form id="form_product_document" method="post" action="">
+                                    <form id="form_product_document" method="post" action="" enctype="multipart/form-data">
                                         {% csrf_token %}
                                         {{ form_product_document.as_p }}
                                         <div class="d-flex justify-content-start align-items-center">

@@ -229,25 +229,25 @@ SHAPES = [
         'expect_user': set(),
     },
     {
-        'name': 'document named without an extension',
-        'why': ('The user types "guide" and picks PDF/A. ELSA completes it to '
-                'guide.pdf rather than refusing, because the format field has '
-                'already said what the file is.'),
-        'build': lambda b: (b.create('corpus bare doc name', 'External')
-                            .add_citation().fill_authors()
-                            .add_modification_history()
-                            .add_document('guide', file_name='noextension')),
-        'expect_user': set(),
-    },
-    {
-        'name': 'document with a space in its file name',
-        'why': ('A name ELSA cannot complete or repair. The form refuses it, so no '
-                'document is created and the collection stays empty, which is what '
-                'the panel should then say.'),
+        'name': 'document uploaded with a space in its file name',
+        'why': ('The file on the user\'s disk is "my guide.pdf". PDS file names '
+                'cannot hold a space, so ELSA stores it as my_guide.pdf rather than '
+                'refusing a name the user did not choose for PDS.'),
         'build': lambda b: (b.create('corpus spaced doc name', 'External')
                             .add_citation().fill_authors()
                             .add_modification_history()
-                            .add_document('guide', file_name='my guide.pdf')),
+                            .add_document('guide', as_name='my guide.pdf')),
+        'expect_user': set(),
+    },
+    {
+        'name': 'document uploaded as an ordinary PDF',
+        'why': ('PDS archives documents as PDF/A-1. The upload refuses an ordinary '
+                'PDF with instructions, so no document is created and the collection '
+                'stays empty, which is what the panel should then say.'),
+        'build': lambda b: (b.create('corpus plain pdf doc', 'External')
+                            .add_citation().fill_authors()
+                            .add_modification_history()
+                            .add_document('guide', fixture='guide_plain.pdf')),
         'expect_user': {'document-collection-empty'},
     },
 ]

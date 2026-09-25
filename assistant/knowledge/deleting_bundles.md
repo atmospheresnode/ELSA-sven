@@ -4,13 +4,13 @@
      build/views.py#bundle_delete_new       = 772fbafa6b88
      build/views.py#delete_collection       = ccc76fbf5208
      build/views.py#bulk_delete_netcdf      = 77145224b2f2
-     build/views.py#delete_product_document = 1efc441dfde2
+     build/views.py#delete_product_document = 7195e35414ca
      friends/views.py#delete_bundles        = 03e19e347f04
      friends/views.py#bundle_hub            = 02a643915c11
      templates/friends/bundle_hub.html      = 1769e80d5787
 -->
-<!-- reviewed: 2026-09-10 -->
-<!-- baseline: 916e4783e9b5a297ffb9e0d83dbb9a4951cd9f8d -->
+<!-- reviewed: 2026-09-25 -->
+<!-- baseline: 7294b1cab0ba188a0fba03e8de9f5e8367bf1b5a -->
 # Deleting Bundles (Single and Bulk) and Deleting Files
 
 Deleting ONE bundle: open the bundle's page and click the red **Delete Bundle**

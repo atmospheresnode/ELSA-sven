@@ -13,7 +13,8 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
 from django.http import HttpResponse, HttpRequest, JsonResponse
 
-from build import preflight, validate_report, validate_rules, validate_runner
+from build import document_files, preflight, validate_report, validate_rules, validate_runner
+from build.label_repair import AMA_LID
 from django.shortcuts import render, redirect, get_object_or_404
 from django.template import RequestContext
 from django.urls import reverse
@@ -649,7 +650,11 @@ def build(request):
             print('---------------- End Build Product_Bundle Base Case -------------------------')
 
             if bundle.bundle_type == 'External':
-                ama_investigation = Investigation.objects.filter(name='Atmospheric Modeling Annex').first()
+                # Looked up by LID, not name: the crawler and PDS title this row
+                # differently, and on prod migration 0075 kept the row named
+                # "Atmospheric Modeling Annex Individual Investigation", so a name
+                # lookup found nothing and every External bundle creation 500ed.
+                ama_investigation = Investigation.objects.filter(lid=AMA_LID).order_by('pk').first()
                 print(ama_investigation)
                 write_into_label(ama_investigation, product_bundle, [])
 
@@ -1160,7 +1165,8 @@ def bundle(request, pk_bundle):
         )
         form_modification_history = ModificationHistoryForm(request.POST or None)     
         form_data = DataForm(request.POST or None, pk_bun=pk_bundle)
-        form_document = ProductDocumentForm(request.POST or None, bundle=bundle)
+        # With the files too, so a refused upload's reason is what the window shows.
+        form_document = ProductDocumentForm(request.POST or None, request.FILES or None, bundle=bundle)
         annex_form_document = AnnexProductDocumentForm(request.POST or None, bundle=bundle)
         form_collections = CollectionsForm(request.POST or None)
         form_product_collection = ProductCollectionForm(request.POST or None)
@@ -1643,6 +1649,8 @@ def bundle(request, pk_bundle):
             product_document = form_document.save(commit=False)
             product_document.bundle = bundle
             product_document.save()
+            # The file itself, before the label is built, so the label names it.
+            document_files.store(product_document, form_document.prepared_file)
 
             print('Product_Document model object: {}'.format(product_document))
 
@@ -3939,12 +3947,15 @@ def annex_collection_document(request, pk_bundle):
     bundle = Bundle.objects.get(pk=pk_bundle)
     if request.user != bundle.user:
         return redirect('main:restricted_access')
-    annex_form_document = AnnexProductDocumentForm(request.POST or None, bundle=bundle)
+    annex_form_document = AnnexProductDocumentForm(
+        request.POST or None, request.FILES or None, bundle=bundle)
 
     if annex_form_document.is_valid():        
         document = annex_form_document.save(commit=False)
         document.bundle = bundle
         document.save()
+        # The file itself, before the label is built, so the label names it.
+        document_files.store(document, annex_form_document.prepared_file)
         document.build_base_case()
 
         print(document.label())
@@ -3986,12 +3997,15 @@ def collection_document(request, pk_bundle):
     bundle = Bundle.objects.get(pk=pk_bundle)
     if request.user != bundle.user:
         return redirect('main:restricted_access')
-    form_document = ProductDocumentForm(request.POST or None, bundle=bundle)
+    form_document = ProductDocumentForm(
+        request.POST or None, request.FILES or None, bundle=bundle)
 
     if form_document.is_valid():        
         document = form_document.save(commit=False)
         document.bundle = bundle
         document.save()
+        # The file itself, before the label is built, so the label names it.
+        document_files.store(document, form_document.prepared_file)
         document.build_base_case()
 
         print(document.label())
@@ -4396,7 +4410,7 @@ def annex_product_document(request, pk_bundle, pk_product_document):
             "document_std_id":product_document.document_std_id,
         }
 
-        annex_form_product_document = AnnexProductDocumentForm(request.POST or None, initial=initial_product, bundle=bundle, editing=product_document)
+        annex_form_product_document = AnnexProductDocumentForm(request.POST or None, request.FILES or None, initial=initial_product, bundle=bundle, editing=product_document)
         documents = Product_Document.objects.filter(bundle=bundle)
         
         if annex_form_product_document.is_valid() and annex_form_product_document.has_changed():
@@ -4436,6 +4450,11 @@ def annex_product_document(request, pk_bundle, pk_product_document):
                     product_document.document_std_id = annex_form_product_document['document_std_id'].value()
                 
             product_document.save()
+
+            # A replacement file, stored before the label is rebuilt so it names the new
+            # file; the old one is removed if the name changed.
+            if annex_form_product_document.prepared_file is not None:
+                document_files.store(product_document, annex_form_product_document.prepared_file)
 
             label_root = label_list[1]
 
@@ -4495,7 +4514,7 @@ def product_document(request, pk_bundle, pk_product_document):
                 "document_std_id":product_document.document_std_id,
             }
             # When editing the product document via the bundle page, we want to use the external form for external bundles
-            form_product_document = AnnexProductDocumentForm(request.POST or None, initial=initial_product, bundle=bundle, editing=product_document)
+            form_product_document = AnnexProductDocumentForm(request.POST or None, request.FILES or None, initial=initial_product, bundle=bundle, editing=product_document)
         else:
             initial_product = {
                 'author_list':product_document.author_list,
@@ -4514,7 +4533,7 @@ def product_document(request, pk_bundle, pk_product_document):
                 'document_std_id': product_document.document_std_id,
             }
             
-            form_product_document = ProductDocumentForm(request.POST or None, initial=initial_product, bundle=bundle, editing=product_document)
+            form_product_document = ProductDocumentForm(request.POST or None, request.FILES or None, initial=initial_product, bundle=bundle, editing=product_document)
         documents = Product_Document.objects.filter(bundle=bundle)
         
         if form_product_document.is_valid() and form_product_document.has_changed():
@@ -4585,6 +4604,11 @@ def product_document(request, pk_bundle, pk_product_document):
                     product_document.comment = form_product_document['comment'].value()
                 
                 product_document.save()
+
+            # A replacement file, stored before the label is rebuilt so it names the new
+            # file; the old one is removed if the name changed.
+            if form_product_document.prepared_file is not None:
+                document_files.store(product_document, form_product_document.prepared_file)
 
             label_root = label_list[1]
 
@@ -4666,6 +4690,10 @@ def delete_product_document(request, pk_bundle, pk_product_document):
                 print('Deleted XML file: {}'.format(xml_path))
             else:
                 print('XML file not found at path: {}'.format(xml_path))
+
+        # And the document's own file, which lives next to its label. Removed while the
+        # record still says where it is, per the rule for deletes.
+        document_files.remove(product_document)
 
         # Delete the product_document from the database
         product_document.delete()

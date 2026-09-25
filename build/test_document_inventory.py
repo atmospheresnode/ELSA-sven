@@ -24,6 +24,7 @@ from django.contrib.auth.models import User
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
+from build.corpus.builder import document_upload
 from build.models import Bundle, Investigation, Product_Collection, Product_Document
 
 NS = {'pds': 'http://pds.nasa.gov/pds4/pds/v1'}
@@ -58,9 +59,8 @@ class DocumentInventoryTests(TestCase):
         response = self.client.post(
             reverse('build:annex_collection_document', args=[str(self.bundle.pk)]),
             {'form_name': 'document_form', 'document_name': name,
-             'document_id': name, 'file_name': name + '.pdf',
-             'comment': 'a document', 'document_std_id': 'PDF/A',
-             'source': 'bundle'})
+             'document_id': name, 'document_file': document_upload(name),
+             'comment': 'a document', 'source': 'bundle'})
         self.assertIn(response.status_code, (200, 302))
 
     def document_collection(self):

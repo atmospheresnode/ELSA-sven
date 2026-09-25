@@ -23,6 +23,7 @@ an indeterminate loading phase instead of a bar sitting at zero.
 import collections
 import os
 import re
+import shutil
 import signal
 import subprocess
 import sys
@@ -158,7 +159,7 @@ def validate_executable():
     return executable
 
 
-def _environment():
+def _environment(java_tmpdir=None):
     """A copy of the environment with JAVA_HOME pointed at the configured runtime.
 
     Also carries the settings module across. The child is a fresh `manage.py`
@@ -189,6 +190,14 @@ def _environment():
     existing = environment.get('_JAVA_OPTIONS', '')
     if max_heap and '-Xmx' not in existing:
         environment['_JAVA_OPTIONS'] = '{} -Xms64m -Xmx{}'.format(existing, max_heap).strip()
+
+    # veraPDF, which validate runs over PDF/A documents, copies each PDF to
+    # java.io.tmpdir as tmp_pdf_file*.pdf and never deletes it, so every check of a
+    # bundle with a document left a copy in /tmp forever. Pointed at a directory of
+    # this run's own, which run() removes when the run ends.
+    if java_tmpdir:
+        environment['_JAVA_OPTIONS'] = '{} -Djava.io.tmpdir={}'.format(
+            environment.get('_JAVA_OPTIONS', ''), java_tmpdir).strip()
 
     return environment
 
@@ -228,6 +237,11 @@ def reports_dir():
 
 def report_path_for(run):
     return os.path.join(reports_dir(), 'run-{}.json'.format(run.pk))
+
+
+def java_tmpdir_for(run):
+    """The temporary directory validate gets for one run. Removed by run()."""
+    return os.path.join(work_dir(), 'tmp', 'run-{}'.format(run.pk))
 
 
 def prune_reports(bundle):
@@ -319,6 +333,8 @@ def run(run_id):
         return _fail(validation_run, 'The check stopped unexpectedly ({}: {}). Running '
                      'it again is safe; if it keeps happening, the server needs '
                      'looking at.'.format(type(error).__name__, error))
+    finally:
+        shutil.rmtree(java_tmpdir_for(validation_run), ignore_errors=True)
 
 
 def _execute(validation_run):
@@ -344,6 +360,14 @@ def _execute(validation_run):
 
     timeout = getattr(settings, 'VALIDATE_TIMEOUT_SECONDS', 3600)
 
+    # A directory it cannot create must not cost the check: on prod only reports/ was
+    # made writable for apache at first. Without it validate just uses /tmp as before.
+    java_tmpdir = java_tmpdir_for(validation_run)
+    try:
+        os.makedirs(java_tmpdir, exist_ok=True)
+    except OSError:
+        java_tmpdir = None
+
     try:
         # errors='replace' because a file name validate echoes back is not
         # guaranteed to be UTF-8, and one undecodable byte would otherwise end the
@@ -355,7 +379,7 @@ def _execute(validation_run):
         # group takes both.
         process = subprocess.Popen(
             command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-            env=_environment(), text=True, errors='replace', bufsize=1,
+            env=_environment(java_tmpdir), text=True, errors='replace', bufsize=1,
             start_new_session=True)
     except OSError as error:
         return _fail(validation_run, 'Could not run validate: {}'.format(error))

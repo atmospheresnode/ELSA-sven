@@ -4525,6 +4525,16 @@ Referenced from        Product_Document
 """
 
 # @python_2_unicode_compatible
+def pds_document_standard(value):
+    """The PDS4 name for a document's format.
+
+    Documents saved before uploads existed chose their format from a list whose plain
+    text option was stored as "ASCII", which is not a value PDS4 accepts; its name for
+    it is "7-Bit ASCII Text". Uploads record the right value themselves.
+    """
+    return {'ASCII': '7-Bit ASCII Text'}.get((value or '').strip(), value)
+
+
 class Product_Document(models.Model):
     # Attributes
     bundle = models.ForeignKey(Bundle, on_delete=models.CASCADE)
@@ -4674,7 +4684,7 @@ class Product_Document(models.Model):
                 if self.document_std_id:
                     encoding_standard_id = Encoded_External.find(
                         '{}encoding_standard_id'.format(NAMESPACE))
-                    encoding_standard_id.text = self.document_std_id
+                    encoding_standard_id.text = pds_document_standard(self.document_std_id)
             if File is not None:
                 if self.comment:
                     comment = File.find('{}comment'.format(NAMESPACE))
@@ -4757,7 +4767,7 @@ class Product_Document(models.Model):
             if self.document_std_id:
                 document_std_id = Files.find(
                     '{}document_standard_id'.format(NAMESPACE))
-                document_std_id.text = self.document_std_id
+                document_std_id.text = pds_document_standard(self.document_std_id)
 
             
 
