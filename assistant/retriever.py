@@ -42,7 +42,7 @@ def _make_chunk(name, text):
 
 
 def _load_chunks():
-    return [_make_chunk(path.stem, path.read_text())
+    return [_make_chunk(path.stem, path.read_text(encoding="utf-8"))
             for path in sorted(KNOWLEDGE_DIR.glob('*.md'))]
 
 
