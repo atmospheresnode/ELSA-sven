@@ -180,3 +180,37 @@ class ReaderProbes(SimpleTestCase):
         except subprocess.TimeoutExpired:
             proc.kill()
             self.fail('non-UTF-8 output stopped the reader and wedged validate')
+
+
+class RunNeverStaysRunningTests(TestCase):
+    """Production, first run: the work directory did not exist and apache could not
+    create it. The PermissionError escaped run(), the child died with the row at
+    RUNNING, and the page said "Checking..." for an hour while the row held one of the
+    two slots every other bundle was waiting for."""
+
+    def setUp(self):
+        self.parent = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.parent, True)
+        os.chmod(self.parent, 0o555)                    # like /export/.../elsa to apache
+        self.addCleanup(os.chmod, self.parent, 0o755)
+        self.archive = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.archive, True)
+        user = User.objects.create_user('stuck', password='pw')
+        self.bundle = Bundle.objects.create(name='stuck', user=user, version='1O00',
+                                            bundle_type='External')
+
+    def test_an_unwritable_work_directory_fails_the_run_instead_of_leaving_it_running(self):
+        if os.access(self.parent, os.W_OK):
+            self.skipTest('running as a user who can write anywhere (root)')
+        run = ValidationRun.objects.create(bundle=self.bundle)
+        with override_settings(ARCHIVE_DIR=self.archive,
+                               VALIDATE_WORK_DIR=os.path.join(self.parent, 'validation')):
+            result = validate_runner.run(run.pk)
+        run.refresh_from_db()
+        self.assertEqual(run.status, ValidationRun.STATUS_FAILED)
+        self.assertIn('PermissionError', run.failure_reason)
+        self.assertIsNotNone(run.finished_at)
+        self.assertEqual(result.pk, run.pk)
+        # And it no longer counts against the server's limit.
+        self.assertFalse(ValidationRun.objects.filter(
+            status__in=[ValidationRun.STATUS_QUEUED, ValidationRun.STATUS_RUNNING]).exists())
