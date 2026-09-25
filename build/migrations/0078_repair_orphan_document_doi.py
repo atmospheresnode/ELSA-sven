@@ -32,15 +32,12 @@ COLUMN_EXISTS = """
 
 
 def repair(apps, schema_editor):
-    if schema_editor.connection.vendor != 'mysql':
-        return
-    with schema_editor.connection.cursor() as cursor:
-        cursor.execute(COLUMN_EXISTS)
-        if not cursor.fetchone()[0]:
-            return
-        cursor.execute(
-            "ALTER TABLE build_product_document "
-            "MODIFY COLUMN doi varchar(255) NULL DEFAULT ''")
+    # Superseded, so it does nothing. main's 0075_product_document_doi brought the
+    # column back into the model as a real field (CharField, default ''), and it is
+    # already applied on production. Altering that column here would change a field
+    # Django now manages. The migration is kept, empty, because databases that ran it
+    # before the merge have it recorded; 0079 joins the two histories.
+    return
 
 
 def undo(apps, schema_editor):

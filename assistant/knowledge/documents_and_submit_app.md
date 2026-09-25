@@ -1,23 +1,23 @@
 <!-- watches: build/models.py#Product_Document, build/views.py#document, build/views.py#product_document, build/views.py#annex_product_document, build/forms.py#ProductDocumentForm, submit/views.py, templates/build/document, templates/submit -->
 <!-- fingerprint:
-     build/models.py#Product_Document      = c6a56c43c704
+     build/models.py#Product_Document      = ecafb0b4754c
      build/views.py#document               = 3a1c3f98dc02
-     build/views.py#product_document       = 4dd268b5fc9c
+     build/views.py#product_document       = 4286ecb8ea52
      build/views.py#annex_product_document = 4f76187a1bf9
-     build/forms.py#ProductDocumentForm    = bb4fc3eddf14
+     build/forms.py#ProductDocumentForm    = eeaa7f2f8ce3
      submit/views.py                       = 1146328cfb92
-     templates/build/document              = 01c8059ee137
+     templates/build/document              = 91025e910e28
      templates/submit                      = ab2d66cdde1f
 -->
-<!-- reviewed: 2026-09-17 -->
-<!-- baseline: ab6b3482d9893d5e8b7e506fadff1e8125905f6a -->
+<!-- reviewed: 2026-09-25 -->
+<!-- baseline: ab4b3d05a8abea19bfcea67d16b5677bf0ad42d4 -->
 # Uploading Documents and the Submit Uploads Area
 
 Documents in a bundle: bundles have a document collection for user guides and
 descriptive documents. On the bundle page, the document form collects the
-document name, author list, publication date, description, files, and related
-identification details; ELSA stores the document in the bundle's document
-collection and generates its PDS4 label. External (AMA) bundles use a simpler
+document name, author list, publication date, description, files, an optional
+DOI, and related identification details; ELSA stores the document in the bundle's
+document collection and generates its PDS4 label. External (AMA) bundles use a simpler
 annex document form (document name, ID, file name, comment, document standard).
 Deleting a document also removes its XML label from disk.
 

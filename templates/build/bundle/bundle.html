@@ -159,6 +159,66 @@
 
 <!-- Archive Contents -->
 {% if bundle_type == "Archive" %}
+
+<style>
+    .bundle-actions {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 14px;
+        padding: 24px 16px 32px;
+    }
+
+    .bundle-action {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: 44px;
+        padding: 10px 20px;
+        border: 1px solid transparent;
+        border-radius: 8px;
+        font: inherit;
+        font-weight: 600;
+        line-height: 1.4;
+        text-decoration: none;
+        cursor: pointer;
+        transition: background-color 0.2s, box-shadow 0.2s;
+    }
+
+    .bundle-action-delete {
+        background: white;
+        border-color: #dc3545;
+        color: #b02a37;
+    }
+
+    .bundle-action-delete:hover {
+        background: #fff1f2;
+        border-color: #b02a37;
+        color: #b02a37;
+    }
+
+    .bundle-action-download {
+        background: #008b8b;
+        border-color: #008b8b;
+        color: white;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.12);
+    }
+
+    .bundle-action-download:hover {
+        background: #006d6d;
+        border-color: #006d6d;
+        color: white;
+        text-decoration: none;
+    }
+
+    .bundle-action:focus-visible {
+        outline: 3px solid #212529;
+        outline-offset: 3px;
+    }
+</style>
+
 <div class="archive-theme">
    <style>
       /* ===== Archive bundle theme ===== */
@@ -219,9 +279,16 @@
                   In this section you have the ability to Delete your bundle should you need to and Download the entire bundle template set as a zip file.
                   Global settings in your bundle handled in the Investigation Area OR Context Product references can be edited here.
                   
-                  <div class="col p-1 m-3 mt-0 text-center">
-                     <a class="btn btn-danger text-light btn-keep-bg" data-bs-toggle="modal" data-bs-target="#delete_modal" aria-expanded="false" style="box-shadow: none;">Delete Bundle</a>
-                     <a class="btn btn-success text-light btn-keep-bg" href="{% url 'build:bundle_download' bundle.pk %}" aria-expanded="false" style="box-shadow: none;">Download Bundle</a>
+                  <div class="bundle-actions">
+                     <button type="button" class="bundle-action bundle-action-delete" data-bs-toggle="modal"data-bs-target="#delete_modal">
+                        <i class="bi bi-trash" aria-hidden="true"></i>
+                        Delete Bundle
+                     </button>
+
+                     <a class="bundle-action bundle-action-download" href="{% url 'build:bundle_download' bundle.pk %}">
+                        <i class="bi bi-download" aria-hidden="true"></i>
+                        Download Bundle
+                     </a>
                   </div>
                </p>
             </div>
@@ -374,191 +441,193 @@
                
                <!-- Content -->
                <div class="tab-content">
-                  <!-- Document Collection -->
+                  <!-- TAB: Document Collection -->
                   <div class="tab-pane fade show active" id="doc_collection" role="tabpanel">
                      <br>
                      <div class="col-md-12">
                         <div class="card">
-                                 <div class="card-header">
-                                    <p> This is your document collection. In this collection, you should plan to put any documentation you
-                                       think users of your data might need to understand and use your data. Typically users would expect to
-                                       find a user guide and/or supporting documentation in this collection. Helpful movies, graphics, or
-                                       other non-standard archive formats could also be here if they helpful for documenting your bundle.</p>
-                                    </div>
-                                    <button type="button" class="btn btn-light text-light" data-bs-toggle="modal" data-bs-target="#document_modal">Add Document Products</button>
-                                 </div>
-                              </div>
+                           <div class="card-header">
+                              <p> This is your document collection. In this collection, you should plan to put any documentation you
+                                 think users of your data might need to understand and use your data. Typically users would expect to
+                                 find a user guide and/or supporting documentation in this collection. Helpful movies, graphics, or
+                                 other non-standard archive formats could also be here if they helpful for documenting your bundle.</p>
+                              <button type="button" class="btn btn-light text-light" data-bs-toggle="modal" data-bs-target="#document_modal"><i class="bi bi-file-earmark-plus"></i> Add Document Products</button>
+                           </div>
                               
-                              <!-- List of Product Documents -->
-                              <div class="row g-3">
-                                 {% if documents %}
-                                 {% for document in documents %}
-                                 <div class="col-12 col-md-6 col-lg-4 mb-3">
-                                    <div class="card h-100 mt-3 shadow-sm border">
-                                       <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
-                                          <div class="d-flex align-items-center text-truncate" style="max-width: 85%;">
-                                             <i class="bi bi-file-earmark-text text-secondary me-2"></i>
-                                             <span class="fw-bold text-truncate" title="{{ document.document_name }}">
-                                                {{ document.document_name }}
-                                             </span>
-                                          </div>
-                                          <button class="btn btn-sm btn-link text-decoration-none text-dark p-0 btn-keep-bg" type="button" data-bs-toggle="collapse" data-bs-target="#doc_details_{{ document.pk }}" aria-expanded="false">
-                                             <i class="bi bi-chevron-down"></i>
-                                          </button>
+                           <!-- List of Product Documents -->
+                           <div class="row g-3">
+                              {% if documents %}
+                              {% for document in documents %}
+                              <div class="col-12 col-md-6 col-lg-4 mb-3">
+                                 <div class="card mt-3 shadow-sm border">
+                                    <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
+                                       <div class="d-flex align-items-center text-truncate" style="max-width: 85%;">
+                                          <i class="bi bi-file-earmark-text text-secondary me-2"></i>
+                                          <span class="fw-bold text-truncate" title="{{ document.document_name }}">
+                                             {{ document.document_name }}
+                                          </span>
                                        </div>
-                                       <div class="collapse" id="doc_details_{{ document.pk }}">
-                                          <div class="card-body bg-light small">
-                                             <div class="mb-2">
-                                                <strong>Author List:</strong><br>
-                                                <span class="text-muted">{{ document.author_list|default:"—" }}</span>
-                                             </div>
-                                             <div class="mb-2">
-                                                <strong>Publication Date:</strong><br>
-                                                <span class="text-muted">{{ document.publication_date|default:"—" }}</span>
-                                             </div>
-                                             <div class="mb-2">
-                                                <strong>DOI:</strong><br>
-                                                <span class="text-muted">{{ document.doi|default:"—" }}</span>
-                                             </div>
-                                             <div class="mb-3">
-                                                <strong>Description:</strong><br>
-                                                <span class="text-muted">{{ document.description|default:"—" }}</span>
-                                             </div>
-                                             <div class="d-flex gap-2">
-                                                <a href="{% url 'build:product_document' bundle.pk document.pk %}" class="btn btn-sm btn-outline-secondary w-100">
-                                                   Edit Details
-                                                </a>
-                                                <button type="button" class="btn btn-sm btn-outline-danger btn-keep-bg w-100"
-                                                data-bs-toggle="modal" data-bs-target="#deleteDocModal{{ document.pk }}">
-                                                <i class="bi bi-trash me-1"></i> Delete
+                                       <button class="btn btn-sm btn-link text-decoration-none text-dark p-0 btn-keep-bg" type="button" data-bs-toggle="collapse" data-bs-target="#doc_details_{{ document.pk }}" aria-expanded="false">
+                                          <i class="bi bi-chevron-down"></i>
+                                       </button>
+                                    </div>
+                                    <div class="collapse" id="doc_details_{{ document.pk }}">
+                                       <div class="card-body bg-light small">
+                                          <div class="mb-2">
+                                             <strong>Author List:</strong><br>
+                                             <span class="text-muted">{{ document.author_list|default:"—" }}</span>
+                                          </div>
+                                          <div class="mb-2">
+                                             <strong>Publication Date:</strong><br>
+                                             <span class="text-muted">{{ document.publication_date|default:"—" }}</span>
+                                          </div>
+                                          <div class="mb-2">
+                                             <strong>DOI:</strong><br>
+                                             <span class="text-muted">{{ document.doi|default:"—" }}</span>
+                                          </div>
+                                          <div class="mb-3">
+                                             <strong>Description:</strong><br>
+                                             <span class="text-muted">{{ document.description|default:"—" }}</span>
+                                          </div>
+                                          <div class="d-flex gap-2">
+                                             <a href="{% url 'build:product_document' bundle.pk document.pk %}" class="btn btn-sm btn-outline-secondary w-100">
+                                                <i class="bi bi-pencil"></i> Edit Details
+                                             </a>
+                                             <button type="button" class="btn btn-sm btn-outline-danger btn-keep-bg w-100"
+                                             data-bs-toggle="modal" data-bs-target="#deleteDocModal{{ document.pk }}">
+                                             <i class="bi bi-trash me-1"></i> Delete
                                              </button>
                                           </div>
                                        </div>
-
-                                       <!-- Delete Document Modal — outside card, inside loop -->
-                                       <div class="modal fade" id="deleteDocModal{{ document.pk }}" tabindex="-1" aria-hidden="true">
-                                          <div class="modal-dialog modal-dialog-centered">
-                                             <div class="modal-content">
-                                                   <div class="modal-header border-0 pb-0">
-                                                      <h5 class="modal-title text-danger">
-                                                         <i class="bi bi-exclamation-triangle me-2"></i> Delete Document
-                                                      </h5>
-                                                      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                                   </div>
-                                                   <div class="modal-body">
-                                                      <p>Are you sure you want to delete <strong>{{ document.document_name }}</strong>?</p>
-                                                      <p class="text-muted small mb-0"><i class="bi bi-info-circle me-1"></i> This action cannot be undone.</p>
-                                                   </div>
-                                                   <div class="modal-footer border-0">
-                                                      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                                      <form action="{% url 'build:delete_product_document' bundle.pk document.pk %}" method="post" class="mb-0">
-                                                         {% csrf_token %}
-                                                         <button type="submit" class="btn btn-danger btn-keep-bg">
-                                                               <i class="bi bi-trash me-1"></i> Delete
-                                                         </button>
-                                                      </form>
-                                                   </div>
+                                    </div>
+                                    
+                                    <!-- Delete Document Modal — outside card, inside loop -->
+                                    <div class="modal fade" id="deleteDocModal{{ document.pk }}" tabindex="-1" aria-hidden="true">
+                                       <div class="modal-dialog modal-dialog-centered">
+                                          <div class="modal-content">
+                                             <div class="modal-header border-0 pb-0">
+                                                <h5 class="modal-title text-danger">
+                                                   <i class="bi bi-exclamation-triangle me-2"></i> Delete Document
+                                                </h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                              </div>
-                                          </div>
+                                             <div class="modal-body">
+                                                <p>Are you sure you want to delete <strong>{{ document.document_name }}</strong>?</p>
+                                                <p class="text-muted small mb-0"><i class="bi bi-info-circle me-1"></i> This action cannot be undone.</p>
+                                             </div>
+                                             <div class="modal-footer border-0">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                <form action="{% url 'build:delete_product_document' bundle.pk document.pk %}" method="post" class="mb-0">
+                                                   {% csrf_token %}
+                                                   <button type="submit" class="btn btn-danger btn-keep-bg">
+                                                         <i class="bi bi-trash me-1"></i> Delete
+                                                   </button>
+                                                </form>
+                                             </div>
+                                          </div>   
                                        </div>
                                     </div>
                                  </div>
-                                 {% endfor %}
-                                 {% else %}
-                                       <div class="col-12">
-                                          <div class="alert alert-light text-center border text-muted">
-                                             No documents!
-                                          </div>
+                              </div>
+                              {% endfor %}
+                              {% else %}
+                                    <div class="col-12">
+                                       <div class="alert alert-light text-center border text-muted">
+                                          No documents!
                                        </div>
-                                 {% endif %}
+                                    </div>
+                              {% endif %}
+                           </div>
                         </div>
-                     </div>
+                     </div>   
+                  </div>
+                  <!--TAB: Additional Collections -->
+                  {% for add_collection in additional_collections_set %}
+                  <div class="tab-pane fade" id="additional_collection_{{ add_collection.id }}" role="tabpanel">
+                     <br>
+                     <div class="col-md-12">
+                        <div class="card">
+                           <div class="card-header">
+                              <p> This is a data collection. In this collection, you will build labels for data products. Data products are also
+                                 known as Product_Observational and include things like tables of data, image files, etc. Currently ELSA
+                                 will help you build tempaltes for data tables. Types of tables ELSA knows how to label are:
 
-                     <!-- Additional Collections -->
-                     {% for add_collection in additional_collections_set %}
-                     <div class="tab-pane fade" id="additional_collection_{{ add_collection.id }}" role="tabpanel">
-                        <br>
-                        <div class="col-md-12">
-                           <div class="card">
-                              <div class="card-header">
-                                 <p> This is a data collection. In this collection, you will build labels for data products. Data products are also
-                                    known as Product_Observational and include things like tables of data, image files, etc. Currently ELSA
-                                    will help you build tempaltes for data tables. Types of tables ELSA knows how to label are:
+                                 <ul>
+                                    <li>Table Binary</li>
+                                    <li>Table Character</li>
+                                    <li>Table Delimited</li>
+                                 </ul>
+                              </p>
+                           <div class="d-flex justify-content-between align-items-center p-2">
+                              <button type="button" class="btn btn-light text-light" data-bs-toggle="modal" data-bs-target="#data_product_modal">
+                                 Add Data Products
+                              </button>
+                              <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#archiveDeleteCollectionModal{{ add_collection.id }}">
+                                 <i class="bi bi-trash me-1"></i> Delete Collection
+                              </button>
+                           </div>
 
-                                    <ul>
-                                       <li>Table Binary</li>
-                                       <li>Table Character</li>
-                                       <li>Table Delimited</li>
-                                    </ul>
-                                 </p>
-                              <div class="d-flex justify-content-between align-items-center p-2">
-                                 <button type="button" class="btn btn-light text-light" data-bs-toggle="modal" data-bs-target="#data_product_modal">
-                                    Add Data Products
-                                 </button>
-                                 <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#archiveDeleteCollectionModal{{ add_collection.id }}">
-                                    <i class="bi bi-trash me-1"></i> Delete Collection
-                                 </button>
-                              </div>
-
-                              <!-- Delete Collection Modal -->
-                              <div class="modal fade" id="archiveDeleteCollectionModal{{ add_collection.id }}" tabindex="-1" aria-labelledby="archiveDeleteCollectionModalLabel{{ add_collection.id }}" aria-hidden="true">
-                                 <div class="modal-dialog modal-dialog-centered">
-                                    <div class="modal-content">
-                                          <div class="modal-header border-0 pb-0">
-                                             <h5 class="modal-title text-danger" id="archiveDeleteCollectionModalLabel{{ add_collection.id }}">
-                                                <i class="bi bi-exclamation-triangle me-2"></i>Delete Collection
-                                             </h5>
-                                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                          </div>
-                                          <div class="modal-body">
-                                             <p>Are you sure you want to delete the <strong>{{ add_collection.collection_name }}</strong> collection?</p>
-                                             <p class="text-muted small mb-0"><i class="bi bi-info-circle me-1"></i>This action cannot be undone.</p>
-                                          </div>
-                                          <div class="modal-footer border-0">
-                                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                             <form action="{% url 'build:delete_collection' pk_bundle=bundle.id pk_collection=add_collection.id %}" method="post" class="mb-0">
-                                                {% csrf_token %}
-                                                <button type="submit" class="btn btn-danger btn-keep-bg">
-                                                      <i class="bi bi-trash me-1"></i> Delete Collection
-                                                </button>
-                                             </form>
-                                          </div>
+                           <!-- Delete Collection Modal -->
+                           <div class="modal fade" id="archiveDeleteCollectionModal{{ add_collection.id }}" tabindex="-1" aria-labelledby="archiveDeleteCollectionModalLabel{{ add_collection.id }}" aria-hidden="true">
+                              <div class="modal-dialog modal-dialog-centered">
+                                 <div class="modal-content">
+                                       <div class="modal-header border-0 pb-0">
+                                          <h5 class="modal-title text-danger" id="archiveDeleteCollectionModalLabel{{ add_collection.id }}">
+                                             <i class="bi bi-exclamation-triangle me-2"></i>Delete Collection
+                                          </h5>
+                                          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                       </div>
+                                       <div class="modal-body">
+                                          <p>Are you sure you want to delete the <strong>{{ add_collection.collection_name }}</strong> collection?</p>
+                                          <p class="text-muted small mb-0"><i class="bi bi-info-circle me-1"></i>This action cannot be undone.</p>
+                                       </div>
+                                       <div class="modal-footer border-0">
+                                          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                          <form action="{% url 'build:delete_collection' pk_bundle=bundle.id pk_collection=add_collection.id %}" method="post" class="mb-0">
+                                             {% csrf_token %}
+                                             <button type="submit" class="btn btn-danger btn-keep-bg">
+                                                   <i class="bi bi-trash me-1"></i> Delete Collection
+                                             </button>
+                                          </form>
                                        </div>
                                     </div>
                                  </div>
                               </div>
+                           </div>
 
-                              <!-- List of Collections -->
-                              <div class="modal-footer justify-content-start mt-3 mb-3">
-                                 {% for data in data_set %}
-                                    {% if data.collection == add_collection %}
-                                    <div class="card snippet-card ms-0 me-3">
-                                       <div class="card-body">
-                                          <h5 class="card-title">{{ data.name }}</h5>
-                                          <p class="card-text">Processing Level: {{ data.processing_level }}</p>
-                                          <p class="card-text">Data Type: {{ data.data_type }}</p>
-                                          <div class="btn-group">
-                                             <a href="{%  url 'build:table_creation' bundle.pk data.pk %}" class="btn btn-light text-light d-flex justify-content-center me-1">Edit Table</a>
-                                             {% for table_type in table_set %}
-                                                {% for table in table_type %}
-                                                   {% if table.data == data %}
-                                                      <a href="{%  url 'build:edit_table_field_information' bundle.pk data.pk table.pk %}" class="btn btn-light text-light d-flex justify-content-center">Edit Field(s)</a>
-                                                   {% endif %}
-                                                {% endfor %}
+                           <!--List of Collections -->
+                           <div class="modal-footer justify-content-start mt-3 mb-3">
+                              {% for data in data_set %}
+                                 {% if data.collection == add_collection %}
+                                 <div class="card snippet-card ms-0 me-3">
+                                    <div class="card-body">
+                                       <h5 class="card-title">{{ data.name }}</h5>
+                                       <p class="card-text">Processing Level: {{ data.processing_level }}</p>
+                                       <p class="card-text">Data Type: {{ data.data_type }}</p>
+                                       <div class="btn-group">
+                                          <a href="{%  url 'build:table_creation' bundle.pk data.pk %}" class="btn btn-light text-light d-flex justify-content-center me-1">Edit Table</a>
+                                          {% for table_type in table_set %}
+                                             {% for table in table_type %}
+                                                {% if table.data == data %}
+                                                   <a href="{%  url 'build:edit_table_field_information' bundle.pk data.pk table.pk %}" class="btn btn-light text-light d-flex justify-content-center">Edit Field(s)</a>
+                                                {% endif %}
                                              {% endfor %}
-                                          </div>
+                                          {% endfor %}
                                        </div>
                                     </div>
-                                    {% endif %}
-                                 {% endfor %}
-                              </div>
+                                 </div>
+                                 {% endif %}
+                              {% endfor %}
                            </div>
                         </div>
                      </div>
-                     {% endfor %}
+                  </div>
+                  {% endfor %}
                         
-                        <!-- Add Collections -->
-                        <div class="tab-pane fade" id="add_a_collection" role="tabpanel">
+                  <!-- Add Collections -->
+                  <div class="tab-pane fade" id="add_a_collection" role="tabpanel">
+                     <div class="col-md-12">
+                        <div class="card">
                            <div class="row px-2">
                               <form action="{% url 'build:bundle' bundle.pk %}" method="post" id="form_collections" novalidate>
                                  {% csrf_token %}
@@ -577,12 +646,13 @@
                               </form>
                            </div>
                         </div>
-                        
                      </div>
-                  </div>
+                  </div>                     
                </div>
             </div>
          </div>
+      </div>
+   </div>
          
          <!-- The Rest -->
          <div class="row py-4">
@@ -1715,6 +1785,12 @@
                   <div class="mt-3">
                      <label for="description">Description</label>
                      {{ form_document.description }}
+                  </div>
+
+                  <!-- DOI-->
+                   <div class="mt-3">
+                     <label for="doi">DOI</label>
+                     {{ form_document.doi }}
                   </div>
                   
                   <!-- Revision ID-->

@@ -4493,6 +4493,7 @@ def product_document(request, pk_bundle, pk_product_document):
                 'author_list':product_document.author_list,
                 'copyright':product_document.copyright,
                 'description':product_document.description,
+                'doi':product_document.doi,
                 'document_editions':product_document.document_editions,
                 'document_name':product_document.document_name,
                 'publication_date':product_document.publication_date,
@@ -4547,6 +4548,9 @@ def product_document(request, pk_bundle, pk_product_document):
 
                 elif change == 'revision_id':
                    product_document.revision_id = form_product_document['revision_id'].value()
+
+                elif change == 'doi':
+                    product_document.doi = form_product_document['doi'].value()
                 
                 elif change == 'edition_name':
                     product_document.edition_name = form_product_document['edition_name'].value()
@@ -4588,8 +4592,21 @@ def product_document(request, pk_bundle, pk_product_document):
             print(' ... Closing Label ... ')
             close_label(product_document.label(), label_root, label_list[2])
 
-        rebuild_collection_inventories(bundle)
-        mirror_citation_into_data_products(bundle)
+            # An edit can change the document's identifier, which is what the inventory
+            # lists, so the tables are rewritten before the page moves on. Inside this
+            # block because the redirect below returns: placed after it, as it was before
+            # the redirect existed, this never ran for a successful edit.
+            rebuild_collection_inventories(bundle)
+            mirror_citation_into_data_products(bundle)
+
+            messages.success(request, "Document successfully updated.")
+
+            return redirect(
+                'build:product_document',
+                pk_bundle=bundle.pk,
+                pk_product_document=product_document.pk,
+            )
+
 
         print('Changed: {}'.format(form_product_document.changed_data))
 

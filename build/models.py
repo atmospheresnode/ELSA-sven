@@ -332,6 +332,11 @@ class Version(models.Model):
         # so that every build number stays four characters wide: A=10, B=11,
         # ... O=24, ... Z=35. Build 1O00 is therefore information model
         # version 1.24.0.0, and 1800 is 1.8.0.0.
+        #
+        # This used to be a hand-written branch per letter, and it stopped at K.
+        # Anything past that fell through every branch and was dropped silently, so
+        # 1O00 -- the version ELSA writes today -- came out as "1.0.0" instead of
+        # "1.24.0.0", and 1Q00 would do the same.
         components = []
 
         for character in number:
@@ -4528,6 +4533,7 @@ class Product_Document(models.Model):
     copyright = models.CharField(max_length=MAX_CHAR_FIELD)
     comment = models.CharField(max_length=MAX_CHAR_FIELD, default='')
     description = models.CharField(max_length=MAX_CHAR_FIELD)
+    doi = models.CharField(max_length=MAX_CHAR_FIELD, default='')
     document_editions = models.CharField(max_length=MAX_CHAR_FIELD)
     document_name = models.CharField(max_length=MAX_CHAR_FIELD)
     # doi = models.CharField(max_length=MAX_CHAR_FIELD) #in reference list but not document
