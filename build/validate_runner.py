@@ -20,6 +20,7 @@ one honest caveat is the beginning: validate emits nothing at all for roughly fi
 seconds while it compiles the schematron into XSLT, so that stretch is reported as
 an indeterminate loading phase instead of a bar sitting at zero.
 """
+import collections
 import os
 import re
 import signal
@@ -56,7 +57,19 @@ COUNTER_PHASES = {
 PROGRESS_WRITE_INTERVAL_SECONDS = 1.0
 
 
-def _track_progress(process, validation_run):
+def _worth_quoting(line):
+    """A line of validate's output that says something about why it stopped."""
+    text = line.strip()
+    return bool(text) and not PROGRESS.search(text) and not text.startswith('Picked up _JAVA_OPTIONS')
+
+
+def last_words(tail, count=3):
+    """validate's last few meaningful lines, for a failure that left no report."""
+    lines = [line.strip() for line in tail if _worth_quoting(line)]
+    return ' | '.join(lines[-count:])
+
+
+def _track_progress(process, validation_run, tail=None):
     """Consume validate's output, recording how far it has got.
 
     Runs on its own thread. Every exit path from here is swallowed deliberately:
@@ -70,6 +83,13 @@ def _track_progress(process, validation_run):
 
     try:
         for line in process.stdout:
+            # Kept whatever happens to the progress bar: when validate stops without a
+            # report, its last lines are the only record of why. On production that
+            # was "FileNotFoundException ... run-19.json (Permission denied)", while the
+            # page could only say "exited with status 1".
+            if tail is not None:
+                tail.append(line)
+
             if validation_run is None:
                 # Recording failed earlier. Keep reading anyway: validate blocks once
                 # the pipe buffer fills, and a reader that stops would hang it until
@@ -346,8 +366,9 @@ def _execute(validation_run):
     # can only fire once the tool has already stopped, which is never the case that
     # matters. Waiting on the process instead means a tool that goes silent is still
     # stopped on schedule.
+    tail = collections.deque(maxlen=40)
     reader = threading.Thread(
-        target=_track_progress, args=(process, validation_run), daemon=True)
+        target=_track_progress, args=(process, validation_run, tail), daemon=True)
     reader.start()
 
     try:
@@ -369,9 +390,10 @@ def _execute(validation_run):
     # A non-zero exit means errors were found, which is a normal outcome and not a
     # failure of the run. Only a missing report means validate could not do its job.
     if not os.path.exists(report_path):
+        said = last_words(tail)
         return _fail(validation_run,
-                     'validate exited with status {} without writing a report.'.format(
-                         process.returncode))
+                     'validate exited with status {} without writing a report.{}'.format(
+                         process.returncode, ' It said: ' + said if said else ''))
 
     # The report is written by another program that may have been killed partway
     # through. A half-written file raises here, and letting that escape would leave
