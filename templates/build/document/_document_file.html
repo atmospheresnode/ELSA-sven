@@ -1,0 +1,42 @@
+{% comment %}
+The uploaded file behind one document product, always visible on its card: what it is,
+how big, and a way to look at it without leaving the page. View opens the shared
+#documentPreviewModal (build/document/_document_preview_modal.html), which must be on
+the page. Needs `document` and `bundle` in context; `on_editor` drops the link back to
+the editor when already on it.
+{% endcomment %}
+{% with size=document.stored_file_size %}
+{% if size is not None %}
+{% url 'build:document_file' bundle.pk document.pk as file_url %}
+<div class="d-flex align-items-center gap-2 px-3 py-2 {% if not on_editor %}border-top {% endif %}small doc-file-row">
+   {% if document.file_name|lower|slice:"-4:" == ".pdf" %}
+   <i class="bi bi-file-earmark-pdf text-danger fs-5" aria-hidden="true"></i>
+   {% else %}
+   <i class="bi bi-file-earmark-text text-secondary fs-5" aria-hidden="true"></i>
+   {% endif %}
+   <div class="text-truncate me-auto">
+      <div class="text-truncate" title="{{ document.file_name }}">{{ document.file_name }}</div>
+      <div class="text-muted">{{ size|filesizeformat }}</div>
+   </div>
+   <button type="button" class="btn btn-sm btn-dark text-nowrap"
+           data-bs-toggle="modal" data-bs-target="#documentPreviewModal"
+           data-doc-url="{{ file_url }}" data-doc-name="{{ document.file_name }}">
+      <i class="bi bi-eye me-1"></i>View
+   </button>
+   <a class="btn btn-sm btn-outline-secondary btn-keep-bg" href="{{ file_url }}?download=1"
+      title="Download" aria-label="Download {{ document.file_name }}">
+      <i class="bi bi-download"></i>
+   </a>
+</div>
+{% else %}
+<div class="d-flex align-items-center gap-2 px-3 py-2 {% if not on_editor %}border-top {% endif %}small" style="background-color: #fff3cd; color: #664d03;">
+   <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+   <span class="me-auto">No file attached.</span>
+   {% if on_editor %}
+   <span>Choose one below and select Update.</span>
+   {% else %}
+   <a href="{% url 'build:product_document' bundle.pk document.pk %}" style="color: inherit;" class="fw-bold">Attach it</a>
+   {% endif %}
+</div>
+{% endif %}
+{% endwith %}

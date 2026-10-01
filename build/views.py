@@ -11,18 +11,22 @@ from itertools import chain
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
-from django.http import HttpResponse, HttpRequest, JsonResponse
+from django.http import FileResponse, Http404, HttpResponse, HttpRequest, JsonResponse
+from django.views.decorators.clickjacking import xframe_options_sameorigin
 
-from build import document_files, preflight, validate_report, validate_rules, validate_runner
+from build import document_files, netcdf_header, preflight, validate_report, validate_rules, validate_runner
+from build import walkthrough
 from build.label_repair import AMA_LID
 from django.shortcuts import render, redirect, get_object_or_404
 from django.template import RequestContext
+from django.template.defaultfilters import filesizeformat
 from django.urls import reverse
 from django import forms
 from django.forms import modelformset_factory
 from django.views.generic.edit import UpdateView, DeleteView
 from django.contrib import messages
 import datetime
+import functools
 import shutil
 import lxml.etree as ET # for XML parsing- Added by Rupak
 # from lxml import etree # debug product obs only
@@ -275,6 +279,7 @@ def alias(request, pk_bundle):  # DEPRECATED: to be replaced by edit alias, **no
         context_dict = {
             'form_alias': form_alias,
             'bundle': bundle,
+            'walkthrough': walkthrough.progress(bundle, 'alias'),
         }
 
         # After ELSAs friend hits submit, if the forms are completed correctly, we should enter
@@ -297,7 +302,7 @@ def alias(request, pk_bundle):  # DEPRECATED: to be replaced by edit alias, **no
 
             print('---------------- End Build Alias -----------------------------------')
             
-            return redirect(reverse('build:modification_history', args=[pk_bundle]))
+            return redirect(walkthrough.after_save(request, bundle, 'alias'))
 
         # Get all current Alias objects associated with the user's Bundle
         # alias_list = Alias.objects.filter(bundle=bundle)
@@ -957,8 +962,50 @@ def data_prep(request, bundle, data_enum):
     return render(request, 'build/data_prep/data_prep.html', context_dict)
 
 
+# -- forms on the bundle page that save in place ------------------------------------
+#
+# The windows on the bundle page used to post as ordinary forms. A save that worked
+# reloaded the page, which was fine; one that did not either re-rendered the bundle page
+# with the reasons hidden inside a closed window, or, for the forms whose views are
+# shared with the walkthrough, rendered a walkthrough page with no way back. Now the
+# page posts them itself (templates/build/bundle/_inplace_forms.html) and names the
+# form in X-Elsa-Inplace. A refusal comes back as the form's errors, shown in the
+# window that is still open, with everything the user typed or picked still in it; a
+# success comes back as the address to go to. Without JavaScript nothing changes.
+
+def _inplace_form(request):
+    """The name of the bundle-page form saving itself in place, or None."""
+    if request.method != 'POST' or not _is_panel_request(request):
+        return None
+    return request.headers.get('X-Elsa-Inplace') or None
+
+
+def _inplace_refused(form, message=''):
+    """A refused in-place save: the form's own errors, keyed by field name."""
+    errors = form.errors.get_json_data() if form is not None else {}
+    if not errors:
+        errors = {'__all__': [{'message': message or 'That could not be saved. Please check the form and try again.', 'code': ''}]}
+    return JsonResponse({'ok': False, 'errors': errors}, status=400)
+
+
+def inplace_redirects(view):
+    """Turn a view's redirect into JSON when the bundle page posted in place.
+
+    fetch() follows a redirect by itself and renders the page it lands on, which would
+    use up the confirmation toast before the page the user actually sees is loaded.
+    """
+    @functools.wraps(view)
+    def wrapper(request, *args, **kwargs):
+        response = view(request, *args, **kwargs)
+        if _inplace_form(request) and response.status_code in (301, 302, 303):
+            return JsonResponse({'ok': True, 'redirect': response['Location']})
+        return response
+    return wrapper
+
+
 # The bundle_detail view is the page that details a specific bundle.
 @login_required
+@inplace_redirects
 def bundle(request, pk_bundle):
     # Get Bundle
     bundle = Bundle.objects.get(pk=pk_bundle)
@@ -1175,7 +1222,9 @@ def bundle(request, pk_bundle):
         form_target = TargetFormAll(request.POST or None, pk_bundle=pk_bundle)
         form_instrument_host = InstrumentHostForm(request.POST or None, pk_inv=None)
         form_facility = FacilityForm(request.POST or None)
-        context_products_contact = ContextProductsContactForm(request.POST or None)
+        # Its own id prefix: rendered on the bundle page beside the Data Product form, its
+        # name field came out as id_name too. Ids only; the field names it posts are unchanged.
+        context_products_contact = ContextProductsContactForm(request.POST or None, auto_id='contact_%s')
         contact_form = ContactForm(request.POST or None)
 
         # creating sets of objects associated with the bundle to add to the bundle progress checklist
@@ -1453,6 +1502,14 @@ def bundle(request, pk_bundle):
                     })
 
                 return HttpResponseRedirect('/elsa/build/' + str(bundle.pk) + '/')
+            elif (request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+                  and not request.headers.get('X-Elsa-Inplace')
+                  and 'collection' in request.POST
+                  and 'netcdf_files' in form_netcdf.errors):
+                # An upload that arrived with no files used to fall through to the full page, which
+                # the upload script took for success. The page now stops this before sending; this
+                # is for anything that still gets here (a stale page, a file the browser dropped).
+                return JsonResponse({'error': 'Choose at least one NetCDF file to upload.'}, status=400)
 
         if form_investigation.is_valid():
             print(form_investigation.cleaned_data['investigation'].file_ref)
@@ -1475,6 +1532,7 @@ def bundle(request, pk_bundle):
 
             context_dict['context_successful_submit'] = True
 
+            messages.success(request, 'Investigation "{}" added.'.format(i.name))
             return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
 
 
@@ -1547,6 +1605,7 @@ def bundle(request, pk_bundle):
             context_dict['modification_history_set'] = modification_history_set
             context_dict['modification_history_set_count'] = len(modification_history_set)
 
+            messages.success(request, 'Modification history added.')
             # # fixes the refresh duplication issue - deric
             return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
 
@@ -1720,8 +1779,10 @@ def bundle(request, pk_bundle):
             context_dict['form_document'] = form_document
             context_dict['documents'] = Product_Document.objects.filter(bundle=bundle)
 
+            messages.success(request, 'Document "{}" added.'.format(product_document.document_name))
             # # fixes the refresh duplication issue - deric
-            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
+            # Opened on the document tab, where the new document is.
+            return HttpResponseRedirect(walkthrough.bundle_url(bundle, 'doc_collection'))
 
             # fixes the refresh duplication issue, use this one for offline testing - deric
             # return HttpResponseRedirect('/build/' + pk_bundle + '/')
@@ -1779,11 +1840,23 @@ def bundle(request, pk_bundle):
             context_dict['alias_set'] = alias_set
             context_dict['alias_set_count'] =  len(alias_set)
 
+            messages.success(request, 'Alias added.')
             # # fixes the refresh duplication issue - deric
             return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
 
             # fixes the refresh duplication issue, use this one for offline testing - deric
             # return HttpResponseRedirect('/build/' + pk_bundle + '/')
+
+        # A window that saved in place and got this far was refused: send back its
+        # reasons rather than the whole page.
+        inplace = _inplace_form(request)
+        if inplace:
+            return _inplace_refused({
+                'document': form_document,
+                'alias': form_alias,
+                'modification_history': form_modification_history,
+                'investigation': form_investigation,
+            }.get(inplace))
 
         context_dict['messages'] = messages.get_messages(request)
         return render(request, 'build/bundle/bundle.html', context_dict)
@@ -2390,6 +2463,81 @@ def label_content(request, pk_bundle):
         'path': relative_path,
         'content': content,
     })
+
+
+@login_required
+def netcdf_file(request, pk_bundle, pk_netcdf):
+    """One uploaded NetCDF file, downloaded by its owner.
+
+    The bundle page used to link to nc_file.file.url, which names the upload area that
+    processing moves the file out of, so every link was dead: a 404 under the dev server and a
+    403 on prod, where nothing serves /uploads/. Going through a view also keeps unpublished data
+    behind the same owner check as the rest of the bundle.
+    """
+    bundle = get_object_or_404(Bundle, pk=pk_bundle)
+    if request.user != bundle.user:
+        return redirect('main:restricted_access')
+    nc_file = get_object_or_404(NetCDFFile, pk=pk_netcdf, bundle=bundle)
+
+    path = nc_file.stored_path()
+    if path is None:
+        raise Http404('This NetCDF file is no longer on disk.')
+
+    # FileResponse streams in blocks, so a multi-gigabyte file never sits in memory.
+    response = FileResponse(open(path, 'rb'), as_attachment=True,
+                            filename=os.path.basename(path), content_type='application/x-netcdf')
+    response['X-Content-Type-Options'] = 'nosniff'
+    response['Cache-Control'] = 'private, no-cache'
+    return response
+
+
+@login_required
+def netcdf_inspect(request, pk_bundle, pk_netcdf):
+    """What one NetCDF file holds and the PDS4 label ELSA wrote for it, for the inspector window.
+
+    Each half fails on its own: a file xarray cannot open still shows its label, and a file with
+    no label (processing failed) still shows its contents, with the reason processing gave.
+    """
+    bundle = get_object_or_404(Bundle, pk=pk_bundle)
+    if request.user != bundle.user:
+        return redirect('main:restricted_access')
+    nc_file = get_object_or_404(NetCDFFile, pk=pk_netcdf, bundle=bundle)
+
+    path = nc_file.stored_path()
+    if path is None:
+        return JsonResponse(
+            {'error': 'This file is no longer on disk. Delete it here and upload it again.'},
+            status=404)
+
+    data = {
+        'name': os.path.basename(path),
+        'size': filesizeformat(os.path.getsize(path)),
+    }
+
+    try:
+        data['contents'] = netcdf_header.contents_html(path)
+    except Exception as e:
+        print('netcdf_inspect: could not read {}: {}'.format(path, e))
+        data['contents_error'] = ('ELSA could not read this file\'s header ({}).'
+                                  .format(type(e).__name__))
+
+    label_path = nc_file.label()
+    if os.path.isfile(label_path):
+        try:
+            tree = etree.parse(label_path)
+            data['label'] = etree.tostring(tree, pretty_print=True, encoding='unicode')
+            data['label_name'] = os.path.basename(label_path)
+        except (OSError, etree.XMLSyntaxError) as e:
+            print('netcdf_inspect: unreadable label {}: {}'.format(label_path, e))
+            data['label_error'] = ('This file\'s label could not be read ({}). Please contact '
+                                   'the ELSA team via the Contact page.'.format(type(e).__name__))
+    elif nc_file.processing_error:
+        data['label_error'] = ('No label was written because processing failed: {}'
+                               .format(nc_file.processing_error))
+    else:
+        data['label_error'] = 'No label has been written for this file yet.'
+
+    return JsonResponse(data)
 
 
 def _report_label_refresh(request, errors):
@@ -3123,6 +3271,7 @@ def citation_information(request, pk_bundle):
             'form_citation_information': form_citation_information,
             'bundle': bundle,
             'bundle_type': bundle.bundle_type, #Rupak
+            'walkthrough': walkthrough.progress(bundle, 'citation_information'),
         }
 
         # After ELSAs friend hits submit, if the forms are completed correctly, we should enter
@@ -3216,27 +3365,21 @@ def edit_citation_information(request, pk_bundle, pk_citation_information):
             # citation had one author cannot be filled from a form that now has three.
             mirror_citation_into_data_products(bundle)
 
-            #return redirect(reverse('build:context_search', args=[pk_bundle]))
-
-            #Adding a check for bundle type, so it skips context search if external selected - RUPAK
-            # Context search is back for AMA, but I'm still living the if statement (for now) in case something changes on the archive end - Nicholas
-            next_page = request.GET.get('next')
-            if bundle.bundle_type == 'External':
-                if next_page == 'bundle':
-                    return redirect(reverse('build:bundle', args=[pk_bundle]))
-                else:
-                    return redirect(reverse('build:context_search', args=[pk_bundle]))  
-            else:
-                if next_page == 'bundle':
-                    return redirect(reverse('build:bundle', args=[pk_bundle]))
-                else:
-                    return redirect(reverse('build:context_search', args=[pk_bundle]))  
+            # Back to the bundle when the edit was opened from it, otherwise on to the
+            # walkthrough step after the citation.
+            if walkthrough.returning_to_bundle(request):
+                messages.success(request, 'Citation information updated.')
+            return redirect(walkthrough.after_save(request, bundle, 'citation_information'))
 
 
         context_dict = {
             'form_edit_citation_information': form_edit_citation_information,
             'bundle': bundle,
             'citation_information': citation_information,
+            # The same page is the walkthrough's citation step and the bundle page's
+            # editor; only the walkthrough gets the stepper.
+            'walkthrough': None if walkthrough.returning_to_bundle(request)
+                           else walkthrough.progress(bundle, 'citation_information'),
         }
 
             # return render(request, 'build/citation_information/citation_information_current.html', context_dict)
@@ -3266,7 +3409,7 @@ def modification_history(request, pk_bundle):
         context_dict = {
             'form_modification_history': form_modification_history,
             'bundle': bundle,
-
+            'walkthrough': walkthrough.progress(bundle, 'modification_history'),
         }
 
         # After ELSAs friend hits submit, if the forms are completed correctly, we should enter
@@ -3286,7 +3429,7 @@ def modification_history(request, pk_bundle):
             write_into_label(modification_history, product_bundle, product_collections_list)
 
             print('------------- End Build  Modification History  -------------------')
-            return redirect(reverse('build:citation_information', args=[pk_bundle]))
+            return redirect(walkthrough.after_save(request, bundle, 'modification_history'))
 
 
         # Update context_dict with the current  Modification History  models associated with the user's bundle
@@ -3332,6 +3475,7 @@ def context_search(request, pk_bundle):
             'telescope_list': bundle.telescopes.all(),
             'contact_form': contact_form,
             'context_products_contact' : context_products_contact,
+            'walkthrough': walkthrough.progress(bundle, 'context_search'),
         }
 
         return render(request, 'build/context/context_search.html', context_dict)
@@ -3484,6 +3628,7 @@ def context_search_instrument_host_and_facility(request, pk_bundle, pk_investiga
         print('unauthorized user attempting to access a restricted area.')
         return redirect('main:restricted_access')
 
+@inplace_redirects
 def context_search_target(request, pk_bundle):
     print('\n\n')
     print('-------------------------------------------------------------------------')
@@ -3528,14 +3673,24 @@ def context_search_target(request, pk_bundle):
                 product_collections_list = chain(Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data'), AdditionalCollections.objects.filter(bundle=bundle))
 
                 write_into_label(i, product_bundle, product_collections_list)
+                messages.success(request, 'Target "{}" added.'.format(i.name))
+            else:
+                # Used to be dropped without a word, and from the walkthrough the user
+                # was moved on to the next step as though the target had been added.
+                if _inplace_form(request):
+                    return _inplace_refused(form_target)
+                messages.error(request, 'No target was added: {}'.format(
+                    ' '.join(e for errs in form_target.errors.values() for e in errs)
+                    or 'please choose one from the list.'))
+                if walkthrough.returning_to_bundle(request):
+                    return redirect(walkthrough.bundle_url(bundle))
+                return redirect('build:context_search', pk_bundle=pk_bundle)
 
-        if request.GET.get('next') == 'bundle':
-            return redirect('build:bundle', pk_bundle=pk_bundle)
-        #return render(request, 'build/collections/annex_collection_document.html', context_dict)
-        if bundle.bundle_type == "External":
-            return redirect('build:annex_collection_document', pk_bundle=pk_bundle)
-        else:
-            return redirect('build:bundle', pk_bundle=pk_bundle)
+        if walkthrough.returning_to_bundle(request):
+            return redirect(walkthrough.bundle_url(bundle))
+        # The walkthrough moves on from targets. Archive has no step after context
+        # products, so it lands on the bundle page as it always did.
+        return redirect(walkthrough.next_url(bundle, 'context_search'))
 
 
     # Secure: Current user is not the user associated with the bundle, so...
@@ -3943,6 +4098,7 @@ def context_search_target_and_instrument(request, pk_bundle, pk_investigation, p
 #     return render(request, 'build/collections/collections_additional.html', {"pk_bundle": pk_bundle, "bundle": bundle, "form_additional_collections": form_additional_collections, "form_document": form_document})
 #     #return render(request, template, {"pk_bundle": pk_bundle, "bundle": bundle, "form_additional_collections": form_additional_collections, "form_document": form_document})
 @login_required
+@inplace_redirects
 def annex_collection_document(request, pk_bundle):
     bundle = Bundle.objects.get(pk=pk_bundle)
     if request.user != bundle.user:
@@ -3983,14 +4139,26 @@ def annex_collection_document(request, pk_bundle):
         rebuild_collection_inventories(bundle)
         mirror_citation_into_data_products(bundle)
 
-        if request.POST.get("source") == "bundle":
-            return redirect(reverse("build:bundle", args=[pk_bundle]))
-        else:
-            return redirect(reverse('build:collection_additional', args=[pk_bundle]))
+        messages.success(request, 'Document "{}" added.'.format(document.document_name))
+        return redirect(walkthrough.after_save(request, bundle, 'annex_collection_document', 'doc_collection'))
 
         #write_into_label(document, product_bundle, product_collections_list)
 
-    return render(request, 'build/collections/annex_collection_document.html', {"pk_bundle": pk_bundle, "bundle": bundle, "annex_form_document": annex_form_document})
+    # Refused. From the bundle page's window, in place: the reasons go back to the
+    # window, which is still open with the chosen file still in it.
+    if _inplace_form(request):
+        return _inplace_refused(annex_form_document)
+
+    # Otherwise this page is shown, and it has to know which of its two lives it is in.
+    # It used to assume the walkthrough, so a bundle-page add that was refused (a name
+    # already taken, a file missing) arrived on a walkthrough step with no way back, and
+    # correcting it there moved the user on to the next step of the walkthrough.
+    from_bundle = walkthrough.returning_to_bundle(request)
+    return render(request, 'build/collections/annex_collection_document.html', {
+        "pk_bundle": pk_bundle, "bundle": bundle, "annex_form_document": annex_form_document,
+        "source": 'bundle' if from_bundle else 'walkthrough',
+        "walkthrough": None if from_bundle else walkthrough.progress(bundle, 'annex_collection_document'),
+    })
 
 @login_required
 def collection_document(request, pk_bundle):
@@ -4040,7 +4208,9 @@ def collection_additional(request, pk_bundle):
     if request.user != bundle.user:
         return redirect('main:restricted_access')
     form_additional_collections = AdditionalCollectionForm(request.POST or None, bundle=bundle)
-    return render(request, 'build/collections/collection_additional.html', {"pk_bundle": pk_bundle, "bundle": bundle, "form_additional_collections": form_additional_collections})
+    return render(request, 'build/collections/collection_additional.html', {
+        "pk_bundle": pk_bundle, "bundle": bundle, "form_additional_collections": form_additional_collections,
+        "walkthrough": walkthrough.progress(bundle, 'collection_additional')})
 
 @login_required
 def data(request, pk_bundle, pk_data):
@@ -4633,6 +4803,9 @@ def product_document(request, pk_bundle, pk_product_document):
 
             messages.success(request, "Document successfully updated.")
 
+            # Opened from the bundle page's document list: go back to it.
+            if walkthrough.returning_to_bundle(request):
+                return redirect(walkthrough.bundle_url(bundle, 'doc_collection'))
             return redirect(
                 'build:product_document',
                 pk_bundle=bundle.pk,
@@ -4656,6 +4829,35 @@ def product_document(request, pk_bundle, pk_product_document):
     else:
         print('unauthorized user attempting to access a restricted area.')
         return redirect('main:restricted_access')
+
+@login_required
+@xframe_options_sameorigin
+def document_file(request, pk_bundle, pk_product_document):
+    """The file a document product is, so its owner can see what they uploaded.
+
+    Shown in place (the bundle page previews it in a window, which is why this one
+    response may be framed by ELSA's own pages); ?download=1 saves it instead.
+    """
+    bundle = get_object_or_404(Bundle, pk=pk_bundle)
+    if request.user != bundle.user:
+        return redirect('main:restricted_access')
+    product_document = get_object_or_404(Product_Document, pk=pk_product_document, bundle=bundle)
+
+    path = document_files.servable_path(product_document)
+    if not path:
+        raise Http404('This document has no file attached.')
+
+    response = FileResponse(
+        open(path, 'rb'),
+        content_type=document_files.content_type(product_document),
+        as_attachment=request.GET.get('download') == '1',
+        filename=product_document.file_name,
+    )
+    response['X-Content-Type-Options'] = 'nosniff'
+    # A replaced file keeps its URL, so never show a stale copy.
+    response['Cache-Control'] = 'private, no-cache'
+    return response
+
 
 def delete_product_document(request, pk_bundle, pk_product_document):
     print('\n\n')
@@ -5164,6 +5366,11 @@ def delete_instrument(request, pk_bundle, pk_instrument):
     bundle.instruments.remove(instrument)
     # instrument.delete()
 
+    # Removed from the bundle page's own list: go back to it, not to a context search
+    # page the user never asked for.
+    if walkthrough.returning_to_bundle(request):
+        return redirect(walkthrough.bundle_url(bundle))
+
     # Need to add to redirect to ask for a new instrument from
     # re_path(r'^(?P<pk_bundle>\d+)/contextsearch/investigation/(?P<pk_investigation>\d+)/instrument_host/(?P<pk_instrument_host>\d+)/instrument/$', views.context_search_instrument, name='context_search_instrument')
 
@@ -5194,7 +5401,12 @@ def delete_instrument_host(request, pk_bundle, pk_instrument_host):
 
     bundle.instrument_hosts.remove(instrument_host)
 
-    if Instrument_Host.objects.filter(investigations=investigation.pk).count == 1:
+    # Removed from the bundle page's own list: go back to it, not to a context search
+    # page the user never asked for.
+    if walkthrough.returning_to_bundle(request):
+        return redirect(walkthrough.bundle_url(bundle))
+
+    if Instrument_Host.objects.filter(investigations=investigation.pk).count() == 1:
         # have screen to choose between deleting investigation or choosing new host
         # return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/contextsearch/investigation/' + str(investigation.pk) + '/instrument_host_or_facility/')
         return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/contextsearch/investigation/' + str(investigation.pk) + '/instrument_host_or_facility/')
@@ -5222,7 +5434,12 @@ def delete_facility(request, pk_bundle, pk_facility):
 
     bundle.facilities.remove(facility)
 
-    if Facility.objects.filter(investigations=investigation.pk).count == 1:
+    # Removed from the bundle page's own list: go back to it, not to a context search
+    # page the user never asked for.
+    if walkthrough.returning_to_bundle(request):
+        return redirect(walkthrough.bundle_url(bundle))
+
+    if Facility.objects.filter(investigations=investigation.pk).count() == 1:
         # have screen to choose between deleting investigation or choosing new host
         # return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/contextsearch/investigation/' + str(investigation.pk) + '/instrument_host_or_facility/')
         return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/contextsearch/investigation/' + str(investigation.pk) + '/instrument_host_or_facility/')
@@ -5331,6 +5548,11 @@ def delete_instrument(request, pk_bundle, pk_instrument):
     bundle.instruments.remove(instrument)
     # instrument.delete()
 
+    # Removed from the bundle page's own list: go back to it, not to a context search
+    # page the user never asked for.
+    if walkthrough.returning_to_bundle(request):
+        return redirect(walkthrough.bundle_url(bundle))
+
     # Need to add to redirect to ask for a new instrument from
     # re_path(r'^(?P<pk_bundle>\d+)/contextsearch/investigation/(?P<pk_investigation>\d+)/instrument_host/(?P<pk_instrument_host>\d+)/instrument/$', views.context_search_instrument, name='context_search_instrument')
 
@@ -5361,7 +5583,12 @@ def delete_instrument_host(request, pk_bundle, pk_instrument_host):
 
     bundle.instrument_hosts.remove(instrument_host)
 
-    if Instrument_Host.objects.filter(investigations=investigation.pk).count == 1:
+    # Removed from the bundle page's own list: go back to it, not to a context search
+    # page the user never asked for.
+    if walkthrough.returning_to_bundle(request):
+        return redirect(walkthrough.bundle_url(bundle))
+
+    if Instrument_Host.objects.filter(investigations=investigation.pk).count() == 1:
         # have screen to choose between deleting investigation or choosing new host
         # return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/contextsearch/investigation/' + str(investigation.pk) + '/instrument_host_or_facility/')
         return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/contextsearch/investigation/' + str(investigation.pk) + '/instrument_host_or_facility/')
@@ -5389,7 +5616,12 @@ def delete_facility(request, pk_bundle, pk_facility):
 
     bundle.facilities.remove(facility)
 
-    if Facility.objects.filter(investigations=investigation.pk).count == 1:
+    # Removed from the bundle page's own list: go back to it, not to a context search
+    # page the user never asked for.
+    if walkthrough.returning_to_bundle(request):
+        return redirect(walkthrough.bundle_url(bundle))
+
+    if Facility.objects.filter(investigations=investigation.pk).count() == 1:
         # have screen to choose between deleting investigation or choosing new host
         # return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/contextsearch/investigation/' + str(investigation.pk) + '/instrument_host_or_facility/')
         return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/contextsearch/investigation/' + str(investigation.pk) + '/instrument_host_or_facility/')

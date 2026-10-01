@@ -158,6 +158,53 @@ def has_file(product_document):
     return bool(path) and os.path.isfile(path)
 
 
+def size(product_document):
+    """The size in bytes of this document's file, or None if it has none on disk."""
+    path = file_path(product_document)
+    return os.path.getsize(path) if path and os.path.isfile(path) else None
+
+
+def text_excerpt(product_document, limit=1200):
+    """The opening of a plain text document, for its thumbnail on the bundle page.
+
+    '' for PDFs and for documents without a file. Cut at a byte limit, so a character
+    split by the cut is dropped rather than shown broken.
+    """
+    path = servable_path(product_document)
+    if not path or not path.lower().endswith('.txt'):
+        return ''
+    with open(path, 'rb') as handle:
+        head = handle.read(limit)
+    return head.decode('utf-8', errors='ignore')
+
+
+def content_type(product_document):
+    """What to tell the browser a document's file is, so it can show it in place.
+
+    Only the two formats uploads accept. Text is declared UTF-8 because that is all
+    uploads let in, and ASCII is a subset of it.
+    """
+    if (product_document.file_name or '').lower().endswith('.pdf'):
+        return 'application/pdf'
+    return 'text/plain; charset=utf-8'
+
+
+def servable_path(product_document):
+    """The document's file, if it exists and really is inside the document collection.
+
+    Documents saved before uploads existed carry a typed file_name that was never
+    cleaned, so it is not trusted to stay in the directory.
+    """
+    path = file_path(product_document)
+    if not path:
+        return ''
+    directory = os.path.realpath(product_document.directory())
+    real = os.path.realpath(path)
+    if os.path.dirname(real) != directory or not os.path.isfile(real):
+        return ''
+    return real
+
+
 def name_taken(bundle, file_name, excluding=None):
     """Whether another document in this bundle already uses this file name.
 

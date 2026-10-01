@@ -1,5 +1,6 @@
 from builtins import object
 from django import forms
+from django.conf import settings
 from django.contrib.auth.models import User
 from .chocolate import replace_all
 from django.utils.safestring import mark_safe
@@ -1122,6 +1123,8 @@ def document_file_field():
         widget=forms.ClearableFileInput(attrs={
             'class': 'form-control',
             'accept': '.pdf,.txt,application/pdf,text/plain',
+            # For the in-browser check in _document_upload_preview.html.
+            'data-max-mb': getattr(settings, 'DOCUMENT_MAX_UPLOAD_MB', 100),
         }))
 
 

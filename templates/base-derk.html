@@ -53,12 +53,12 @@
             <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
                 <!-- ELSA Logo -->
                 <a class="navbar-brand" href="{% url 'main:index' %}">
-                    <img src="{% static 'images/ELSA-Logo-White.png' %}" style="text-shadow: none; font-size: 25px; color: rgb(43, 187, 173); height: 50px; width: 95px; line-height: 75px; text-align: center;"></img> 
+                    <img alt="ELSA home" src="{% static 'images/ELSA-Logo-White.png' %}" style="text-shadow: none; font-size: 25px; color: rgb(43, 187, 173); height: 50px; width: 95px; line-height: 75px; text-align: center;">
                 </a>
 
                 <!-- PDS Logo -->
                 <a href="https://pds-atmospheres.nmsu.edu/">
-                    <img src="{% static 'images/PDS_Planets_inv_clrbk_no_words.png' %}" style="text-shadow: none; font-size: 25px; color: rgb(43, 187, 173); height: 50px; width: 95px; line-height: 75px; text-align: center; "></i> 
+                    <img alt="PDS Atmospheres Node" src="{% static 'images/PDS_Planets_inv_clrbk_no_words.png' %}" style="text-shadow: none; font-size: 25px; color: rgb(43, 187, 173); height: 50px; width: 95px; line-height: 75px; text-align: center; ">
                 </a>
 
                 <!-- For Smaller Screens -->
@@ -133,7 +133,7 @@
 
         <!-- Main Content -->
         <main class="row py-4">
-            <div class="col">{% block body_block %}{% endblock %}</div>
+            <div class="col">{% include 'build/_bundle_breadcrumb.html' %}{% block body_block %}{% endblock %}</div>
         </main>
 
         <!-- Footer -->
@@ -448,6 +448,7 @@
                 <form id="elsaAssistantForm">
                     {% csrf_token %}
                     <textarea id="elsaAssistantInput" rows="1"
+                              aria-label="Message the ELSA Assistant"
                               placeholder="Ask about ELSA or PDS4... (Shift+Enter for a new line)"
                               autocomplete="off" maxlength="4000"></textarea>
                     <button type="submit" id="elsaAssistantSend" aria-label="Send"><i class="bi bi-send-fill"></i></button>
@@ -1255,7 +1256,12 @@
 
         // Put the panel back the way the user left it on the previous page.
         if (remembered('elsaAssistantExpanded')) setExpanded(true);
-        if (remembered('elsaAssistantOpen')) openPanel({restore: true});
+        // Not on a phone or a short screen, where the panel takes the whole screen (the
+        // media query above): reopened there, it covers the page someone just navigated
+        // to. One "Why does this matter?" used to hide every page after it until closed.
+        const fullScreen = window.matchMedia &&
+            window.matchMedia('(max-width: 576px), (max-height: 560px)').matches;
+        if (remembered('elsaAssistantOpen') && !fullScreen) openPanel({restore: true});
     })();
     </script>
     {% endif %}

@@ -112,6 +112,13 @@ Product Document Editor
                                     <h4>Product Document Editor</h4>
                                 </div>
                                 <div class="card-body">
+                                    <!-- What is uploaded now, viewable before deciding to replace it -->
+                                    <div class="mb-3">
+                                        <div class="fw-bold mb-1">Current file</div>
+                                        <div class="border rounded overflow-hidden">
+                                            {% include 'build/document/_document_file.html' with document=product_document on_editor=True %}
+                                        </div>
+                                    </div>
                                     <form id="form_product_document" method="post" action="" enctype="multipart/form-data">
                                         {% csrf_token %}
                                         {{ form_product_document.as_p }}
@@ -175,7 +182,7 @@ Product Document Editor
                                 <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-4 g-4">
                                     {% for doc in documents %}
                                         <div class="col">
-                                            <a href="{% url 'build:product_document' bundle.pk doc.pk %}"
+                                            <a href="{% url 'build:product_document' bundle.pk doc.pk %}{% if request.GET.next == 'bundle' %}?next=bundle{% endif %}"
                                             class="document-product-link">
                                                 <div class="card document-product-card h-100">
                                                     <img
@@ -266,4 +273,7 @@ Product Document Editor
     </div>
 </div>
 </div>
+{% include 'build/document/_document_upload_preview.html' %}
+<!-- Document preview window, outside the cards -->
+{% include 'build/document/_document_preview_modal.html' %}
 {% endblock %}

@@ -153,7 +153,7 @@ Nothing here starts work on page load. Running a check is an explicit action.
          </div>
          {% endif %}
 
-         {% include 'build/validation/fix_list.html' %}
+         {% include 'build/validation/fix_list.html' with switch_from='validation_modal' %}
 
          {% if validation_advisory %}
          <div class="d-flex align-items-center gap-2 mb-2">

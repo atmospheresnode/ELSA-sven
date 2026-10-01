@@ -32,6 +32,7 @@
 </style>
 
 <div class="container-fluid">
+    {% include 'build/walkthrough/_stepper.html' %}
     <div class="row justify-content-center align-items-center py-4">
         <div class="col-12 col-lg-9 col-xl-10">
             <div class="card mb-3">
@@ -66,11 +67,22 @@
                                     {% endif %}
                                 </div>
                             {% endfor %}
-                            <button type="submit" name="source" value="walkthrough" class="btn">Add Document</button>
-                            <a href="{% url 'build:collection_additional' bundle.pk %}" class="btn btn-light text-light ms-3">
+                            {% comment %}The source says where the user goes once the document
+                            is added. This page is also where a bundle-page add lands when
+                            JavaScript is off and the add was refused, and correcting it here
+                            must go back to the bundle, not on through the walkthrough.{% endcomment %}
+                            <button type="submit" name="source" value="{{ source|default:'walkthrough' }}" class="btn">Add Document</button>
+                            {% if source == 'bundle' %}
+                            <a href="{% url 'build:bundle' bundle.pk %}" class="btn btn-light text-light ms-3">
+                                <i class="fa fa-arrow-left me-2"></i>
+                                Back to bundle
+                            </a>
+                            {% else %}
+                            <a href="{% if walkthrough %}{{ walkthrough.next_url }}{% else %}{% url 'build:collection_additional' bundle.pk %}{% endif %}" class="btn btn-light text-light ms-3">
                                 Skip
                                 <i class="fa fa-arrow-right ms-2"></i>
                             </a>
+                            {% endif %}
                         </form>           
                     </div>
 
@@ -98,4 +110,5 @@
     </div>
 </div>
 
+{% include 'build/document/_document_upload_preview.html' %}
 {% endblock %}

@@ -452,6 +452,168 @@ class UploadViewTests(TestCase):
         self.add_external(bundle)
         self.assertFalse(Product_Document.objects.filter(bundle=bundle).exists())
 
+    # viewing what was uploaded
+
+    def file_url(self, bundle, document, download=False):
+        url = reverse('build:document_file', args=[str(bundle.pk), str(document.pk)])
+        return url + '?download=1' if download else url
+
+    def body(self, response):
+        try:
+            return b''.join(response.streaming_content)
+        finally:
+            response.close()
+
+    def test_the_owner_sees_a_pdf_in_place_on_both_bundle_types(self):
+        for bundle_type, add in (('External', self.add_external),
+                                 ('Archive', self.add_archive)):
+            bundle = self.make(bundle_type)
+            add(bundle)
+            document = Product_Document.objects.get(bundle=bundle)
+            response = self.client.get(self.file_url(bundle, document))
+            self.assertEqual(response.status_code, 200, bundle_type)
+            self.assertEqual(response['Content-Type'], 'application/pdf')
+            self.assertTrue(response['Content-Disposition'].startswith('inline'))
+            self.assertIn('guide.pdf', response['Content-Disposition'])
+            # Framed by the bundle page's preview window, even where prod says DENY.
+            self.assertEqual(response['X-Frame-Options'], 'SAMEORIGIN')
+            self.assertEqual(response['X-Content-Type-Options'], 'nosniff')
+            self.assertEqual(self.body(response), fixture_bytes('guide_pdfa1b.pdf'))
+
+    def test_text_is_served_as_utf8_text(self):
+        bundle = self.make('External')
+        self.add_external(bundle, document_file=document_upload('notes', 'guide.txt'))
+        document = Product_Document.objects.get(bundle=bundle)
+        response = self.client.get(self.file_url(bundle, document))
+        self.assertEqual(response['Content-Type'], 'text/plain; charset=utf-8')
+        self.assertEqual(self.body(response), fixture_bytes('guide.txt'))
+
+    def test_download_saves_instead_of_showing(self):
+        bundle = self.make('Archive')
+        self.add_archive(bundle)
+        document = Product_Document.objects.get(bundle=bundle)
+        response = self.client.get(self.file_url(bundle, document, download=True))
+        self.assertTrue(response['Content-Disposition'].startswith('attachment'))
+        self.body(response)
+
+    def test_a_replaced_file_is_what_is_shown_next(self):
+        bundle = self.make('External')
+        self.add_external(bundle)
+        document = Product_Document.objects.get(bundle=bundle)
+        self.assertIn('no-cache', self.client.get(self.file_url(bundle, document))['Cache-Control'])
+        document_files.store(document, document_files.prepare(
+            document_upload('guide', 'guide.txt')))
+        document.refresh_from_db()
+        response = self.client.get(self.file_url(bundle, document))
+        self.assertEqual(self.body(response), fixture_bytes('guide.txt'))
+
+    def test_nobody_else_can_see_the_file(self):
+        bundle = self.make('External')
+        self.add_external(bundle)
+        document = Product_Document.objects.get(bundle=bundle)
+        url = self.file_url(bundle, document)
+
+        User.objects.create_user('intruder', password='pw')
+        self.client.login(username='intruder', password='pw')
+        response = self.client.get(url)
+        self.assertRedirects(response, reverse('main:restricted_access'),
+                             fetch_redirect_response=False)
+
+        self.client.logout()
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 302)
+        self.assertNotIn('restricted', response['Location'])
+
+    def test_a_document_is_only_reachable_through_its_own_bundle(self):
+        mine = self.make('External')
+        self.add_external(mine)
+        document = Product_Document.objects.get(bundle=mine)
+        other = self.make('Archive')
+        response = self.client.get(self.file_url(other, document))
+        self.assertEqual(response.status_code, 404)
+
+    def test_no_file_and_escaping_names_are_not_found(self):
+        bundle = self.make('External')
+        self.add_external(bundle)
+        document = Product_Document.objects.get(bundle=bundle)
+        os.remove(document_files.file_path(document))
+        self.assertEqual(self.client.get(self.file_url(bundle, document)).status_code, 404)
+
+        # A typed name from before uploads existed is not trusted to stay put.
+        secret = os.path.join(self.archive, 'secret.pdf')
+        with open(secret, 'wb') as handle:
+            handle.write(b'%PDF-1.4 secret')
+        relative = os.path.relpath(secret, document.directory())
+        Product_Document.objects.filter(pk=document.pk).update(file_name=relative)
+        document.refresh_from_db()
+        self.assertTrue(os.path.isfile(document_files.file_path(document)))
+        self.assertEqual(self.client.get(self.file_url(bundle, document)).status_code, 404)
+
+    def test_the_bundle_page_offers_view_and_download_on_both_types(self):
+        for bundle_type, add in (('External', self.add_external),
+                                 ('Archive', self.add_archive)):
+            bundle = self.make(bundle_type)
+            add(bundle)
+            document = Product_Document.objects.get(bundle=bundle)
+            response = self.client.get(reverse('build:bundle', args=[str(bundle.pk)]))
+            self.assertContains(response, 'data-doc-url="{}"'.format(
+                self.file_url(bundle, document)), count=1)
+            self.assertContains(response, self.file_url(bundle, document, download=True))
+            self.assertContains(response, 'id="documentPreviewModal"', count=1)
+
+    def test_a_document_without_its_file_says_so(self):
+        bundle = self.make('Archive')
+        self.add_archive(bundle)
+        document = Product_Document.objects.get(bundle=bundle)
+        os.remove(document_files.file_path(document))
+        response = self.client.get(reverse('build:bundle', args=[str(bundle.pk)]))
+        self.assertContains(response, 'No file attached')
+        self.assertNotContains(response, 'data-doc-url=')
+
+    def test_the_list_puts_every_action_on_the_row_with_one_delete_window(self):
+        for bundle_type, add in (('External', self.add_external),
+                                 ('Archive', self.add_archive)):
+            bundle = self.make(bundle_type)
+            add(bundle, name='guide')
+            add(bundle, name='notes', document_file=document_upload('notes', 'guide.txt'))
+            response = self.client.get(reverse('build:bundle', args=[str(bundle.pk)]))
+            self.assertContains(response, '2 documents')
+            self.assertContains(response, 'id="documentDeleteModal"', count=1)
+            self.assertNotContains(response, 'deleteDocModal')
+            self.assertNotContains(response, 'doc_details_')
+            for document in Product_Document.objects.filter(bundle=bundle):
+                self.assertContains(response, 'data-delete-url="{}"'.format(reverse(
+                    'build:delete_product_document', args=[str(bundle.pk), str(document.pk)])))
+
+    def test_tiles_show_the_document_itself(self):
+        bundle = self.make('External')
+        self.add_external(bundle, name='guide')
+        self.add_external(bundle, name='notes', document_file=document_upload('notes', 'guide.txt'))
+        guide = Product_Document.objects.get(bundle=bundle, document_name='guide')
+        response = self.client.get(reverse('build:bundle', args=[str(bundle.pk)]))
+        # The PDF's first page is drawn in the browser from its own file URL...
+        self.assertContains(response, 'data-pdf-thumb="{}"'.format(self.file_url(bundle, guide)))
+        # ...and the text file's opening lines are in the page already.
+        first_line = fixture_bytes('guide.txt').decode('ascii').splitlines()[0]
+        self.assertContains(response, first_line)
+        self.assertContains(response, 'Add a document')
+
+    def test_an_empty_collection_offers_to_add_one(self):
+        for bundle_type in ('External', 'Archive'):
+            bundle = self.make(bundle_type)
+            response = self.client.get(reverse('build:bundle', args=[str(bundle.pk)]))
+            self.assertContains(response, 'No documents yet')
+
+    def test_the_editor_shows_the_current_file(self):
+        bundle = self.make('External')
+        self.add_external(bundle)
+        document = Product_Document.objects.get(bundle=bundle)
+        response = self.client.get(
+            reverse('build:product_document', args=[str(bundle.pk), str(document.pk)]))
+        self.assertContains(response, 'Current file')
+        self.assertContains(response, 'data-doc-url="{}"'.format(self.file_url(bundle, document)))
+        self.assertContains(response, 'id="documentPreviewModal"', count=1)
+
 
 # -- what the validation panel says -------------------------------------------------
 

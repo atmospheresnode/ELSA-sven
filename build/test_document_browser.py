@@ -101,6 +101,17 @@ class DocumentUploadBrowserTests(StaticLiveServerTestCase):
             'name': name, 'bundle_type': bundle_type, 'version': '1O00', 'bundleID': ''})
         return Bundle.objects.get(name=name)
 
+    def both_bundles(self):
+        """One bundle of each type, both made before the browser does anything.
+
+        Made inside the loop, the second came from the test thread while the live server was
+        still finishing the first bundle's requests in its own threads, and the two collided
+        on the shared in-memory database ("database table is locked", about one run in five).
+        """
+        return [(bundle_type, fill, self.make(bundle_type))
+                for bundle_type, fill in (('External', self.fill_external),
+                                          ('Archive', self.fill_archive))]
+
     def open_documents_window(self, bundle):
         self.page.goto(self.live_server_url + reverse('build:bundle', args=[bundle.pk]))
         self.page.locator(
@@ -112,6 +123,16 @@ class DocumentUploadBrowserTests(StaticLiveServerTestCase):
     def submit(self, modal):
         with self.page.expect_navigation():
             modal.locator('button[type="submit"]').click()
+
+    def submit_refused(self, modal):
+        """A refused add stays on the page: the window saves in place and shows why."""
+        url = self.page.url
+        modal.locator('button[type="submit"]').click()
+        error = modal.locator('[data-inplace-for="document_file"]')
+        error.wait_for(state='visible')
+        self.assertEqual(self.page.url, url)
+        self.assertTrue(modal.is_visible())
+        return error
 
     # -- External --------------------------------------------------------------
 
@@ -140,9 +161,9 @@ class DocumentUploadBrowserTests(StaticLiveServerTestCase):
         bundle = self.make('External')
         modal = self.open_documents_window(bundle)
         self.fill_external(modal, 'guide', fixture('guide_plain.pdf'))
-        self.submit(modal)
+        error = self.submit_refused(modal)
         self.assertFalse(Product_Document.objects.filter(bundle=bundle).exists())
-        self.assertIn('ordinary PDF', self.page.content())
+        self.assertIn('ordinary PDF', error.inner_text())
 
     # -- Archive ---------------------------------------------------------------
 
@@ -166,12 +187,10 @@ class DocumentUploadBrowserTests(StaticLiveServerTestCase):
         bundle = self.make('Archive')
         modal = self.open_documents_window(bundle)
         self.fill_archive(modal, 'guide', fixture('guide_pdfa2b.pdf'))
-        self.submit(modal)
+        error = self.submit_refused(modal)
         self.assertFalse(Product_Document.objects.filter(bundle=bundle).exists())
-        # Seen, not merely present: the window reopens with the reason in it.
-        reopened = self.page.locator('#document_modal.show')
-        reopened.wait_for(state='visible')
-        self.assertIn('PDF/A-2', reopened.inner_text())
+        # Seen, not merely present: the window stays open with the reason in it.
+        self.assertIn('PDF/A-2', error.inner_text())
 
     def test_archive_window_stays_shut_on_an_ordinary_visit(self):
         bundle = self.make('Archive')
@@ -183,9 +202,7 @@ class DocumentUploadBrowserTests(StaticLiveServerTestCase):
     # -- the edit page -----------------------------------------------------------
 
     def test_edit_page_replaces_the_file(self):
-        for bundle_type, fill in (('External', self.fill_external),
-                                  ('Archive', self.fill_archive)):
-            bundle = self.make(bundle_type)
+        for bundle_type, fill, bundle in self.both_bundles():
             modal = self.open_documents_window(bundle)
             fill(modal, 'guide', fixture('guide_pdfa1b.pdf'))
             self.submit(modal)
@@ -206,3 +223,179 @@ class DocumentUploadBrowserTests(StaticLiveServerTestCase):
             self.assertEqual(document.file_name, 'guide.txt', bundle_type)
             self.assertTrue(document_files.has_file(document), bundle_type)
             self.assertFalse(os.path.exists(old), bundle_type)
+
+    # -- seeing what was uploaded --------------------------------------------------
+
+    def open_preview(self):
+        self.page.locator('button[data-bs-target="#documentPreviewModal"]').locator(
+            'visible=true').first.click()
+        preview = self.page.locator('#documentPreviewModal.show')
+        preview.wait_for(state='visible')
+        return preview
+
+    def test_view_shows_the_uploaded_file_on_both_bundle_types(self):
+        for bundle_type, fill, bundle in self.both_bundles():
+            modal = self.open_documents_window(bundle)
+            fill(modal, 'guide', fixture('guide.txt'))
+            self.submit(modal)
+            document = Product_Document.objects.get(bundle=bundle)
+
+            # Visible on the card without expanding anything.
+            preview = self.open_preview()
+            self.assertIn('guide.txt', preview.locator('.modal-title').inner_text())
+            frame = self.page.frame_locator('#documentPreviewFrame')
+            with open(fixture('guide.txt')) as handle:
+                first_line = handle.readline().strip()
+            frame.locator('body').wait_for(state='attached')
+            self.page.wait_for_function(
+                "t => { const d = document.getElementById('documentPreviewFrame').contentDocument;"
+                " return d && d.body && d.body.innerText.includes(t); }", arg=first_line)
+            self.assertEqual(
+                preview.locator('#documentPreviewDownload').get_attribute('href'),
+                reverse('build:document_file', args=[bundle.pk, document.pk]) + '?download=1',
+                bundle_type)
+
+            # Closing unloads the file, so the next View starts clean.
+            preview.locator('.btn-close').click()
+            # Bootstrap fires hidden after the backdrop fades, so wait for it.
+            self.page.wait_for_function(
+                "() => document.getElementById('documentPreviewFrame')"
+                ".getAttribute('src') === 'about:blank'")
+
+    def test_view_frames_a_pdf_and_it_loads(self):
+        bundle = self.make('External')
+        modal = self.open_documents_window(bundle)
+        self.fill_external(modal, 'guide', fixture('guide_pdfa1b.pdf'))
+        with self.page.expect_navigation():
+            modal.locator('button[type="submit"]').click()
+        document = Product_Document.objects.get(bundle=bundle)
+        url = reverse('build:document_file', args=[bundle.pk, document.pk])
+
+        with self.page.expect_response(lambda r: r.url.endswith(url)) as caught:
+            self.open_preview()
+        response = caught.value
+        self.assertEqual(response.status, 200)
+        self.assertEqual(response.headers['content-type'], 'application/pdf')
+        self.assertEqual(response.headers['x-frame-options'], 'SAMEORIGIN')
+
+    def test_the_edit_page_shows_the_current_file(self):
+        bundle = self.make('Archive')
+        modal = self.open_documents_window(bundle)
+        self.fill_archive(modal, 'guide', fixture('guide.txt'))
+        self.submit(modal)
+        document = Product_Document.objects.get(bundle=bundle)
+        self.page.goto(self.live_server_url + reverse(
+            'build:product_document', args=[bundle.pk, document.pk]))
+        preview = self.open_preview()
+        self.assertIn('guide.txt', preview.locator('.modal-title').inner_text())
+
+    # -- seeing a file before it is uploaded -----------------------------------------
+
+    def picker(self, scope):
+        box = scope.locator('.doc-pick')
+        box.wait_for(state='visible')
+        status = box.locator('.doc-pick-status')
+        self.page.wait_for_function(
+            "el => !el.classList.contains('is-checking') && el.className.includes('is-')",
+            arg=status.element_handle())
+        return box, status
+
+    def test_a_chosen_file_is_checked_and_previewed_before_upload(self):
+        for bundle_type, fill, bundle in self.both_bundles():
+            modal = self.open_documents_window(bundle)
+            fill(modal, 'guide', fixture('guide_pdfa1b.pdf'))
+            box, status = self.picker(modal)
+            self.assertIn('is-ok', status.get_attribute('class'), bundle_type)
+            self.assertIn('PDF/A-1', status.inner_text())
+            self.assertIn('guide_pdfa1b.pdf', box.inner_text())
+            box.locator('button', has_text='Preview').click()
+            frame = box.locator('iframe')
+            frame.wait_for(state='visible')
+            self.assertTrue(frame.get_attribute('src').startswith('blob:'))
+            self.assertFalse(Product_Document.objects.filter(bundle=bundle).exists())
+
+            # Nothing in the browser stops the upload itself.
+            self.submit(modal)
+            self.assertTrue(Product_Document.objects.filter(bundle=bundle).exists(), bundle_type)
+
+    def test_files_that_will_be_refused_say_so_before_upload(self):
+        bundle = self.make('External')
+        modal = self.open_documents_window(bundle)
+        file_input = modal.locator('input[name="document_file"]')
+        for name, says in (('guide_plain.pdf', 'ordinary PDF'),
+                           ('guide_pdfa2b.pdf', 'PDF/A-2')):
+            file_input.set_input_files(fixture(name))
+            _, status = self.picker(modal)
+            self.assertIn('is-bad', status.get_attribute('class'), name)
+            self.assertIn(says, status.inner_text(), name)
+
+        for payload, says in (
+                ({'name': 'notes.docx', 'mimeType': 'application/octet-stream',
+                  'buffer': b'PK'}, 'neither'),
+                ({'name': 'latin.txt', 'mimeType': 'text/plain',
+                  'buffer': 'café'.encode('latin-1')}, 'not UTF-8'),
+                ({'name': 'fake.pdf', 'mimeType': 'application/pdf',
+                  'buffer': b'hello'}, 'not a PDF')):
+            file_input.set_input_files(payload)
+            _, status = self.picker(modal)
+            self.assertIn('is-bad', status.get_attribute('class'), payload['name'])
+            self.assertIn(says, status.inner_text(), payload['name'])
+
+    def test_text_is_shown_and_the_saved_name_is_told(self):
+        bundle = self.make('Archive')
+        modal = self.open_documents_window(bundle)
+        with open(fixture('guide.txt'), 'rb') as handle:
+            data = handle.read()
+        modal.locator('input[name="document_file"]').set_input_files(
+            {'name': 'User Guide été.txt', 'mimeType': 'text/plain', 'buffer': data})
+        box, status = self.picker(modal)
+        self.assertIn('is-ok', status.get_attribute('class'))
+        self.assertIn('saved as User_Guide_ete.txt', box.inner_text())
+        box.locator('button', has_text='Preview').click()
+        self.assertIn(data.decode('ascii').splitlines()[0], box.locator('pre').inner_text())
+        self.assertEqual(document_files.clean_file_name('User Guide été.txt'),
+                         'User_Guide_ete.txt')
+
+    def test_remove_clears_the_choice(self):
+        bundle = self.make('External')
+        modal = self.open_documents_window(bundle)
+        file_input = modal.locator('input[name="document_file"]')
+        file_input.set_input_files(fixture('guide.txt'))
+        box, _ = self.picker(modal)
+        box.locator('button[aria-label="Remove this file"]').click()
+        box.wait_for(state='hidden')
+        self.assertEqual(file_input.evaluate('el => el.files.length'), 0)
+
+    def test_the_edit_page_previews_a_replacement(self):
+        bundle = self.make('External')
+        modal = self.open_documents_window(bundle)
+        self.fill_external(modal, 'guide', fixture('guide_pdfa1b.pdf'))
+        self.submit(modal)
+        document = Product_Document.objects.get(bundle=bundle)
+        self.page.goto(self.live_server_url + reverse(
+            'build:product_document', args=[bundle.pk, document.pk]))
+        self.page.locator('input[name="document_file"]').set_input_files(fixture('guide.txt'))
+        _, status = self.picker(self.page.locator('#form_product_document'))
+        self.assertIn('is-ok', status.get_attribute('class'))
+
+    # -- the list --------------------------------------------------------------------
+
+    def test_delete_from_the_list_asks_then_removes_the_right_one(self):
+        for bundle_type, fill, bundle in self.both_bundles():
+            for name, path in (('guide', 'guide_pdfa1b.pdf'), ('notes', 'guide.txt')):
+                modal = self.open_documents_window(bundle)
+                fill(modal, name, fixture(path))
+                self.submit(modal)
+            notes = Product_Document.objects.get(bundle=bundle, document_name='notes')
+
+            self.page.locator('button[aria-label="Delete notes"]').click()
+            confirm = self.page.locator('#documentDeleteModal.show')
+            confirm.wait_for(state='visible')
+            self.assertIn('notes', confirm.inner_text())
+            with self.page.expect_navigation():
+                confirm.locator('button[type="submit"]').click()
+
+            names = list(Product_Document.objects.filter(bundle=bundle)
+                         .values_list('document_name', flat=True))
+            self.assertEqual(names, ['guide'], bundle_type)
+            self.assertFalse(os.path.exists(document_files.file_path(notes)), bundle_type)
