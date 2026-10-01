@@ -1,0 +1,30 @@
+{% autoescape off %}ELSA ASSISTANT, WEEKLY REVIEW
+{{ total }} answer{{ total|pluralize }} to review, {{ period }}
+
+Voted down: {{ total }}   Voted up: {{ ups }}   All replies: {{ replies }}
+
+Why: {% for reason in reasons %}{{ reason.label }} {{ reason.count }}{% if not forloop.last %}, {% endif %}{% endfor %}
+{% if top_chunks %}Knowledge behind the bad answers: {% for chunk in top_chunks %}{{ chunk.name }}.md x{{ chunk.count }}{% if not forloop.last %}, {% endif %}{% endfor %}
+{% endif %}{% for row in rows %}
+------------------------------------------------------------
+[{{ row.style.label }}] {{ row.rated|date:"M j, g:i A" }}, {{ row.username }}, message #{{ row.id }}
+{% if row.question %}
+Q: {{ row.question|truncatechars:300 }}
+{% endif %}
+Assistant answered:
+{{ row.answer|truncatechars:700 }}
+{% if row.comment %}
+User said:
+{{ row.comment }}
+{% endif %}
+Built from: {% for chunk in row.chunks %}{{ chunk }}.md{% if not forloop.last %}, {% endif %}{% empty %}no knowledge chunks recorded{% endfor %}
+{% if row.hint %}Where to look: {{ row.hint }}
+{% endif %}{% endfor %}
+------------------------------------------------------------
+{% if more %}{{ more }} more in the admin: Messages, filtered by rating = Thumbs down.
+
+{% endif %}Closing the loop:
+1. Fix the knowledge chunk, the prompt, or retrieval.
+2. Run assistant_stats --export-evals drafts.json to turn each question into an eval case.
+3. Run assistant_eval so it stays fixed.
+{% endautoescape %}

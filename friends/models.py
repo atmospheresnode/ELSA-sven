@@ -34,7 +34,11 @@ class UserProfile(models.Model):
         # We could be super cool and add more agencies.
     )
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    agency = models.CharField(max_length=10, choices=AGENCY_CHOICES, default='NASA')
+    # 'nasa:pds', not 'NASA': the default has to be one of the choice VALUES, not a
+    # display label. Bundle.lid() interpolates this straight into the LID, so a
+    # profile carrying 'NASA' produced urn:NASA:<bundle>, which fails PDS4 on both
+    # the lowercase pattern and the segment count.
+    agency = models.CharField(max_length=10, choices=AGENCY_CHOICES, default='nasa:pds')
     directory = models.CharField(max_length=1000)
     #picture = models.ImageField(upload_to='profile_images', blank=True)
 
@@ -194,7 +198,11 @@ class UpdateAgency(models.Model):
         ('esa:psa','ESA'),
         ('jaxa:darts','JAXA'),
     )
-    agency = models.CharField(max_length=10, choices=AGENCY_CHOICES, default='NASA')
+    # 'nasa:pds', not 'NASA': the default has to be one of the choice VALUES, not a
+    # display label. Bundle.lid() interpolates this straight into the LID, so a
+    # profile carrying 'NASA' produced urn:NASA:<bundle>, which fails PDS4 on both
+    # the lowercase pattern and the segment count.
+    agency = models.CharField(max_length=10, choices=AGENCY_CHOICES, default='nasa:pds')
 class UpdateEmail(models.Model):
     email = models.CharField(max_length=256)
 class UpdatePassword(models.Model):

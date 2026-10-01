@@ -3,10 +3,10 @@
      templates/base-derk.html#nav      = 568cd6ce6baa
      friends/views.py#bundle_hub       = 02a643915c11
      templates/friends/bundle_hub.html = 1769e80d5787
-     build/urls.py                     = 735cfb905d8b
+     build/urls.py                     = d97e97aeb9bb
 -->
-<!-- reviewed: 2026-08-28 -->
-<!-- baseline: d8df4b96320a4636b7a95ac426bec7ff1a1fa839 -->
+<!-- reviewed: 2026-09-25 -->
+<!-- baseline: ab6b3482d9893d5e8b7e506fadff1e8125905f6a -->
 # Navigating ELSA
 
 Key pages:
@@ -26,7 +26,8 @@ Key pages:
 - Contact page, reach the ELSA / Atmospheres node team directly.
 - ELSA Assistant, the chat widget at the bottom right of every page (this
   assistant); it answers questions about using ELSA and can pass feedback to
-  the team. Replies can be copied and rated (thumbs up/down). Enter sends a
+  the team. Replies can be copied and rated (thumbs up/down); a thumbs-down
+  asks what went wrong, and the ELSA team reviews those. Enter sends a
   message, Shift+Enter starts a new line, and the send button becomes a stop
   button while a reply is streaming. Chats are stored to help improve ELSA.
 
@@ -38,5 +39,13 @@ Common actions:
 - Delete a bundle: red Delete Bundle button on the bundle page (confirmation
   modal), or bulk-delete several at once from the Bundle Hub via the card
   checkboxes. Both remove the bundle and its files permanently.
+- Get back to a bundle: any page about one bundle (a document editor, a context
+  product page) has a "Bundle Hub / <bundle name>" link at the top that returns
+  to it. Saving from a bundle page window or an Edit link comes back to the
+  bundle page; if the save is refused, the window stays open with the reason
+  under the field and nothing typed or chosen is lost.
+- Guided walkthrough: each step shows "step N of M" and an "Exit to bundle page"
+  link, so a user can leave at any step; whatever was already saved is kept,
+  and the rest can be filled in from the bundle page.
 - Get help or report problems: ask this assistant, or use the Contact page. The
   assistant can also send feedback (bugs, suggestions) to the ELSA team for you.

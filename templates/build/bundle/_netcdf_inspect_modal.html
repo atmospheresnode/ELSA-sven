@@ -1,0 +1,190 @@
+{% comment %}
+One inspector window shared by every NetCDF file on the page, opened by a file's View button
+in a collection's NetCDF card or in the Files Not In Any Collection pane. A browser cannot show a .nc file, so instead of handing back the
+file the user just uploaded, this answers what they actually want to know: what is in it
+(xarray's notebook view of the header, from build:netcdf_inspect) and what ELSA made of it (the
+PDS4 label). Download stays available in the header, through build:netcdf_file.
+
+Nothing is fetched until the window opens, and each file is fetched once per page load.
+Triggers carry data-nc-name, data-nc-inspect-url and data-nc-download-url.
+Include once per page, outside any card or collapse.
+{% endcomment %}
+<style>
+   /* nci- (NetCDF inspector). A fixed height so the window does not jump when switching between
+      a short label and a long header. xarray caps its view at 700px for notebook cells; this
+      window is wider than a cell, and long attribute values are exactly what wraps badly at 700px. */
+   #netcdfInspectModal .nci-pane { height: 65vh; overflow: auto; }
+   #netcdfInspectModal .xr-wrap { max-width: none; }
+</style>
+<div class="modal fade" id="netcdfInspectModal" tabindex="-1" aria-labelledby="netcdfInspectTitle" aria-hidden="true">
+   <div class="modal-dialog modal-xl modal-dialog-centered modal-fullscreen-lg-down">
+      <div class="modal-content">
+         <div class="modal-header py-2">
+            <div class="me-3" style="min-width: 0;">
+               <h5 class="modal-title text-truncate" id="netcdfInspectTitle">NetCDF file</h5>
+               <div class="small text-muted" id="netcdfInspectMeta">&nbsp;</div>
+            </div>
+            <div class="d-flex align-items-center gap-2 ms-auto">
+               <a id="netcdfInspectDownload" class="btn btn-sm btn-outline-secondary btn-keep-bg text-nowrap" href="#">
+                  <i class="bi bi-download me-1"></i>Download
+               </a>
+               <button type="button" class="btn-close ms-1" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+         </div>
+         <div class="modal-body pt-2">
+            <ul class="nav nav-tabs" role="tablist">
+               <li class="nav-item" role="presentation">
+                  <button class="nav-link active" id="netcdfInspectContentsTab" data-bs-toggle="tab"
+                          data-bs-target="#netcdfInspectContents" type="button" role="tab"
+                          aria-controls="netcdfInspectContents" aria-selected="true">
+                     <i class="bi bi-diagram-3 me-1"></i>Contents
+                  </button>
+               </li>
+               <li class="nav-item" role="presentation">
+                  <button class="nav-link" id="netcdfInspectLabelTab" data-bs-toggle="tab"
+                          data-bs-target="#netcdfInspectLabel" type="button" role="tab"
+                          aria-controls="netcdfInspectLabel" aria-selected="false">
+                     <i class="bi bi-filetype-xml me-1"></i>PDS4 label
+                  </button>
+               </li>
+            </ul>
+            <div class="tab-content">
+               <div class="tab-pane fade show active nci-pane pt-3" id="netcdfInspectContents"
+                    role="tabpanel" aria-labelledby="netcdfInspectContentsTab"></div>
+               <div class="tab-pane fade nci-pane pt-3" id="netcdfInspectLabel"
+                    role="tabpanel" aria-labelledby="netcdfInspectLabelTab"></div>
+            </div>
+         </div>
+      </div>
+   </div>
+</div>
+<script>
+   (function () {
+      var modal = document.getElementById('netcdfInspectModal');
+      if (!modal) { return; }
+      var titleEl = document.getElementById('netcdfInspectTitle');
+      var metaEl = document.getElementById('netcdfInspectMeta');
+      var downloadEl = document.getElementById('netcdfInspectDownload');
+      var contentsTab = document.getElementById('netcdfInspectContentsTab');
+      var contentsEl = document.getElementById('netcdfInspectContents');
+      var labelEl = document.getElementById('netcdfInspectLabel');
+      var canCopy = !!(navigator.clipboard && navigator.clipboard.writeText);
+      var cache = {};
+      // The file whose window is open. A slow answer for a file the user has since moved on
+      // from is cached but not shown.
+      var currentUrl = null;
+
+      function showMessage(el, text, isError) {
+         el.innerHTML = '';
+         var p = document.createElement('p');
+         p.className = 'my-5 text-center ' + (isError ? 'text-danger' : 'text-muted');
+         p.textContent = text;
+         el.appendChild(p);
+      }
+
+      function showLoading(el) {
+         el.innerHTML = '<div class="my-5 text-center text-muted">' +
+            '<span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>' +
+            'Reading the file...</div>';
+      }
+
+      function renderContents(data) {
+         if (!data.contents) {
+            showMessage(contentsEl, data.contents_error || 'This file could not be read.', true);
+            return;
+         }
+         // Safe to insert: xarray escapes every name and attribute it writes.
+         contentsEl.innerHTML =
+            '<p class="small text-muted mb-2">The file as stored, header only. Select a section ' +
+            'to open or close it; the icons at the end of each variable show its attributes ' +
+            'and a summary of its data.</p>' + data.contents;
+      }
+
+      function renderLabel(data) {
+         if (!data.label) {
+            showMessage(labelEl, data.label_error || 'No label has been written for this file yet.', false);
+            return;
+         }
+         labelEl.innerHTML = '';
+         var bar = document.createElement('div');
+         bar.className = 'd-flex align-items-center gap-2 mb-2';
+         var name = document.createElement('span');
+         name.className = 'small text-muted me-auto text-truncate';
+         name.textContent = data.label_name;
+         bar.appendChild(name);
+         if (canCopy) {
+            var copy = document.createElement('button');
+            copy.type = 'button';
+            copy.className = 'btn btn-sm btn-outline-secondary btn-keep-bg text-nowrap';
+            copy.innerHTML = '<i class="bi bi-clipboard me-1"></i>Copy XML';
+            copy.addEventListener('click', function () {
+               navigator.clipboard.writeText(data.label).then(function () {
+                  copy.innerHTML = '<i class="bi bi-check2 me-1"></i>Copied';
+                  setTimeout(function () { copy.innerHTML = '<i class="bi bi-clipboard me-1"></i>Copy XML'; }, 1500);
+               }).catch(function () {});
+            });
+            bar.appendChild(copy);
+         }
+         var pre = document.createElement('pre');
+         pre.className = 'small mb-0';
+         var code = document.createElement('code');
+         code.textContent = data.label;
+         pre.appendChild(code);
+         labelEl.appendChild(bar);
+         labelEl.appendChild(pre);
+      }
+
+      function render(data) {
+         if (data.error) {
+            showMessage(contentsEl, data.error, true);
+            showMessage(labelEl, data.error, true);
+            return;
+         }
+         metaEl.textContent = data.size;
+         renderContents(data);
+         renderLabel(data);
+      }
+
+      modal.addEventListener('show.bs.modal', function (event) {
+         var trigger = event.relatedTarget;
+         if (!trigger) { return; }
+         var url = trigger.getAttribute('data-nc-inspect-url');
+         var name = trigger.getAttribute('data-nc-name') || 'NetCDF file';
+         currentUrl = url;
+         titleEl.textContent = name;
+         titleEl.title = name;
+         metaEl.innerHTML = '&nbsp;';
+         downloadEl.href = trigger.getAttribute('data-nc-download-url');
+         downloadEl.setAttribute('aria-label', 'Download ' + name);
+         bootstrap.Tab.getOrCreateInstance(contentsTab).show();
+
+         if (cache[url]) {
+            render(cache[url]);
+            return;
+         }
+         showLoading(contentsEl);
+         showLoading(labelEl);
+         fetch(url, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            credentials: 'same-origin'
+         })
+            .then(function (response) {
+               return response.json().then(function (data) {
+                  return { ok: response.ok, data: data };
+               });
+            })
+            .then(function (result) {
+               // Only successful reads are cached, so a failure is retried on the next open.
+               if (result.ok) { cache[url] = result.data; }
+               if (currentUrl !== url) { return; }
+               render(result.data);
+            })
+            .catch(function () {
+               if (currentUrl !== url) { return; }
+               var text = 'This file could not be loaded. Check your connection and try again.';
+               showMessage(contentsEl, text, true);
+               showMessage(labelEl, text, true);
+            });
+      });
+   })();
+</script>

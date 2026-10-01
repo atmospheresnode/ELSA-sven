@@ -1,0 +1,45 @@
+{% comment %}
+The Review & Submit window's list of what stands between this bundle and submission.
+
+The same list the PDS Validation window shows (fix_list.html), not a second checklist.
+This window used to decide readiness for itself, from whether Modification History,
+Citation Information and Targets existed, alongside the validation verdict above it,
+so the same bundle was judged twice in two formats that could disagree.
+
+Refreshed with the verdict when a check finishes: build:validation_panel renders it
+again and the page swaps it in by id.
+{% endcomment %}
+<div id="review_findings">
+   <p class="text-uppercase text-muted small fw-semibold mb-2">Before you can submit</p>
+
+   {% if validation_cards %}
+      {% include 'build/validation/fix_list.html' with switch_from='reviewBundleModal' %}
+   {% elif not validation_run or validation_run.is_active or validation_run.is_stale %}
+      <p class="small text-muted">
+         Anything PDS or ELSA needs you to change will be listed here once the check
+         finishes.
+      </p>
+   {% elif validation_run.status == 'f' %}
+      <p class="small text-muted">
+         The check could not run, so there is nothing to list. Node staff will check
+         the bundle during review.
+      </p>
+   {% else %}
+      <div class="d-flex align-items-center gap-2 p-2 rounded mb-3" style="background-color:#e2f0ee;">
+         <span class="text-success fw-bold">&check;</span>
+         <span class="small">Nothing needs changing.</span>
+      </div>
+   {% endif %}
+
+   {% if validation_advisory %}
+   <p class="text-uppercase text-muted small fw-semibold mb-2 mt-3">Worth reviewing</p>
+   <div class="list-group rounded overflow-hidden mb-3">
+      {% for item in validation_advisory %}
+      <div class="list-group-item py-2">
+         <div class="small">{{ item.title }}</div>
+         <div class="text-muted" style="font-size:0.78rem;">{{ item.detail }}</div>
+      </div>
+      {% endfor %}
+   </div>
+   {% endif %}
+</div><!-- /review_findings -->

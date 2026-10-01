@@ -1,0 +1,197 @@
+{% comment %}
+The bundle page's windows save in place.
+
+Any form here marked data-inplace="<name>" is posted by this script instead of by the
+browser, with the name in X-Elsa-Inplace. The view answers in JSON
+(build/views.py, _inplace_form and friends):
+
+  {ok: true, redirect: url}      saved: go there (normally this page, so it reloads
+                                 with the confirmation toast and the right tab open)
+  {ok: false, errors: {...}}     refused: Django's form errors, keyed by field name
+
+A refusal is shown inside the window, which stays open with everything the user typed
+and the file they picked still in it. Before this, a refused document add on an External
+bundle left the bundle page for a walkthrough page with no way back, and a refused alias
+or modification history reloaded the page with the reasons hidden in a closed window.
+
+Without fetch or FormData, or with JavaScript off, the forms post as they always did;
+the views still handle that.
+{% endcomment %}
+<style>
+   .inplace-busy-spinner { width: 0.9rem; height: 0.9rem; border-width: 0.15em; }
+</style>
+<script>
+(function () {
+   'use strict';
+   if (!window.fetch || !window.FormData) return;
+
+   var MARK = 'data-inplace-error';
+
+   function cssEscape(value) {
+      return window.CSS && CSS.escape ? CSS.escape(value) : String(value).replace(/["\\]/g, '\\$&');
+   }
+
+   function clearErrors(form) {
+      form.querySelectorAll('[' + MARK + ']').forEach(function (el) { el.remove(); });
+      form.querySelectorAll('.is-invalid[data-inplace-invalid]').forEach(function (el) {
+         el.classList.remove('is-invalid');
+         el.removeAttribute('data-inplace-invalid');
+         el.removeAttribute('aria-invalid');
+      });
+   }
+
+   // The control a field's error belongs to. Hidden inputs cannot show one.
+   function fieldFor(form, name) {
+      var found = form.querySelectorAll('[name="' + cssEscape(name) + '"]');
+      for (var i = 0; i < found.length; i++) {
+         if (found[i].type !== 'hidden') return found[i];
+      }
+      return null;
+   }
+
+   // Where the message goes: after the control, or after anything the page has built just
+   // after it (the chosen-file row the document window adds below its file input).
+   function anchorFor(field) {
+      var after = field;
+      var next = field.nextElementSibling;
+      while (next && (next.classList.contains('doc-pick') || next.classList.contains('select2'))) {
+         after = next;
+         next = next.nextElementSibling;
+      }
+      return after;
+   }
+
+   function showErrors(form, errors) {
+      clearErrors(form);
+      var general = [];
+      var first = null;
+      Object.keys(errors || {}).forEach(function (name) {
+         var messages = (errors[name] || []).map(function (e) { return e.message || String(e); });
+         var field = name === '__all__' ? null : fieldFor(form, name);
+         if (!field) { general = general.concat(messages); return; }
+         field.classList.add('is-invalid');
+         field.setAttribute('data-inplace-invalid', '');
+         field.setAttribute('aria-invalid', 'true');
+         var box = document.createElement('div');
+         box.className = 'invalid-feedback d-block';
+         box.setAttribute(MARK, '');
+         box.setAttribute('data-inplace-for', name);
+         box.textContent = messages.join(' ');
+         anchorFor(field).insertAdjacentElement('afterend', box);
+         if (!first) first = field;
+      });
+      if (general.length) {
+         var alert = document.createElement('div');
+         alert.className = 'alert alert-danger py-2 small mt-3';
+         alert.setAttribute(MARK, '');
+         alert.setAttribute('role', 'alert');
+         alert.textContent = general.join(' ');
+         form.insertBefore(alert, form.firstChild);
+         first = alert;
+      }
+      if (first) {
+         first.scrollIntoView({ block: 'center', behavior: 'smooth' });
+         if (first.focus && first.type !== 'file') {
+            try { first.focus({ preventScroll: true }); } catch (err) { first.focus(); }
+         }
+      }
+   }
+
+   function setBusy(form, submitter, busy) {
+      form.toggleAttribute('data-inplace-busy', busy);
+      form.setAttribute('aria-busy', busy ? 'true' : 'false');
+      form.querySelectorAll('button[type="submit"], input[type="submit"]').forEach(function (b) {
+         b.disabled = busy;
+      });
+      var target = submitter || form.querySelector('button[type="submit"]');
+      if (!target || target.tagName !== 'BUTTON') return;
+      var spinner = target.querySelector('.inplace-busy-spinner');
+      if (busy && !spinner) {
+         spinner = document.createElement('span');
+         spinner.className = 'spinner-border inplace-busy-spinner me-2';
+         spinner.setAttribute('aria-hidden', 'true');
+         target.insertBefore(spinner, target.firstChild);
+      } else if (!busy && spinner) {
+         spinner.remove();
+      }
+   }
+
+   // A redirect to this same page only changes the fragment, which a browser does without
+   // loading anything, so the page is reloaded to show what was saved.
+   function go(url) {
+      var to = new URL(url, window.location.href);
+      if (to.pathname === window.location.pathname && to.search === window.location.search) {
+         try { history.replaceState(null, '', to.pathname + to.search + to.hash); } catch (err) {}
+         window.location.reload();
+      } else {
+         window.location.assign(to.href);
+      }
+   }
+
+   document.addEventListener('submit', function (e) {
+      var form = e.target;
+      if (!(form instanceof HTMLFormElement) || !form.hasAttribute('data-inplace')) return;
+      if (e.defaultPrevented) return;
+      e.preventDefault();
+      if (form.hasAttribute('data-inplace-busy')) return;
+
+      var submitter = e.submitter || null;
+      var body = new FormData(form);
+      // FormData leaves out the button that was pressed, and the External document
+      // window's button carries source=bundle, which is what brings the user back here.
+      if (submitter && submitter.name) body.append(submitter.name, submitter.value);
+
+      clearErrors(form);
+      setBusy(form, submitter, true);
+
+      fetch(form.action, {
+         method: 'POST',
+         body: body,
+         credentials: 'same-origin',
+         headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-Elsa-Inplace': form.getAttribute('data-inplace')
+         }
+      })
+         .then(function (response) {
+            return response.json().then(
+               function (data) { return data; },
+               function () { return null; });
+         })
+         .then(function (data) {
+            if (data && data.ok && data.redirect) {
+               // Stays busy: the page is about to change.
+               go(data.redirect);
+               return;
+            }
+            setBusy(form, submitter, false);
+            if (data && data.errors) {
+               showErrors(form, data.errors);
+            } else {
+               showErrors(form, { __all__: [{ message:
+                  'Something went wrong while saving. Please reload the page to see whether it was saved, then try again.' }] });
+            }
+         })
+         .catch(function () {
+            setBusy(form, submitter, false);
+            showErrors(form, { __all__: [{ message:
+               'ELSA could not be reached, so nothing was sent. Check your connection and try again.' }] });
+         });
+   });
+
+   // A field the user has started to correct loses its message.
+   function settle(e) {
+      var field = e.target;
+      if (!field || !field.hasAttribute || !field.hasAttribute('data-inplace-invalid')) return;
+      var form = field.form;
+      field.classList.remove('is-invalid');
+      field.removeAttribute('data-inplace-invalid');
+      field.removeAttribute('aria-invalid');
+      if (!form) return;
+      var box = form.querySelector('[data-inplace-for="' + cssEscape(field.name) + '"]');
+      if (box) box.remove();
+   }
+   document.addEventListener('input', settle);
+   document.addEventListener('change', settle);
+})();
+</script>

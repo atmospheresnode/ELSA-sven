@@ -1,18 +1,18 @@
 <!-- watches: build/models.py#Target, build/models.py#Investigation, build/models.py#Instrument, build/models.py#Instrument_Host, build/models.py#Facility, build/models.py#Telescope, build/views.py#context_search*, build/views.py#delete_target, build/views.py#delete_investigation, templates/build/context -->
 <!-- fingerprint:
-     build/models.py#Target              = 31e0dc5a27fa
-     build/models.py#Investigation       = 55d5b2007e0d
-     build/models.py#Instrument          = 045c45ac98c6
-     build/models.py#Instrument_Host     = 89845b10189f
-     build/models.py#Facility            = fe3f71b6bc88
-     build/models.py#Telescope           = 0d4e9fc5695d
+     build/models.py#Target              = 508e7900ba81
+     build/models.py#Investigation       = e2c07802a5f9
+     build/models.py#Instrument          = a75d43b9342d
+     build/models.py#Instrument_Host     = fe0c0b835587
+     build/models.py#Facility            = edb1f557974d
+     build/models.py#Telescope           = 8517fb364fcf
      build/views.py#context_search*      = eb3e9e767306
-     build/views.py#delete_target        = eb9d21f1c8dc
-     build/views.py#delete_investigation = 9b74bef19257
+     build/views.py#delete_target        = 266667f71ce9
+     build/views.py#delete_investigation = e0c9e97bba48
      templates/build/context             = a8559e40f4ac
 -->
-<!-- reviewed: 2026-08-28 -->
-<!-- baseline: d8df4b96320a4636b7a95ac426bec7ff1a1fa839 -->
+<!-- reviewed: 2026-09-17 -->
+<!-- baseline: ab6b3482d9893d5e8b7e506fadff1e8125905f6a -->
 # Targets and Context Products
 
 PDS4 Information Model (v1.24 / 1O00): the Target_Identification class provides
@@ -21,6 +21,17 @@ Attributes: name [1..1] (required), type [1..*] (required, e.g. Planet,
 Satellite, Comet), alternate_designation [0..*], description [0..1], and an
 optional Internal_Reference pointing at the target's context product
 (lid_reference + reference_type required).
+
+type is a closed list and PDS is case-sensitive about it: 'Asteroid', not
+'ASTEROID'. The PDS registry that ELSA crawls stores most of them upper case, so
+ELSA converts to the PDS spelling when it writes the label. Users pick a target
+from a list and never type its type, so a complaint from PDS about a target type
+is never something the user can fix by choosing differently.
+
+reference_type on a Target_Identification depends on what is referring to it:
+bundle_to_target from a Product_Bundle, collection_to_target from a
+Product_Collection, data_to_target from a Product_Observational, and
+document_to_target from a Product_Document.
 
 Context products are PDS4 products that describe the "context" of an
 observation: investigations (missions, field campaigns, observing campaigns),

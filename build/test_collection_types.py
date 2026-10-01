@@ -164,6 +164,17 @@ class CollectionTypeE2ETests(TestCase):
         self.assertIsNotNone(collection, 'the collection was not created')
         self.assertEqual(self.collection_types(bundle)['mydata'], 'External')
 
+    def test_creating_a_collection_lands_on_its_tab(self):
+        """The redirect names the new collection's tab, not the Add New Collection form."""
+        bundle = self.build_bundle('coltype lands on tab', 'External')
+        response = self.client.post(reverse('build:bundle', kwargs={'pk_bundle': bundle.pk}),
+                                    {'collection_name': 'mydata', 'collection_type': 'External'})
+
+        collection = AdditionalCollections.objects.get(bundle=bundle, collection_name='mydata')
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response['Location'].endswith(
+            '/#additional_collection_{}'.format(collection.pk)), response['Location'])
+
     # -- the guard that catches any future drift ---------------------------------------------------
 
     def test_no_bundle_emits_a_value_outside_the_enumeration(self):
@@ -272,3 +283,112 @@ class CollectionTypeRepairMigrationTests(TestCase):
             wanted = collection.collection_type()
             self.assertFalse(migration.repair_collection_label(collection.label(), wanted),
                              '{} was rewritten despite already being correct'.format(wanted))
+
+
+class UserAddedCollectionInventoryTests(CollectionTypeE2ETests):
+    """A collection the user adds must carry the inventory every PDS4 collection needs.
+
+    ELSA's own document collection has had build_inventory() since the inventory work;
+    collections the user added were never given it, so they shipped with the whole
+    File_Area_Inventory blank: no file name, no local identifier, no creation date.
+    That was ten of the seventeen findings on a freshly built bundle, because validate
+    reports each empty field twice and then abandons the product entirely for want of
+    a file name.
+    """
+
+    def add_collection(self, bundle, name):
+        self.client.post(reverse('build:bundle', kwargs={'pk_bundle': bundle.pk}),
+                         {'collection_name': name, 'collection_type': 'External'})
+        collection = AdditionalCollections.objects.filter(bundle=bundle).first()
+        self.assertIsNotNone(collection, 'the collection was not created')
+        return collection
+
+    def inventory_area(self, collection):
+        root = ET.parse(collection.label()).getroot()
+        area = root.find('pds:File_Area_Inventory', NS)
+        self.assertIsNotNone(area, 'no File_Area_Inventory in the collection label')
+        return area
+
+    def inventory_fields(self, collection):
+        area = self.inventory_area(collection)
+        file_element = area.find('pds:File', NS)
+        return {
+            'file_name': (file_element.findtext('pds:file_name', '', NS) or '').strip(),
+            'creation_date_time': (
+                file_element.findtext('pds:creation_date_time', '', NS) or '').strip(),
+        }
+
+    def test_the_label_names_an_inventory_file(self):
+        bundle = self.build_bundle('inv names file', 'External')
+        collection = self.add_collection(bundle, 'sims')
+        fields = self.inventory_fields(collection)
+        self.assertTrue(fields['file_name'],
+                        'the label promises an inventory it does not name; validate '
+                        'abandons the whole product for want of a file name')
+        self.assertTrue(fields['file_name'].endswith('.csv'), fields['file_name'])
+
+    def test_the_inventory_file_is_actually_written(self):
+        bundle = self.build_bundle('inv file exists', 'External')
+        collection = self.add_collection(bundle, 'sims')
+        named = self.inventory_fields(collection)['file_name']
+        self.assertTrue(
+            os.path.exists(os.path.join(collection.directory(), named)),
+            'the label names an inventory file that is not on disk')
+
+    def test_no_inventory_element_is_present_but_empty(self):
+        """The rule is not that every element is filled, it is that none is blank.
+
+        An optional element ELSA has no value for is dropped, which is correct and is
+        what local_identifier does here. An element left in place with no text is what
+        PDS rejects, and it costs two findings each: the pattern and the type.
+        """
+        bundle = self.build_bundle('inv no blanks', 'External')
+        collection = self.add_collection(bundle, 'sims')
+        for element in self.inventory_area(collection).iter():
+            if len(element):
+                continue                        # containers hold children, not text
+            self.assertTrue(
+                (element.text or '').strip(),
+                '<{}> is present but empty in the collection label'.format(
+                    element.tag.split('}')[-1]))
+
+    def test_the_required_inventory_fields_are_filled(self):
+        bundle = self.build_bundle('inv required', 'External')
+        collection = self.add_collection(bundle, 'sims')
+        for name, value in self.inventory_fields(collection).items():
+            self.assertTrue(value, '{} is empty in the collection label'.format(name))
+
+    def test_elsas_own_collection_still_has_its_inventory(self):
+        """The half that already worked."""
+        bundle = self.build_bundle('inv document still', 'External')
+        document = Product_Collection.objects.filter(bundle=bundle).first()
+        root = ET.parse(document.label()).getroot()
+        named = root.findtext(
+            'pds:File_Area_Inventory/pds:File/pds:file_name', '', NS).strip()
+        self.assertTrue(named, 'the document collection lost its inventory')
+
+
+class AMAInvestigationLookupTests(CollectionTypeE2ETests):
+    """The External branch finds the AMA investigation by LID, whatever the row is named.
+
+    On prod the crawler had stored the row under PDS's full title, "Atmospheric Modeling
+    Annex Individual Investigation", and migration 0075 kept that row and deleted the one
+    named "Atmospheric Modeling Annex". The view looked the row up by the short name, got
+    None, and every External bundle creation 500ed in write_into_label.
+    """
+
+    AMA_LID = 'urn:nasa:pds:context:investigation:individual.atmospheric_modeling_annex'
+
+    def setUp(self):
+        super(AMAInvestigationLookupTests, self).setUp()
+        Investigation.objects.filter(lid=self.AMA_LID).update(
+            name='Atmospheric Modeling Annex Individual Investigation')
+
+    def test_external_bundle_is_created_when_the_row_has_the_published_title(self):
+        bundle = self.build_bundle('ama full title', 'External')
+        label = Product_Bundle.objects.get(bundle=bundle).label()
+        root = ET.parse(label).getroot()
+        self.assertEqual(
+            root.findtext('pds:Context_Area/pds:Investigation_Area/pds:Internal_Reference/'
+                          'pds:lid_reference', '', NS).strip(),
+            self.AMA_LID)

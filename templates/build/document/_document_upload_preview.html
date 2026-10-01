@@ -1,0 +1,215 @@
+{% comment %}
+Shows a document file as soon as it is chosen, before anything is uploaded: its name as
+ELSA will save it, its size, whether it will be accepted, and a preview of what is in
+it. Enhances every input[name="document_file"] on the page, so one include covers the
+Archive and External windows, the editor page and the walkthrough pages.
+
+The checks repeat build/document_files.py (cleaned name, .pdf or .txt, size cap, PDF/A-1
+claim in the XMP, UTF-8 text) so a file that would be refused says so here, with the
+reason, instead of after the upload. The server is still the authority; nothing here
+blocks the form. Keep the two in step.
+
+Include once per page, after the forms.
+{% endcomment %}
+<style>
+   .doc-pick { border: 1px solid #dee2e6; border-radius: .5rem; margin-top: .5rem; overflow: hidden; background: #fff; }
+   .doc-pick-row { display: flex; align-items: center; gap: .6rem; padding: .55rem .75rem; }
+   .doc-pick-row .bi { font-size: 1.35rem; flex: none; }
+   .doc-pick-name { min-width: 0; flex: 1 1 auto; }
+   .doc-pick-name > div { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+   .doc-pick-status { padding: .45rem .75rem; font-size: .875rem; border-top: 1px solid #dee2e6; }
+   .doc-pick-status.is-ok { background: #d1e7dd; color: #0f5132; }
+   .doc-pick-status.is-bad { background: #f8d7da; color: #842029; }
+   .doc-pick-status.is-checking { background: #f8f9fa; color: #6c757d; }
+   .doc-pick-view { border-top: 1px solid #dee2e6; background: #f8f9fa; }
+   .doc-pick-view iframe { display: block; width: 100%; height: 420px; border: 0; background: #fff; }
+   .doc-pick-view pre { margin: 0; padding: .75rem; max-height: 320px; overflow: auto; font-size: .8rem; white-space: pre-wrap; word-break: break-word; background: #fff; }
+</style>
+<script>
+   (function () {
+      var PDS_FILE_NAME = /^[a-zA-Z0-9]([a-zA-Z0-9]|[-]|[_]|[.])*[.][a-zA-Z0-9]+$/;
+      var PDFA_PART = /pdfaid:part\s*(?:=\s*["']|>)\s*(\d)/;
+      var HOW_TO = 'Export it again as PDF/A-1b: in Word, Export > Create PDF/XPS and tick ' +
+         '"ISO 19005-1 compliant (PDF/A)"; in LibreOffice, Export as PDF, tick "Archive (PDF/A)" ' +
+         'and choose PDF/A-1b; in Acrobat, save as PDF/A-1b. Plain text (.txt) is accepted too.';
+      var TEXT_PREVIEW_BYTES = 64 * 1024;
+
+      function sizeText(bytes) {
+         if (bytes < 1024) { return bytes + ' bytes'; }
+         if (bytes < 1024 * 1024) { return (bytes / 1024).toFixed(1) + ' KB'; }
+         return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+      }
+
+      // document_files.clean_file_name: the name the label will carry, or an error.
+      function cleanName(name) {
+         var dot = name.lastIndexOf('.');
+         var stem = dot > 0 ? name.slice(0, dot) : name;
+         var ext = dot > 0 ? name.slice(dot).toLowerCase() : '';
+         if (ext !== '.pdf' && ext !== '.txt') {
+            return { error: 'Documents can be a PDF (.pdf) or plain text (.txt). "' + name + '" is neither.' };
+         }
+         stem = stem.normalize('NFKD').replace(/[^\x00-\x7F]/g, '').trim()
+            .replace(/\s+/g, '_').replace(/[^A-Za-z0-9._-]/g, '').replace(/^[._-]+/, '');
+         var cleaned = stem + ext;
+         if (!stem || !PDS_FILE_NAME.test(cleaned)) {
+            return { error: 'PDS file names may use letters, digits, dots, dashes and underscores, ' +
+                            'and must start with a letter or digit. Rename "' + name + '" and choose it again.' };
+         }
+         return { name: cleaned };
+      }
+
+      function el(tag, className, text) {
+         var node = document.createElement(tag);
+         if (className) { node.className = className; }
+         if (text !== undefined) { node.textContent = text; }
+         return node;
+      }
+
+      function enhance(input) {
+         if (input.dataset.docPick) { return; }
+         input.dataset.docPick = '1';
+         var MAX_MB = parseInt(input.dataset.maxMb, 10) || 100;
+
+         var box = el('div', 'doc-pick');
+         box.hidden = true;
+         var row = el('div', 'doc-pick-row');
+         var icon = el('i', 'bi');
+         icon.setAttribute('aria-hidden', 'true');
+         var nameWrap = el('div', 'doc-pick-name');
+         var nameLine = el('div', 'fw-bold');
+         var metaLine = el('div', 'small text-muted');
+         nameWrap.appendChild(nameLine);
+         nameWrap.appendChild(metaLine);
+         var toggle = el('button', 'btn btn-sm btn-outline-secondary btn-keep-bg text-nowrap');
+         toggle.type = 'button';
+         var remove = el('button', 'btn btn-sm btn-outline-secondary btn-keep-bg');
+         remove.type = 'button';
+         remove.title = 'Choose a different file';
+         remove.setAttribute('aria-label', 'Remove this file');
+         remove.innerHTML = '<i class="bi bi-x-lg" style="font-size: 1rem;"></i>';
+         row.appendChild(icon);
+         row.appendChild(nameWrap);
+         row.appendChild(toggle);
+         row.appendChild(remove);
+         var status = el('div', 'doc-pick-status');
+         status.setAttribute('role', 'status');
+         var view = el('div', 'doc-pick-view');
+         view.hidden = true;
+         box.appendChild(row);
+         box.appendChild(status);
+         box.appendChild(view);
+         input.insertAdjacentElement('afterend', box);
+
+         var blobUrl = null;
+         var token = 0;
+
+         function setStatus(kind, text) {
+            status.className = 'doc-pick-status is-' + kind;
+            status.textContent = text;
+         }
+
+         function setOpen(open) {
+            view.hidden = !open;
+            toggle.innerHTML = open ? '<i class="bi bi-eye-slash me-1"></i>Hide preview'
+                                    : '<i class="bi bi-eye me-1"></i>Preview';
+            toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+         }
+
+         function reset() {
+            token += 1;
+            if (blobUrl) { URL.revokeObjectURL(blobUrl); blobUrl = null; }
+            view.innerHTML = '';
+            setOpen(false);
+            box.hidden = true;
+         }
+
+         toggle.addEventListener('click', function () { setOpen(view.hidden); });
+         remove.addEventListener('click', function () {
+            input.value = '';
+            reset();
+            input.focus();
+         });
+
+         input.addEventListener('change', function () {
+            reset();
+            var file = input.files && input.files[0];
+            if (!file) { return; }
+            var mine = token;
+            box.hidden = false;
+
+            var isPdf = /\.pdf$/i.test(file.name);
+            icon.className = 'bi ' + (isPdf ? 'bi-file-earmark-pdf text-danger' : 'bi-file-earmark-text text-secondary');
+            nameLine.textContent = file.name;
+            nameLine.title = file.name;
+            metaLine.textContent = sizeText(file.size);
+            toggle.hidden = true;
+
+            var named = cleanName(file.name);
+            if (named.error) { setStatus('bad', named.error); return; }
+            if (file.size === 0) { setStatus('bad', '"' + file.name + '" is empty.'); return; }
+            if (file.size > MAX_MB * 1024 * 1024) {
+               setStatus('bad', '"' + file.name + '" is larger than the ' + MAX_MB + ' MB a document may be.');
+               return;
+            }
+            if (named.name !== file.name) {
+               metaLine.textContent = sizeText(file.size) + ' · saved as ' + named.name;
+            }
+
+            setStatus('checking', 'Checking the file…');
+            file.arrayBuffer().then(function (buffer) {
+               if (mine !== token) { return; }
+               var bytes = new Uint8Array(buffer);
+               if (isPdf) {
+                  var raw = new TextDecoder('latin1').decode(bytes);
+                  if (raw.slice(0, 5) !== '%PDF-') {
+                     setStatus('bad', '"' + file.name + '" is named .pdf but is not a PDF file.');
+                     return;
+                  }
+                  blobUrl = URL.createObjectURL(new Blob([buffer], { type: 'application/pdf' }));
+                  var frame = el('iframe');
+                  frame.title = 'Preview of ' + file.name;
+                  frame.src = blobUrl;
+                  view.appendChild(frame);
+                  toggle.hidden = false;
+                  var match = PDFA_PART.exec(raw);
+                  var part = match ? parseInt(match[1], 10) : null;
+                  if (part !== 1) {
+                     setStatus('bad', 'This will be refused: it is ' +
+                        (part ? 'PDF/A-' + part + ', not PDF/A-1. ' : 'an ordinary PDF, not PDF/A-1. ') + HOW_TO);
+                     return;
+                  }
+                  setStatus('ok', 'Ready to upload: PDF/A-1.');
+               } else {
+                  var text;
+                  try {
+                     text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+                  } catch (e) {
+                     setStatus('bad', 'This will be refused: the text is not UTF-8, the only text encoding ' +
+                        'PDS accepts. Save it as UTF-8 (usually under "Save as" or "Encoding") and choose it again.');
+                     return;
+                  }
+                  var shown = text.length > TEXT_PREVIEW_BYTES
+                     ? text.slice(0, TEXT_PREVIEW_BYTES) + '\n\n… (preview shows the start of the file)'
+                     : text;
+                  view.appendChild(el('pre', '', shown));
+                  toggle.hidden = false;
+                  setStatus('ok', /^[\x00-\x7F]*$/.test(text) ? 'Ready to upload: plain ASCII text.'
+                                                              : 'Ready to upload: UTF-8 text.');
+               }
+            }).catch(function () {
+               if (mine !== token) { return; }
+               setStatus('bad', 'This file could not be read. Choose it again.');
+            });
+         });
+      }
+
+      function enhanceAll() {
+         document.querySelectorAll('input[type="file"][name="document_file"]').forEach(enhance);
+      }
+      if (document.readyState === 'loading') {
+         document.addEventListener('DOMContentLoaded', enhanceAll);
+      } else {
+         enhanceAll();
+      }
+   })();
+</script>

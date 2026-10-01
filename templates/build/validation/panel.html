@@ -1,0 +1,316 @@
+{% comment %}
+PDS validation results. The body only: this is rendered inside the validation modal,
+which the Bundle Components card opens. It used to be a card of its own on the bundle
+page, which cost a full-width card to say nothing most of the time.
+
+Grouped by the ELSA card that fixes each item, never by XML file or line: someone
+thinks "my citation is incomplete", not "line 22 of collection_x_document.xml".
+
+Counts what passed as well as what failed, because a validation panel that only
+ever reports failures is one people avoid opening.
+
+Nothing here starts work on page load. Running a check is an explicit action.
+{% endcomment %}
+
+      {% comment %}
+   Everything above the Check button lives in one container, because that is the
+   part the page replaces when a check finishes. The button stays put so the click
+   handler bound to it survives the swap.
+{% endcomment %}
+<div id="preflight_body">
+
+{% comment %}Not said when the page is about to check by itself: the answer is seconds away.{% endcomment %}
+{% if validation_run and validation_run.is_stale and not validation_auto_check %}
+      <div class="alert alert-warning py-2 px-3 small mb-3" id="preflight_stale">
+         <strong>These results are out of date.</strong>
+         The bundle changed after this check ran, so some items may already be fixed.
+         Run it again to see where things stand.
+      </div>
+      {% endif %}
+
+      {% if validation_run and validation_run.status == 'f' %}
+      <div class="alert alert-danger py-2 px-3 small mb-3">
+         <strong>The last check could not finish.</strong>
+         {{ validation_run.failure_reason }}
+      </div>
+      {% endif %}
+
+      {# --- running ------------------------------------------------------- #}
+      <div id="preflight_progress" class="mb-3" {% if not validation_run.is_active %}hidden{% endif %}>
+         <div class="d-flex justify-content-between align-items-baseline mb-1">
+            <span class="small fw-semibold" id="preflight_phase">Starting…</span>
+            <span class="small text-muted" id="preflight_counts"></span>
+         </div>
+         <div class="progress" style="height: 8px;">
+            {% comment %}
+               Indeterminate while validate compiles schemas, which takes a few
+               seconds and emits nothing. A bar sitting at zero reads as a hang.
+            {% endcomment %}
+            <div id="preflight_bar"
+                 class="progress-bar progress-bar-striped progress-bar-animated"
+                 role="progressbar" style="width: 100%;"
+                 aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+         </div>
+      </div>
+
+      {# --- results ------------------------------------------------------- #}
+      {% comment %}
+         Says what changed, not what to do about it: the details below are already
+         the new ones by the time this appears.
+      {% endcomment %}
+      <div id="preflight_updated" class="alert alert-success py-2 px-3 small mb-3" hidden>
+         <strong>Results updated.</strong>
+         <span id="preflight_summary_counts"></span>
+      </div>
+
+      {% comment %}
+         Keyed on there being raw output, not on there being a verdict. ELSA's own
+         requirements produce a verdict with nothing behind it in the PDS report, and
+         a "Validation output" tab that opens on an empty list is worse than no tab.
+      {% endcomment %}
+      {% if validation_raw_total %}
+      {% comment %}
+         Two tabs rather than two panes side by side. A split view would imply that a
+         row on one side lines up with a row on the other, and it does not: on a real
+         bundle four rows stand for fifty-six findings, one of them backed by sixteen,
+         and thirty-four correspond to nothing shown at all. Tabs make no such promise.
+
+         "What to fix" is first and opens by default. The raw output is there for
+         anyone who wants to check the translation rather than trust it, which is the
+         whole reason for offering it, but meeting it first would undo the work the
+         translation does.
+      {% endcomment %}
+      <ul class="nav nav-tabs small mb-3" role="tablist">
+         <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="preflight_tab_fix" data-bs-toggle="tab"
+                    data-bs-target="#preflight_pane_fix" type="button" role="tab"
+                    aria-controls="preflight_pane_fix" aria-selected="true">What to fix</button>
+         </li>
+         <li class="nav-item" role="presentation">
+            <button class="nav-link" id="preflight_tab_raw" data-bs-toggle="tab"
+                    data-bs-target="#preflight_pane_raw" type="button" role="tab"
+                    aria-controls="preflight_pane_raw" aria-selected="false">
+               Validation output
+               <span class="badge rounded-pill bg-secondary ms-1">{{ validation_raw_total }}</span>
+            </button>
+         </li>
+      </ul>
+
+      <div class="tab-content">
+      <div class="tab-pane fade show active" id="preflight_pane_fix" role="tabpanel"
+           aria-labelledby="preflight_tab_fix">
+      {% endif %}
+
+      <div id="preflight_results">
+
+         {% comment %}
+            Whether a check has run is its own statement, not a branch of the results.
+            ELSA's own requirements are checked against the database and need no run,
+            so an unchecked bundle can have items to show underneath this note; before
+            requirements existed, "not checked yet" and "here is what to fix" could
+            never both be true and this was the first arm of the chain below.
+         {% endcomment %}
+         {% if not validation_run %}
+         <p class="small text-muted mb-3">
+            {% if validation_auto_check %}
+            Checking this bundle against the PDS validation tool. This takes a few seconds.
+            {% else %}
+            This bundle has not been checked yet. Running a check takes a few seconds
+            and tells you what PDS would say about it today.
+            {% endif %}
+         </p>
+         {% endif %}
+
+         {% if validation_summary %}
+         {% comment %}
+            The counts row needs a run to have happened: "Labels checked" has no
+            honest value before one. ELSA's own requirements do not, so the items
+            below can appear without it.
+         {% endcomment %}
+         {% if validation_run %}
+         <div class="d-flex text-center border rounded overflow-hidden mb-3">
+            <div class="flex-fill py-2 px-1 border-end">
+               <div class="fw-bold {% if validation_summary.blocking %}text-danger{% else %}text-success{% endif %}"
+                    style="font-size:1.4rem; line-height:1;">{{ validation_summary.blocking }}</div>
+               <div class="text-muted" style="font-size:0.7rem;">Need your attention</div>
+            </div>
+            <div class="flex-fill py-2 px-1 border-end">
+               <div class="fw-bold" style="font-size:1.4rem; line-height:1;">{{ validation_summary.advisory }}</div>
+               <div class="text-muted" style="font-size:0.7rem;">Worth reviewing</div>
+            </div>
+            <div class="flex-fill py-2 px-1">
+               <div class="fw-bold text-success" style="font-size:1.4rem; line-height:1;">{{ validation_run.products_total }}</div>
+               <div class="text-muted" style="font-size:0.7rem;">Labels checked</div>
+            </div>
+         </div>
+         {% endif %}
+
+         {% if validation_summary.can_submit %}
+         <div class="d-flex align-items-center gap-2 p-2 rounded mb-3"
+              style="background-color:#e2f0ee;">
+            <span class="text-success fw-bold">&check;</span>
+            <span class="small">Nothing is blocking this bundle from going for review.</span>
+         </div>
+         {% endif %}
+
+         {% include 'build/validation/fix_list.html' with switch_from='validation_modal' %}
+
+         {% if validation_advisory %}
+         <div class="d-flex align-items-center gap-2 mb-2">
+            <span class="text-muted fw-semibold text-nowrap"
+                  style="font-size:0.7rem; letter-spacing:0.07em; text-transform:uppercase;">Worth reviewing</span>
+            <hr class="flex-grow-1 my-0 opacity-50">
+         </div>
+         <div class="list-group rounded overflow-hidden mb-3">
+            {% for item in validation_advisory %}
+            <div class="list-group-item py-2">
+               <div class="small">{{ item.title }}</div>
+               <div class="text-muted" style="font-size:0.78rem;">{{ item.detail }}</div>
+            </div>
+            {% endfor %}
+         </div>
+         {% endif %}
+
+         {% elif validation_run.is_active %}
+         <p class="small text-muted mb-3">
+            Checking this bundle against the PDS validation tool.
+         </p>
+
+         {% elif validation_run.status == 'd' %}
+         {% comment %}
+            A completed run that reported nothing at all. Saying "run it again" here,
+            as this branch used to, tells someone whose bundle passed cleanly that
+            something went wrong.
+         {% endcomment %}
+         <div class="d-flex align-items-center gap-2 p-2 rounded mb-3"
+              style="background-color:#e2f0ee;">
+            <span class="text-success fw-bold">&check;</span>
+            <span class="small">
+               PDS reported nothing on this bundle. All
+               {{ validation_run.products_total }} label{{ validation_run.products_total|pluralize }}
+               passed.
+            </span>
+         </div>
+
+         {% elif validation_run and validation_run.status != 'f' %}
+         <p class="small text-muted mb-3">
+            The last check finished without storing any findings. Run it again.
+         </p>
+         {% endif %}
+
+         {% if validation_run and validation_run.finished_at %}
+         <div class="text-muted" style="font-size:0.72rem;">
+            Last checked {{ validation_run.finished_at|timesince }} ago.
+         </div>
+         {% endif %}
+      </div>
+
+      {% if validation_raw_total %}
+      </div>{# /pane: what to fix #}
+
+      <div class="tab-pane fade" id="preflight_pane_raw" role="tabpanel"
+           aria-labelledby="preflight_tab_raw">
+         {% comment %}
+            The technical tally lives here rather than behind a separate disclosure in
+            the other tab: this tab is the technical detail, and two doors to the same
+            room made the panel look unsure of itself.
+         {% endcomment %}
+         <p class="small text-muted mb-1">
+            <strong>You do not need this tab to fix anything.</strong> It shows
+            PDS's unfiltered output, so you can double-check the other tab.
+         </p>
+         <p class="small text-muted">
+            {{ validation_run.products_total }} label{{ validation_run.products_total|pluralize }}
+            checked:
+            {{ validation_run.error_count }} error{{ validation_run.error_count|pluralize }},
+            {{ validation_run.warning_count }} warning{{ validation_run.warning_count|pluralize }}.
+            {% if validation_run.error_count|add:validation_run.warning_count > validation_raw_total %}
+            PDS often reports a problem twice, so these are
+            {{ validation_raw_total }} distinct problem{{ validation_raw_total|pluralize }}.
+            {% endif %}
+            {% if validation_raw_elsa %}
+            {{ validation_raw_elsa }} of these {{ validation_raw_elsa|pluralize:"is,are" }}
+            caused by ELSA, not by anything you entered.
+            {% endif %}
+            {% if user.is_staff %}
+            <a href="{% url 'build:validation_report' validation_run.pk %}">Full report</a>
+            {% endif %}
+         </p>
+         {% comment %}
+            No scroller of its own. This started as a sidebar card, where a long list
+            needed containing; it now renders in a scrollable modal body, and an inner
+            scroller there just means two scrollbars for one list.
+         {% endcomment %}
+         <div>
+         {% for label_name, findings in validation_raw %}
+         <div class="d-flex align-items-center gap-2 mb-1 mt-2">
+            <span class="text-muted fw-semibold text-nowrap"
+                  style="font-size:0.7rem; letter-spacing:0.07em; text-transform:uppercase;">{{ label_name }}</span>
+            <hr class="flex-grow-1 my-0 opacity-50">
+         </div>
+         <div>
+            {% for finding in findings %}
+            <div class="d-flex gap-2 py-2 border-bottom" style="font-size:0.74rem;">
+               <span class="badge rounded-pill flex-shrink-0
+                  {% if finding.severity == 'ERROR' %}bg-danger{% else %}bg-warning text-dark{% endif %}"
+                  style="font-size:0.6rem;">{{ finding.severity|title }}</span>
+               <div class="flex-grow-1" style="min-width:0;">
+                  {% comment %}
+                     The cross-reference. Without it the two tabs are two unrelated
+                     lists and the reader has to guess which raw line became which
+                     item, which is exactly the trust this tab is meant to earn.
+                  {% endcomment %}
+                  {% if finding.audience == 'elsa' %}
+                  <div class="mb-1"><span class="badge bg-secondary"
+                       style="font-size:0.6rem;">ELSA's to fix</span>
+                     <span class="text-muted">{{ finding.shown_as }}</span></div>
+                  {% elif finding.is_unmapped %}
+                  <div class="mb-1"><span class="badge bg-light text-dark border"
+                       style="font-size:0.6rem;">No plain-language wording yet</span></div>
+                  {% else %}
+                  <div class="mb-1">Shown to you as
+                     <span class="fw-semibold">{{ finding.shown_as }}</span></div>
+                  {% endif %}
+                  <div class="font-monospace text-muted" style="font-size:0.68rem;">
+                     {{ finding.element_path|default:"the bundle" }}{% if finding.line %} &middot; line {{ finding.line }}{% endif %}
+                  </div>
+                  {% comment %}
+                     A schema message can be a three-kilobyte regular expression: the
+                     ASCII_Date_Time_YMD_UTC pattern alone runs past 3000 characters,
+                     and one of those dropped in verbatim fills the whole tab. Folded,
+                     not truncated. The opening words are what identifies the problem,
+                     and the rest is one click away rather than gone.
+                  {% endcomment %}
+                  {% for message in finding.messages %}
+                  {% if message|length > 220 %}
+                  <details class="mt-1">
+                     <summary style="cursor:pointer; overflow-wrap:anywhere;">{{ message|truncatechars:200 }}</summary>
+                     <div class="mt-1 p-2 bg-light rounded"
+                          style="overflow-wrap:anywhere; font-size:0.7rem;">{{ message }}</div>
+                  </details>
+                  {% else %}
+                  <div class="mt-1" style="overflow-wrap:anywhere;">{{ message }}</div>
+                  {% endif %}
+                  {% endfor %}
+               </div>
+            </div>
+            {% endfor %}
+         </div>
+         {% empty %}
+         <p class="small text-muted">Nothing was reported.</p>
+         {% endfor %}
+         </div>
+      </div>
+      </div>{# /tab-content #}
+      {% endif %}
+
+</div><!-- /preflight_body -->
+
+      <button type="button" class="btn btn-sm btn-outline-secondary w-100 mt-2"
+              id="preflight_run"
+              data-status-url="{% url 'build:validation_status' bundle.pk %}"
+              data-start-url="{% url 'build:start_validation' bundle.pk %}"
+              data-panel-url="{% url 'build:validation_panel' bundle.pk %}"
+              {% if validation_auto_check %}data-auto-check="1"{% endif %}>
+   {% if validation_run %}Check again{% else %}Check this bundle{% endif %}
+</button>

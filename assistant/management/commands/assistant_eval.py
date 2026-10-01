@@ -44,6 +44,13 @@ class Command(BaseCommand):
             user = User.objects.first()
 
         evals = json.loads(EVALS_PATH.read_text())
+        # A case with nothing to check passes whatever the model says; this
+        # catches a draft from `assistant_stats --export-evals` added unfinished.
+        empty = [case['question'] for case in evals
+                 if not case.get('must_include') and not case.get('must_not_include')]
+        if empty:
+            raise CommandError('These eval cases have nothing to check (empty must_include and '
+                               'must_not_include): ' + '; '.join(empty))
         if options['limit']:
             evals = evals[:options['limit']]
 

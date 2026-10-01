@@ -368,21 +368,11 @@ class RenderedDomAudit(AMATestCaseMixin, TestCase):
                           if value.startswith('ama') or value.startswith('id_')]
         self.assertEqual(ama_duplicates, [], 'duplicate AMA element ids in the live DOM')
 
-    def test_the_remaining_duplicate_ids_are_all_upload_card_controls(self):
-        """Documents a pre-existing issue rather than asserting it away.
-
-        The NetCDF upload/delete card renders once per collection, so its control ids repeat. The
-        JavaScript resolves those elements relative to the submitted form, so they still work, but
-        the ids are invalid HTML and should be made unique when that card is next touched.
-        """
-        expected = {
-            'bulkDeleteBtn', 'bulkDeleteNetCDFForm', 'collection',
-            'netcdfUploadForm', 'selectAllWrapper', 'uploadBtn', 'uploadCancelBtn',
-            'uploadPercent', 'uploadProgressBar', 'uploadProgressWrapper', 'uploadStatusText',
-            'uploadSuccessMsg',
-        }
-        self.assertEqual(set(self.duplicate_ids()) - expected, set(),
-                         'a new duplicate id appeared outside the known upload-card set')
+    def test_no_element_id_is_duplicated(self):
+        """The NetCDF upload/delete card renders once per collection, and its control ids used to
+        repeat with it. They carry the collection's id now, and the script finds them by class
+        within the form, so nothing on the page may share an id."""
+        self.assertEqual(self.duplicate_ids(), [], 'duplicate element ids in the live DOM')
 
     def test_no_ama_label_points_at_a_missing_element(self):
         tree = self.parsed(self.combined_html())

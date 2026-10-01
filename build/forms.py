@@ -1,5 +1,6 @@
 from builtins import object
 from django import forms
+from django.conf import settings
 from django.contrib.auth.models import User
 from .chocolate import replace_all
 from .chocolate import validate_path_component
@@ -9,6 +10,8 @@ from django.utils.safestring import mark_safe
 
 from lxml import etree
 import json
+import re
+import unicodedata
 import urllib.request
 import urllib.error
 import urllib.parse
@@ -287,6 +290,9 @@ class CitationInformationForm(forms.ModelForm):
         exclude = ('bundle',)
 
     def __init__(self, *args, **kwargs):
+        # The bundle the citation is for, when the caller knows it. Only used to
+        # decide whether an author is required (External bundles, for now).
+        self.bundle = kwargs.pop('bundle', None)
         super().__init__(*args, **kwargs)
 
         # Add fields for authors (people)
@@ -342,6 +348,19 @@ class CitationInformationForm(forms.ModelForm):
         for f in ('number_of_editors_people', 'number_of_editors_organization'):
             if cleaned_data.get(f) is None:
                 cleaned_data[f] = 0
+
+        # An External bundle needs an author (build.preflight), and this is the only
+        # moment one can be added: the edit form fills in names but cannot change
+        # how many there are. A citation created with none could only be fixed by
+        # deleting it and starting again, so it is refused here instead.
+        if self.bundle is not None and self.bundle.bundle_type == 'External':
+            people = cleaned_data.get('number_of_authors_people') or 0
+            organizations = cleaned_data.get('number_of_authors_organization') or 0
+            if people + organizations < 1:
+                raise forms.ValidationError(
+                    'Add at least one author, a person or an organization. A citation '
+                    'needs someone to credit, and the number of authors cannot be '
+                    'changed once the citation has been created.')
         return cleaned_data
     
 
@@ -364,6 +383,33 @@ class EditCitationInformationForm(forms.Form):
         # Neakrase, Lyle Huber) are never editable and get no form fields.
         self._add_person_fields('editor', self.citation_information.number_of_editors_people)
         self._add_organization_fields('editor', self.citation_information.number_of_editors_organization)
+
+    def clean(self):
+        """Names PDS cannot store, caught here rather than by the validator.
+
+        PDS4 holds author and editor names in ASCII_* types, all of which are
+        restricted to Basic Latin, so an accented name is refused however correctly
+        it is spelled. Catching it on the form means the user is told while they are
+        looking at the field, and told what spelling does work, rather than finding
+        out later from a validation report about a label they cannot see.
+        """
+        cleaned = super(EditCitationInformationForm, self).clean()
+
+        for name, value in list(cleaned.items()):
+            if not isinstance(value, str) or not value:
+                continue
+            if name.endswith('_given_name'):
+                label = 'given name'
+            elif name.endswith('_family_name'):
+                label = 'family name'
+            else:
+                continue
+            try:
+                clean_pds_person_name(value, label)
+            except forms.ValidationError as error:
+                self.add_error(name, error)
+
+        return cleaned
 
     def _add_person_fields(self, prefix, count):
         """Helper method to add fields for a person (author or editor)."""
@@ -1000,6 +1046,117 @@ PE_STD_ID = [
     ('ASCII', '7-Bit ASCII')
 ]
 
+
+def clean_unique_document_name(form, value):
+    """Refuse a document name already used in this bundle.
+
+    The name becomes the product identifier, which the collection inventory lists,
+    and a collection cannot list the same identifier twice. Two documents called
+    "11" is not a duplicate row in a table somewhere; it is a bundle PDS refuses.
+    """
+    value = (value or '').strip()
+    bundle = getattr(form, 'bundle', None)
+    if not value or bundle is None:
+        return value
+
+    clash = Product_Document.objects.filter(bundle=bundle, document_name=value)
+
+    # The document being edited is not a clash with itself. The edit views build
+    # these forms with initial= rather than instance=, so form.instance has no pk to
+    # exclude and `editing` is how they say which document this is. Without it,
+    # opening a document and saving it unchanged would be refused as a duplicate.
+    editing = getattr(form, 'editing', None)
+    exclude_pk = getattr(editing, 'pk', None) or (
+        form.instance.pk if form.instance is not None else None)
+    if exclude_pk:
+        clash = clash.exclude(pk=exclude_pk)
+    if clash.exists():
+        raise forms.ValidationError(
+            'This bundle already has a document called "%(value)s". PDS identifies '
+            'a document by its name, and a collection cannot list the same one '
+            'twice, so give this one a different name.',
+            params={'value': value})
+    return value
+
+
+# PDS4 stores author and editor names in ASCII_* types, every one of which is
+# restricted to '\p{IsBasicLatin}*'. An accented name is refused however correctly
+# it is spelled, which is a limitation of the archive format rather than anything
+# the user did wrong, so the message says so and offers the spelling that works.
+PDS_BASIC_LATIN = re.compile(r'^[\x00-\x7F]*$')
+
+
+def ascii_suggestion(value):
+    """The nearest unaccented spelling: Morales-Juberias for Morales-Juberias."""
+    decomposed = unicodedata.normalize('NFKD', value or '')
+    stripped = ''.join(c for c in decomposed if not unicodedata.combining(c))
+    return ''.join(c for c in stripped if ord(c) < 128)
+
+
+def clean_pds_person_name(value, label):
+    """Reject a name PDS cannot store, and say what to write instead."""
+    value = (value or '').strip()
+    if not value or PDS_BASIC_LATIN.match(value):
+        return value
+
+    suggestion = ascii_suggestion(value)
+    if suggestion and suggestion != value:
+        raise forms.ValidationError(
+            'PDS can only store unaccented letters in a %(label)s, so '
+            '"%(value)s" cannot be recorded as written. Try "%(suggestion)s". '
+            'This is a limit of the archive format, not a judgement about the name.',
+            params={'label': label, 'value': value, 'suggestion': suggestion})
+
+    raise forms.ValidationError(
+        'PDS can only store unaccented Latin letters in a %(label)s, and '
+        '"%(value)s" uses characters outside that set.',
+        params={'label': label, 'value': value})
+
+
+def document_file_field():
+    """The file a document is. Declared on each document form, not on a mixin, because
+    Django's form metaclass ignores fields declared on a plain mixin."""
+    return forms.FileField(
+        required=False,
+        label='Document File',
+        label_suffix='',
+        help_text=('A PDF/A-1 (.pdf) or plain text (.txt) file. Its name becomes the '
+                   'file name in the label.'),
+        widget=forms.ClearableFileInput(attrs={
+            'class': 'form-control',
+            'accept': '.pdf,.txt,application/pdf,text/plain',
+            # For the in-browser check in _document_upload_preview.html.
+            'data-max-mb': getattr(settings, 'DOCUMENT_MAX_UPLOAD_MB', 100),
+        }))
+
+
+def clean_document_upload(form):
+    """Check the uploaded document file for either document form.
+
+    A new document must come with its file. An edit may leave it out and keep the file
+    it has, or upload a replacement. What is accepted, and why, is in document_files.
+    The checked upload is kept on form.prepared_file for the view to store.
+    """
+    from build import document_files
+
+    form.prepared_file = None
+    uploaded = form.cleaned_data.get('document_file')
+    if not uploaded:
+        if form.editing is None:
+            raise forms.ValidationError(
+                'Attach the document itself: a PDF/A-1 (.pdf) or a plain text (.txt) file.')
+        return None
+
+    prepared = document_files.prepare(uploaded)
+    if form.bundle is not None and document_files.name_taken(
+            form.bundle, prepared.file_name, excluding=form.editing):
+        raise forms.ValidationError(
+            'Another document in this bundle already uses the file name "{}". Rename '
+            'the file and upload it again.'.format(prepared.file_name))
+    form.prepared_file = prepared
+    return uploaded
+
+
 # Nov. 24, 2025 -- External Bundles are supposed to have some different fields for document collections.
 class AnnexProductDocumentForm(forms.ModelForm):
 
@@ -1034,35 +1191,34 @@ class AnnexProductDocumentForm(forms.ModelForm):
         })
     )
 
-    file_name = forms.CharField(
-        required = True,
-        max_length=100,
-        label='File Name',
-        label_suffix='',
-        widget=forms.TextInput(attrs={
-            "class":"form-control",
-            "placeholder": "Enter file name (e.g. User_Guide.pdf)",
-        })
-    )
+    # The file itself. Its name and format (PDF/A or plain text) are taken from the
+    # upload, so there is no typed file name to disagree with it any more.
+    document_file = document_file_field()
 
-    document_std_id = forms.ChoiceField(
-        required=False,
-        choices=PE_STD_ID,
-        label='File Format',
-        label_suffix = '',
-        widget=forms.Select(attrs={
-            'class': 'form-control custom-select'
-        })
-    )
     class Meta:
         model = Product_Document
         fields = [
             "document_name",
             "document_id",
-            "file_name",
             "comment",
-            "document_std_id",
         ]
+
+    def __init__(self, *args, **kwargs):
+        # The bundle is needed to tell whether a document name is already taken in
+        # it. Optional, so existing callers that do not pass one keep working and
+        # simply skip that one check.
+        self.bundle = kwargs.pop('bundle', None)
+        # The Product_Document being edited, when this form is an edit rather than an
+        # add, so the duplicate-name check can tell it apart from a real clash.
+        self.editing = kwargs.pop('editing', None)
+        super(AnnexProductDocumentForm, self).__init__(*args, **kwargs)
+        self.prepared_file = None
+
+    def clean_document_file(self):
+        return clean_document_upload(self)
+
+    def clean_document_name(self):
+        return clean_unique_document_name(self, self.cleaned_data.get('document_name'))
 
 
 
@@ -1158,23 +1314,9 @@ class ProductDocumentForm(forms.ModelForm):
             #'placeholder': 'Language'
         })
     )
-    files = forms.IntegerField(
-        required=False,
-        label_suffix = '',
-        widget=forms.NumberInput(attrs={
-            'class': 'form-control',
-           # 'placeholder': 'Number of Files'
-        })
-    )
-    file_name = forms.CharField(
-        required=False,
-        max_length=100,
-        label_suffix = '',
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            #'placeholder': 'File Name'
-        })
-    )
+    # The file itself. Its name, its format and the edition's file count (always one:
+    # the label has one Document_File) are taken from the upload.
+    document_file = document_file_field()
     local_id = forms.CharField(
         required=False,
         max_length=100,
@@ -1184,15 +1326,6 @@ class ProductDocumentForm(forms.ModelForm):
             #'placeholder': 'Local ID'
         })
     )
-    document_std_id = forms.ChoiceField(
-        required=False,
-        choices=STD_ID,
-        label_suffix = '',
-        widget=forms.Select(attrs={
-            'class': 'form-control custom-select'
-        })
-    )
-
     class Meta:
         model = Product_Document
         #exclude = ('bundle',)
@@ -1207,11 +1340,28 @@ class ProductDocumentForm(forms.ModelForm):
             "document_editions",
             "edition_name",
             "language",
-            "files",
-            "file_name",
             "local_id",
-            "document_std_id",
         ]
+
+    def __init__(self, *args, **kwargs):
+        self.bundle = kwargs.pop('bundle', None)
+        # The Product_Document being edited, when this form is an edit rather than an
+        # add, so the duplicate-name check can tell it apart from a real clash.
+        self.editing = kwargs.pop('editing', None)
+        super(ProductDocumentForm, self).__init__(*args, **kwargs)
+        self.prepared_file = None
+
+    def clean_document_file(self):
+        return clean_document_upload(self)
+
+    def clean_document_editions(self):
+        # Optional on the form but NOT NULL in the table, so a blank field was a 500.
+        # ELSA writes exactly one Document_Edition, so one is the true count.
+        value = self.cleaned_data.get('document_editions')
+        return 1 if value is None else value
+
+    def clean_document_name(self):
+        return clean_unique_document_name(self, self.cleaned_data.get('document_name'))
 
 
 """

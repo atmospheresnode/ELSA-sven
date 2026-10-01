@@ -1,12 +1,12 @@
 <!-- watches: build/models.py#Version, build/models.py#Bundle, build/models.py#Product_Collection, build/models.py#Product_Bundle -->
 <!-- fingerprint:
-     build/models.py#Version            = 75715835cd67
-     build/models.py#Bundle             = 81fb6e671b24
+     build/models.py#Version            = 4f1cc4036529
+     build/models.py#Bundle             = 7e1c83a0d383
      build/models.py#Product_Collection = 0595895e042e
-     build/models.py#Product_Bundle     = a4a2242d07bf
+     build/models.py#Product_Bundle     = 066355abe899
 -->
-<!-- reviewed: 2026-08-28 -->
-<!-- baseline: d8df4b96320a4636b7a95ac426bec7ff1a1fa839 -->
+<!-- reviewed: 2026-09-25 -->
+<!-- baseline: 76f3f4b06c6f49212ee49c59521969d3c7d1699c -->
 # LIDs, VIDs, and the Identification Area
 
 PDS4 Information Model (v1.24 / 1O00): every PDS4 product label has an
@@ -24,9 +24,19 @@ Optional components of the Identification_Area: Alias_List,
 Citation_Information, Modification_History, and License_Information.
 
 In ELSA: the Bundle ID (shown under the bundle name on the bundle page) is the
-LID, auto-generated from the bundle name when the bundle is created, users do
-not type it by hand. Products within the bundle get LIDs that extend the bundle
-LID (e.g. urn:nasa:pds:mybundle:document:userguide).
+LID. It is generated from the bundle name when the bundle is created; the create
+form also offers an optional Bundle ID field for anyone who wants to set it
+themselves. Products within the bundle get LIDs that extend the bundle LID
+(e.g. urn:nasa:pds:mybundle:document:userguide).
+
+Users never have to worry about which characters are allowed. ELSA cleans every
+segment it builds a LID from, the bundle name or ID, the collection name, and an
+uploaded file's name, replacing anything outside the permitted set with an
+underscore and lowercasing the rest. A NetCDF uploaded as
+"00000.atmos_average_pstd_-_Copy.nc" keeps that name on disk and in the label's
+file_name, and its LID segment becomes
+"00000.atmos_average_pstd_-_copy.nc". A file does not need renaming to
+validate.
 
 Terminology: the LID IS a URN, so "URN", "LID", "logical identifier", and
 "Bundle ID" all refer to the same identifier for a bundle. Each bundle's

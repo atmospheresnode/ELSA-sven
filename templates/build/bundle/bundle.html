@@ -152,17 +152,10 @@
 
 {% block body_block %}
 
-<!-- Messages (AMA metadata saves, label refresh warnings) -->
-{% if messages %}
-<div class="container-fluid pt-3">
-   {% for message in messages %}
-   <div class="alert {% if message.tags == 'error' %}alert-danger{% elif message.tags == 'warning' %}alert-warning{% elif message.tags == 'info' %}alert-info{% else %}alert-success{% endif %} alert-dismissible fade show">
-      {{ message }}
-      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-   </div>
-   {% endfor %}
-</div>
-{% endif %}
+<!-- Messages (AMA metadata saves, label refresh warnings). Rendered as toasts:
+     an AMA save ends in a full page reload, and a banner at the top of the document
+     was arriving a long way from the dialog the user had just been working in. -->
+{% include "includes/_toasts.html" %}
 
 <!-- Archive Contents -->
 {% if bundle_type == "Archive" %}
@@ -399,12 +392,14 @@
                         </span>
                      </a>
                   </div>
-                  
+
+                  {% include 'build/validation/row.html' %}
+
                </div>
             </div>
          </div>
       </div>
-      
+
       <!-- Collections Card -->
       <div class="row justify-content-center align-items-center mt-3">
          <div class="col-md-12">
@@ -459,85 +454,9 @@
                               <button type="button" class="btn btn-light text-light" data-bs-toggle="modal" data-bs-target="#document_modal"><i class="bi bi-file-earmark-plus"></i> Add Document Products</button>
                            </div>
                               
-                           <!-- List of Product Documents -->
-                           <div class="row g-3">
-                              {% if documents %}
-                              {% for document in documents %}
-                              <div class="col-12 col-md-6 col-lg-4 mb-3">
-                                 <div class="card mt-3 shadow-sm border">
-                                    <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
-                                       <div class="d-flex align-items-center text-truncate" style="max-width: 85%;">
-                                          <i class="bi bi-file-earmark-text text-secondary me-2"></i>
-                                          <span class="fw-bold text-truncate" title="{{ document.document_name }}">
-                                             {{ document.document_name }}
-                                          </span>
-                                       </div>
-                                       <button class="btn btn-sm btn-link text-decoration-none text-dark p-0 btn-keep-bg" type="button" data-bs-toggle="collapse" data-bs-target="#doc_details_{{ document.pk }}" aria-expanded="false">
-                                          <i class="bi bi-chevron-down"></i>
-                                       </button>
-                                    </div>
-                                    <div class="collapse" id="doc_details_{{ document.pk }}">
-                                       <div class="card-body bg-light small">
-                                          <div class="mb-2">
-                                             <strong>Author List:</strong><br>
-                                             <span class="text-muted">{{ document.author_list|default:"—" }}</span>
-                                          </div>
-                                          <div class="mb-2">
-                                             <strong>Publication Date:</strong><br>
-                                             <span class="text-muted">{{ document.publication_date|default:"—" }}</span>
-                                          </div>
-                                          <div class="mb-3">
-                                             <strong>Description:</strong><br>
-                                             <span class="text-muted">{{ document.description|default:"—" }}</span>
-                                          </div>
-                                          <div class="d-flex gap-2">
-                                             <a href="{% url 'build:product_document' bundle.pk document.pk %}" class="btn btn-sm btn-outline-secondary w-100">
-                                                <i class="bi bi-pencil"></i> Edit Details
-                                             </a>
-                                             <button type="button" class="btn btn-sm btn-outline-danger btn-keep-bg w-100"
-                                             data-bs-toggle="modal" data-bs-target="#deleteDocModal{{ document.pk }}">
-                                             <i class="bi bi-trash me-1"></i> Delete
-                                             </button>
-                                          </div>
-                                       </div>
-                                    </div>
-                                    
-                                    <!-- Delete Document Modal — outside card, inside loop -->
-                                    <div class="modal fade" id="deleteDocModal{{ document.pk }}" tabindex="-1" aria-hidden="true">
-                                       <div class="modal-dialog modal-dialog-centered">
-                                          <div class="modal-content">
-                                             <div class="modal-header border-0 pb-0">
-                                                <h5 class="modal-title text-danger">
-                                                   <i class="bi bi-exclamation-triangle me-2"></i> Delete Document
-                                                </h5>
-                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                             </div>
-                                             <div class="modal-body">
-                                                <p>Are you sure you want to delete <strong>{{ document.document_name }}</strong>?</p>
-                                                <p class="text-muted small mb-0"><i class="bi bi-info-circle me-1"></i> This action cannot be undone.</p>
-                                             </div>
-                                             <div class="modal-footer border-0">
-                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                                <form action="{% url 'build:delete_product_document' bundle.pk document.pk %}" method="post" class="mb-0">
-                                                   {% csrf_token %}
-                                                   <button type="submit" class="btn btn-danger btn-keep-bg">
-                                                         <i class="bi bi-trash me-1"></i> Delete
-                                                   </button>
-                                                </form>
-                                             </div>
-                                          </div>   
-                                       </div>
-                                    </div>
-                                 </div>
-                              </div>
-                              {% endfor %}
-                              {% else %}
-                                    <div class="col-12">
-                                       <div class="alert alert-light text-center border text-muted">
-                                          No documents!
-                                       </div>
-                                    </div>
-                              {% endif %}
+                           <!-- Documents: one row each, every action visible -->
+                           <div class="p-3">
+                              {% include 'build/document/_document_list.html' %}
                            </div>
                         </div>
                      </div>   
@@ -639,7 +558,7 @@
                                  </div>
                                  
                                  <div class="mt-3">
-                                    <label for="col_type">Collection Type<span class="text-danger" title="This field is required">*</span></label>
+                                    <label for="{{ form_additional_collections.collection_type.id_for_label }}">Collection Type<span class="text-danger" title="This field is required">*</span></label>
                                     {{ form_additional_collections.collection_type }}
                                  </div>
                                  
@@ -738,12 +657,12 @@
       <!-- Figure out how to move these to new file for readability sake - deric -->
       
       <!-- Delete Bundle Modal -->
-      <div class="modal fade" id="delete_modal" tabindex="-1" aria-hidden="true">
+      <div class="modal fade" id="delete_modal" tabindex="-1" aria-labelledby="delete_modal_title" aria-hidden="true">
          <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                <!-- Title -->
                <div class="modal-header">
-                  <h3 class="modal-title w-100 text-center">Delete Bundle</h3>
+                  <h3 class="modal-title w-100 text-center" id="delete_modal_title">Delete Bundle</h3>
                   <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                </div>
                
@@ -791,14 +710,30 @@
          });
       </script>
       {% endif %}
+
+      <script>
+         // Creating a collection redirects here with the new collection's tab in the fragment;
+         // open it rather than leaving the page on the document tab it renders with.
+         document.addEventListener('DOMContentLoaded', function () {
+            var card = document.getElementById('collectionsCard');
+            var target = window.location.hash;
+            if (!card || !/^#additional_collection_\d+$/.test(target)) return;
+            var button = card.querySelector('[data-bs-toggle="tab"][data-bs-target="' + target + '"]');
+            if (!button || !window.bootstrap || !bootstrap.Tab) return;
+            bootstrap.Tab.getOrCreateInstance(button).show();
+            // Dropped from the URL so a later reload does not reopen it.
+            try { history.replaceState(null, '', window.location.pathname + window.location.search); } catch (err) {}
+            card.scrollIntoView({ block: 'start' });
+         });
+      </script>
       
       <!-- Context Modal -->
-      <div class="modal fade" id="context_modal">
+      <div class="modal fade" id="context_modal" tabindex="-1" aria-labelledby="context_modal_title" aria-hidden="true">
          <div class="modal-dialog modal-xl">
             <div class="modal-content">
                <!-- Title -->
                <div class="modal-header d-flex justify-content-center position-relative">
-                  <h5 class="modal-title">Context</h5>
+                  <h5 class="modal-title" id="context_modal_title">Context</h5>
                   <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="position: absolute; right: 1.5rem;"></button>
                </div>
                
@@ -833,54 +768,6 @@
                   {% if bundle_type != "External" %} 
                   <div class="tab-content">
                      <!-- Investigation Tab -->
-                     <!-- Contact Modal -->
-                     <div class="modal fade" id="contactModal" tabindex="-1" role="dialog" aria-labelledby="contactModalLabel" aria-hidden="true">
-                        <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
-                           <div class="modal-content">
-                              <form method="post" action="{% url 'main:context_products_contact' %}">
-                                 {% csrf_token %}
-                                 <input type="hidden" name="form_name" value="contact_form">
-                                 
-                                 <div class="modal-header">
-                                    <h5 class="modal-title" id="contactModalLabel">Send a Message to ELSA</h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                 </div>
-                                 
-                                 <div class="modal-body">
-                                    <p>Please describe the context product you need. An ATM node representative will contact you to finalize what you need before officially submitting to the PDS system.</p>
-                                    {% for field in context_products_contact %}
-                                    <div class="form-group">
-                                       {{ field.label_tag }} 
-                                       {{ field }}
-                                       {% if field.errors %}
-                                       <div class="text-danger">{{ field.errors }}</div>
-                                       {% endif %}
-                                    </div>
-                                    {% endfor %}
-                                 </div>
-                                 
-                                 <style>
-                                    .contact_submit {
-                                       display: inline-flex;
-                                       align-items: center; 
-                                       justify-content: center; 
-                                       color: white;
-                                       padding: 2x 2px;
-                                       background-color: #2bbbad;
-                                       border-radius: 5px;
-                                       text-decoration: none; 
-                                       cursor: pointer;
-                                       transition: background-color 0.3s;
-                                    }
-                                 </style>
-                                 
-                                 <div class="modal-footer">
-                                    <button type="submit" class="contact_submit">Send message</button>
-                                 </div>
-                              </form>
-                           </div>
-                        </div>
-                     </div>
                      <div class="tab-pane fade show active" id="con_inv" role="tabpanel" >
                         <br>
                         <div class="col-md-12">
@@ -888,7 +775,7 @@
                               <div class="card-header">
                                  <p> To begin, select an investigation product below to associate with your bundle. Investigations serve as the top level of the context system and will associate your bundle with a larger project.</br> <strong>Investigations are categorized as:</strong> Individual Investigations, Missions, Field Campaigns, Observing Campaigns, or Other Investigations. Selecting an investigation will pare down the list of components to the ones that go with that investigation (i.e., associated instruments, targets, etc.) </p>
                               </div>
-                              <form class="card-body black-text text-left z-depth-2" id="form_investigation" method="post" action="{% url 'build:bundle' bundle.pk  %}">
+                              <form class="card-body black-text text-left z-depth-2" id="form_investigation" method="post" action="{% url 'build:bundle' bundle.pk  %}" data-inplace="investigation">
                                  {% csrf_token %}
                                  <input type="hidden" name="form_name" value="investigation_form">
                                  <input type="hidden" name="form_name" value="contact_form">
@@ -905,7 +792,7 @@
                                  
                                  <div class="d-flex">
                                     <input type="submit" class="btn btn-light text-light mt-4" value="Submit"/>
-                                    <input type="button" class="btn btn-light text-light mt-4 ms-auto" data-bs-toggle="modal" data-bs-target="#contactModal" value="Contact">
+                                    <input type="button" class="btn btn-light text-light mt-4 ms-auto" onclick="switchToModal('context_modal', 'contactModal')" value="Contact">
                                  </div>
                               </form>
                            </br>
@@ -982,7 +869,7 @@
                                  <h5 class="card-title">{{ instrument_host }}</h5>
                                  <p class="card-text">Investigation(s): {{ instrument_host.investigations.last }}</p>
                                  <p class="card-text">{{ instrument_host.lid }}</p>
-                                 <a type="button" class="btn btn-danger" href="{% url 'build:delete_instrument_host' bundle.pk instrument_host.pk %}">Remove</a>
+                                 <a type="button" class="btn btn-danger" href="{% url 'build:delete_instrument_host' bundle.pk instrument_host.pk %}?next=bundle">Remove</a>
                                  
                                  <!-- <p class="card-text"><small class="text-muted">Last updated 3 mins ago</small></p> -->
                               </div>
@@ -1036,7 +923,7 @@
                               <div class="card-body">
                                  <h5 class="card-title">{{ instrument }}</h5>
                                  <p class="card-text">{{ instrument.lid }}</p>
-                                 <a type="button" class="btn btn-danger" href="{% url 'build:delete_instrument' bundle.pk instrument.pk %}">Remove</a>
+                                 <a type="button" class="btn btn-danger" href="{% url 'build:delete_instrument' bundle.pk instrument.pk %}?next=bundle">Remove</a>
                                  
                                  <!-- <p class="card-text"><small class="text-muted">Last updated 3 mins ago</small></p> -->
                               </div>
@@ -1083,7 +970,7 @@
                            scope, so picking from "All other targets" is a normal choice,
                            not something to second-guess. The per-investigation Add Target
                            page is where that confirmation belongs. -->
-                           <form class="card-header black-text text-left z-depth-2" id="query01" method="post" action="{% url 'build:context_search_target' bundle.pk %}">
+                           <form class="card-header black-text text-left z-depth-2" id="query01" method="post" action="{% url 'build:context_search_target' bundle.pk %}?next=bundle" data-inplace="target">
                               
                               {% csrf_token %}
                               {{ form_target }}
@@ -1092,7 +979,7 @@
                               
                               <div class="d-flex">
                                  <input type="submit" name="submit_target" class="btn btn-light text-light mt-4" value="Submit"/>
-                                 <input type="button" class="btn btn-light text-light mt-4 ms-auto" data-bs-toggle="modal" data-bs-target="#contactModal" value="Contact">
+                                 <input type="button" class="btn btn-light text-light mt-4 ms-auto" onclick="switchToModal('context_modal', 'contactModal')" value="Contact">
                               </div>
                               
                            </form>
@@ -1167,7 +1054,7 @@
                                  <strong>Working with model or simulation data?</strong> Choose the "Laboratory Analog" entry for the body you're simulating (e.g., "Mars Laboratory Analog" for a Mars atmosphere simulation). It's not a physical lab sample, PDS4 just uses this name for the target.
                               </div>
                            </div>
-                           <form class="card-header black-text text-left z-depth-2"id="query01" method="post" action="{% url 'build:context_search_target' bundle.pk %}">
+                           <form class="card-header black-text text-left z-depth-2"id="query01" method="post" action="{% url 'build:context_search_target' bundle.pk %}?next=bundle" data-inplace="target">
                               
                               {% csrf_token %}
                               {{ form_target }}
@@ -1237,504 +1124,79 @@
       </div>
    </div>
    
+   {% comment %}
+      Outside the Context window, not inside it. Nested, it opened over that window with
+      two backdrops, and closing the Context window first (the only way Bootstrap shows one
+      modal after another) would have hidden it too. The Contact buttons hand off with
+      switchToModal.
+   {% endcomment %}
+   <!-- Contact Modal -->
+   <div class="modal fade" id="contactModal" tabindex="-1" role="dialog" aria-labelledby="contactModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+         <div class="modal-content">
+            <form method="post" action="{% url 'main:context_products_contact' %}">
+               {% csrf_token %}
+               <input type="hidden" name="form_name" value="contact_form">
+            
+               <div class="modal-header">
+                  <h5 class="modal-title" id="contactModalLabel">Send a Message to ELSA</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+               </div>
+            
+               <div class="modal-body">
+                  <p>Please describe the context product you need. An ATM node representative will contact you to finalize what you need before officially submitting to the PDS system.</p>
+                  {% for field in context_products_contact %}
+                  <div class="form-group">
+                     {{ field.label_tag }} 
+                     {{ field }}
+                     {% if field.errors %}
+                     <div class="text-danger">{{ field.errors }}</div>
+                     {% endif %}
+                  </div>
+                  {% endfor %}
+               </div>
+            
+               <style>
+                  .contact_submit {
+                     display: inline-flex;
+                     align-items: center; 
+                     justify-content: center; 
+                     color: white;
+                     padding: 2x 2px;
+                     background-color: #2bbbad;
+                     border-radius: 5px;
+                     text-decoration: none; 
+                     cursor: pointer;
+                     transition: background-color 0.3s;
+                  }
+               </style>
+            
+               <div class="modal-footer">
+                  <button type="submit" class="contact_submit">Send message</button>
+               </div>
+            </form>
+         </div>
+      </div>
+   </div>
+   
    <!-- Investigation Area Modal -->
    <!-- Splitting the Investigation Area into 3 different pop-up modals accessed by the dropdown -->
    
-   <!-- Alias -->
-   <div class="modal fade" id="alias_modal">
-      <div class="modal-dialog modal-xl">
-         <div class="modal-content">
-            <!-- Title -->
-            <div class="modal-header d-flex justify-content-center position-relative">
-               <h5 class="modal-title">Alias</h5>
-               <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="position: absolute; right: 1rem;"></button>
-            </div>
-            
-            <div class="modal-body pt-0">
-               
-               <!-- Content -->
-               <div class="tab-content">
-                  <!-- Alias -->
-                  <div class="tab-pane show active" id="inv_alias" role="tabpanel">
-                     <!-- Form -->
-                     {% if alias_set_count == 0 %}
-                     <div class="row px-2">
-                        <form action="{% url 'build:bundle' bundle.pk %}" method="post" id="form_alias" >
-                           {% csrf_token %}
-                           
-                           <!-- Alternate ID -->
-                           <div class="mt-3">
-                              <label for="alt_id">Alternate ID<span class="text-danger" title="This field is required">*</span></label>
-                              {{ form_alias.alternate_id }}
-                           </div>
-                           
-                           <!-- Alternate Title -->
-                           <div class="mt-3">
-                              <label for="alt_title">Alternate Title<span class="text-danger" title="This field is required">*</span></label>
-                              {{ form_alias.alternate_title }}
-                           </div>
-                           
-                           <!-- Comment -->
-                           <div class="mt-3">
-                              <label for="comment">Comment</label>
-                              {{ form_alias.comment }}
-                           </div>
-                           
-                           <!-- Create Alias -->
-                           <button type="submit" class="btn btn-light text-light my-4">Create Alias</button>
-                        </form>
-                     </div>
-                     
-                     {% else %}
-                     
-                     <div class="alert alert-info mt-4 mx-2">
-                        <i class="bi bi-info-circle-fill me-2"></i>
-                        An alias already exists for this bundle. Edit or delete the
-                        existing alias before creating another one.
-                     </div>
-                     
-                     {% endif %}
-                     
-                     <!-- Current Alias -->
-                     <div class="mt-4">
-                        
-                        {% if alias_set_count == 0 %}
-                        
-                        <p class="text-muted px-2">No Alias Found</p>
-                        
-                        {% else %}
-                        
-                        {% for alias in alias_set %}
-                        
-                        <div class="card shadow-sm mt-3">
-                           
-                           <div class="card-header bg-light">
-                              <h5 class="mb-0">
-                                 <i class="bi bi-tag-fill me-2"></i>
-                                 Current Alias
-                              </h5>
-                           </div>
-                           
-                           <div class="card-body">
-                              
-                              <table class="table table-bordered table-hover mb-0">
-                                 
-                                 <tr>
-                                    <th style="width:30%;">
-                                       Alternate ID
-                                    </th>
-                                    <td>
-                                       {{ alias.alternate_id|default:"-" }}
-                                    </td>
-                                 </tr>
-                                 
-                                 <tr>
-                                    <th>
-                                       Alternate Title
-                                    </th>
-                                    <td>
-                                       {{ alias.alternate_title|default:"-" }}
-                                    </td>
-                                 </tr>
-                                 
-                                 <tr>
-                                    <th>
-                                       Comment
-                                    </th>
-                                    <td>
-                                       {{ alias.comment|default:"-" }}
-                                    </td>
-                                 </tr>
-                                 
-                              </table>
-                           </div>
-                        </div>
-                        
-                        <br>
-                        
-                        <div class="card-footer d-flex justify-content-end">
-                           <a href="{% url 'build:alias_edit' bundle.pk alias.pk %}"
-                           class="btn btn-light text-light">
-                           
-                           <i class="bi bi-pencil-fill"></i>
-                           Edit
-                        </a>
-                     </div>
-                     
-                     {% endfor %}
-                     
-                     {% endif %}
-                     
-                  </div>
-               </div>
-            </div>
-         </div>
-      </div>
-   </div>
-</div>
-
-<!-- Modificaiton History -->
-<div class="modal fade" id="mod_history_modal">
-   <div class="modal-dialog modal-xl">
-      <div class="modal-content">
-         <!-- Title -->
-         <div class="modal-header d-flex justify-content-center position-relative">
-            <h5 class="modal-title">Modification History</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="position: absolute; right: 1rem;"></button>
-         </div>
-         
-         <div class="modal-body pt-0">
-            
-            <!-- Content -->
-            <div class="tab-content">
-               
-               <!-- Modification History -->
-               <div class="tab-pane show active" id="inv_mod" role="tabpanel">
-                  <div class="row px-2">
-                     <form action="{% url 'build:bundle' bundle.pk %}" method="post" id="form_modification_history">
-                        {% csrf_token %}
-                        
-                        <!-- Version ID -->
-                        <div class="mt-3">
-                           <label for="version_id">Version ID<span class="text-danger" title="This field is required">*</span></label>
-                           {{ form_modification_history.version_id }}
-                        </div>
-                        
-                        <!-- Description-->
-                        <div class="mt-3">
-                           <label for="mod_desc">Description</label>
-                           {{ form_modification_history.description }}
-                        </div>
-                        
-                        <!-- Modification Date -->
-                        <div class="mt-3">
-                           <label for="mod_date">Modificaiton Date<span class="text-danger" title="This field is required">*</span></label>
-                           {{ form_modification_history.modification_date }}
-                        </div>
-                        
-                        <!-- Create Modification History -->
-                        <button type="submit" class="btn btn-light text-light my-4">Create Modification History</button>
-                     </form>
-                  </div>
-                  
-                  <!-- List of Modification History Snippets -->
-                  <div class="modal-footer justify-content-start">
-                     <!-- No Modificaiton History Snippets Exist -->
-                     {% if modification_history_set_count == 0 %}
-                     <p>No Modification History Found</p>
-                     
-                     <!-- Display Modification History Snippets -->
-                     {% else %}
-                     {% for modification_history in modification_history_set %}
-                     <div class="card snippet-card ms-0 me-3">
-                        <div class="card-body">
-                           <p class="card-text">Version ID: {{ modification_history.version_id}}</p>
-                           <p class="card-text">Description: {{ modification_history.description }}</p>
-                           <p class="card-text">Modification Date: {{ modification_history.modification_date }}</p>
-                           
-                           <form action="{% url 'build:modification_history_delete' bundle.pk modification_history.pk %}" method="post" style="display:inline;">
-                              {% csrf_token %}
-                              <button type="submit" class="btn btn-danger btn-sm">Delete</button>
-                           </form>
-                           
-                        </div>
-                     </div>
-                     {% endfor %}
-                     {% endif %}
-                  </div>
-               </div>
-            </div>
-         </div>
-      </div>
-   </div>
-</div>
-
-
-<!-- Citation Information -->
-<div class="modal fade" id="citation_information_modal">
-   <div class="modal-dialog modal-xl">
-      <div class="modal-content">
-         <!-- Title -->
-         <div class="modal-header d-flex justify-content-center position-relative">
-            <h5 class="modal-title">Citation Information</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="position: absolute; right: 1rem;"></button>
-         </div>
-         
-         <div class="modal-body pt-0">
-            
-            <!-- Content -->
-            <div class="tab-content">
-               <!-- Citation Information -->
-               <div class="tab-pane show active" id="inv_cite" role="tabpanel">
-                  <!-- Form -->
-                  
-                  {% if citation_information_set_count == 0 %}
-                  <div class="row px-2">
-                     <!-- This is where to change the linkage to one of the new pages -->
-                     <!--Changed the view after build and added citation information.pk-->
-                     <form action="{% url 'build:bundle' bundle.pk %}?next=bundle" method="post" id="form_citation_information"> 
-                        {% csrf_token %}
-                        
-                        <!-- Author List -->
-                        <h6 class="mt-4 mb-1 fw-semibold">Authors <span class="fw-normal fst-italic text-muted">(data providers)</span></h6>
-                        <div class="mt-3">
-                           <label for="id_number_of_authors_people">Number of Persons</label>
-                           <small class="d-block text-muted">This is a count, not a name. You will enter each author's name on the next screen.</small>
-                           {{ form_citation_information.number_of_authors_people }}
-                        </div>
-                        
-                        <div class="mt-3">
-                           <label for="author_list">Number of Organizations*</label>
-                           {{ form_citation_information.number_of_authors_organization }}
-                        </div>
-                        
-                        <p class="text-muted small mt-2">* Organizations should be set to 0 unless used.</p>
-                        <!-- Editors -->
-                        <h6 class="mt-4 mb-1 fw-semibold">Editors</h6>
-                        <p class="text-muted small mt-1">Lynn Neakrase and Lyle Huber (ATM node staff) are always included automatically. Add extra editors below if needed; names are entered on the citation details page.</p>
-                        <div class="mt-3">
-                           <label for="id_number_of_editors_people">Additional Editors: Number of Persons</label>
-                           {{ form_citation_information.number_of_editors_people }}
-                        </div>
-                        <div class="mt-3">
-                           <label for="id_number_of_editors_organization">Additional Editors: Number of Organizations</label>
-                           {{ form_citation_information.number_of_editors_organization }}
-                        </div>
-                        
-                        
-                        <!-- Keyword -->
-                        <div class="mt-3">
-                           <label for="keyword">Keyword</label>
-                           {{ form_citation_information.keyword }}
-                        </div>
-                        
-                        <!-- Publication Year -->
-                        <div class="mt-3">
-                           <label for="publication_year">Publication Year<span class="text-danger" title="This field is required">*</span></label>
-                           {{ form_citation_information.publication_year }}
-                        </div>
-                        
-                        <!-- Description -->
-                        <div class="mt-3">
-                           <label for="mod_desc">Description<span class="text-danger" title="This field is required">*</span></label>
-                           {{ form_citation_information.description }}
-                        </div>
-                        
-                        {{ form_citation_information.errors }}
-                        
-                        <!-- Create Citation Information -->
-                        <button type="submit" class="btn btn-light text-light my-4">Create Citaiton Information</button>
-                     </form>
-                  </div>
-                  
-                  {% else %}
-                  
-                  <div class="alert alert-info mt-4">
-                     Citation Information already exists for this bundle.
-                     PDS4 allows one Citation Information section per bundle.
-                     Edit or delete the existing citation information below.
-                  </div>
-                  
-                  
-                  {% endif %}
-                  
-                  
-                  <!-- List of Citation Information Snippets -->
-                  <div class="mt-4">
-                     <!--Display Current Citation Information-->
-                     {% for citation_information in citation_information_set %}
-                     <div class="card shadow-sm mt-3">
-                        <div class="card-header bg-light">
-                           <h5 class="mb-0">
-                              <i class="bi bi-journal-text me-2"></i>
-                              Current Citation Information
-                           </h5>
-                        </div>
-                        
-                        <div class="card-body">
-                           <table class="table table-bordered table-hover mb-0">
-                              <tr>
-                                 <th style="width:30%;">Authors</th>
-                                 <td>
-                                    <button class="btn btn-sm btn-outline-secondary"
-                                    type="button"
-                                    data-bs-toggle="collapse"
-                                    data-bs-target="#authorsCollapse{{ citation_information.pk }}"
-                                    aria-expanded="false">
-                                    
-                                    {{ citation_information.number_of_authors_people|default:"0" }} Person(s),
-                                    {{ citation_information.number_of_authors_organization|default:"0" }} Organization(s)
-                                    
-                                 </button>
-                                 
-                                 <div class="collapse mt-2" id="authorsCollapse{{ citation_information.pk }}">
-                                    <div class="border rounded p-3 bg-light">
-                                       
-                                       {% if citation_information.display_authors %}
-                                       
-                                       {% for author in citation_information.display_authors %}
-                                       
-                                       <div class="mb-3">
-                                          
-                                          <strong>{{ author.type }}</strong><br>
-                                          
-                                          {{ author.name }}<br>
-                                          
-                                          {% if author.organization %}
-                                          <small class="text-muted">
-                                             {{ author.organization }}
-                                          </small>
-                                          {% endif %}
-                                          <br>
-                                          {% if author.orcid %}
-                                          <small class="text-muted">
-                                             ORCID: {{ author.orcid }}
-                                          </small>
-                                          {% endif %}
-                                       </div>
-                                       
-                                       {% endfor %}
-                                       
-                                       {% else %}
-                                       
-                                       <em>No author information found.</em>
-                                       
-                                       {% endif %}
-                                       
-                                    </div>
-                                 </div>
-                              </td>
-                           </tr>
-                           
-                           <tr>
-                              <th>Editors</th>
-                              <td>
-                                 <button class="btn btn-sm btn-outline-secondary"
-                                 type="button"
-                                 data-bs-toggle="collapse"
-                                 data-bs-target="#editorsCollapse{{ citation_information.pk }}"
-                                 aria-expanded="false">
-                                 
-                                 {{ citation_information.display_editor_people_count }} Person(s),
-                                 {{ citation_information.display_editor_organization_count }} Organization(s)
-                                 
-                              </button>
-                              
-                              <div class="collapse mt-2" id="editorsCollapse{{ citation_information.pk }}">
-                                 <div class="border rounded p-3 bg-light">
-                                    
-                                    {% if citation_information.display_editors %}
-                                    
-                                    {% for editor in citation_information.display_editors %}
-                                    
-                                    <div class="mb-3">
-                                       
-                                       <strong>{{ editor.type }}</strong><br>
-                                       
-                                       {% if editor.name %}
-                                       {{ editor.name }}<br>
-                                       {% endif %}
-                                       
-                                       {% if editor.organization %}
-                                       <small class="text-muted">
-                                          {{ editor.organization }}
-                                       </small><br>
-                                       {% endif %}
-                                       
-                                       {% if editor.orcid %}
-                                       <small class="text-muted">
-                                          ORCID: {{ editor.orcid }}
-                                       </small><br>
-                                       {% endif %}
-                                       
-                                       {% if editor.rorid %}
-                                       <small class="text-muted">
-                                          RORID: {{ editor.rorid }}
-                                       </small><br>
-                                       {% endif %}
-                                       
-                                       {% if editor.sequence_number %}
-                                       <small class="text-muted">
-                                          Sequence Number: {{ editor.sequence_number }}
-                                       </small><br>
-                                       {% endif %}
-                                       
-                                       {% if editor.parent_organization %}
-                                       <small class="text-muted">
-                                          Parent Organization: {{ editor.parent_organization }}
-                                       </small>
-                                       {% endif %}
-                                       
-                                    </div>
-                                    
-                                    {% endfor %}
-                                    
-                                    {% else %}
-                                    
-                                    <em>No editor information found.</em>
-                                    
-                                    {% endif %}
-                                    
-                                 </div>
-                              </div>
-                           </td>
-                        </tr>
-                        <tr>
-                           <th>Keyword(s)</th>
-                           <td>{{ citation_information.keyword|default:"-" }}</td>
-                        </tr>
-                        
-                        <tr>
-                           <th>Publication Year</th>
-                           <td>{{ citation_information.publication_year|default:"-" }}</td>
-                        </tr>
-                        
-                        <tr>
-                           <th>Description</th>
-                           <td>{{ citation_information.description|default:"-" }}</td>
-                        </tr>
-                     </table>
-                  </div>
-               </div>
-               <br>
-               <div class="card-footer d-flex justify-content-end gap-2">
-                  <a href="{% url 'build:edit_citation_information' bundle.pk citation_information.pk %}?next=bundle"
-                  class="btn btn-light" style="color:white;">
-                  <i class="bi bi-pencil-fill"></i>
-                  Edit
-               </a>
-               
-               <!--implementing citation delete-->
-               <form action="{% url 'build:citation_information_delete' bundle.pk citation_information.pk %}" method="post" style="display:inline;">
-                  {% csrf_token %}
-                  <button type="submit" class="btn btn-danger">
-                     <i class="bi bi-trash-fill"></i>   
-                     Delete
-                  </button>
-               </form> 
-            </div>
-            {% endfor %}
-         </div>
-      </div>
-   </div>
-</div>
-</div>
-</div>
-</div>
+   {% include 'build/bundle/_bundle_info_modals.html' %}
 
 <!-- Document Product Modal -->
-<div class="modal fade" id="document_modal">
+<div class="modal fade" id="document_modal" tabindex="-1" aria-labelledby="document_modal_title" aria-hidden="true">
    <div class="modal-dialog modal-xl">
       <div class="modal-content">
          <!-- Title -->
          <div class="modal-header">
-            <h5 class="modal-title">Add Document Product</h5>
+            <h5 class="modal-title" id="document_modal_title">Add Document Product</h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
          </div>
          
          <div class="modal-body pt-0">
             <div class="row px-2">                    
-               <form action="{% url 'build:bundle' bundle.pk %}" method="post" id="form_document" enctype="multipart/form-data">
+               <form action="{% url 'build:bundle' bundle.pk %}" method="post" id="form_document" enctype="multipart/form-data" data-inplace="document">
                   {% csrf_token %}
                   <input type="hidden" name="form_name" value="document_form">
                   {% if form_document.errors %}
@@ -1744,81 +1206,71 @@
                   {% endif %}
                   <!-- Name-->
                   <div class="mt-3">
-                     <label for="doc_name">Document Name</label>
+                     <label for="{{ form_document.document_name.id_for_label }}">Document Name</label>
                      {{ form_document.document_name }}
                   </div>
                   
                   <!-- Publication Date -->
                   <div class="mt-3">
-                     <label for="pub_date">Publication Date</label>
+                     <label for="{{ form_document.publication_date.id_for_label }}">Publication Date</label>
                      {{ form_document.publication_date }}
                   </div>
                   
                   <!-- Author List -->
                   <div class="mt-3">
-                     <label for="auth_list">Author List</label>
+                     <label for="{{ form_document.author_list.id_for_label }}">Author List</label>
                      {{ form_document.author_list }}
                   </div>
                   
                   <!-- Copyright-->
                   <div class="mt-3">
-                     <label for="copyright">Copyright</label>
+                     <label for="{{ form_document.copyright.id_for_label }}">Copyright</label>
                      {{ form_document.copyright }}
                   </div>
                   
                   <!-- Description -->
                   <div class="mt-3">
-                     <label for="description">Description</label>
+                     <label for="{{ form_document.description.id_for_label }}">Description</label>
                      {{ form_document.description }}
                   </div>
                   
                   <!-- Revision ID-->
                   <div class="mt-3">
-                     <label for="rev_id">Revision ID</label>
+                     <label for="{{ form_document.revision_id.id_for_label }}">Revision ID</label>
                      {{ form_document.revision_id }}
                   </div>
                   
                   <!-- document_editions -->
                   <div class="mt-3">
-                     <label for="doc_editions">Document Editions</label>
+                     <label for="{{ form_document.document_editions.id_for_label }}">Document Editions</label>
                      {{ form_document.document_editions }}
                   </div>
                   
                   <!-- edition name -->
                   <div class="mt-3">
-                     <label for="edition_name">Edition Name</label>
+                     <label for="{{ form_document.edition_name.id_for_label }}">Edition Name</label>
                      {{ form_document.edition_name }}
                   </div>
                   
                   <!-- Language -->
                   <div class="mt-3">
-                     <label for="language">Language</label>
+                     <label for="{{ form_document.language.id_for_label }}">Language</label>
                      {{ form_document.language }}
                   </div>
                   
-                  <!-- Files-->
+                  <!-- The document file itself: its name and format come from the upload -->
                   <div class="mt-3">
-                     <label for="files">Files</label>
-                     {{ form_document.files }}
-                  </div>
-                  
-                  <!-- file_name -->
-                  <div class="mt-3">
-                     <label for="file_name">File Name</label>
-                     {{ form_document.file_name }}
+                     <label for="{{ form_document.document_file.id_for_label }}">Document file</label>
+                     {{ form_document.document_file }}
+                     <div class="form-text">{{ form_document.document_file.help_text }}</div>
                   </div>
                   
                   <!-- Local ID -->
                   <div class="mt-3">
-                     <label for="local_id">Local ID</label>
+                     <label for="{{ form_document.local_id.id_for_label }}">Local ID</label>
                      {{ form_document.local_id }}
                   </div>
                   
-                  <!-- Document SSTD ID -->
-                  <div class="mt-3">
-                     <label for="doc_std_id">Document STD ID</label>
-                     {{ form_document.document_std_id }}
-                  </div>
                   
                   <!-- Create Product Document -->
                   <button type="submit" name="source" value="bundle" class="btn btn-light text-light my-4">Create Document</button>
@@ -1828,6 +1280,16 @@
       </div>
    </div>
 </div>
+{% if form_document.errors and request.POST.form_name == 'document_form' %}
+<script>
+   // The document was not created. Reopen the window so its reasons are seen,
+   // rather than reloading the page with them hidden in a closed modal.
+   document.addEventListener('DOMContentLoaded', function () {
+      var el = document.getElementById('document_modal');
+      if (el && window.bootstrap) { bootstrap.Modal.getOrCreateInstance(el).show(); }
+   });
+</script>
+{% endif %}
 
 <!-- =========================================================
    ADD DATA PRODUCT MODAL
@@ -2152,6 +1614,9 @@
          display: flex;
          align-items: center;
          gap: .5rem;
+         /* On a phone the Uploaded files row (label, count, Select All, Delete Selected)
+            is wider than the column, and Delete Selected ran off the right edge. */
+         flex-wrap: wrap;
          min-height: 2rem;
          margin-bottom: .75rem;
       }
@@ -2188,6 +1653,12 @@
       .external-theme .ecu-drop.ecu-drop-over {
          border-color: var(--external);
          background-color: #eef5fb;
+      }
+      /* Upload pressed with nothing picked. After the hover rule so it stays red under the pointer
+         until files are chosen. */
+      .external-theme .ecu-drop.ecu-drop-invalid {
+         border-color: #dc3545;
+         background-color: #fdf3f4;
       }
       .external-theme .ecu-drop-icon { font-size: 1.6rem; color: var(--external); line-height: 1; }
       .external-theme .ecu-drop-title { font-weight: 600; }
@@ -2369,9 +1840,11 @@
                      </a>
                   </div>
                   
+                  {% include 'build/validation/row.html' %}
+
                   <!-- Submit -->
                   <button type="button" id="externalSubmitBtn"
-                  class="btn {% if status_dict.Modification_History and status_dict.Citation_Information and status_dict.Targets %}btn-success{% else %}btn-outline-secondary{% endif %} w-100"
+                  class="btn {% if not validation_requirements %}btn-success{% else %}btn-outline-secondary{% endif %} w-100 mt-3"
                   data-bs-toggle="modal" data-bs-target="#reviewBundleModal"
                   title="Complete all required sections to submit your bundle."
                   data-bs-placement="top">
@@ -2389,7 +1862,7 @@
          </div>
       </div>
    </div>
-   
+
    <!-- Collections Card -->
    <div class="row justify-content-center mt-3">
       <div class="col-md-12">
@@ -2452,94 +1925,13 @@
                            <p>This is your document collection. In this collection, you should plan to put any documentation you think users of your 
                               data might need to understand and use your data. Typically users would expect to find a user guide and/or supporting documentation 
                               in this collection. You can add as many documents as you need and tailor the label for each.</p>
-                           </div>
-                           <button type="button" class="btn btn-light text-light" data-bs-toggle="modal" data-bs-target="#document_modal">Add Document Products</button>
+                           <button type="button" class="btn btn-light text-light" data-bs-toggle="modal" data-bs-target="#document_modal"><i class="bi bi-file-earmark-plus"></i> Add Document Products</button>
                         </div>
                         
-                        <!-- List of Product Documents -->
-                        <div class="row g-3">
-                           {% if documents %}
-                           {% for document in documents %}
-                           <div class="col-12 col-md-6 col-lg-4 mb-3">
-                              <div class="card h-100 mt-3 shadow-sm border">
-                                 <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
-                                    <div class="d-flex align-items-center text-truncate" style="max-width: 85%;">
-                                       <i class="bi bi-file-earmark-text text-secondary me-2"></i>
-                                       <span class="fw-bold text-truncate" title="{{ document.document_name }}">
-                                          {{ document.document_name }}
-                                       </span>
-                                    </div>
-                                    <button class="btn btn-sm btn-link text-decoration-none text-dark p-0" type="button" data-bs-toggle="collapse" data-bs-target="#doc_details_{{ document.pk }}" aria-expanded="false">
-                                       <i class="bi bi-chevron-down"></i>
-                                    </button>
-                                 </div>
-                                 <div class="collapse" id="doc_details_{{ document.pk }}">
-                                    <div class="card-body bg-light small">
-                                       <div class="mb-2">
-                                          <strong>Document ID:</strong><br>
-                                          <span class="text-muted">{{ document.document_id|default:"—" }}</span>
-                                       </div>
-                                       <div class="mb-2">
-                                          <strong>File Name:</strong><br>
-                                          <span class="text-muted">{{ document.file_name|default:"—" }}</span>
-                                       </div>
-                                       <div class="mb-2">
-                                          <strong>File Format:</strong><br>
-                                          <span class="text-muted">{{ document.document_std_id|default:"—" }}</span>
-                                       </div>
-                                       <div class="mb-3">
-                                          <strong>Comment:</strong><br>
-                                          <span class="text-muted">{{ document.comment|default:"—" }}</span>
-                                       </div>
-                                       <div class="d-flex gap-2">
-                                          <a href="{% url 'build:product_document' bundle.pk document.pk %}" class="btn btn-sm btn-outline-secondary w-100">
-                                             Edit Details
-                                          </a>
-                                          <button type="button" class="btn btn-sm btn-outline-danger btn-keep-bg w-100"
-                                          data-bs-toggle="modal" data-bs-target="#deleteDocModal{{ document.pk }}">
-                                          <i class="bi bi-trash me-1"></i> Delete
-                                       </button>
-                                    </div>
-                                 </div>
-                              </div>
-                           </div>
+                        <!-- Documents: one row each, every action visible -->
+                        <div class="p-3">
+                           {% include 'build/document/_document_list.html' %}
                         </div>
-                        
-                        <!-- Delete Document Modal — outside card, inside loop -->
-                        <div class="modal fade" id="deleteDocModal{{ document.pk }}" tabindex="-1" aria-hidden="true">
-                           <div class="modal-dialog modal-dialog-centered">
-                              <div class="modal-content">
-                                 <div class="modal-header border-0 pb-0">
-                                    <h5 class="modal-title text-danger">
-                                       <i class="bi bi-exclamation-triangle me-2"></i> Delete Document
-                                    </h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                 </div>
-                                 <div class="modal-body">
-                                    <p>Are you sure you want to delete <strong>{{ document.document_name }}</strong>?</p>
-                                    <p class="text-muted small mb-0"><i class="bi bi-info-circle me-1"></i> This action cannot be undone.</p>
-                                 </div>
-                                 <div class="modal-footer border-0">
-                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                    <form action="{% url 'build:delete_product_document' bundle.pk document.pk %}" method="post" class="mb-0">
-                                       {% csrf_token %}
-                                       <button type="submit" class="btn btn-danger btn-keep-bg">
-                                          <i class="bi bi-trash me-1"></i> Delete
-                                       </button>
-                                    </form>
-                                 </div>
-                              </div>
-                           </div>
-                        </div>
-                        
-                        {% endfor %}
-                        {% else %}
-                        <div class="col-12">
-                           <div class="alert alert-light text-center border text-muted">
-                              No documents!
-                           </div>
-                        </div>
-                        {% endif %}
                      </div>
                   </div>
                   
@@ -2609,9 +2001,9 @@
                            <div class="ecu-head">
                               <span class="text-muted fw-semibold text-nowrap ecu-eyebrow">Add NetCDF files</span>
                            </div>
-                           <form id="netcdfUploadForm" method="post" enctype="multipart/form-data">
+                           <form id="netcdfUploadForm_{{ add_collection.id }}" class="netcdf-upload-form" method="post" enctype="multipart/form-data">
                               {% csrf_token %}
-                              <input type="hidden" class="form-control" id="collection" name="collection" value="{{ add_collection }}">
+                              <input type="hidden" class="form-control" name="collection" value="{{ add_collection }}">
                               {% if form_netcdf.errors %}
                               <div class="alert alert-danger" role="alert">
                                  <strong>Please correct the errors below:</strong>
@@ -2660,6 +2052,7 @@
                                     </button>
                                     <span class="text-muted">or click above to choose different files</span>
                                  </div>
+                                 <div class="ecu-drop-required text-danger small mt-2 d-none" role="alert"></div>
                                  {% comment %}Rendered by hand rather than as {{ form_netcdf.netcdf_files }} only so the id
                                     can be unique per collection; the name must stay netcdf_files for the view. Hidden,
                                     not removed: it is still the control, still focusable, and the drop area lights up
@@ -2672,39 +2065,39 @@
                               
                               
                               <!-- Progress bar -->
-                              <div id="uploadProgressWrapper" style="display:none;" class="mb-3">
+                              <div id="uploadProgressWrapper_{{ add_collection.id }}" style="display:none;" class="upload-progress-wrapper mb-3">
                                  <div class="d-flex justify-content-between align-items-center small text-muted mb-1">
-                                    <span id="uploadStatusText">Uploading...</span>
+                                    <span id="uploadStatusText_{{ add_collection.id }}" class="upload-status-text">Uploading...</span>
                                     <div class="d-flex align-items-center gap-2">
-                                       <span id="uploadPercent">0%</span>
+                                       <span id="uploadPercent_{{ add_collection.id }}" class="upload-percent">0%</span>
                                        <!-- Only offered while bytes are still in flight. Once the server starts
                                        processing, aborting the request cannot stop it, so the button is
                                        replaced by a note rather than left there making a false promise. -->
-                                       <button type="button" id="uploadCancelBtn"
-                                       class="btn btn-sm btn-outline-danger btn-keep-bg py-0 px-2"
+                                       <button type="button" id="uploadCancelBtn_{{ add_collection.id }}"
+                                       class="btn btn-sm btn-outline-danger btn-keep-bg py-0 px-2 upload-cancel-btn"
                                        style="display:none; font-size: .75rem;">
                                        Cancel
                                     </button>
                                  </div>
                               </div>
                               <div class="progress" style="height: 10px;">
-                                 <div id="uploadProgressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-success"
+                                 <div id="uploadProgressBar_{{ add_collection.id }}" class="upload-progress-bar progress-bar progress-bar-striped progress-bar-animated bg-success"
                                  role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
                               </div>
                            </div>
                         </div>
                         
                         <!-- Success message -->
-                        <div id="uploadSuccessMsg" class="alert alert-success py-2 small" style="display:none;">
+                        <div id="uploadSuccessMsg_{{ add_collection.id }}" class="upload-success-msg alert alert-success py-2 small" style="display:none;">
                            <i class="bi bi-check-circle me-1"></i> Upload complete! Reloading...
                         </div>
                         
-                        <button type="submit" id="uploadBtn" class="btn btn-success w-100">Upload</button>
+                        <button type="submit" id="uploadBtn_{{ add_collection.id }}" class="upload-btn btn btn-success w-100">Upload</button>
                      </form>
                   </div>
                   
                   <div class="col-md-6">
-                     <form method="post" action="{% url 'build:bulk_delete_netcdf' pk_bundle=bundle.id %}" id="bulkDeleteNetCDFForm">
+                     <form method="post" action="{% url 'build:bulk_delete_netcdf' pk_bundle=bundle.id %}" id="bulkDeleteNetCDFForm_{{ add_collection.id }}" class="bulk-delete-netcdf-form">
                         {% csrf_token %}
                         
                         {% comment %}The same header as the column opposite. .ecu-head gives both
@@ -2721,13 +2114,13 @@
                               {% comment %}Was rendered with style="display: none;" and never
                                  unhidden by anything, so the control shipped invisible.
                                  toggleSelectAll() was wired and correct all along.{% endcomment %}
-                              <button type="button" class="btn btn-sm btn-outline-secondary"
-                                 id="selectAllWrapper" onclick="toggleSelectAll(this)">
+                              <button type="button" class="btn btn-sm btn-outline-secondary select-all-btn"
+                                 id="selectAllWrapper_{{ add_collection.id }}" onclick="toggleSelectAll(this)">
                                  Select All
                               </button>
-                              <button type="button" class="btn btn-sm btn-outline-danger btn-keep-bg"
+                              <button type="button" class="btn btn-sm btn-outline-danger btn-keep-bg bulk-delete-btn"
                               data-bs-toggle="modal" data-bs-target="#bulkDeleteNetCDFModal"
-                              id="bulkDeleteBtn">
+                              id="bulkDeleteBtn_{{ add_collection.id }}">
                               <i class="bi bi-trash me-1"></i> Delete Selected
                            </button>
                         </div>
@@ -2752,11 +2145,11 @@
                               the files themselves.{% endcomment %}
                            <li class="list-group-item d-flex align-items-center gap-2 px-2 py-2 bg-transparent">
                               <input class="form-check-input flex-shrink-0 netcdf-checkbox" type="checkbox"
-                                 name="selected_netcdf" value="{{ nc_file.pk }}" id="nc_{{ nc_file.pk }}">
+                                 name="selected_netcdf" value="{{ nc_file.pk }}" id="nc_{{ nc_file.pk }}"
+                                 aria-label="Select {{ nc_file.title }}">
                               <i class="bi bi-file-earmark-code text-secondary flex-shrink-0"></i>
                               <span class="flex-grow-1" style="min-width: 0;">
-                                 <a href="{{ nc_file.file.url }}" target="_blank" class="d-block text-truncate"
-                                    title="{{ nc_file.title }}">{{ nc_file.title }}</a>
+                                 <span class="d-block text-truncate" title="{{ nc_file.title }}">{{ nc_file.title }}</span>
                                  <span class="text-muted ecu-file-meta">{{ nc_file.uploaded_at|date:"M d, H:i" }}</span>
                               </span>
                               {% comment %}Outline pills rather than solid badges, matching the readings in the Files
@@ -2774,6 +2167,25 @@
                               <span class="ecu-pill ecu-warn flex-shrink-0"
                                  title="Uploaded before files were filed by collection, and its collection could not be determined. Re-upload it into a collection to edit its AMA metadata.">Unassigned</span>
                               {% endif %}
+                              {% comment %}View and Download the way a document card offers them, last in the row so
+                                 they line up down the list whatever pills a row carries. View opens the inspector
+                                 (build/bundle/_netcdf_inspect_modal.html): a browser cannot show a .nc file, so it
+                                 shows the header and the label instead.{% endcomment %}
+                              {% url 'build:netcdf_file' bundle.pk nc_file.pk as nc_download_url %}
+                              <span class="d-flex gap-1 flex-shrink-0">
+                                 <button type="button" class="btn btn-sm btn-dark text-nowrap"
+                                    data-bs-toggle="modal" data-bs-target="#netcdfInspectModal"
+                                    data-nc-name="{{ nc_file.title }}"
+                                    data-nc-inspect-url="{% url 'build:netcdf_inspect' bundle.pk nc_file.pk %}"
+                                    data-nc-download-url="{{ nc_download_url }}"
+                                    aria-label="View contents of {{ nc_file.title }}">
+                                    <i class="bi bi-eye me-1"></i>View
+                                 </button>
+                                 <a class="btn btn-sm btn-outline-secondary btn-keep-bg" href="{{ nc_download_url }}"
+                                    title="Download" aria-label="Download {{ nc_file.title }}">
+                                    <i class="bi bi-download"></i>
+                                 </a>
+                              </span>
                            </li>
                {% empty %}
                <li class="list-group-item text-center text-muted py-4 bg-transparent">
@@ -2816,6 +2228,16 @@ when in fact their collection was NULL the whole time.
                   <span class="badge bg-warning text-dark ms-2">Not in a collection</span>
                </div>
                <div class="d-flex align-items-center gap-2">
+                  {% comment %}Seeing what a file holds is what tells the user which collection it
+                     belongs in, or whether it is worth keeping.{% endcomment %}
+                  <button type="button" class="btn btn-sm btn-dark text-nowrap"
+                     data-bs-toggle="modal" data-bs-target="#netcdfInspectModal"
+                     data-nc-name="{{ nc_file.title }}"
+                     data-nc-inspect-url="{% url 'build:netcdf_inspect' bundle.pk nc_file.pk %}"
+                     data-nc-download-url="{% url 'build:netcdf_file' bundle.pk nc_file.pk %}"
+                     aria-label="View contents of {{ nc_file.title }}">
+                     <i class="bi bi-eye me-1"></i>View
+                  </button>
                   <form method="post" class="d-flex align-items-center gap-2"
                      action="{% url 'build:assign_netcdf_collection' pk_bundle=bundle.id pk_netcdf=nc_file.id %}">
                      {% csrf_token %}
@@ -2856,7 +2278,7 @@ when in fact their collection was NULL the whole time.
          
          <!-- Alternate Title -->
          <div class="mt-3">
-            <label for="col_type">Collection Type<span class="text-danger" title="This field is required">*</span></label>
+            <label for="{{ form_additional_collections.collection_type.id_for_label }}">Collection Type<span class="text-danger" title="This field is required">*</span></label>
             {{ form_additional_collections.collection_type }}
          </div>
          
@@ -2992,20 +2414,7 @@ also follows the project's own rule: modals go outside the card structure they b
    </div>
 </div>
 
-<!-- Only works here, idk why it doesnt work when moved to elsa.js - deric -->
 <script>
-   // Close one Bootstrap modal, then open another once the first is fully hidden.
-   function switchToModal(fromId, toId) {
-      var fromEl = document.getElementById(fromId);
-      var toEl   = document.getElementById(toId);
-      if (!fromEl || !toEl) return;
-      fromEl.addEventListener('hidden.bs.modal', function handler() {
-         fromEl.removeEventListener('hidden.bs.modal', handler);
-         bootstrap.Modal.getOrCreateInstance(toEl).show();
-      });
-      bootstrap.Modal.getInstance(fromEl).hide();
-   }
-   
    // Label selection, filtering and on-demand loading live in build/bundle/_file_tree.html,
    // which owns the Files card and defines window.showFileContent.
    
@@ -3173,10 +2582,26 @@ also follows the project's own rule: modals go outside the card structure they b
       if (actions) actions.classList.remove('d-none');
    }
 
+   // Upload pressed with nothing picked: said at the well rather than sent. It used to go to the
+   // server empty and come back as the whole page, which the submit handler read as success, so
+   // the bar ran, "Upload complete!" showed and the page reloaded having added nothing.
+   function setNoFilesWarning(input, show) {
+      var zone = document.querySelector('.ecu-drop[for="' + input.id + '"]');
+      var note = zone ? zone.parentNode.querySelector('.ecu-drop-required') : null;
+      if (zone) zone.classList.toggle('ecu-drop-invalid', show);
+      if (note) {
+         note.classList.toggle('d-none', !show);
+         note.innerHTML = show
+            ? '<i class="bi bi-exclamation-circle me-1"></i>Choose at least one NetCDF file to upload.'
+            : '';
+      }
+   }
+
    document.addEventListener('change', function(e) {
       var input = e.target;
       if (!input || input.name !== 'netcdf_files') return;
       renderPicked(input);
+      if (input.files && input.files.length) setNoFilesWarning(input, false);
    });
 
    // Clear puts the well back to its invitation. Delegated, because the upload area renders once
@@ -3194,17 +2619,61 @@ also follows the project's own rule: modals go outside the card structure they b
    
    document.addEventListener('submit', function(e) {
       var form = e.target;
-      if (!form || form.id !== 'netcdfUploadForm') return;
+      if (!form || !form.classList.contains('netcdf-upload-form')) return;
       e.preventDefault();
       
-      var uploadBtn      = form.querySelector('#uploadBtn');
-      var progressWrapper = form.querySelector('#uploadProgressWrapper');
-      var progressBar    = form.querySelector('#uploadProgressBar');
-      var uploadPercent  = form.querySelector('#uploadPercent');
-      var uploadStatusText = form.querySelector('#uploadStatusText');
-      var uploadSuccessMsg = form.querySelector('#uploadSuccessMsg');
-      var cancelBtn      = form.querySelector('#uploadCancelBtn');
-      
+      var uploadBtn      = form.querySelector('.upload-btn');
+      var progressWrapper = form.querySelector('.upload-progress-wrapper');
+      var progressBar    = form.querySelector('.upload-progress-bar');
+      var uploadPercent  = form.querySelector('.upload-percent');
+      var uploadStatusText = form.querySelector('.upload-status-text');
+      var uploadSuccessMsg = form.querySelector('.upload-success-msg');
+      var cancelBtn      = form.querySelector('.upload-cancel-btn');
+
+      // Ask the server whether it has room before sending a single byte. Refusing afterwards is
+      // too late: the whole file has crossed the network and been buffered to disk by then, which
+      // on a nearly full disk is exactly what fails. If the check itself cannot be made, upload
+      // anyway; the view repeats it once the files arrive.
+      var fileInput = form.querySelector('input[name="netcdf_files"]');
+      var picked = fileInput && fileInput.files ? Array.prototype.slice.call(fileInput.files) : [];
+      var collectionInput = form.querySelector('input[name="collection"]');
+      var storageCtx = {
+         form: form,
+         collection: collectionInput ? collectionInput.value : '',
+         files: picked.map(function (f) { return { name: f.name, size: f.size }; })
+      };
+      if (!picked.length) {
+         if (fileInput) { setNoFilesWarning(fileInput, true); fileInput.focus(); }
+         return;
+      }
+
+      if (uploadBtn) { uploadBtn.disabled = true; uploadBtn.textContent = 'Checking space...'; }
+      fetch('{% url "build:netcdf_storage_check" pk_bundle=bundle.id %}', {
+         method: 'POST',
+         credentials: 'same-origin',
+         headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': (form.querySelector('input[name="csrfmiddlewaretoken"]') || {}).value || ''
+         },
+         body: JSON.stringify({ collection: storageCtx.collection, files: storageCtx.files })
+      })
+         .then(function (r) { return r.ok ? r.json() : null; })
+         .catch(function () { return null; })
+         .then(function (space) {
+            if (space && space.ok === false && window.elsaOpenStorageDialog) {
+               if (uploadBtn) { uploadBtn.disabled = false; uploadBtn.textContent = 'Upload'; }
+               storageCtx.needed = space.needed;
+               storageCtx.available = space.available;
+               storageCtx.availableBytes = space.available_bytes;
+               storageCtx.stage = 'before';
+               window.elsaOpenStorageDialog(storageCtx);
+               return;
+            }
+            startUpload();
+         });
+
+      function startUpload() {
       var formData = new FormData(form);
       var xhr = new XMLHttpRequest();
       
@@ -3267,9 +2736,20 @@ also follows the project's own rule: modals go outside the card structure they b
          if (cancelBtn) cancelBtn.style.display = 'none';
          if (xhr.status >= 400) {
             var errorMsg = 'Upload failed.';
-            try { errorMsg = JSON.parse(xhr.responseText).error; } catch (err) {}
+            var reply = null;
+            try { reply = JSON.parse(xhr.responseText); errorMsg = reply.error; } catch (err) {}
             if (progressWrapper) progressWrapper.style.display = 'none';
             if (uploadBtn) { uploadBtn.disabled = false; uploadBtn.textContent = 'Upload'; }
+            // The view's own storage check refused the files after they arrived (the disk filled
+            // up after the preflight, or the preflight could not run). Same dialog, same offer.
+            if (reply && reply.code === 'insufficient_storage' && window.elsaOpenStorageDialog) {
+               storageCtx.needed = reply.needed;
+               storageCtx.available = reply.available;
+               storageCtx.availableBytes = reply.available_bytes;
+               storageCtx.stage = 'after';
+               window.elsaOpenStorageDialog(storageCtx);
+               return;
+            }
             var alertBox = form.querySelector('.netcdf-upload-error');
             if (!alertBox) {
                alertBox = document.createElement('div');
@@ -3322,12 +2802,13 @@ also follows the project's own rule: modals go outside the card structure they b
       // with a redirect that carries nothing the post-upload notice can be built from.
       xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
       xhr.send(formData);
+      }
    });
    
    // Cancel an in-flight upload. Delegated for the same reason the submit handler is: the
    // upload form is repeated once per collection tab pane, so IDs are not unique.
    document.addEventListener('click', function(e) {
-      var btn = e.target.closest ? e.target.closest('#uploadCancelBtn') : null;
+      var btn = e.target.closest ? e.target.closest('.upload-cancel-btn') : null;
       if (!btn) return;
       var form = btn.closest('form');
       if (!form || !form._netcdfUploadXhr) return;
@@ -3347,11 +2828,11 @@ also follows the project's own rule: modals go outside the card structure they b
      columns renders only because .modal is display:none, and it breaks the column layout the
      moment that changes. -->
 <!-- Submit Bundle for Review Modal -->
-<div class="modal fade" id="submitBundleModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="submitBundleModal" tabindex="-1" aria-labelledby="submitBundleModal_title" aria-hidden="true">
    <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
          <div class="modal-header border-0 pb-0">
-            <h5 class="modal-title">
+            <h5 class="modal-title" id="submitBundleModal_title">
                <i class="bi bi-send me-2 text-success"></i>
                {% if bundle.submitted_at %}Resubmit{% else %}Submit{% endif %} Bundle for Review
             </h5>
@@ -3374,25 +2855,19 @@ also follows the project's own rule: modals go outside the card structure they b
          </div>
          <div class="modal-footer border-0">
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-            <form action="{% url 'build:submit_bundle_internal' bundle.pk %}" method="post" class="mb-0">
-               {% csrf_token %}
-               <button type="submit" class="btn btn-success">
-                  <i class="bi bi-send me-1"></i>
-                  {% if bundle.submitted_at %}Resubmit{% else %}Submit{% endif %} for Review
-               </button>
-            </form>
+            {% include 'build/validation/submit_confirm.html' %}
          </div>
       </div>
    </div>
 </div>
 
 <!-- Review & Submit Modal -->
-<div class="modal fade" id="reviewBundleModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="reviewBundleModal" tabindex="-1" aria-labelledby="reviewBundleModal_title" aria-hidden="true">
    <div class="modal-dialog modal-dialog-centered modal-xl">
       <div class="modal-content">
          <div class="modal-header border-0 pb-0">
             <div>
-               <h5 class="modal-title mb-0">
+               <h5 class="modal-title mb-0" id="reviewBundleModal_title">
                   <i class="bi bi-clipboard-check me-2 text-success"></i>Bundle Review
                </h5>
                <p class="text-muted small mb-0 mt-1">
@@ -3404,122 +2879,75 @@ also follows the project's own rule: modals go outside the card structure they b
             <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal" aria-label="Close"></button>
          </div>
          <div class="modal-body pt-3">
+
+            {% include 'build/validation/verdict.html' %}
+
             <div class="row g-4">
                
-               <!-- Left column: Required + Optional -->
+               <!-- Left column: what stands between this bundle and submission. The same list
+                    the PDS Validation window shows, not a checklist of this window's own. -->
                <div class="col-md-6">
-                  <p class="text-uppercase text-muted small fw-semibold mb-2">Required</p>
-                  <div class="list-group mb-4">
-                     
-                     <!-- Modification History -->
-                     <div class="list-group-item d-flex justify-content-between align-items-start py-3">
-                        <div class="me-auto">
-                           <div class="d-flex align-items-center gap-2 mb-1">
-                              {% if status_dict.Modification_History %}
-                              <i class="bi bi-check-circle-fill text-success"></i>
-                              {% else %}
-                              <i class="bi bi-x-circle-fill text-danger"></i>
-                              {% endif %}
-                              <span class="fw-semibold">Modification History</span>
-                           </div>
-                           <p class="text-muted small mb-1">
-                              {% if status_dict.Modification_History %}
-                              {{ modification_history_set_count }} entr{% if modification_history_set_count == 1 %}y{% else %}ies{% endif %}
-                              {% if modification_history_set_count == 1 %}&mdash; auto-created when your bundle was built{% endif %}
-                              {% else %}
-                              <span class="text-danger">Not added</span>
-                              {% endif %}
-                           </p>
-                           <p class="text-muted small mb-0">A log of changes made to this bundle over time. An initial entry is auto-created when you first build your bundle; you can add more to record edits before submission.</p>
-                        </div>
-                        <button type="button" class="btn btn-sm btn-outline-secondary ms-3 flex-shrink-0"
-                        onclick="switchToModal('reviewBundleModal', 'mod_history_modal')">
-                        Add <i class="bi bi-arrow-right ms-1"></i>
-                     </button>
-                  </div>
-                  
-                  <!-- Citation Information -->
-                  <div class="list-group-item d-flex justify-content-between align-items-start py-3">
-                     <div class="me-auto">
-                        <div class="d-flex align-items-center gap-2 mb-1">
-                           {% if status_dict.Citation_Information %}
-                           <i class="bi bi-check-circle-fill text-success"></i>
-                           {% else %}
-                           <i class="bi bi-x-circle-fill text-danger"></i>
-                           {% endif %}
-                           <span class="fw-semibold">Citation Information</span>
-                        </div>
-                        <p class="text-muted small mb-0">
-                           {% if status_dict.Citation_Information %}Added{% else %}<span class="text-danger">Not added</span>{% endif %}
-                        </p>
-                     </div>
-                     <button type="button" class="btn btn-sm btn-outline-secondary ms-3 flex-shrink-0"
-                     onclick="switchToModal('reviewBundleModal', 'citation_information_modal')">
-                     {% if status_dict.Citation_Information %}Edit{% else %}Add{% endif %} <i class="bi bi-arrow-right ms-1"></i>
-                  </button>
+                  {% include 'build/validation/review_findings.html' %}
                </div>
                
-               <!-- Targets -->
-               <div class="list-group-item d-flex justify-content-between align-items-start py-3">
-                  <div class="me-auto">
-                     <div class="d-flex align-items-center gap-2 mb-1">
-                        {% if status_dict.Targets %}
-                        <i class="bi bi-check-circle-fill text-success"></i>
-                        {% else %}
-                        <i class="bi bi-x-circle-fill text-danger"></i>
-                        {% endif %}
-                        <span class="fw-semibold">Targets</span>
-                     </div>
-                     <p class="text-muted small mb-0">
-                        {% with tc=targets|length %}
-                        {% if tc %}{{ tc }} target{% if tc != 1 %}s{% endif %} selected{% else %}<span class="text-danger">No targets added</span>{% endif %}
-                        {% endwith %}
-                     </p>
-                  </div>
-                  <button type="button" class="btn btn-sm btn-outline-secondary ms-3 flex-shrink-0"
-                  onclick="switchToModal('reviewBundleModal', 'context_modal')">
-                  Edit <i class="bi bi-arrow-right ms-1"></i>
-               </button>
-            </div>
-            
-         </div>
-         
-         <p class="text-uppercase text-muted small fw-semibold mb-2">Optional</p>
-         <div class="list-group">
-            
-            <!-- Alias -->
-            <div class="list-group-item d-flex justify-content-between align-items-start py-3">
-               <div class="me-auto">
-                  <div class="d-flex align-items-center gap-2 mb-1">
-                     {% if status_dict.Alias %}
-                     <i class="bi bi-check-circle-fill text-success"></i>
-                     {% else %}
-                     <i class="bi bi-exclamation-triangle-fill text-warning"></i>
-                     {% endif %}
-                     <span class="fw-semibold">Alias</span>
-                  </div>
-                  <p class="text-muted small mb-1">
-                     {% if status_dict.Alias %}
-                     {{ alias_set_count }} alias{% if alias_set_count != 1 %}es{% endif %} added
-                     {% else %}
-                     Not added
-                     {% endif %}
-                  </p>
-                  <p class="text-muted small mb-0">An alternate name or identifier for this bundle, such as a short name used in publications or a prior archive identifier.</p>
-               </div>
-               <button type="button" class="btn btn-sm btn-outline-secondary ms-3 flex-shrink-0"
-               onclick="switchToModal('reviewBundleModal', 'alias_modal')">
-               {% if status_dict.Alias %}Edit{% else %}Add{% endif %} <i class="bi bi-arrow-right ms-1"></i>
-            </button>
-         </div>
-         
-      </div>
-   </div>
-   
-   <!-- Right column: Content -->
+   <!-- Right column: what is being sent. An inventory with the quickest route to
+        editing each piece, not a verdict: whether any of it needs changing is the
+        left column's job, so nothing here is marked red or green. -->
    <div class="col-md-6">
-      <p class="text-uppercase text-muted small fw-semibold mb-2">Content</p>
+      <p class="text-uppercase text-muted small fw-semibold mb-2">What you are sending</p>
       <div class="list-group">
+         <div class="list-group-item d-flex justify-content-between align-items-start py-3">
+            <div class="me-auto">
+               <div class="d-flex align-items-center gap-2 mb-1">
+                  <i class="bi bi-quote text-muted"></i>
+                  <span class="fw-semibold">Citation Information</span>
+               </div>
+               <p class="text-muted small mb-0">{% if citation_information_set %}Added{% else %}Not added yet{% endif %}</p>
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-secondary ms-3 flex-shrink-0"
+            onclick="switchToModal('reviewBundleModal', 'citation_information_modal')">
+            {% if citation_information_set %}Edit{% else %}Add{% endif %} <i class="bi bi-arrow-right ms-1"></i>
+         </button>
+      </div>
+         <div class="list-group-item d-flex justify-content-between align-items-start py-3">
+            <div class="me-auto">
+               <div class="d-flex align-items-center gap-2 mb-1">
+                  <i class="bi bi-clock-history text-muted"></i>
+                  <span class="fw-semibold">Modification History</span>
+               </div>
+               <p class="text-muted small mb-0">{% if modification_history_set_count %}{{ modification_history_set_count }} entr{{ modification_history_set_count|pluralize:'y,ies' }}{% else %}None yet{% endif %}</p>
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-secondary ms-3 flex-shrink-0"
+            onclick="switchToModal('reviewBundleModal', 'mod_history_modal')">
+            Add <i class="bi bi-arrow-right ms-1"></i>
+         </button>
+      </div>
+         <div class="list-group-item d-flex justify-content-between align-items-start py-3">
+            <div class="me-auto">
+               <div class="d-flex align-items-center gap-2 mb-1">
+                  <i class="bi bi-bullseye text-muted"></i>
+                  <span class="fw-semibold">Targets</span>
+               </div>
+               <p class="text-muted small mb-0">{% for target in targets %}{{ target.name }}{% if not forloop.last %}, {% endif %}{% empty %}None selected yet{% endfor %}</p>
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-secondary ms-3 flex-shrink-0"
+            onclick="switchToModal('reviewBundleModal', 'context_modal')">
+            Edit <i class="bi bi-arrow-right ms-1"></i>
+         </button>
+      </div>
+         <div class="list-group-item d-flex justify-content-between align-items-start py-3">
+            <div class="me-auto">
+               <div class="d-flex align-items-center gap-2 mb-1">
+                  <i class="bi bi-tag text-muted"></i>
+                  <span class="fw-semibold">Alias <span class="text-muted fw-normal small">(optional)</span></span>
+               </div>
+               <p class="text-muted small mb-0">{% if alias_set_count %}{{ alias_set_count }} alias{{ alias_set_count|pluralize:'es' }}{% else %}None{% endif %}</p>
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-secondary ms-3 flex-shrink-0"
+            onclick="switchToModal('reviewBundleModal', 'alias_modal')">
+            {% if alias_set_count %}Edit{% else %}Add{% endif %} <i class="bi bi-arrow-right ms-1"></i>
+         </button>
+      </div>
          
          <!-- Document Collection -->
          <div class="list-group-item d-flex justify-content-between align-items-start py-3">
@@ -3585,18 +3013,7 @@ also follows the project's own rule: modals go outside the card structure they b
 </div>
 <div class="modal-footer border-0 d-flex justify-content-between align-items-center">
    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-   {% if status_dict.Modification_History and status_dict.Citation_Information and status_dict.Targets %}
-   <button type="button" class="btn btn-success"
-   onclick="switchToModal('reviewBundleModal', 'submitBundleModal')">
-   <i class="bi bi-send me-1"></i>
-   {% if bundle.submitted_at %}Resubmit{% else %}Submit{% endif %}
-</button>
-{% else %}
-<button type="button" class="btn btn-success" disabled>
-   <i class="bi bi-send me-1"></i>
-   {% if bundle.submitted_at %}Resubmit{% else %}Submit{% endif %}
-</button>
-{% endif %}
+   {% include 'build/validation/submit_action.html' %}
 </div>
 </div>
 </div>
@@ -3606,12 +3023,12 @@ also follows the project's own rule: modals go outside the card structure they b
 <!-- Figure out how to move these to new file for readability sake - deric -->
 
 <!-- Delete Bundle Modal -->
-<div class="modal fade" id="delete_modal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="delete_modal" tabindex="-1" aria-labelledby="delete_modal_title" aria-hidden="true">
    <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
          <!-- Title -->
          <div class="modal-header">
-            <h3 class="modal-title w-100 text-center">Delete Bundle</h3>
+            <h3 class="modal-title w-100 text-center" id="delete_modal_title">Delete Bundle</h3>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
          </div>
          
@@ -3651,6 +3068,20 @@ also follows the project's own rule: modals go outside the card structure they b
 </script>
 {% endif %}
 
+{% comment %}
+   A citation the form refused (for now, only an External citation with no author)
+   reopens its window, where the form's errors are rendered. Left closed, the refusal
+   was invisible: the page reloaded and simply had no citation on it.
+{% endcomment %}
+{% if reopen_citation_modal %}
+<script type="text/javascript">
+   document.addEventListener('DOMContentLoaded', function () {
+      var el = document.getElementById('citation_information_modal');
+      if (el && window.bootstrap) { bootstrap.Modal.getOrCreateInstance(el).show(); }
+   });
+</script>
+{% endif %}
+
 {% if additional_collection_successful_submit %}
 <script type="text/javascript">
    $(document).ready(function(){
@@ -3661,12 +3092,12 @@ also follows the project's own rule: modals go outside the card structure they b
 {% endif %}
 
 <!-- Context Modal -->
-<div class="modal fade" id="context_modal">
+<div class="modal fade" id="context_modal" tabindex="-1" aria-labelledby="context_modal_title" aria-hidden="true">
    <div class="modal-dialog modal-xl">
       <div class="modal-content">
          <!-- Title -->
          <div class="modal-header d-flex justify-content-center position-relative">
-            <h5 class="modal-title">Context</h5>
+            <h5 class="modal-title" id="context_modal_title">Context</h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="position: absolute; right: 1.5rem;"></button>
          </div>
          
@@ -3756,7 +3187,7 @@ also follows the project's own rule: modals go outside the card structure they b
                         <div class="card-header">
                            <p> To begin, select an investigation product below to associate with your bundle. Investigations serve as the top level of the context system and will associate your bundle with a larger project.</br> <strong>Investigations are categorized as:</strong> Individual Investigations, Missions, Field Campaigns, Observing Campaigns, or Other Investigations. Selecting an investigation will pare down the list of components to the ones that go with that investigation (i.e., associated instruments, targets, etc.) </p>
                         </div>
-                        <form class="card-body black-text text-left z-depth-2" id="form_investigation" method="post" action="{% url 'build:bundle' bundle.pk  %}">
+                        <form class="card-body black-text text-left z-depth-2" id="form_investigation" method="post" action="{% url 'build:bundle' bundle.pk  %}" data-inplace="investigation">
                            {% csrf_token %}
                            <input type="hidden" name="form_name" value="investigation_form">
                            <input type="hidden" name="form_name" value="contact_form">
@@ -3850,7 +3281,7 @@ also follows the project's own rule: modals go outside the card structure they b
                            <h5 class="card-title">{{ instrument_host }}</h5>
                            <p class="card-text">Investigation(s): {{ instrument_host.investigations.last }}</p>
                            <p class="card-text">{{ instrument_host.lid }}</p>
-                           <a type="button" class="btn btn-danger" href="{% url 'build:delete_instrument_host' bundle.pk instrument_host.pk %}">Remove</a>
+                           <a type="button" class="btn btn-danger" href="{% url 'build:delete_instrument_host' bundle.pk instrument_host.pk %}?next=bundle">Remove</a>
                            
                            <!-- <p class="card-text"><small class="text-muted">Last updated 3 mins ago</small></p> -->
                         </div>
@@ -3904,7 +3335,7 @@ also follows the project's own rule: modals go outside the card structure they b
                         <div class="card-body">
                            <h5 class="card-title">{{ instrument }}</h5>
                            <p class="card-text">{{ instrument.lid }}</p>
-                           <a type="button" class="btn btn-danger" href="{% url 'build:delete_instrument' bundle.pk instrument.pk %}">Remove</a>
+                           <a type="button" class="btn btn-danger" href="{% url 'build:delete_instrument' bundle.pk instrument.pk %}?next=bundle">Remove</a>
                            
                            <!-- <p class="card-text"><small class="text-muted">Last updated 3 mins ago</small></p> -->
                         </div>
@@ -3941,7 +3372,7 @@ also follows the project's own rule: modals go outside the card structure they b
                      <div class="card-header">
                         <p>Choose the target(s) you wish to add to your bundle. This is a complete list of availabe targets, independent of any investigations chosen.</p>
                      </div>
-                     <form class="card-header black-text text-left z-depth-2"id="query01" method="post" action="{% url 'build:context_search_target' bundle.pk %}?next=bundle">
+                     <form class="card-header black-text text-left z-depth-2"id="query01" method="post" action="{% url 'build:context_search_target' bundle.pk %}?next=bundle" data-inplace="target">
                         
                         {% csrf_token %}
                         {{ form_target }}
@@ -4025,7 +3456,7 @@ also follows the project's own rule: modals go outside the card structure they b
                            <strong>Working with model or simulation data?</strong> Choose the "Laboratory Analog" entry for the body you're simulating (e.g., "Mars Laboratory Analog" for a Mars atmosphere simulation). It's not a physical lab sample, PDS4 just uses this name for the target.
                         </div>
                      </div>
-                     <form class="card-header black-text text-left z-depth-2"id="query01" method="post" action="{% url 'build:context_search_target' bundle.pk %}?next=bundle">
+                     <form class="card-header black-text text-left z-depth-2"id="query01" method="post" action="{% url 'build:context_search_target' bundle.pk %}?next=bundle" data-inplace="target">
                         
                         {% csrf_token %}
                         {{ form_target }}
@@ -4098,495 +3529,15 @@ also follows the project's own rule: modals go outside the card structure they b
 <!-- Investigation Area Modal -->
 <!-- Splitting the Investigation Area into 3 different pop-up modals accessed by the dropdown -->
 
-<!-- Alias -->
-<div class="modal fade" id="alias_modal">
-   <div class="modal-dialog modal-xl">
-      <div class="modal-content">
-         <!-- Title -->
-         <div class="modal-header d-flex justify-content-center position-relative">
-            <h5 class="modal-title">Alias</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="position: absolute; right: 1rem;"></button>
-         </div>
-         
-         <div class="modal-body pt-0">
-            
-            <!-- Content -->
-            <div class="tab-content">
-               <!-- Alias -->
-               <div class="tab-pane show active" id="inv_alias" role="tabpanel">
-                  <!-- Form -->
-                  {% if alias_set_count == 0 %}
-                  <div class="row px-2">
-                     <form action="{% url 'build:bundle' bundle.pk %}" method="post" id="form_alias" >
-                        {% csrf_token %}
-                        
-                        <!-- Alternate ID -->
-                        <div class="mt-3">
-                           <label for="alt_id">Alternate ID<span class="text-danger" title="This field is required">*</span></label>
-                           {{ form_alias.alternate_id }}
-                        </div>
-                        
-                        <!-- Alternate Title -->
-                        <div class="mt-3">
-                           <label for="alt_title">Alternate Title<span class="text-danger" title="This field is required">*</span></label>
-                           {{ form_alias.alternate_title }}
-                        </div>
-                        
-                        <!-- Comment -->
-                        <div class="mt-3">
-                           <label for="comment">Comment</label>
-                           {{ form_alias.comment }}
-                        </div>
-                        
-                        <!-- Create Alias -->
-                        <button type="submit" class="btn btn-light text-light my-4">Create Alias</button>
-                     </form>
-                  </div>
-                  
-                  {% else %}
-                  
-                  <div class="alert alert-info mt-4 mx-2">
-                     <i class="bi bi-info-circle-fill me-2"></i>
-                     An alias already exists for this bundle. Edit or delete the
-                     existing alias before creating another one.
-                  </div>
-                  
-                  {% endif %}
-                  
-                  <!-- Current Alias -->
-                  <div class="mt-4">
-                     
-                     {% if alias_set_count == 0 %}
-                     
-                     <p class="text-muted px-2">No Alias Found</p>
-                     
-                     {% else %}
-                     
-                     {% for alias in alias_set %}
-                     
-                     <div class="card shadow-sm mt-3">
-                        
-                        <div class="card-header bg-light">
-                           <h5 class="mb-0">
-                              <i class="bi bi-tag-fill me-2"></i>
-                              Current Alias
-                           </h5>
-                        </div>
-                        
-                        <div class="card-body">
-                           
-                           <table class="table table-bordered table-hover mb-0">
-                              
-                              <tr>
-                                 <th style="width:30%;">
-                                    Alternate ID
-                                 </th>
-                                 <td>
-                                    {{ alias.alternate_id|default:"-" }}
-                                 </td>
-                              </tr>
-                              
-                              <tr>
-                                 <th>
-                                    Alternate Title
-                                 </th>
-                                 <td>
-                                    {{ alias.alternate_title|default:"-" }}
-                                 </td>
-                              </tr>
-                              
-                              <tr>
-                                 <th>
-                                    Comment
-                                 </th>
-                                 <td>
-                                    {{ alias.comment|default:"-" }}
-                                 </td>
-                              </tr>
-                              
-                           </table>
-                        </div>
-                     </div>
-                     
-                     <br>
-                     
-                     <div class="card-footer d-flex justify-content-end">
-                        <a href="{% url 'build:alias_edit' bundle.pk alias.pk %}"
-                        class="btn btn-light text-light">
-                        
-                        <i class="bi bi-pencil-fill"></i>
-                        Edit
-                     </a>
-                  </div>
-                  
-                  {% endfor %}
-                  
-                  {% endif %}
-                  
-               </div>
-            </div>
-         </div>
-      </div>
-   </div>
-</div>
-</div>
-
-<!-- Modificaiton History -->
-<div class="modal fade" id="mod_history_modal">
-   <div class="modal-dialog modal-xl">
-      <div class="modal-content">
-         <!-- Title -->
-         <div class="modal-header d-flex justify-content-center position-relative">
-            <h5 class="modal-title">Modification History</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="position: absolute; right: 1rem;"></button>
-         </div>
-         
-         <div class="modal-body pt-0">
-            
-            <!-- Content -->
-            <div class="tab-content">
-               
-               <!-- Modification History -->
-               <div class="tab-pane show active" id="inv_mod" role="tabpanel">
-                  <div class="row px-2">
-                     <form action="{% url 'build:bundle' bundle.pk %}" method="post" id="form_modification_history">
-                        {% csrf_token %}
-                        
-                        <!-- Version ID -->
-                        <div class="mt-3">
-                           <label for="version_id">Version ID<span class="text-danger" title="This field is required">*</span></label>
-                           {{ form_modification_history.version_id }}
-                        </div>
-                        
-                        <!-- Description-->
-                        <div class="mt-3">
-                           <label for="mod_desc">Description</label>
-                           {{ form_modification_history.description }}
-                        </div>
-                        
-                        <!-- Modification Date -->
-                        <div class="mt-3">
-                           <label for="mod_date">Modificaiton Date<span class="text-danger" title="This field is required">*</span></label>
-                           {{ form_modification_history.modification_date }}
-                        </div>
-                        
-                        <!-- Create Modification History -->
-                        <button type="submit" class="btn btn-light text-light my-4">Create Modification History</button>
-                     </form>
-                  </div>
-                  
-                  <!-- List of Modification History Snippets -->
-                  <div class="modal-footer justify-content-start">
-                     <!-- No Modificaiton History Snippets Exist -->
-                     {% if modification_history_set_count == 0 %}
-                     <p>No Modification History Found</p>
-                     
-                     <!-- Display Modification History Snippets -->
-                     {% else %}
-                     {% for modification_history in modification_history_set %}
-                     <div class="card snippet-card ms-0 me-3">
-                        <div class="card-body">
-                           <p class="card-text">Version ID: {{ modification_history.version_id}}</p>
-                           <p class="card-text">Description: {{ modification_history.description }}</p>
-                           <p class="card-text">Modification Date: {{ modification_history.modification_date }}</p>
-                           
-                           <form action="{% url 'build:modification_history_delete' bundle.pk modification_history.pk %}" method="post" style="display:inline;">
-                              {% csrf_token %}
-                              <button type="submit" class="btn btn-danger btn-sm">Delete</button>
-                           </form>
-                           
-                        </div>
-                     </div>
-                     {% endfor %}
-                     {% endif %}
-                  </div>
-               </div>
-            </div>
-         </div>
-      </div>
-   </div>
-</div>
-
-
-<!-- Citation Information -->
-<div class="modal fade" id="citation_information_modal">
-   <div class="modal-dialog modal-xl">
-      <div class="modal-content">
-         <!-- Title -->
-         <div class="modal-header d-flex justify-content-center position-relative">
-            <h5 class="modal-title">Citation Information</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="position: absolute; right: 1rem;"></button>
-         </div>
-         
-         <div class="modal-body pt-0">
-            
-            <!-- Content -->
-            <div class="tab-content">
-               <!-- Citation Information -->
-               <div class="tab-pane show active" id="inv_cite" role="tabpanel">
-                  <!-- Form -->
-                  
-                  {% if citation_information_set_count == 0 %}
-                  <div class="row px-2">
-                     <!-- This is where to change the linkage to one of the new pages -->
-                     <!--Changed the view after build and added citation information.pk-->
-                     <form action="{% url 'build:bundle' bundle.pk %}?next=bundle" method="post" id="form_citation_information"> 
-                        {% csrf_token %}
-                        
-                        <!-- Author List -->
-                        <h6 class="mt-4 mb-1 fw-semibold">Authors <span class="fw-normal fst-italic text-muted">(data providers)</span></h6>
-                        <div class="mt-3">
-                           <label for="id_number_of_authors_people">Number of Persons</label>
-                           <small class="d-block text-muted">This is a count, not a name. You will enter each author's name on the next screen.</small>
-                           {{ form_citation_information.number_of_authors_people }}
-                        </div>
-                        
-                        <div class="mt-3">
-                           <label for="author_list">Number of Organizations*</label>
-                           {{ form_citation_information.number_of_authors_organization }}
-                        </div>
-                        
-                        <p class="text-muted small mt-2">* Organizations should be set to 0 unless used.</p>
-                        <!-- Editors -->
-                        <h6 class="mt-4 mb-1 fw-semibold">Editors</h6>
-                        <p class="text-muted small mt-1">Lynn Neakrase and Lyle Huber (ATM node staff) are always included automatically. Add extra editors below if needed; names are entered on the citation details page.</p>
-                        <div class="mt-3">
-                           <label for="id_number_of_editors_people">Additional Editors: Number of Persons</label>
-                           {{ form_citation_information.number_of_editors_people }}
-                        </div>
-                        <div class="mt-3">
-                           <label for="id_number_of_editors_organization">Additional Editors: Number of Organizations</label>
-                           {{ form_citation_information.number_of_editors_organization }}
-                        </div>
-                        
-                        
-                        <!-- Keyword -->
-                        <div class="mt-3">
-                           <label for="keyword">Keyword</label>
-                           {{ form_citation_information.keyword }}
-                        </div>
-                        
-                        <!-- Publication Year -->
-                        <div class="mt-3">
-                           <label for="publication_year">Publication Year<span class="text-danger" title="This field is required">*</span></label>
-                           {{ form_citation_information.publication_year }}
-                        </div>
-                        
-                        <!-- Description -->
-                        <div class="mt-3">
-                           <label for="mod_desc">Description<span class="text-danger" title="This field is required">*</span></label>
-                           {{ form_citation_information.description }}
-                        </div>
-                        
-                        {{ form_citation_information.errors }}
-                        
-                        <!-- Create Citation Information -->
-                        <button type="submit" class="btn btn-light text-light my-4">Create Citaiton Information</button>
-                     </form>
-                  </div>
-                  
-                  {% else %}
-                  
-                  <div class="alert alert-info mt-4">
-                     Citation Information already exists for this bundle.
-                     PDS4 allows one Citation Information section per bundle.
-                     Edit or delete the existing citation information below.
-                  </div>
-                  
-                  
-                  {% endif %}
-                  
-                  
-                  <!-- List of Citation Information Snippets -->
-                  <div class="mt-4">
-                     <!--Display Current Citation Information-->
-                     {% for citation_information in citation_information_set %}
-                     <div class="card shadow-sm mt-3">
-                        <div class="card-header bg-light">
-                           <h5 class="mb-0">
-                              <i class="bi bi-journal-text me-2"></i>
-                              Current Citation Information
-                           </h5>
-                        </div>
-                        
-                        <div class="card-body">
-                           <table class="table table-bordered table-hover mb-0">
-                              <tr>
-                                 <th style="width:30%;">Authors</th>
-                                 <td>
-                                    <button class="btn btn-sm btn-outline-secondary"
-                                    type="button"
-                                    data-bs-toggle="collapse"
-                                    data-bs-target="#authorsCollapse{{ citation_information.pk }}"
-                                    aria-expanded="false">
-                                    
-                                    {{ citation_information.number_of_authors_people|default:"0" }} Person(s),
-                                    {{ citation_information.number_of_authors_organization|default:"0" }} Organization(s)
-                                    
-                                 </button>
-                                 
-                                 <div class="collapse mt-2" id="authorsCollapse{{ citation_information.pk }}">
-                                    <div class="border rounded p-3 bg-light">
-                                       
-                                       {% if citation_information.display_authors %}
-                                       
-                                       {% for author in citation_information.display_authors %}
-                                       
-                                       <div class="mb-3">
-                                          
-                                          <strong>{{ author.type }}</strong><br>
-                                          
-                                          {{ author.name }}<br>
-                                          
-                                          {% if author.organization %}
-                                          <small class="text-muted">
-                                             {{ author.organization }}
-                                          </small>
-                                          {% endif %}
-                                          <br>
-                                          {% if author.orcid %}
-                                          <small class="text-muted">
-                                             ORCID: {{ author.orcid }}
-                                          </small>
-                                          {% endif %}
-                                       </div>
-                                       
-                                       {% endfor %}
-                                       
-                                       {% else %}
-                                       
-                                       <em>No author information found.</em>
-                                       
-                                       {% endif %}
-                                       
-                                    </div>
-                                 </div>
-                              </td>
-                           </tr>
-                           
-                           <tr>
-                              <th>Editors</th>
-                              <td>
-                                 <button class="btn btn-sm btn-outline-secondary"
-                                 type="button"
-                                 data-bs-toggle="collapse"
-                                 data-bs-target="#editorsCollapse{{ citation_information.pk }}"
-                                 aria-expanded="false">
-                                 
-                                 {{ citation_information.display_editor_people_count }} Person(s),
-                                 {{ citation_information.display_editor_organization_count }} Organization(s)
-                                 
-                              </button>
-                              
-                              <div class="collapse mt-2" id="editorsCollapse{{ citation_information.pk }}">
-                                 <div class="border rounded p-3 bg-light">
-                                    
-                                    {% if citation_information.display_editors %}
-                                    
-                                    {% for editor in citation_information.display_editors %}
-                                    
-                                    <div class="mb-3">
-                                       
-                                       <strong>{{ editor.type }}</strong><br>
-                                       
-                                       {% if editor.name %}
-                                       {{ editor.name }}<br>
-                                       {% endif %}
-                                       
-                                       {% if editor.organization %}
-                                       <small class="text-muted">
-                                          {{ editor.organization }}
-                                       </small><br>
-                                       {% endif %}
-                                       
-                                       {% if editor.orcid %}
-                                       <small class="text-muted">
-                                          ORCID: {{ editor.orcid }}
-                                       </small><br>
-                                       {% endif %}
-                                       
-                                       {% if editor.rorid %}
-                                       <small class="text-muted">
-                                          RORID: {{ editor.rorid }}
-                                       </small><br>
-                                       {% endif %}
-                                       
-                                       {% if editor.sequence_number %}
-                                       <small class="text-muted">
-                                          Sequence Number: {{ editor.sequence_number }}
-                                       </small><br>
-                                       {% endif %}
-                                       
-                                       {% if editor.parent_organization %}
-                                       <small class="text-muted">
-                                          Parent Organization: {{ editor.parent_organization }}
-                                       </small>
-                                       {% endif %}
-                                       
-                                    </div>
-                                    
-                                    {% endfor %}
-                                    
-                                    {% else %}
-                                    
-                                    <em>No editor information found.</em>
-                                    
-                                    {% endif %}
-                                    
-                                 </div>
-                              </div>
-                           </td>
-                        </tr>
-                        <tr>
-                           <th>Keyword(s)</th>
-                           <td>{{ citation_information.keyword|default:"-" }}</td>
-                        </tr>
-                        
-                        <tr>
-                           <th>Publication Year</th>
-                           <td>{{ citation_information.publication_year|default:"-" }}</td>
-                        </tr>
-                        
-                        <tr>
-                           <th>Description</th>
-                           <td>{{ citation_information.description|default:"-" }}</td>
-                        </tr>
-                     </table>
-                  </div>
-               </div>
-               <br>
-               <div class="card-footer d-flex justify-content-end gap-2">
-                  <a href="{% url 'build:edit_citation_information' bundle.pk citation_information.pk %}?next=bundle"
-                  class="btn btn-light" style="color:white;">
-                  <i class="bi bi-pencil-fill"></i>
-                  Edit
-               </a>
-               
-               <!--implementing citation delete-->
-               <form action="{% url 'build:citation_information_delete' bundle.pk citation_information.pk %}" method="post" style="display:inline;">
-                  {% csrf_token %}
-                  <button type="submit" class="btn btn-danger">
-                     <i class="bi bi-trash-fill"></i>   
-                     Delete
-                  </button>
-               </form> 
-            </div>
-            {% endfor %}
-         </div>
-      </div>
-   </div>
-</div>
-</div>
-</div>
-</div>
+{% include 'build/bundle/_bundle_info_modals.html' %}
 
 <!-- Document Product Modal -->
-<div class="modal fade" id="document_modal">
+<div class="modal fade" id="document_modal" tabindex="-1" aria-labelledby="document_modal_title" aria-hidden="true">
    <div class="modal-dialog modal-xl">
       <div class="modal-content">
          <!-- Title -->
          <div class="modal-header">
-            <h5 class="modal-title">Add Document Product</h5>
+            <h5 class="modal-title" id="document_modal_title">Add Document Product</h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
          </div>
          
@@ -4594,13 +3545,14 @@ also follows the project's own rule: modals go outside the card structure they b
             <div class="row px-2">
                {% if bundle.bundle_type == "External" %}
                <!-- Reusing the document form from the external walkthrough -->
-               <form action="{% url 'build:annex_collection_document' bundle.pk %}" method="post" id="form_document">
+               <form action="{% url 'build:annex_collection_document' bundle.pk %}" method="post" id="form_document" enctype="multipart/form-data" data-inplace="document">
                   {% csrf_token %}
                   <input type="hidden" name="form_name" value="document_form">
                   {% for field in annex_form_document %}
                   <div class="mb-3">
                      {{ field.label_tag }}
                      {{ field }}
+                     {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
                      {% if field.errors %}
                      <div class="text-danger">{{ field.errors }}</div>
                      {% endif %}
@@ -4609,87 +3561,77 @@ also follows the project's own rule: modals go outside the card structure they b
                   <button type="submit" name="source" value="bundle" class="btn btn-light text-light my-4">Add Document</button>
                </form>
                {% else %}                        
-               <form action="{% url 'build:bundle' bundle.pk %}" method="post" id="form_document">
+               <form action="{% url 'build:bundle' bundle.pk %}" method="post" id="form_document" enctype="multipart/form-data" data-inplace="document">
                   {% csrf_token %}
                   <input type="hidden" name="form_name" value="document_form">
                   
                   <!-- Name-->
                   <div class="mt-3">
-                     <label for="doc_name">Document Name</label>
+                     <label for="{{ form_document.document_name.id_for_label }}">Document Name</label>
                      {{ form_document.document_name }}
                   </div>
                   
                   <!-- Publication Date -->
                   <div class="mt-3">
-                     <label for="pub_date">Publication Date</label>
+                     <label for="{{ form_document.publication_date.id_for_label }}">Publication Date</label>
                      {{ form_document.publication_date }}
                   </div>
                   
                   <!-- Author List -->
                   <div class="mt-3">
-                     <label for="auth_list">Author List</label>
+                     <label for="{{ form_document.author_list.id_for_label }}">Author List</label>
                      {{ form_document.author_list }}
                   </div>
                   
                   <!-- Copyright-->
                   <div class="mt-3">
-                     <label for="copyright">Copyright</label>
+                     <label for="{{ form_document.copyright.id_for_label }}">Copyright</label>
                      {{ form_document.copyright }}
                   </div>
                   
                   <!-- Description -->
                   <div class="mt-3">
-                     <label for="description">Description</label>
+                     <label for="{{ form_document.description.id_for_label }}">Description</label>
                      {{ form_document.description }}
                   </div>
                   
                   <!-- Revision ID-->
                   <div class="mt-3">
-                     <label for="rev_id">Revision ID</label>
+                     <label for="{{ form_document.revision_id.id_for_label }}">Revision ID</label>
                      {{ form_document.revision_id }}
                   </div>
                   
                   <!-- document_editions -->
                   <div class="mt-3">
-                     <label for="doc_editions">Document Editions</label>
+                     <label for="{{ form_document.document_editions.id_for_label }}">Document Editions</label>
                      {{ form_document.document_editions }}
                   </div>
                   
                   <!-- edition name -->
                   <div class="mt-3">
-                     <label for="edition_name">Edition Name</label>
+                     <label for="{{ form_document.edition_name.id_for_label }}">Edition Name</label>
                      {{ form_document.edition_name }}
                   </div>
                   
                   <!-- Language -->
                   <div class="mt-3">
-                     <label for="language">Language</label>
+                     <label for="{{ form_document.language.id_for_label }}">Language</label>
                      {{ form_document.language }}
                   </div>
                   
-                  <!-- Files-->
+                  <!-- The document file itself: its name and format come from the upload -->
                   <div class="mt-3">
-                     <label for="files">Files</label>
-                     {{ form_document.files }}
-                  </div>
-                  
-                  <!-- file_name -->
-                  <div class="mt-3">
-                     <label for="file_name">File Name</label>
-                     {{ form_document.file_name }}
+                     <label for="{{ form_document.document_file.id_for_label }}">Document file</label>
+                     {{ form_document.document_file }}
+                     <div class="form-text">{{ form_document.document_file.help_text }}</div>
                   </div>
                   
                   <!-- Local ID -->
                   <div class="mt-3">
-                     <label for="local_id">Local ID</label>
+                     <label for="{{ form_document.local_id.id_for_label }}">Local ID</label>
                      {{ form_document.local_id }}
                   </div>
                   
-                  <!-- Document SSTD ID -->
-                  <div class="mt-3">
-                     <label for="doc_std_id">Document STD ID</label>
-                     {{ form_document.document_std_id }}
-                  </div>
                   
                   <!-- Create Product Document -->
                   <button type="submit" class="btn btn-light text-light my-4">Create Document</button>
@@ -4702,11 +3644,11 @@ also follows the project's own rule: modals go outside the card structure they b
 </div>
 
 <!-- Data Product Modal -->
-<div class="modal fade" id="data_product_modal">
+<div class="modal fade" id="data_product_modal" tabindex="-1" aria-labelledby="data_product_modal_title" aria-hidden="true">
    <div class="modal-dialog modal-xl">
       <div class="modal-content">
          <div class="modal-header">
-            <h5 class="modal-title">Add Data Product</h5>
+            <h5 class="modal-title" id="data_product_modal_title">Add Data Product</h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
          </div>
          
@@ -4716,12 +3658,12 @@ also follows the project's own rule: modals go outside the card structure they b
                   {% csrf_token %}
                   
                   <div class="mt-3">
-                     <label for="data_name">Name<span class="text-danger" title="This field is required">*</span></label>
+                     <label for="{{ form_data.name.id_for_label }}">Name<span class="text-danger" title="This field is required">*</span></label>
                      {{ form_data.name }}
                   </div>
                   
                   <div class="mt-3">
-                     <label for="processing_level">Processing Level</label>
+                     <label for="{{ form_data.processing_level.id_for_label }}">Processing Level</label>
                      {{ form_data.processing_level }}
                   </div>
                   
@@ -4768,7 +3710,7 @@ also follows the project's own rule: modals go outside the card structure they b
                </div>
                
                <div class="mt-3">
-                  <label for="data_type">Data Type</label>
+                  <label for="{{ form_data.data_type.id_for_label }}">Data Type</label>
                   {{ form_data.data_type }}
                </div>
                
@@ -4779,14 +3721,14 @@ also follows the project's own rule: modals go outside the card structure they b
                </style>
                
                <div id="header_field" class="mt-3">
-                  <label for="header">Header?</label>
+                  <label for="{{ form_data.header.id_for_label }}">Header?</label>
                   {{ form_data.header }}
                </div>
                
                <!-- <input type="hidden" class="form-control" id="collection" name="collection" value="{{ add_collection }}"> -->
                
                <div class="mt-3">
-                  <label for="collection">Collection<span class="text-danger" title="This field is required">*</span></label>
+                  <label for="{{ form_data.collection.id_for_label }}">Collection<span class="text-danger" title="This field is required">*</span></label>
                   {{ form_data.collection }}
                </div>
                
@@ -4800,13 +3742,46 @@ also follows the project's own rule: modals go outside the card structure they b
 </div>
 {% endif %}
 
+{% comment %}
+   switchToModal is here, outside the Archive/External branch, for the same reason as the
+   validation modal below: both layouts call it (Fix in the validation window, Contact in
+   the Context window). It used to live inside the External branch, so on an Archive page
+   those buttons threw "switchToModal is not defined" and did nothing.
+{% endcomment %}
+<script>
+   // Close one Bootstrap modal, then open another once the first is fully hidden. Bootstrap
+   // 5.0 cannot show two at once: both stay up, with two backdrops.
+   function switchToModal(fromId, toId) {
+      var fromEl = document.getElementById(fromId);
+      var toEl   = document.getElementById(toId);
+      if (!fromEl || !toEl) return;
+      // Not open (or already closing): there is no hidden event to wait for.
+      if (!fromEl.classList.contains('show')) {
+         bootstrap.Modal.getOrCreateInstance(toEl).show();
+         return;
+      }
+      fromEl.addEventListener('hidden.bs.modal', function handler() {
+         fromEl.removeEventListener('hidden.bs.modal', handler);
+         bootstrap.Modal.getOrCreateInstance(toEl).show();
+      });
+      bootstrap.Modal.getOrCreateInstance(fromEl).hide();
+   }
+</script>
+
+{% comment %}
+   Outside the Archive/External branch on purpose. The Bundle Components card carries
+   the validation row in both layouts, and this modal is what that row opens; inside
+   the branch, the Archive row pointed at a modal that was never rendered.
+{% endcomment %}
+{% include 'build/validation/modal.html' %}
+
 <!-- NetCDF Bulk Delete Modal — outside all cards/forms so overflow:hidden cannot interfere.
 Has its own form; JS populates hidden inputs with the selected IDs on show. -->
-<div class="modal fade" id="bulkDeleteNetCDFModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="bulkDeleteNetCDFModal" tabindex="-1" aria-labelledby="bulkDeleteNetCDFModal_title" aria-hidden="true">
    <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
          <div class="modal-header border-0 pb-0">
-            <h5 class="modal-title text-danger">
+            <h5 class="modal-title text-danger" id="bulkDeleteNetCDFModal_title">
                <i class="bi bi-exclamation-triangle me-2"></i>Delete Selected Files
             </h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -4887,11 +3862,11 @@ Has its own form; JS populates hidden inputs with the selected IDs on show. -->
 
 <!-- Unsaved-changes guard for the editor. Bootstrap modal rather than confirm(), per
      project convention. -->
-<div class="modal fade" id="amaUnsavedModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="amaUnsavedModal" tabindex="-1" aria-labelledby="amaUnsavedModal_title" aria-hidden="true">
    <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
          <div class="modal-header">
-            <h5 class="modal-title">Discard unsaved changes?</h5>
+            <h5 class="modal-title" id="amaUnsavedModal_title">Discard unsaved changes?</h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
          </div>
          <div class="modal-body">
@@ -5212,6 +4187,277 @@ so a page that was not just uploaded to never shows it.{% endcomment %}
    </div>
 </div>
 
+<style>
+   /* Storage dialog. Colours come from Bootstrap's own variables so the dialog follows the
+      page's light or dark theme without a second set of rules. */
+   .ess-icon {
+      width: 48px; height: 48px; flex: none; border-radius: 50%;
+      display: inline-flex; align-items: center; justify-content: center; font-size: 1.35rem;
+      background: var(--bs-danger-bg-subtle); color: var(--bs-danger-text-emphasis);
+   }
+   .ess-icon-ok { background: var(--bs-success-bg-subtle); color: var(--bs-success-text-emphasis); }
+   .ess-stats { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+   .ess-stat { border: 1px solid var(--bs-border-color); border-radius: .5rem; padding: .75rem 1rem; }
+   .ess-stat-label {
+      font-size: .7rem; text-transform: uppercase; letter-spacing: .05em;
+      color: var(--bs-secondary-color);
+   }
+   .ess-stat-value { font-size: 1.3rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+   .ess-stat-short { background: var(--bs-danger-bg-subtle); border-color: var(--bs-danger-border-subtle); }
+   .ess-stat-short .ess-stat-value { color: var(--bs-danger-text-emphasis); }
+   .ess-draft-wrap { position: relative; }
+   .ess-drafting {
+      position: absolute; inset: 0; border-radius: var(--bs-border-radius);
+      display: flex; align-items: center; justify-content: center; gap: .5rem;
+      background: var(--bs-tertiary-bg); color: var(--bs-secondary-color); font-size: .9rem;
+   }
+</style>
+
+{% comment %}Opened by the upload script when the server has no room for the picked files, either
+before the upload (the usual case) or when the view's own check refuses it afterwards. The message
+is drafted by the server (Gemini, or a template when Gemini is unavailable) and is the user's to
+edit; the email adds the technical details itself, so nothing here has to be trusted for them.
+Kept outside every card for the same reason as the dialog above.{% endcomment %}
+<div class="modal fade" id="netcdfStorageModal" tabindex="-1" aria-hidden="true"
+   aria-labelledby="netcdfStorageModalTitle" data-user-email="{{ user.email }}">
+   <div class="modal-dialog modal-dialog-centered modal-lg modal-fullscreen-sm-down">
+      <div class="modal-content">
+         <div class="modal-header border-0 pb-0 align-items-start">
+            <div class="d-flex align-items-center gap-3">
+               <span class="ess-icon"><i class="bi bi-device-hdd"></i></span>
+               <div>
+                  <h5 class="modal-title mb-0" id="netcdfStorageModalTitle">Not enough space on the server</h5>
+                  <p class="small text-muted mb-0 ess-lede"></p>
+               </div>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+         </div>
+         <div class="modal-body">
+            <div class="ess-form">
+               <div class="ess-stats mb-3">
+                  <div class="ess-stat">
+                     <div class="ess-stat-label">This upload</div>
+                     <div class="ess-stat-value ess-needed"></div>
+                     <div class="small text-muted ess-count"></div>
+                  </div>
+                  <div class="ess-stat ess-stat-short">
+                     <div class="ess-stat-label">Room right now</div>
+                     <div class="ess-stat-value ess-available"></div>
+                     <div class="small text-muted">largest upload accepted</div>
+                  </div>
+               </div>
+               <p class="small mb-3 ess-tip"></p>
+
+               <hr class="my-3">
+
+               <h6 class="mb-1"><i class="bi bi-envelope-paper me-1"></i>Let Team ELSA know</h6>
+               <p class="small text-muted mb-2">
+                  We wrote the report for you. Read it over, change anything you like, and send.
+                  File sizes and server details are attached automatically.
+               </p>
+               <div class="ess-draft-wrap">
+                  <label class="visually-hidden" for="essMessage">Message to Team ELSA</label>
+                  <textarea id="essMessage" class="form-control" rows="9" maxlength="5000"></textarea>
+                  <div class="ess-drafting" aria-live="polite">
+                     <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                     <span>Drafting your message...</span>
+                  </div>
+               </div>
+               <div class="d-flex flex-wrap justify-content-between gap-2 mt-1 small text-muted">
+                  <span class="ess-source"></span>
+                  <span class="ess-replyto"></span>
+               </div>
+               <div class="alert alert-danger small py-2 mt-2 mb-0 d-none ess-error" role="alert"></div>
+            </div>
+
+            <div class="ess-sent d-none text-center py-4">
+               <span class="ess-icon ess-icon-ok mb-3"><i class="bi bi-check-lg"></i></span>
+               <h5 class="mb-1">Report sent</h5>
+               <p class="text-muted mb-0 ess-sent-text"></p>
+            </div>
+         </div>
+         <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary btn-keep-bg ess-close"
+               data-bs-dismiss="modal">Not now</button>
+            <button type="button" class="btn btn-keep-bg text-white ess-send" style="background-color: teal;">
+               <span class="spinner-border spinner-border-sm me-1 d-none" aria-hidden="true"></span>
+               <i class="bi bi-send me-1"></i>Send to Team ELSA
+            </button>
+         </div>
+      </div>
+   </div>
+</div>
+
+<script>
+(function () {
+   var modalEl = document.getElementById('netcdfStorageModal');
+   if (!modalEl) return;
+
+   var DRAFT_URL  = '{% url "build:netcdf_storage_draft" pk_bundle=bundle.id %}';
+   var REPORT_URL = '{% url "build:netcdf_storage_report" pk_bundle=bundle.id %}';
+   var email      = modalEl.getAttribute('data-user-email') || '';
+
+   var q = function (sel) { return modalEl.querySelector(sel); };
+   var formPane = q('.ess-form'), sentPane = q('.ess-sent');
+   var textarea = q('#essMessage'), drafting = q('.ess-drafting');
+   var sendBtn  = q('.ess-send'), sendSpin = sendBtn.querySelector('.spinner-border');
+   var closeBtn = q('.ess-close'), errorBox = q('.ess-error');
+
+   var ctx = null;
+   // Bootstrap only displays the dialog once its backdrop has faded in, so a draft that arrives
+   // before then (the template is instant) cannot take focus yet. Whichever comes second, the
+   // draft or the dialog being shown, puts the user at the start of the message.
+   var shown = false;
+
+   function focusDraft() {
+      if (!shown || drafting.style.display !== 'none') return;
+      textarea.setSelectionRange(0, 0);
+      textarea.focus();
+      textarea.scrollTop = 0;
+   }
+
+   modalEl.addEventListener('shown.bs.modal', function () { shown = true; focusDraft(); });
+   modalEl.addEventListener('hidden.bs.modal', function () { shown = false; });
+   // Bumped on every open, so a draft that arrives after the dialog was closed and reopened for
+   // a different selection cannot overwrite the newer one.
+   var generation = 0;
+
+   function post(url, body) {
+      var token = (ctx.form.querySelector('input[name="csrfmiddlewaretoken"]') || {}).value || '';
+      return fetch(url, {
+         method: 'POST',
+         credentials: 'same-origin',
+         headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': token
+         },
+         body: JSON.stringify(body)
+      }).then(function (r) {
+         // An expired session does not fail: login_required redirects, fetch follows it, and the
+         // login page comes back as a 200. Anything that is not this view's JSON is treated as
+         // that, so a report is never shown as sent when it was not.
+         var isJson = (r.headers.get('Content-Type') || '').indexOf('application/json') !== -1;
+         if (r.redirected || !isJson) {
+            throw new Error('Your session may have expired. Please sign in again in another tab, '
+                          + 'then come back and press Send.');
+         }
+         return r.json().then(function (data) {
+            if (!r.ok) throw new Error(data.error || 'Something went wrong. Please try again.');
+            return data;
+         });
+      });
+   }
+
+   function showError(message) {
+      errorBox.textContent = message;
+      errorBox.classList.toggle('d-none', !message);
+   }
+
+   function setSending(on) {
+      sendBtn.disabled = on || drafting.style.display !== 'none';
+      sendSpin.classList.toggle('d-none', !on);
+      textarea.readOnly = on;
+   }
+
+   function setDrafting(on) {
+      drafting.style.display = on ? '' : 'none';
+      textarea.readOnly = on;
+      sendBtn.disabled = on;
+   }
+
+   function fillSummary() {
+      var count = ctx.files.length;
+      var stage = ctx.stage === 'after'
+         ? 'The files reached the server but could not be stored, so nothing was added to this bundle.'
+         : 'Your upload was stopped before anything was sent, so nothing was added to this bundle.';
+      q('.ess-lede').textContent = stage;
+      q('.ess-needed').textContent = ctx.needed || '';
+      q('.ess-count').textContent = count + (count === 1 ? ' file' : ' files');
+      q('.ess-available').textContent = ctx.available || '';
+
+      var tip;
+      if (!ctx.availableBytes) {
+         tip = 'The server has no room for new files at the moment. Your files are safe on your '
+             + 'computer, and you can upload them once Team ELSA has made space.';
+      } else if (count > 1) {
+         tip = 'Uploading fewer files at a time may work: anything up to ' + ctx.available
+             + ' can go through right now.';
+      } else {
+         tip = 'You can upload it once Team ELSA has made space. Your file is safe on your computer.';
+      }
+      q('.ess-tip').textContent = tip;
+      q('.ess-replyto').textContent = email ? 'Replies go to ' + email : '';
+   }
+
+   function loadDraft() {
+      var mine = ++generation;
+      textarea.value = '';
+      q('.ess-source').textContent = '';
+      setDrafting(true);
+      post(DRAFT_URL, { collection: ctx.collection, files: ctx.files })
+         .then(function (data) {
+            if (mine !== generation) return;
+            textarea.value = data.message || '';
+            q('.ess-source').innerHTML = data.source === 'ai'
+               ? '<i class="bi bi-stars me-1"></i>Drafted by ELSA Assistant. Please check it before sending.'
+               : '<i class="bi bi-pencil me-1"></i>Prefilled for you. Please check it before sending.';
+         })
+         .catch(function () {
+            if (mine !== generation) return;
+            q('.ess-source').textContent = 'We could not prepare a draft. Please describe the problem in your own words.';
+         })
+         .then(function () {
+            if (mine !== generation) return;
+            setDrafting(false);
+            // Setting the value leaves the caret at the end, and focus scrolls to the caret, so
+            // the user would land on the sign-off. focusDraft starts them at the greeting.
+            focusDraft();
+         });
+   }
+
+   window.elsaOpenStorageDialog = function (context) {
+      ctx = context;
+      formPane.classList.remove('d-none');
+      sentPane.classList.add('d-none');
+      sendBtn.classList.remove('d-none');
+      closeBtn.textContent = 'Not now';
+      showError('');
+      setSending(false);
+      fillSummary();
+      loadDraft();
+      if (window.bootstrap) bootstrap.Modal.getOrCreateInstance(modalEl).show();
+   };
+
+   sendBtn.addEventListener('click', function () {
+      var message = textarea.value.trim();
+      if (!message) { showError('Please write a short message before sending.'); textarea.focus(); return; }
+      showError('');
+      setSending(true);
+      post(REPORT_URL, { collection: ctx.collection, files: ctx.files, message: message })
+         .then(function (data) {
+            if (!data.sent) throw new Error('The report could not be sent just now. Please try again.');
+            formPane.classList.add('d-none');
+            sentPane.classList.remove('d-none');
+            sendBtn.classList.add('d-none');
+            closeBtn.textContent = 'Done';
+            q('.ess-sent-text').textContent = data.email
+               ? 'Team ELSA has your report and will reply to ' + data.email + ', usually within 24 to 48 hours.'
+               : 'Team ELSA has your report and will be in touch.';
+            closeBtn.focus();
+         })
+         .catch(function (err) {
+            showError(err.message);
+            // Send was disabled while it worked, which drops focus out of the dialog, and
+            // Bootstrap only hears Escape from inside it. Hand focus back to the message.
+            setSending(false);
+            textarea.focus();
+         })
+         .then(function () { setSending(false); });
+   });
+})();
+</script>
+
 <script>
 (function () {
    var BUNDLE   = '{{ bundle.id }}';
@@ -5245,14 +4491,26 @@ so a page that was not just uploaded to never shows it.{% endcomment %}
       });
    }
 
+   function tabButton(target) {
+      if (!card || !target || !SAFE_ID.test(target)) return null;
+      return card.querySelector('[data-bs-toggle="tab"][data-bs-target="' + target + '"]');
+   }
+
    function restoreTab() {
-      var target = readStore(TAB_KEY, false);
+      // Creating a collection redirects here with the new collection's tab in the fragment. It
+      // wins over the remembered tab, which is the Add New Collection form it was made from.
+      var fresh = tabButton(window.location.hash);
       // A collection deleted since the tab was remembered leaves a target that matches nothing,
       // in which case the page keeps the document tab it rendered with.
-      if (!card || !target || !SAFE_ID.test(target)) return;
-      var button = card.querySelector('[data-bs-toggle="tab"][data-bs-target="' + target + '"]');
+      var button = fresh || tabButton(readStore(TAB_KEY, false));
       if (button && window.bootstrap && bootstrap.Tab) {
          bootstrap.Tab.getOrCreateInstance(button).show();
+      }
+      if (fresh) {
+         rememberTab(window.location.hash);
+         // Dropped from the URL so a later reload goes back to whatever tab is open by then.
+         try { history.replaceState(null, '', window.location.pathname + window.location.search); } catch (err) {}
+         card.scrollIntoView({ block: 'start' });
       }
    }
 
@@ -5431,4 +4689,407 @@ so a page that was not just uploaded to never shows it.{% endcomment %}
 </script>
 {% endif %}
 
+<script>
+/* Pre-flight check: start a run, then poll until it finishes.
+ *
+ * Deliberately small. The panel's contents are rendered server-side on page load;
+ * this only drives the progress indicator and reloads once there is something new
+ * to show, rather than duplicating the rendering in JavaScript where it would
+ * drift from the template.
+ */
+(function () {
+   var button = document.getElementById('preflight_run');
+   if (!button) { return; }
+
+   /* These live inside #preflight_body, which refreshPanel replaces. Held from page
+    * load they pointed at the replaced elements, so a second check on the same page
+    * ran with no visible progress. Looked up again before each use instead. */
+   var progress, bar, phase, counts, results;
+   /* The same progress, shown a second time in the Review & Submit window's verdict
+    * band, so someone who opened that window sees the check it is waiting on. */
+   var vChecking, vResult, vBar, vPhase, vCounts;
+   function lookup() {
+      progress = document.getElementById('preflight_progress');
+      bar      = document.getElementById('preflight_bar');
+      phase    = document.getElementById('preflight_phase');
+      counts   = document.getElementById('preflight_counts');
+      results  = document.getElementById('preflight_results');
+      vChecking = document.getElementById('verdict_checking');
+      vResult   = document.getElementById('verdict_result');
+      vBar      = document.getElementById('verdict_bar');
+      vPhase    = document.getElementById('verdict_phase');
+      vCounts   = document.getElementById('verdict_counts');
+   }
+   lookup();
+   /* The badge on the Bundle Components row. The results now live in a modal, so a
+    * check that runs on page load happens entirely out of sight; without this the
+    * row would still read "Checking…" long after it finished. */
+   var rowBadge = document.getElementById('preflight_row_badge');
+
+   function setBadge(text, variant) {
+      if (!rowBadge) { return; }
+      rowBadge.textContent = text;
+      rowBadge.className = 'badge rounded-pill ' + variant;
+   }
+
+   var statusUrl = button.getAttribute('data-status-url');
+   var startUrl  = button.getAttribute('data-start-url');
+   var panelUrl  = button.getAttribute('data-panel-url');
+   var polling   = null;
+
+   function token() {
+      var input = document.querySelector('input[name="csrfmiddlewaretoken"]');
+      return input ? input.value : '';
+   }
+
+   function showProgress(on) {
+      lookup();
+      if (progress) { progress.hidden = !on; }
+      if (results)  { results.style.opacity = on ? '0.5' : ''; }
+      button.disabled = on;
+      button.textContent = on ? 'Checking…' : 'Run check again';
+      if (on) {
+         setBadge('Checking…', 'bg-secondary');
+         if (vChecking) { vChecking.hidden = false; }
+         if (vResult)   { vResult.hidden = true; }
+      }
+   }
+
+   function showVerdictResult() {
+      lookup();
+      if (vChecking) { vChecking.hidden = true; }
+      if (vResult)   { vResult.hidden = false; }
+   }
+
+   function render(state) {
+      lookup();
+      var label = state.phase_label || 'Working…';
+      [phase, vPhase].forEach(function (el) { if (el) { el.textContent = label; } });
+
+      /* percent is null while validate compiles schemas, which takes a few seconds
+       * and produces no output at all. An indeterminate striped bar is honest about
+       * that; a bar sitting at 0 looks like a hang. */
+      [bar, vBar].forEach(function (el) {
+         if (!el) { return; }
+         if (state.percent === null || state.percent === undefined) {
+            el.classList.add('progress-bar-striped', 'progress-bar-animated');
+            el.style.width = '100%';
+            el.setAttribute('aria-valuenow', 0);
+         } else {
+            el.classList.remove('progress-bar-animated');
+            el.style.width = state.percent + '%';
+            el.setAttribute('aria-valuenow', state.percent);
+         }
+      });
+
+      var tally = state.products_total
+         ? state.products_done + ' of ' + state.products_total
+         : '';
+      [counts, vCounts].forEach(function (el) { if (el) { el.textContent = tally; } });
+   }
+
+   /* A check that stopped without a result. Said where the progress was, with the
+    * bar stopped, because hiding the progress area hid the message along with it:
+    * "Could not reach the server" used to be written into an element nobody saw. */
+   function stopWithMessage(message) {
+      stopPolling();
+      lookup();
+      button.disabled = false;
+      button.textContent = 'Run check again';
+      [phase, vPhase].forEach(function (el) { if (el) { el.textContent = message; } });
+      [bar, vBar].forEach(function (el) {
+         if (el) { el.classList.remove('progress-bar-animated'); el.style.width = '0%'; }
+      });
+      [counts, vCounts].forEach(function (el) { if (el) { el.textContent = ''; } });
+      setBadge('Could not run', 'bg-warning text-dark');
+   }
+
+   function stopPolling() {
+      if (polling) { window.clearInterval(polling); polling = null; }
+   }
+
+   /* Replaces the panel's contents, and never reloads the page.
+    *
+    * It used to reload, so the results could be rendered once in the template rather
+    * than twice. That was wrong in a way that only shows up in use: a check starts by
+    * itself when the page loads, and the NetCDF upload posts over XMLHttpRequest.
+    * If someone began an upload during the few seconds a check was running, the
+    * reload tore the page down mid-request and the upload was aborted with its
+    * progress bar still saying "Processing". Nothing the user did was wrong and
+    * nothing told them what had happened.
+    *
+    * The counts then updated in place and the details waited behind a "Refresh to
+    * see the details" link, which asked someone to reload a page to be shown a
+    * result the server already had.
+    *
+    * So the new contents are fetched and swapped in. The rendering still happens
+    * once, in the template, and nothing else on the page is disturbed: an upload in
+    * flight stays in flight. */
+   function refreshPanel(state) {
+      if (!panelUrl) { return; }
+      fetch(panelUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+         .then(function (response) {
+            if (!response.ok) { throw new Error('panel ' + response.status); }
+            return response.text();
+         })
+         .then(function (html) {
+            /* Parsed rather than assigned wholesale, so a reply that is not the
+             * fragments (a login redirect, an error page) replaces nothing. */
+            var parsed = new DOMParser().parseFromString(html, 'text/html');
+
+            /* Three places show the verdict: the panel, the band at the top of the
+             * Review & Submit window, and whether that window offers a Submit button.
+             * Refreshing only the panel left the other two saying whatever was true
+             * at page load, so a check that answered a stale result left the review
+             * window still refusing to submit. */
+            var swapped = false;
+            ['preflight_body', 'validation_verdict', 'review_submit_action',
+             'review_findings', 'submit_confirm_action'].forEach(
+               function (id) {
+                  var target = document.getElementById(id);
+                  var fresh = parsed.getElementById(id);
+                  if (target && fresh) {
+                     target.innerHTML = fresh.innerHTML;
+                     swapped = true;
+                  }
+               });
+            if (!swapped) { return; }
+
+            /* Bootstrap's tab and modal behaviour is delegated from the document, so
+             * the swapped-in tabs work without re-binding. Tooltips are not: they are
+             * instantiated per element. */
+            var body = document.getElementById('preflight_body');
+            if (body && window.bootstrap && bootstrap.Tooltip) {
+               body.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(
+                  function (el) { bootstrap.Tooltip.getOrCreateInstance(el); });
+            }
+
+            /* Said after the swap, into the panel that is now on the page. Saying it
+             * before would be pointless: the swap replaces the element it is in. */
+            if (state) { announce(state); }
+         })
+         .catch(function () {
+            /* The counts in the banner are already correct and the button still
+             * works, so a failed refresh leaves a usable panel rather than a broken
+             * one. The verdict band goes back to the result it last had rather than
+             * saying "checking" forever. */
+            showVerdictResult();
+         });
+   }
+
+   /* A short confirmation that something happened, for the case where the new panel
+    * looks much like the old one and the change would otherwise be easy to miss. */
+   function announce(state) {
+      var summary = document.getElementById('preflight_summary_counts');
+      if (summary) {
+         summary.textContent = state.errors + ' error' + (state.errors === 1 ? '' : 's')
+            + ', ' + state.warnings + ' warning' + (state.warnings === 1 ? '' : 's')
+            + '.';
+      }
+      var notice = document.getElementById('preflight_updated');
+      if (notice) { notice.hidden = false; }
+   }
+
+   function finish(state) {
+      showProgress(false);
+      refreshPanel(state);
+
+      /* state.blocking is the translated count, the same number the template rendered
+       * into the badge. Using state.errors here instead would make the badge jump the
+       * moment a check finished: 3 to fix becomes 43 to fix, for the same bundle. */
+      if (state.status === 'f') {
+         setBadge('Could not run', 'bg-warning text-dark');
+      } else if (state.blocking) {
+         setBadge(state.blocking + ' to fix', 'bg-danger');
+      } else {
+         setBadge('Passed', 'bg-success');
+      }
+   }
+
+   function poll() {
+      fetch(statusUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+         .then(function (response) {
+            if (!response.ok) { throw new Error('status ' + response.status); }
+            return response.json();
+         })
+         .then(function (state) {
+            if (state.status === 'none') {
+               stopPolling(); showProgress(false); refreshPanel(); return;
+            }
+            render(state);
+            if (state.finished) {
+               stopPolling();
+               finish(state);
+            }
+         })
+         .catch(function () {
+            stopWithMessage('Could not reach the server. Try again.');
+         });
+   }
+
+   /* How many times a busy server has been asked again, and the limit: every five
+    * seconds for two minutes. Checks take seconds, so a slot is normally free long
+    * before this runs out. */
+   var busyTries = 0;
+   var BUSY_RETRY_MS = 5000;
+   var BUSY_MAX_TRIES = 24;
+
+   button.addEventListener('click', function () {
+      busyTries = 0;
+      showProgress(true);
+      render({ percent: null, phase_label: 'Starting…' });
+      startCheck();
+   });
+
+   function startCheck() {
+      fetch(startUrl, {
+         method: 'POST',
+         headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': token(),
+            'Content-Type': 'application/x-www-form-urlencoded'
+         },
+         body: 'tier=structure'
+      })
+         .then(function (response) {
+            if (!response.ok) { throw new Error('start failed'); }
+            return response.json();
+         })
+         .then(function (state) {
+            /* Refused because the server is already running its limit. That says
+             * nothing about the bundle, so it is not shown as a failed check: the
+             * page waits for a slot and asks again. */
+            if (state.busy) {
+               if (busyTries < BUSY_MAX_TRIES) {
+                  busyTries += 1;
+                  render({ percent: null,
+                           phase_label: 'Waiting for another check on the server to finish…' });
+                  window.setTimeout(startCheck, BUSY_RETRY_MS);
+               } else {
+                  stopWithMessage('The server is busy. Try the check again in a few minutes.');
+               }
+               return;
+            }
+            render(state);
+            if (state.finished) { finish(state); return; }
+            polling = window.setInterval(poll, 1500);
+         })
+         .catch(function () {
+            stopWithMessage('Could not start the check. Try again.');
+         });
+   }
+
+   /* "Check now" in the Review & Submit window's verdict band. Delegated, because
+    * the band is replaced whenever a check finishes. */
+   document.addEventListener('click', function (event) {
+      if (!event.target.closest('.verdict-run-check')) { return; }
+      if (!button.disabled) { button.click(); }
+   });
+
+   /* "Show me" for the items that are not fixed in a modal. Delegated from the
+    * document, so it keeps working after the panel swaps its own contents. */
+   document.addEventListener('click', function (event) {
+      var trigger = event.target.closest('.preflight-goto');
+      if (!trigger) { return; }
+      var target = document.getElementById(trigger.getAttribute('data-target'));
+      if (!target) { return; }
+      /* After the modal has finished closing, or the scroll fights the backdrop. */
+      window.setTimeout(function () {
+         target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 200);
+   });
+
+   /* Opening the Review & Submit window makes sure it answers about the bundle as
+    * it is now.
+    *
+    * If the last check still matches the files, the window just refreshes and Submit
+    * is offered at once. If the bundle was never checked or has changed since, the
+    * window starts the check itself and shows its progress in the verdict band,
+    * rather than sending the person off to another window to press a button. A
+    * check already running, usually the one the page started on load, is followed
+    * rather than duplicated.
+    *
+    * Whether a check is needed is the server's call (validate_runner.needs_check),
+    * the same rule the page's background check follows. */
+   var reviewModal = document.getElementById('reviewBundleModal');
+   if (reviewModal) {
+      reviewModal.addEventListener('show.bs.modal', function () {
+         fetch(statusUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function (response) {
+               if (!response.ok) { throw new Error('status ' + response.status); }
+               return response.json();
+            })
+            .then(function (state) {
+               if (state.status === 'q' || state.status === 'r') {
+                  showProgress(true);
+                  render(state);
+                  if (!polling) { polling = window.setInterval(poll, 1500); }
+               } else if (state.needs_check && !button.disabled) {
+                  button.click();
+               } else if (!button.disabled) {
+                  refreshPanel();
+               }
+            })
+            .catch(function () { refreshPanel(); });
+      });
+   }
+
+   /* A run already in flight when the page loaded: pick it up rather than showing
+    * a stale panel until someone presses the button. */
+   if (progress && !progress.hidden) {
+      showProgress(true);
+      polling = window.setInterval(poll, 1500);
+      return;
+   }
+
+   /* Start one automatically when the server says the results are missing or no
+    * longer describe this bundle, so the panel is usually already filled in rather
+    * than waiting to be asked.
+    *
+    * Started here rather than in the view on purpose: rendering a bundle page must
+    * never spawn a JVM, or a crawler or a link preview would. The server decides
+    * whether it is worth doing (see validate_runner.should_auto_check, which holds
+    * the cooldown and refuses to retry a failed run); the page only acts on it. */
+   if (button.getAttribute('data-auto-check') === '1') {
+      button.click();
+   }
+})();
+</script>
+
+<script>
+/* "Why does this matter?" hands the question to the existing assistant.
+ *
+ * Deliberately not a second path to a model: the assistant already has the
+ * knowledge base, the rate limiting and the conversation history, so routing
+ * through it means an explanation here behaves exactly like one someone typed. */
+(function () {
+   document.addEventListener('click', function (event) {
+      var trigger = event.target.closest('.preflight-explain');
+      if (!trigger) { return; }
+      var question = trigger.getAttribute('data-question');
+      if (!window.elsaAssistant || !window.elsaAssistant.ask) { return; }
+      /* Both windows that list findings are modals, and the assistant sits under any open
+       * modal: the answer streamed in behind it, and the modal's focus trap pulled the
+       * cursor back out of the assistant's input. So the window closes first, the same
+       * handoff switchToModal does, and the question is asked once it is gone. */
+      var host = trigger.closest('.modal.show');
+      var instance = host && window.bootstrap ? bootstrap.Modal.getInstance(host) : null;
+      if (!instance) { window.elsaAssistant.ask(question); return; }
+      host.addEventListener('hidden.bs.modal', function handler() {
+         host.removeEventListener('hidden.bs.modal', handler);
+         window.elsaAssistant.ask(question);
+      });
+      instance.hide();
+   });
+})();
+</script>
+
+<!-- Document files: checked and previewed as soon as they are chosen -->
+{% include 'build/document/_document_upload_preview.html' %}
+{% include 'build/bundle/_inplace_forms.html' %}
+{% include 'build/document/_document_delete_modal.html' %}
+<!-- Document preview: one window for every document's View button -->
+{% include 'build/document/_document_preview_modal.html' %}
+<!-- NetCDF inspector: one window for every NetCDF file's name -->
+{% include 'build/bundle/_netcdf_inspect_modal.html' %}
    {% endblock %}

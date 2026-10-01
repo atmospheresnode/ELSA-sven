@@ -1,0 +1,48 @@
+{% comment %}
+One preview window shared by every document on the page, opened by the View buttons in
+_document_file.html. The file only loads when the window opens and is unloaded when it
+closes, so a page with many documents fetches none of them up front. The browser's own
+viewer shows it (PDFs get its page, zoom and search controls; text shows as text).
+Include once per page, outside any card or collapse.
+{% endcomment %}
+<div class="modal fade" id="documentPreviewModal" tabindex="-1" aria-labelledby="documentPreviewTitle" aria-hidden="true">
+   <div class="modal-dialog modal-xl modal-dialog-centered modal-fullscreen-lg-down">
+      <div class="modal-content">
+         <div class="modal-header py-2">
+            <h5 class="modal-title text-truncate me-3" id="documentPreviewTitle">Document</h5>
+            <div class="d-flex align-items-center gap-2 ms-auto">
+               <a id="documentPreviewOpen" class="btn btn-sm btn-outline-secondary btn-keep-bg text-nowrap" href="#" target="_blank" rel="noopener">
+                  <i class="bi bi-box-arrow-up-right me-1"></i>Open in new tab
+               </a>
+               <a id="documentPreviewDownload" class="btn btn-sm btn-outline-secondary btn-keep-bg text-nowrap" href="#">
+                  <i class="bi bi-download me-1"></i>Download
+               </a>
+               <button type="button" class="btn-close ms-1" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+         </div>
+         <div class="modal-body p-0 bg-light">
+            <iframe id="documentPreviewFrame" title="Document preview" src="about:blank"
+                    style="display: block; width: 100%; height: 80vh; border: 0; background: #fff;"></iframe>
+         </div>
+      </div>
+   </div>
+</div>
+<script>
+   (function () {
+      var modal = document.getElementById('documentPreviewModal');
+      if (!modal) { return; }
+      var frame = document.getElementById('documentPreviewFrame');
+      modal.addEventListener('show.bs.modal', function (event) {
+         var trigger = event.relatedTarget;
+         if (!trigger) { return; }
+         var url = trigger.getAttribute('data-doc-url');
+         document.getElementById('documentPreviewTitle').textContent = trigger.getAttribute('data-doc-name') || 'Document';
+         document.getElementById('documentPreviewOpen').href = url;
+         document.getElementById('documentPreviewDownload').href = url + '?download=1';
+         frame.src = url;
+      });
+      modal.addEventListener('hidden.bs.modal', function () {
+         frame.src = 'about:blank';
+      });
+   })();
+</script>

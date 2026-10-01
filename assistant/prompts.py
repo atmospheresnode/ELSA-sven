@@ -187,11 +187,17 @@ def _page_context(user, page_path):
     return f'the page at path {_user_data(page_path)}'
 
 
-def build_system_prompt(user, page_path=None, query=''):
-    """Assemble the full system prompt: persona + retrieved knowledge + user context."""
+def build_system_prompt(user, page_path=None, query='', chunks=None):
+    """Assemble the full system prompt: persona + retrieved knowledge + user context.
+
+    Pass `chunks` when the caller has already retrieved them (the chat view
+    does, to record which ones a reply was built from); otherwise they are
+    retrieved from `query`.
+    """
     lines = [BASE_PROMPT]
 
-    chunks = retrieve(query) if query else []
+    if chunks is None:
+        chunks = retrieve(query) if query else []
     if chunks:
         lines.append('\nREFERENCE MATERIAL (authoritative; prefer this over prior knowledge):')
         for chunk in chunks:

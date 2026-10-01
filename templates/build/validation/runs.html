@@ -1,0 +1,124 @@
+{% extends 'base-derk.html' %}
+{% load tz %}
+
+{% comment %}
+Staff-only. Shows raw validate output and translates nothing, deliberately: this is
+where the team sees which findings actually occur across real bundles, which is what
+keeps the translation table honest.
+{% endcomment %}
+
+{% block body_block %}
+<div class="container-fluid py-4">
+
+  <div class="d-flex justify-content-between align-items-baseline flex-wrap gap-2 mb-4">
+    <div>
+      <h2 class="mb-1">PDS validation runs</h2>
+      <p class="text-muted mb-0">Raw validate output, staff only. Nothing here is shown to data providers yet.</p>
+    </div>
+  </div>
+
+  {% if by_type %}
+  <div class="card mb-4">
+    <div class="card-header bg-white">
+      <strong>Findings by message type</strong>
+      <span class="text-muted small ms-2">across every stored run</span>
+    </div>
+    <div class="card-body">
+      <p class="text-muted small">
+        A type appearing on most bundles is the first thing worth translating into
+        plain language. <code>error.label.schema</code> and
+        <code>error.label.schematron</code> are catch-alls, so their counts say less
+        than the per-location breakdown inside each run.
+      </p>
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead>
+            <tr><th scope="col">Message type</th><th scope="col" class="text-end">Findings</th></tr>
+          </thead>
+          <tbody>
+            {% for type_name, count in by_type %}
+            <tr>
+              <td><code>{{ type_name }}</code></td>
+              <td class="text-end">{{ count }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="card">
+    <div class="card-header bg-white"><strong>Recent runs</strong></div>
+    <div class="card-body p-0">
+      {% if runs %}
+      <div class="table-responsive">
+        <table class="table table-sm table-hover mb-0 align-middle">
+          <thead>
+            <tr>
+              <th scope="col">Bundle</th>
+              <th scope="col">User</th>
+              <th scope="col">Tier</th>
+              <th scope="col">Status</th>
+              <th scope="col" class="text-end">Errors</th>
+              <th scope="col" class="text-end">Warnings</th>
+              <th scope="col" class="text-end">Took</th>
+              <th scope="col">Run at</th>
+              <th scope="col"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for run in runs %}
+            <tr>
+              <td>{{ run.bundle.name }}</td>
+              <td class="text-muted">{{ run.bundle.user.username }}</td>
+              <td class="text-muted small">{{ run.get_tier_display }}</td>
+              <td>
+                {% if run.status == 'd' %}
+                  <span class="badge bg-success">Complete</span>
+                {% elif run.status == 'f' %}
+                  <span class="badge bg-danger">Failed</span>
+                {% elif run.status == 'r' %}
+                  <span class="badge bg-primary">Running</span>
+                {% else %}
+                  <span class="badge bg-secondary">Queued</span>
+                {% endif %}
+                {% if run.is_stale %}
+                  <span class="badge bg-warning text-dark" title="The bundle changed after this run">Stale</span>
+                {% endif %}
+              </td>
+              <td class="text-end">{{ run.error_count }}</td>
+              <td class="text-end">{{ run.warning_count }}</td>
+              <td class="text-end text-muted small">
+                {% if run.duration_seconds %}{{ run.duration_seconds|floatformat:1 }}s{% else %}&mdash;{% endif %}
+              </td>
+              <td class="text-muted small">
+                {% timezone "America/Denver" %}{{ run.requested_at|date:"M j, Y g:i A T" }}{% endtimezone %}
+              </td>
+              <td class="text-end">
+                {% if run.findings %}
+                <a class="btn btn-sm btn-outline-secondary"
+                   href="{% url 'build:validation_report' run.pk %}">Findings</a>
+                {% endif %}
+              </td>
+            </tr>
+            {% if run.failure_reason %}
+            <tr>
+              <td colspan="9" class="text-danger small ps-4">{{ run.failure_reason }}</td>
+            </tr>
+            {% endif %}
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="p-4 text-muted">
+        No validation runs recorded yet. Runs appear here once a bundle has been validated.
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}

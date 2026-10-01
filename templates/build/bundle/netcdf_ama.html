@@ -23,15 +23,6 @@ _ama_panel.html, so they cannot drift apart.
     <div class="row justify-content-center py-4">
         <div class="col-12 col-xxl-11">
 
-            {% if messages %}
-                {% for message in messages %}
-                    <div class="alert {% if message.tags == 'error' %}alert-danger{% elif message.tags == 'warning' %}alert-warning{% elif message.tags == 'info' %}alert-info{% else %}alert-success{% endif %} alert-dismissible fade show">
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                {% endfor %}
-            {% endif %}
-
             <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
                 <div>
                     <h4 class="mb-1">AMA Metadata</h4>
@@ -54,5 +45,11 @@ _ama_panel.html, so they cannot drift apart.
         </div>
     </div>
 </div>
+
+{% comment %}
+Outside the container, like the project's modals: a position-fixed element nested
+inside a themed or padded wrapper inherits layout it has no business inheriting.
+{% endcomment %}
+{% include "includes/_toasts.html" %}
 
 {% endblock %}

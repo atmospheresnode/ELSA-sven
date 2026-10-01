@@ -1,0 +1,34 @@
+{% comment %}
+The validation results, opened from the Bundle Components card.
+
+Outside every card and column wrapper, per the project convention: a modal nested
+inside a collapsible or a card renders with stray whitespace and, worse, inherits
+the card's stacking context.
+
+modal-lg because the second tab carries PDS's own output, which includes schema
+messages thousands of characters long.
+{% endcomment %}
+
+<div class="modal fade" id="validation_modal" tabindex="-1" aria-hidden="true"
+     aria-labelledby="validation_modal_title">
+   <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+         <div class="modal-header border-0 pb-0">
+            <div>
+               <h5 class="modal-title mb-0" id="validation_modal_title">
+                  <i class="bi bi-patch-check me-2 text-success"></i>PDS Validation
+               </h5>
+               <p class="text-muted small mb-0 mt-1">
+                  What the PDS validation tool says about
+                  <span class="fw-semibold">{{ bundle.name }}</span> as it stands today.
+               </p>
+            </div>
+            <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal"
+                    aria-label="Close"></button>
+         </div>
+         <div class="modal-body pt-3">
+            {% include 'build/validation/panel.html' %}
+         </div>
+      </div>
+   </div>
+</div>

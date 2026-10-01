@@ -29,6 +29,12 @@ class CaptchaPassing(object):
                              return_value=RecaptchaResponse(is_valid=True))
         patcher.start()
         self.addCleanup(patcher.stop)
+        # Sign-up is throttled per address (friends.views._signup_throttled) and every test
+        # posts from the same one, so without this the sixth sign-up in a run was refused
+        # and every registration test after it failed for a reason it was not testing.
+        from django.core.cache import cache
+        cache.clear()
+        self.addCleanup(cache.clear)
         super(CaptchaPassing, self).setUp()
 
 

@@ -11,15 +11,22 @@ from itertools import chain
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
-from django.http import HttpResponse, HttpRequest, JsonResponse
+from django.http import FileResponse, Http404, HttpResponse, HttpRequest, JsonResponse
+from django.views.decorators.clickjacking import xframe_options_sameorigin
+
+from build import document_files, netcdf_header, preflight, validate_report, validate_rules, validate_runner
+from build import walkthrough
+from build.label_repair import AMA_LID
 from django.shortcuts import render, redirect, get_object_or_404
 from django.template import RequestContext
+from django.template.defaultfilters import filesizeformat
 from django.urls import reverse
 from django import forms
 from django.forms import modelformset_factory
 from django.views.generic.edit import UpdateView, DeleteView
 from django.contrib import messages
 import datetime
+import functools
 import shutil
 import lxml.etree as ET # for XML parsing- Added by Rupak
 # from lxml import etree # debug product obs only
@@ -39,6 +46,218 @@ from django.utils.timezone import localtime
 #
 # -------------------------------------------------------------------------------------------------- #
 @login_required
+def rebuild_collection_inventories(bundle):
+    """Rewrite every collection's inventory table and the record counts in its label.
+
+    A PDS4 collection is required to carry an inventory naming each of its members,
+    and the label declares how many records that table holds. Both are derived from
+    membership, so both are wrong the moment membership changes and nothing rewrites
+    them.
+
+    Five of the views that add a document did not. The document collection therefore
+    sat at records=0 with an empty inventory file no matter how many documents were
+    added, and PDS rejected it as an empty collection, which the validation panel
+    then reported as "the document collection has nothing in it" to someone who had
+    just put three documents in it.
+
+    Cheap and idempotent: it rewrites from the current membership every time, so
+    calling it more often than strictly necessary costs nothing and missing a call
+    is the only way to be wrong.
+    """
+    for collection in bundle_label_targets(bundle):
+        try:
+            collection.build_inventory()
+        except Exception as error:
+            # One collection failing must not lose the others, and must not take
+            # down the request that was only adding a document.
+            print('rebuild_collection_inventories: {} failed: {}'.format(
+                collection, error))
+
+
+def _submission_status(bundle):
+    """The three components the Review & Submit button checks, for the fragment view.
+
+    Computed in build.preflight, which is also what the validation panel reads, so
+    the button and the panel cannot disagree about whether a bundle is ready. They
+    used to: the panel knew only what PDS reported, and PDS4 makes a target optional,
+    so a bundle with no target had a red "Targets" badge and a green "passed" panel
+    at the same time.
+    """
+    from build import preflight
+
+    return preflight.status(bundle)
+
+
+def validation_summary_for_email(bundle):
+    """What the node needs to know about a submitted bundle, in plain text.
+
+    The submission notification used to say only that a bundle had arrived, so
+    whoever opened it still had to find the bundle in ELSA and check it before
+    knowing whether there was anything to do. Since reducing that back-and-forth is
+    the point of running the validator at all, the answer belongs in the message.
+
+    Advisory items are listed because they are the ones that reach a reviewer: the
+    gate already refuses a submission with anything blocking. ELSA's own findings
+    are counted rather than listed; they are our backlog, and a number is enough for
+    someone to know whether to mention them.
+    """
+    from build import validate_rules
+
+    # The most recently *finished* run, not the most recent one. Submitting starts a
+    # full content check, so at the moment this message is composed the newest run
+    # is the one that has just been queued and knows nothing yet. What the node
+    # wants is the verdict the submission was judged on, which is the gate's tier:
+    # a full run refused at submission because the server was busy would otherwise
+    # be reported as "could not run" over a check that did.
+    run = ValidationRun.objects.filter(
+        bundle=bundle, tier=ValidationRun.TIER_STRUCTURE,
+        status__in=[ValidationRun.STATUS_DONE, ValidationRun.STATUS_FAILED],
+    ).order_by('-finished_at', '-requested_at').first()
+
+    if run is None:
+        in_flight = validate_runner.latest_run_for(bundle)
+        if in_flight is not None:
+            return 'PDS validation: still running when this was submitted.'
+        return 'PDS validation: not run for this bundle.'
+
+    if run.status == ValidationRun.STATUS_FAILED:
+        return ('PDS validation: could not run ({}). The bundle was accepted anyway; '
+                'being unable to check is not evidence of a problem.'.format(
+                    run.failure_reason or 'no reason recorded'))
+
+    findings = run.findings or []
+    translated = validate_rules.translate(findings)
+    lines = ['PDS validation: {} label(s) checked{}.'.format(
+        run.products_total, ', results out of date' if run.is_stale() else '')]
+
+    if not findings:
+        lines.append('  Nothing reported.')
+        return '\n'.join(lines)
+
+    if translated['user']:
+        lines.append('  Still outstanding for the submitter:')
+        for item in translated['user']:
+            # Some items name the thing they are about: three documents with bad
+            # file names are three identical lines otherwise, which tells a reader
+            # nothing about which ones.
+            subject = item.get('subject')
+            lines.append('    - {}{}'.format(
+                item['title'], ' ({})'.format(subject) if subject else ''))
+
+    if translated['advisory']:
+        lines.append('  Worth a look during review:')
+        for item in translated['advisory']:
+            lines.append('    - {} ({} finding{})'.format(
+                item['title'], len(item['findings']),
+                '' if len(item['findings']) == 1 else 's'))
+
+    hidden = sum(len(item['findings']) for item in translated['elsa'])
+    if hidden:
+        lines.append('  {} finding(s) caused by ELSA rather than the submitter, '
+                     'hidden from them.'.format(hidden))
+
+    if not translated['user'] and not translated['advisory']:
+        lines.append('  Nothing outstanding for the submitter.')
+
+    return '\n'.join(lines)
+
+
+def validation_context(bundle, user):
+    """Everything the PDS validation panel needs to render.
+
+    Shared by the bundle page and by the partial the page fetches when a check
+    finishes, so the two cannot drift: the panel that replaces itself is rendered by
+    the same code that rendered it in the first place.
+
+    Read-only and cheap. The most recent run is looked up and its stored findings
+    translated; nothing is started. Running a check is an explicit POST.
+    """
+    from build import preflight
+
+    # ELSA's own requirements, checked against the database rather than the labels.
+    # Three EXISTS queries, so these are shown whenever the panel is open, including
+    # before any check has run and while one is in flight. A user who has not chosen
+    # a target does not have to wait for a JVM to be told so.
+    outstanding = preflight.requirements(bundle)
+
+    latest_validation = validate_runner.latest_run_for(bundle)
+    context = {
+        'validation_run': latest_validation,
+        'validation_requirements': outstanding,
+        # Whether the page should start a check for itself once it has loaded. The
+        # view does not start one: rendering a bundle must never spawn a JVM, or a
+        # crawler would.
+        'validation_auto_check': validate_runner.should_auto_check(bundle),
+        # Why submission is blocked, if it is, so the page can say so in the same
+        # words the view would use when refusing.
+        'validation_block': validate_runner.submission_block(bundle, user),
+        'validation_summary': None,
+        'validation_cards': [],
+        'validation_advisory': [],
+        'validation_raw': [],
+        'validation_raw_total': 0,
+        'validation_raw_elsa': 0,
+    }
+
+    # A summary is built when there is anything at all to say, which now includes a
+    # bundle with no findings but an unmet requirement. Without the second clause the
+    # template fell through to its "PDS reported nothing, all labels passed" branch,
+    # which is how a bundle with no target was told it had passed.
+    # Findings come from the run the verdict rests on, which is the latest unless the
+    # latest failed while an earlier check still describes the bundle. Taking them
+    # from a failed run would empty the list while the gate, reading the earlier
+    # check, went on refusing, with nothing on screen to say why.
+    judged = validate_runner.judged_run(bundle)
+    findings = (judged.findings or []) if judged else []
+    if findings or outstanding:
+        context['validation_summary'] = validate_rules.summarise(findings, outstanding)
+        context['validation_cards'] = validate_rules.cards(findings, outstanding)
+        context['validation_advisory'] = validate_rules.translate(findings)['advisory']
+        # The raw output, for the second tab. Everything PDS reported, including the
+        # findings the translation hides. Grouped by the thing each is about rather
+        # than listed one per line: PDS reports most defects twice, once as a pattern
+        # failure and once as a type failure on the same element and line, so a
+        # bundle with four problems read as eight errors and looked twice as bad as
+        # it was. Each group carries the plain-language item it became, which is what
+        # makes the tab worth opening rather than merely honest.
+        context['validation_raw'] = validate_rules.raw_groups(findings)
+        context['validation_raw_total'] = sum(
+            len(groups) for _label, groups in context['validation_raw'])
+        # Counted in the same unit as the total, distinct problems. The summary's
+        # "hidden" is a count of ELSA's rule categories, so the tab used to read
+        # "36 distinct problems. 8 of these are caused by ELSA" above 36 items that
+        # were all ELSA's.
+        context['validation_raw_elsa'] = sum(
+            1 for _label, groups in context['validation_raw']
+            for group in groups if group['audience'] == validate_rules.ELSA)
+
+    return context
+
+
+def bundle_label_targets(bundle):
+    """Every collection label a bundle-level metadata edit has to reach.
+
+    A bundle's collections live in two tables. Product_Collection holds the ones
+    ELSA creates for it (Document, Context, XML Schema); AdditionalCollections holds
+    the ones the user adds. Bundle-level metadata, the citation, the modification
+    history, the alias, is copied into all of their labels, so a write that queries
+    only the first table leaves the user's own collections behind.
+
+    That is how a citation could be filled in and still fail validation: the author
+    was written into the bundle and the document collection, while the collection
+    the user had added kept the empty <given_name/> skeleton it was created with,
+    and PDS reported the blank as an error against a citation the user had
+    demonstrably filled in. The context views had already grown a chain() for this;
+    every other one had not.
+
+    Data collections are excluded here as they were at each of the old call sites:
+    they carry their own observational metadata rather than the bundle's.
+    """
+    return list(chain(
+        Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data'),
+        AdditionalCollections.objects.filter(bundle=bundle)))
+
+
 def alias(request, pk_bundle):  # DEPRECATED: to be replaced by edit alias, **not deprecated**
     print(' \n\n \n\n-------------------------------------------------------------------------')
     print('\n\n---------------------- Add an Alias with ELSA ---------------------------')
@@ -60,6 +279,7 @@ def alias(request, pk_bundle):  # DEPRECATED: to be replaced by edit alias, **no
         context_dict = {
             'form_alias': form_alias,
             'bundle': bundle,
+            'walkthrough': walkthrough.progress(bundle, 'alias'),
         }
 
         # After ELSAs friend hits submit, if the forms are completed correctly, we should enter
@@ -76,13 +296,13 @@ def alias(request, pk_bundle):  # DEPRECATED: to be replaced by edit alias, **no
             print('Alias model object: {}'.format(alias))
 
             product_bundle = Product_Bundle.objects.get(bundle=bundle)
-            product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+            product_collections_list = bundle_label_targets(bundle)
 
             write_into_label(alias, product_bundle, product_collections_list)
 
             print('---------------- End Build Alias -----------------------------------')
             
-            return redirect(reverse('build:modification_history', args=[pk_bundle]))
+            return redirect(walkthrough.after_save(request, bundle, 'alias'))
 
         # Get all current Alias objects associated with the user's Bundle
         # alias_list = Alias.objects.filter(bundle=bundle)
@@ -118,7 +338,7 @@ def alias_edit(request, pk_bundle, pk_alias):  # DEPRECATED: to be replaced by e
             if form_alias.has_changed():
                 old_alias = Alias.objects.get(pk=pk_alias, bundle=bundle)
                 product_bundle = Product_Bundle.objects.get(bundle=bundle)
-                product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+                product_collections_list = bundle_label_targets(bundle)
 
                 remove_from_label(old_alias, product_bundle, product_collections_list,)
 
@@ -157,7 +377,7 @@ def alias_delete(request, pk_bundle, pk_alias):
         alias = Alias.objects.get(pk=pk_alias)
 
         product_bundle = Product_Bundle.objects.get(bundle=bundle)
-        product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+        product_collections_list = bundle_label_targets(bundle)
 
         remove_from_label(alias, product_bundle, product_collections_list)
 
@@ -435,7 +655,11 @@ def build(request):
             print('---------------- End Build Product_Bundle Base Case -------------------------')
 
             if bundle.bundle_type == 'External':
-                ama_investigation = Investigation.objects.filter(name='Atmospheric Modeling Annex').first()
+                # Looked up by LID, not name: the crawler and PDS title this row
+                # differently, and on prod migration 0075 kept the row named
+                # "Atmospheric Modeling Annex Individual Investigation", so a name
+                # lookup found nothing and every External bundle creation 500ed.
+                ama_investigation = Investigation.objects.filter(lid=AMA_LID).order_by('pk').first()
                 print(ama_investigation)
                 write_into_label(ama_investigation, product_bundle, [])
 
@@ -486,9 +710,25 @@ def build(request):
                 #label_root = bundle.version.fill_xml_schema(label_root)
                 label_root = product_collection.fill_base_case(label_root)
 
+                # The AMA investigation is written into the bundle label above, but the
+                # collection carries its own Investigation_Area and was shipping it empty:
+                # a blank name, type and lid_reference are each a validation error, and the
+                # collection genuinely does belong to the same investigation. fill_label
+                # already picks 'collection_to_investigation' from the root tag, so the same
+                # call serves both labels. Done on the tree that is already open rather than
+                # reopening it.
+                if ama_investigation:
+                    print(' ... Adding Investigation Area ... ')
+                    label_root = ama_investigation.fill_label(label_root)
+
                 # Close label
                 print(' ... Closing Label ... ')
                 close_label(product_collection.label(), label_root, label_list[2])
+
+                # Write the inventory table the label promises. A brand new collection has
+                # no members yet, so this writes an empty table; it is rewritten each time a
+                # document is added or removed.
+                product_collection.build_inventory()
                 print('-------------End Build Product_Collection Base Case-----------------')
             else:
                 print('before initial save')
@@ -559,6 +799,11 @@ def build(request):
                         # Close label
                         print(' ... Closing Label ... ')
                         close_label(product_collection.label(), label_root, label_list[2])
+
+                        # Write the inventory table the label promises. Archive bundles
+                        # need this exactly as much as External ones do: every PDS4
+                        # collection is required to carry one.
+                        product_collection.build_inventory()
                         print('-------------End Build Product_Collection Base Case-----------------')
 
             # Further develop context_dict entries for templates
@@ -615,7 +860,7 @@ def yes_intro_page(request, bundle_id):
             )
             mod_history.save()
             product_bundle = Product_Bundle.objects.get(bundle=bundle)
-            product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+            product_collections_list = bundle_label_targets(bundle)
             write_into_label(mod_history, product_bundle, product_collections_list)
 
         # Declare context_dict for template
@@ -717,8 +962,50 @@ def data_prep(request, bundle, data_enum):
     return render(request, 'build/data_prep/data_prep.html', context_dict)
 
 
+# -- forms on the bundle page that save in place ------------------------------------
+#
+# The windows on the bundle page used to post as ordinary forms. A save that worked
+# reloaded the page, which was fine; one that did not either re-rendered the bundle page
+# with the reasons hidden inside a closed window, or, for the forms whose views are
+# shared with the walkthrough, rendered a walkthrough page with no way back. Now the
+# page posts them itself (templates/build/bundle/_inplace_forms.html) and names the
+# form in X-Elsa-Inplace. A refusal comes back as the form's errors, shown in the
+# window that is still open, with everything the user typed or picked still in it; a
+# success comes back as the address to go to. Without JavaScript nothing changes.
+
+def _inplace_form(request):
+    """The name of the bundle-page form saving itself in place, or None."""
+    if request.method != 'POST' or not _is_panel_request(request):
+        return None
+    return request.headers.get('X-Elsa-Inplace') or None
+
+
+def _inplace_refused(form, message=''):
+    """A refused in-place save: the form's own errors, keyed by field name."""
+    errors = form.errors.get_json_data() if form is not None else {}
+    if not errors:
+        errors = {'__all__': [{'message': message or 'That could not be saved. Please check the form and try again.', 'code': ''}]}
+    return JsonResponse({'ok': False, 'errors': errors}, status=400)
+
+
+def inplace_redirects(view):
+    """Turn a view's redirect into JSON when the bundle page posted in place.
+
+    fetch() follows a redirect by itself and renders the page it lands on, which would
+    use up the confirmation toast before the page the user actually sees is loaded.
+    """
+    @functools.wraps(view)
+    def wrapper(request, *args, **kwargs):
+        response = view(request, *args, **kwargs)
+        if _inplace_form(request) and response.status_code in (301, 302, 303):
+            return JsonResponse({'ok': True, 'redirect': response['Location']})
+        return response
+    return wrapper
+
+
 # The bundle_detail view is the page that details a specific bundle.
 @login_required
+@inplace_redirects
 def bundle(request, pk_bundle):
     # Get Bundle
     bundle = Bundle.objects.get(pk=pk_bundle)
@@ -920,12 +1207,14 @@ def bundle(request, pk_bundle):
         form_bundle = BundleForm(request.POST or None) 
         form_citation_information = CitationInformationForm(
             request.POST or None,
-            initial={'publication_year': timezone.now().year}
+            initial={'publication_year': timezone.now().year},
+            bundle=bundle,
         )
         form_modification_history = ModificationHistoryForm(request.POST or None)     
         form_data = DataForm(request.POST or None, pk_bun=pk_bundle)
-        form_document = ProductDocumentForm(request.POST or None)
-        annex_form_document = AnnexProductDocumentForm(request.POST or None)
+        # With the files too, so a refused upload's reason is what the window shows.
+        form_document = ProductDocumentForm(request.POST or None, request.FILES or None, bundle=bundle)
+        annex_form_document = AnnexProductDocumentForm(request.POST or None, bundle=bundle)
         form_collections = CollectionsForm(request.POST or None)
         form_product_collection = ProductCollectionForm(request.POST or None)
         form_additional_collections = AdditionalCollectionForm(request.POST or None, bundle=bundle)
@@ -933,7 +1222,9 @@ def bundle(request, pk_bundle):
         form_target = TargetFormAll(request.POST or None, pk_bundle=pk_bundle)
         form_instrument_host = InstrumentHostForm(request.POST or None, pk_inv=None)
         form_facility = FacilityForm(request.POST or None)
-        context_products_contact = ContextProductsContactForm(request.POST or None)
+        # Its own id prefix: rendered on the bundle page beside the Data Product form, its
+        # name field came out as id_name too. Ids only; the field names it posts are unchanged.
+        context_products_contact = ContextProductsContactForm(request.POST or None, auto_id='contact_%s')
         contact_form = ContactForm(request.POST or None)
 
         # creating sets of objects associated with the bundle to add to the bundle progress checklist
@@ -1045,6 +1336,8 @@ def bundle(request, pk_bundle):
         context_dict['status_dict'] = status_dict
         context_dict['file_tree'] = file_tree
 
+        context_dict.update(validation_context(bundle, request.user))
+
         # To handle NetCDF files
         # if form_netcdf.is_valid():
         #     netcdf_obj = form_netcdf.save(commit=False)
@@ -1083,18 +1376,23 @@ def bundle(request, pk_bundle):
                 os.makedirs(netcdf_collection_directory, exist_ok=True)
 
 
-                # Refuse the upload up front if the disk can't hold it (plus a
-                # safety margin) - running out of space mid-write corrupts labels
-                # and used to leave the whole bundle 500ing.
-                import shutil as _shutil
+                # Refuse the upload if the disk can't hold it (plus a safety margin) - running out
+                # of space mid-write corrupts labels and used to leave the whole bundle 500ing.
+                # The page asks the same question before sending anything; this is the backstop
+                # for a browser without the script, or a disk that filled up in between. The code
+                # lets the page open its storage dialog instead of a bare error.
+                from build import storage_report
                 total_upload = sum(getattr(f, 'size', 0) for f in files)
-                free_bytes = _shutil.disk_usage(settings.ARCHIVE_DIR).free
-                margin = 2 * 1024 ** 3  # keep 2 GB headroom for labels and other users
-                if total_upload + margin > free_bytes:
-                    print('Upload rejected: needs {} bytes, only {} free'.format(total_upload, free_bytes))
+                space = storage_report.check_space(total_upload)
+                if not space['ok']:
+                    print('Upload rejected: needs {} bytes, {} usable'.format(total_upload, space['available']))
                     return JsonResponse(
                         {'error': 'The server does not have enough storage space for this upload right now. '
-                                  'The ELSA team has been made aware of storage issues; please try again later or contact us via the Contact page.'},
+                                  'Nothing was added to your bundle.',
+                         'code': 'insufficient_storage',
+                         'needed': storage_report.human_size(space['needed']),
+                         'available': storage_report.human_size(space['available']),
+                         'available_bytes': space['available']},
                         status=507
                     )
 
@@ -1204,6 +1502,14 @@ def bundle(request, pk_bundle):
                     })
 
                 return HttpResponseRedirect('/elsa/build/' + str(bundle.pk) + '/')
+            elif (request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+                  and not request.headers.get('X-Elsa-Inplace')
+                  and 'collection' in request.POST
+                  and 'netcdf_files' in form_netcdf.errors):
+                # An upload that arrived with no files used to fall through to the full page, which
+                # the upload script took for success. The page now stops this before sending; this
+                # is for anything that still gets here (a stale page, a file the browser dropped).
+                return JsonResponse({'error': 'Choose at least one NetCDF file to upload.'}, status=400)
 
         if form_investigation.is_valid():
             print(form_investigation.cleaned_data['investigation'].file_ref)
@@ -1226,8 +1532,17 @@ def bundle(request, pk_bundle):
 
             context_dict['context_successful_submit'] = True
 
+            messages.success(request, 'Investigation "{}" added.'.format(i.name))
             return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
 
+
+        # A citation that was posted and refused reopens its window, so the reason is on
+        # screen rather than in a closed modal. Only when the post was the citation
+        # form's: every form on this page is bound to every POST, so the citation form
+        # also "fails" whenever anything else is submitted.
+        if (request.method == 'POST' and 'number_of_authors_people' in request.POST
+                and not form_citation_information.is_valid()):
+            context_dict['reopen_citation_modal'] = True
 
         # After ELSAs friend hits submit, if the forms are completed correctly, we should enter
         # this conditional.
@@ -1290,6 +1605,7 @@ def bundle(request, pk_bundle):
             context_dict['modification_history_set'] = modification_history_set
             context_dict['modification_history_set_count'] = len(modification_history_set)
 
+            messages.success(request, 'Modification history added.')
             # # fixes the refresh duplication issue - deric
             return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
 
@@ -1351,6 +1667,16 @@ def bundle(request, pk_bundle):
             for modification_history in modification_history_set:
                 write_into_label(modification_history, additional_collections, None)
 
+            # The inventory the label promises. Every PDS4 collection is required to
+            # carry one, and a collection the user added was shipping with the whole
+            # File_Area_Inventory blank: no file name, no local identifier, no
+            # creation date. That alone was ten of the seventeen findings on a
+            # freshly built bundle, because validate reports each empty field twice
+            # and then gives up on the product entirely for want of a file name.
+            # ELSA's own document collection has had this call since the inventory
+            # work; the user's collections were simply never given it.
+            additional_collections.build_inventory()
+
             additional_collections_set = _collections_with_ama(bundle)
             context_dict['additional_collections_set'] = additional_collections_set
             context_dict['additional_collections_count'] =  len(additional_collections_set)
@@ -1359,18 +1685,20 @@ def bundle(request, pk_bundle):
             # return render(request, 'build/bundle/bundle.html', context_dict)
 
             # # fixes the refresh duplication issue - deric
-            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
+            # The fragment tells the page to open the new collection's tab instead of the
+            # Add New Collection form it was just created from.
+            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/#additional_collection_' + str(additional_collections.pk))
 
             # fixes the refresh duplication issue, use this one for offline testing - deric
             # return HttpResponseRedirect('/build/' + pk_bundle + '/')
-                    
+
         # After ELSAs friend hits submit, if the forms are completed correctly, we should enter
         # this conditional.  We must do [] things: 1. Create the Document model object, 2. Add a Product_Document label to the Document Collection, 3. Add the Document as an Internal_Reference to the proper labels (like Product_Bundle and Product_Collection).
         
         if bundle.bundle_type == "External":
-            form_document = AnnexProductDocumentForm(request.POST or None, request.FILES or None)
+            form_document = AnnexProductDocumentForm(request.POST or None, request.FILES or None, bundle=bundle)
         else:
-            form_document = ProductDocumentForm(request.POST or None, request.FILES or None)
+            form_document = ProductDocumentForm(request.POST or None, request.FILES or None, bundle=bundle)
             
         if form_document.is_valid():
             print('\n\n---------------------- DOCUMENT INFO -------------------------------')
@@ -1380,6 +1708,8 @@ def bundle(request, pk_bundle):
             product_document = form_document.save(commit=False)
             product_document.bundle = bundle
             product_document.save()
+            # The file itself, before the label is built, so the label names it.
+            document_files.store(product_document, form_document.prepared_file)
 
             print('Product_Document model object: {}'.format(product_document))
 
@@ -1431,6 +1761,11 @@ def bundle(request, pk_bundle):
                 close_label(label.label(), label_root, label_list[2])
             print('\n----------------End Build Internal_Reference for Document-------------------')
 
+            # The document collection's inventory names every member product, so it has to
+            # be rewritten whenever membership changes.
+            for product_collection in product_collections_list:
+                product_collection.build_inventory()
+
             for citation_information in citation_information_set:
                 write_into_label(citation_information, product_document, None)
             for alias in alias_set:
@@ -1444,8 +1779,10 @@ def bundle(request, pk_bundle):
             context_dict['form_document'] = form_document
             context_dict['documents'] = Product_Document.objects.filter(bundle=bundle)
 
+            messages.success(request, 'Document "{}" added.'.format(product_document.document_name))
             # # fixes the refresh duplication issue - deric
-            return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
+            # Opened on the document tab, where the new document is.
+            return HttpResponseRedirect(walkthrough.bundle_url(bundle, 'doc_collection'))
 
             # fixes the refresh duplication issue, use this one for offline testing - deric
             # return HttpResponseRedirect('/build/' + pk_bundle + '/')
@@ -1503,11 +1840,23 @@ def bundle(request, pk_bundle):
             context_dict['alias_set'] = alias_set
             context_dict['alias_set_count'] =  len(alias_set)
 
+            messages.success(request, 'Alias added.')
             # # fixes the refresh duplication issue - deric
             return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
 
             # fixes the refresh duplication issue, use this one for offline testing - deric
             # return HttpResponseRedirect('/build/' + pk_bundle + '/')
+
+        # A window that saved in place and got this far was refused: send back its
+        # reasons rather than the whole page.
+        inplace = _inplace_form(request)
+        if inplace:
+            return _inplace_refused({
+                'document': form_document,
+                'alias': form_alias,
+                'modification_history': form_modification_history,
+                'investigation': form_investigation,
+            }.get(inplace))
 
         context_dict['messages'] = messages.get_messages(request)
         return render(request, 'build/bundle/bundle.html', context_dict)
@@ -1579,10 +1928,96 @@ def bulk_delete_netcdf(request, pk_bundle):
                 except Exception as e:
                     print('Error deleting NetCDF file {}: {}'.format(netcdf_id, e))
 
+        # Rewrite inventories after the deletes, so they stop naming files that are gone.
+        for additional_collection in AdditionalCollections.objects.filter(bundle=bundle):
+            additional_collection.build_inventory()
+
         return HttpResponseRedirect('/elsa/build/' + str(pk_bundle) + '/')
 
     else:
         return redirect('main:restricted_access')
+
+
+# ------------------------------------------------------------------------------------------------ #
+#                                    NetCDF storage check and report
+# ------------------------------------------------------------------------------------------------ #
+# The upload page asks netcdf_storage_check before sending any bytes, and when there is no room it
+# opens a dialog that fetches a drafted message from netcdf_storage_draft and posts the user's
+# reviewed version to netcdf_storage_report. All three answer JSON, since only the page's script
+# calls them, so a stranger's request gets a 403 rather than the restricted-access redirect.
+# The logic lives in build/storage_report.py.
+
+def _storage_request(request, pk_bundle):
+    """(bundle, payload, error_response) for the storage views, after the usual owner check."""
+    from build import storage_report
+    bundle = get_object_or_404(Bundle, pk=pk_bundle)
+    if request.user != bundle.user:
+        return None, None, JsonResponse({'error': 'Not your bundle.'}, status=403)
+    if request.method != 'POST':
+        return None, None, JsonResponse({'error': 'POST only.'}, status=405)
+    try:
+        payload = json.loads(request.body or b'{}')
+    except ValueError:
+        return None, None, JsonResponse({'error': 'Malformed request.'}, status=400)
+    if not isinstance(payload, dict):
+        return None, None, JsonResponse({'error': 'Malformed request.'}, status=400)
+    payload['files'] = storage_report.clean_files(payload.get('files'))
+    payload['collection'] = str(payload.get('collection', ''))[:200]
+    return bundle, payload, None
+
+
+@login_required
+def netcdf_storage_check(request, pk_bundle):
+    from build import storage_report
+    bundle, payload, error = _storage_request(request, pk_bundle)
+    if error:
+        return error
+    total = sum(f['size'] for f in payload['files'])
+    space = storage_report.check_space(total)
+    if not space['ok']:
+        print('Upload preflight refused for {}: needs {} bytes, {} usable'.format(
+            request.user.username, total, space['available']))
+    return JsonResponse({
+        'ok': space['ok'],
+        'needed': storage_report.human_size(space['needed']),
+        'available': storage_report.human_size(space['available']),
+        'available_bytes': space['available'],
+    })
+
+
+@login_required
+def netcdf_storage_draft(request, pk_bundle):
+    from build import storage_report
+    bundle, payload, error = _storage_request(request, pk_bundle)
+    if error:
+        return error
+    message, source = storage_report.draft_message(
+        request.user, bundle, payload['collection'], payload['files'])
+    return JsonResponse({'message': message, 'source': source})
+
+
+@login_required
+def netcdf_storage_report(request, pk_bundle):
+    from build import storage_report
+    bundle, payload, error = _storage_request(request, pk_bundle)
+    if error:
+        return error
+    message = str(payload.get('message', '')).strip()
+    if not message:
+        return JsonResponse({'error': 'Please write a message before sending.'}, status=400)
+    if len(message) > 5000:
+        return JsonResponse({'error': 'That message is too long. Please keep it under 5000 characters.'},
+                            status=400)
+    if storage_report.rate_limited('send', request.user, storage_report.SEND_LIMIT_PER_HOUR):
+        return JsonResponse({'error': 'You have already sent a few reports this hour. Team ELSA has '
+                                      'them and will be in touch.'}, status=429)
+    try:
+        storage_report.send_report(request.user, bundle, payload['collection'], payload['files'], message)
+    except Exception as e:
+        print('Storage report email failed: {}'.format(e))
+        return JsonResponse({'error': 'The report could not be sent just now. Please email '
+                                      'atm-elsa@nmsu.edu directly.'}, status=502)
+    return JsonResponse({'sent': True, 'email': request.user.email})
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -2028,6 +2463,81 @@ def label_content(request, pk_bundle):
         'path': relative_path,
         'content': content,
     })
+
+
+@login_required
+def netcdf_file(request, pk_bundle, pk_netcdf):
+    """One uploaded NetCDF file, downloaded by its owner.
+
+    The bundle page used to link to nc_file.file.url, which names the upload area that
+    processing moves the file out of, so every link was dead: a 404 under the dev server and a
+    403 on prod, where nothing serves /uploads/. Going through a view also keeps unpublished data
+    behind the same owner check as the rest of the bundle.
+    """
+    bundle = get_object_or_404(Bundle, pk=pk_bundle)
+    if request.user != bundle.user:
+        return redirect('main:restricted_access')
+    nc_file = get_object_or_404(NetCDFFile, pk=pk_netcdf, bundle=bundle)
+
+    path = nc_file.stored_path()
+    if path is None:
+        raise Http404('This NetCDF file is no longer on disk.')
+
+    # FileResponse streams in blocks, so a multi-gigabyte file never sits in memory.
+    response = FileResponse(open(path, 'rb'), as_attachment=True,
+                            filename=os.path.basename(path), content_type='application/x-netcdf')
+    response['X-Content-Type-Options'] = 'nosniff'
+    response['Cache-Control'] = 'private, no-cache'
+    return response
+
+
+@login_required
+def netcdf_inspect(request, pk_bundle, pk_netcdf):
+    """What one NetCDF file holds and the PDS4 label ELSA wrote for it, for the inspector window.
+
+    Each half fails on its own: a file xarray cannot open still shows its label, and a file with
+    no label (processing failed) still shows its contents, with the reason processing gave.
+    """
+    bundle = get_object_or_404(Bundle, pk=pk_bundle)
+    if request.user != bundle.user:
+        return redirect('main:restricted_access')
+    nc_file = get_object_or_404(NetCDFFile, pk=pk_netcdf, bundle=bundle)
+
+    path = nc_file.stored_path()
+    if path is None:
+        return JsonResponse(
+            {'error': 'This file is no longer on disk. Delete it here and upload it again.'},
+            status=404)
+
+    data = {
+        'name': os.path.basename(path),
+        'size': filesizeformat(os.path.getsize(path)),
+    }
+
+    try:
+        data['contents'] = netcdf_header.contents_html(path)
+    except Exception as e:
+        print('netcdf_inspect: could not read {}: {}'.format(path, e))
+        data['contents_error'] = ('ELSA could not read this file\'s header ({}).'
+                                  .format(type(e).__name__))
+
+    label_path = nc_file.label()
+    if os.path.isfile(label_path):
+        try:
+            tree = etree.parse(label_path)
+            data['label'] = etree.tostring(tree, pretty_print=True, encoding='unicode')
+            data['label_name'] = os.path.basename(label_path)
+        except (OSError, etree.XMLSyntaxError) as e:
+            print('netcdf_inspect: unreadable label {}: {}'.format(label_path, e))
+            data['label_error'] = ('This file\'s label could not be read ({}). Please contact '
+                                   'the ELSA team via the Contact page.'.format(type(e).__name__))
+    elif nc_file.processing_error:
+        data['label_error'] = ('No label was written because processing failed: {}'
+                               .format(nc_file.processing_error))
+    else:
+        data['label_error'] = 'No label has been written for this file yet.'
+
+    return JsonResponse(data)
 
 
 def _report_label_refresh(request, errors):
@@ -2489,9 +2999,25 @@ def submit_bundle_internal(request, pk_bundle):
 
     if request.user == bundle.user:
         if request.method == 'POST':
+            # Enforced here, not only by disabling the button. A disabled button is
+            # a courtesy to someone reading the page; it stops nobody who reloads,
+            # scripts the form, or has it open from before the results changed.
+            blocked = validate_runner.submission_block(bundle, request.user)
+            if blocked is not None:
+                _reason, explanation = blocked
+                messages.warning(
+                    request,
+                    'This bundle was not submitted. {}'.format(explanation))
+                return HttpResponseRedirect(
+                    reverse('build:bundle', kwargs={'pk_bundle': pk_bundle}))
+
             is_resubmission = bundle.submitted_at is not None
             bundle.submitted_at = timezone.now()
             bundle.save()
+
+            # No second check is started here. The gate above has just confirmed a
+            # check that matches these exact files, and that check already reads
+            # inside data files, so another run would only repeat it.
 
             # Build email
             archive_path = bundle.directory()
@@ -2512,7 +3038,8 @@ def submit_bundle_internal(request, pk_bundle):
                 'Bundle Type: {}\n'
                 'Submitted: {}\n\n'
                 'Archive Path:\n{}\n\n'
-                'Download URL:\n{}\n'
+                'Download URL:\n{}\n\n'
+                '{}\n'
             ).format(
                 'resubmitted' if is_resubmission else 'submitted',
                 bundle.name,
@@ -2522,6 +3049,7 @@ def submit_bundle_internal(request, pk_bundle):
                 localtime(bundle.submitted_at).strftime('%B %d, %Y at %I:%M %p %Z'),
                 archive_path,
                 download_url,
+                validation_summary_for_email(bundle),
             )
 
             try:
@@ -2718,7 +3246,8 @@ def citation_information(request, pk_bundle):
         # }
         form_citation_information = CitationInformationForm(
             request.POST or None,
-            initial={'publication_year': timezone.now().year}
+            initial={'publication_year': timezone.now().year},
+            bundle=bundle,
         )
         # if form_citation_information and form_citation_information.has_changed:
         #     print('changed: {}', format(form_citation_information.changed_data))
@@ -2742,6 +3271,7 @@ def citation_information(request, pk_bundle):
             'form_citation_information': form_citation_information,
             'bundle': bundle,
             'bundle_type': bundle.bundle_type, #Rupak
+            'walkthrough': walkthrough.progress(bundle, 'citation_information'),
         }
 
         # After ELSAs friend hits submit, if the forms are completed correctly, we should enter
@@ -2756,9 +3286,12 @@ def citation_information(request, pk_bundle):
             print('Citation Information model object: {}'.format(citation_information))
             
             product_bundle = Product_Bundle.objects.get(bundle=bundle)
-            product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+            product_collections_list = bundle_label_targets(bundle)
 
             write_into_label(citation_information, product_bundle, product_collections_list)
+            # A NetCDF uploaded before the citation existed has a label with no
+            # citation in it; one uploaded after gets it at generation time.
+            mirror_citation_into_data_products(bundle)
 
             print('------------- End Build Citation Information -------------------')
 
@@ -2804,7 +3337,7 @@ def edit_citation_information(request, pk_bundle, pk_citation_information):
             all_labels = []
 
             product_bundle = Product_Bundle.objects.get(bundle=bundle)
-            product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+            product_collections_list = bundle_label_targets(bundle)
 
             all_labels.append(product_bundle)
             all_labels.extend(product_collections_list)
@@ -2822,27 +3355,31 @@ def edit_citation_information(request, pk_bundle, pk_citation_information):
                 print(' ... Closing Label ... ')
                 close_label(label.label(), label_root, label_list[2])
 
-            #return redirect(reverse('build:context_search', args=[pk_bundle]))
+            # Data product labels carry the citation too, and were in no write path at
+            # all: a NetCDF label could only be reached by regenerating it from the
+            # file it describes. So editing the citation updated the bundle and its
+            # collections while every data product kept the blank it was born with,
+            # PDS reported that blank, and the panel showed a citation error on a
+            # citation that had just been filled in. Copied from the bundle label
+            # rather than filled from the form, because a label written when the
+            # citation had one author cannot be filled from a form that now has three.
+            mirror_citation_into_data_products(bundle)
 
-            #Adding a check for bundle type, so it skips context search if external selected - RUPAK
-            # Context search is back for AMA, but I'm still living the if statement (for now) in case something changes on the archive end - Nicholas
-            next_page = request.GET.get('next')
-            if bundle.bundle_type == 'External':
-                if next_page == 'bundle':
-                    return redirect(reverse('build:bundle', args=[pk_bundle]))
-                else:
-                    return redirect(reverse('build:context_search', args=[pk_bundle]))  
-            else:
-                if next_page == 'bundle':
-                    return redirect(reverse('build:bundle', args=[pk_bundle]))
-                else:
-                    return redirect(reverse('build:context_search', args=[pk_bundle]))  
+            # Back to the bundle when the edit was opened from it, otherwise on to the
+            # walkthrough step after the citation.
+            if walkthrough.returning_to_bundle(request):
+                messages.success(request, 'Citation information updated.')
+            return redirect(walkthrough.after_save(request, bundle, 'citation_information'))
 
 
         context_dict = {
             'form_edit_citation_information': form_edit_citation_information,
             'bundle': bundle,
             'citation_information': citation_information,
+            # The same page is the walkthrough's citation step and the bundle page's
+            # editor; only the walkthrough gets the stepper.
+            'walkthrough': None if walkthrough.returning_to_bundle(request)
+                           else walkthrough.progress(bundle, 'citation_information'),
         }
 
             # return render(request, 'build/citation_information/citation_information_current.html', context_dict)
@@ -2872,7 +3409,7 @@ def modification_history(request, pk_bundle):
         context_dict = {
             'form_modification_history': form_modification_history,
             'bundle': bundle,
-
+            'walkthrough': walkthrough.progress(bundle, 'modification_history'),
         }
 
         # After ELSAs friend hits submit, if the forms are completed correctly, we should enter
@@ -2887,12 +3424,12 @@ def modification_history(request, pk_bundle):
             print(' Modification History  model object: {}'.format(modification_history))
 
             product_bundle = Product_Bundle.objects.get(bundle=bundle)
-            product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+            product_collections_list = bundle_label_targets(bundle)
 
             write_into_label(modification_history, product_bundle, product_collections_list)
 
             print('------------- End Build  Modification History  -------------------')
-            return redirect(reverse('build:citation_information', args=[pk_bundle]))
+            return redirect(walkthrough.after_save(request, bundle, 'modification_history'))
 
 
         # Update context_dict with the current  Modification History  models associated with the user's bundle
@@ -2938,6 +3475,7 @@ def context_search(request, pk_bundle):
             'telescope_list': bundle.telescopes.all(),
             'contact_form': contact_form,
             'context_products_contact' : context_products_contact,
+            'walkthrough': walkthrough.progress(bundle, 'context_search'),
         }
 
         return render(request, 'build/context/context_search.html', context_dict)
@@ -3090,6 +3628,7 @@ def context_search_instrument_host_and_facility(request, pk_bundle, pk_investiga
         print('unauthorized user attempting to access a restricted area.')
         return redirect('main:restricted_access')
 
+@inplace_redirects
 def context_search_target(request, pk_bundle):
     print('\n\n')
     print('-------------------------------------------------------------------------')
@@ -3134,14 +3673,24 @@ def context_search_target(request, pk_bundle):
                 product_collections_list = chain(Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data'), AdditionalCollections.objects.filter(bundle=bundle))
 
                 write_into_label(i, product_bundle, product_collections_list)
+                messages.success(request, 'Target "{}" added.'.format(i.name))
+            else:
+                # Used to be dropped without a word, and from the walkthrough the user
+                # was moved on to the next step as though the target had been added.
+                if _inplace_form(request):
+                    return _inplace_refused(form_target)
+                messages.error(request, 'No target was added: {}'.format(
+                    ' '.join(e for errs in form_target.errors.values() for e in errs)
+                    or 'please choose one from the list.'))
+                if walkthrough.returning_to_bundle(request):
+                    return redirect(walkthrough.bundle_url(bundle))
+                return redirect('build:context_search', pk_bundle=pk_bundle)
 
-        if request.GET.get('next') == 'bundle':
-            return redirect('build:bundle', pk_bundle=pk_bundle)
-        #return render(request, 'build/collections/annex_collection_document.html', context_dict)
-        if bundle.bundle_type == "External":
-            return redirect('build:annex_collection_document', pk_bundle=pk_bundle)
-        else:
-            return redirect('build:bundle', pk_bundle=pk_bundle)
+        if walkthrough.returning_to_bundle(request):
+            return redirect(walkthrough.bundle_url(bundle))
+        # The walkthrough moves on from targets. Archive has no step after context
+        # products, so it lands on the bundle page as it always did.
+        return redirect(walkthrough.next_url(bundle, 'context_search'))
 
 
     # Secure: Current user is not the user associated with the bundle, so...
@@ -3549,16 +4098,20 @@ def context_search_target_and_instrument(request, pk_bundle, pk_investigation, p
 #     return render(request, 'build/collections/collections_additional.html', {"pk_bundle": pk_bundle, "bundle": bundle, "form_additional_collections": form_additional_collections, "form_document": form_document})
 #     #return render(request, template, {"pk_bundle": pk_bundle, "bundle": bundle, "form_additional_collections": form_additional_collections, "form_document": form_document})
 @login_required
+@inplace_redirects
 def annex_collection_document(request, pk_bundle):
     bundle = Bundle.objects.get(pk=pk_bundle)
     if request.user != bundle.user:
         return redirect('main:restricted_access')
-    annex_form_document = AnnexProductDocumentForm(request.POST or None)
+    annex_form_document = AnnexProductDocumentForm(
+        request.POST or None, request.FILES or None, bundle=bundle)
 
     if annex_form_document.is_valid():        
         document = annex_form_document.save(commit=False)
         document.bundle = bundle
         document.save()
+        # The file itself, before the label is built, so the label names it.
+        document_files.store(document, annex_form_document.prepared_file)
         document.build_base_case()
 
         print(document.label())
@@ -3577,28 +4130,50 @@ def annex_collection_document(request, pk_bundle):
 
 
         product_bundle = Product_Bundle.objects.get(bundle=bundle)
-        product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+        product_collections_list = bundle_label_targets(bundle)
 
-        if request.POST.get("source") == "bundle":
-            return redirect(reverse("build:bundle", args=[pk_bundle]))
-        else:
-            return redirect(reverse('build:collection_additional', args=[pk_bundle]))
+        # The collection now has a member it did not have a moment ago, and both the
+        # inventory table and the record count in the label are derived from
+        # membership. Without this the document collection stays at records=0 with
+        # an empty inventory however many documents are added to it.
+        rebuild_collection_inventories(bundle)
+        mirror_citation_into_data_products(bundle)
+
+        messages.success(request, 'Document "{}" added.'.format(document.document_name))
+        return redirect(walkthrough.after_save(request, bundle, 'annex_collection_document', 'doc_collection'))
 
         #write_into_label(document, product_bundle, product_collections_list)
 
-    return render(request, 'build/collections/annex_collection_document.html', {"pk_bundle": pk_bundle, "bundle": bundle, "annex_form_document": annex_form_document})
+    # Refused. From the bundle page's window, in place: the reasons go back to the
+    # window, which is still open with the chosen file still in it.
+    if _inplace_form(request):
+        return _inplace_refused(annex_form_document)
+
+    # Otherwise this page is shown, and it has to know which of its two lives it is in.
+    # It used to assume the walkthrough, so a bundle-page add that was refused (a name
+    # already taken, a file missing) arrived on a walkthrough step with no way back, and
+    # correcting it there moved the user on to the next step of the walkthrough.
+    from_bundle = walkthrough.returning_to_bundle(request)
+    return render(request, 'build/collections/annex_collection_document.html', {
+        "pk_bundle": pk_bundle, "bundle": bundle, "annex_form_document": annex_form_document,
+        "source": 'bundle' if from_bundle else 'walkthrough',
+        "walkthrough": None if from_bundle else walkthrough.progress(bundle, 'annex_collection_document'),
+    })
 
 @login_required
 def collection_document(request, pk_bundle):
     bundle = Bundle.objects.get(pk=pk_bundle)
     if request.user != bundle.user:
         return redirect('main:restricted_access')
-    form_document = ProductDocumentForm(request.POST or None)
+    form_document = ProductDocumentForm(
+        request.POST or None, request.FILES or None, bundle=bundle)
 
     if form_document.is_valid():        
         document = form_document.save(commit=False)
         document.bundle = bundle
         document.save()
+        # The file itself, before the label is built, so the label names it.
+        document_files.store(document, form_document.prepared_file)
         document.build_base_case()
 
         print(document.label())
@@ -3616,7 +4191,10 @@ def collection_document(request, pk_bundle):
         print('---------------- End Build Product_Document Base Case -------')                     
 
         product_bundle = Product_Bundle.objects.get(bundle=bundle)
-        product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+        product_collections_list = bundle_label_targets(bundle)
+
+        rebuild_collection_inventories(bundle)
+        mirror_citation_into_data_products(bundle)
 
         return redirect(reverse('build:collection_additional', args=[pk_bundle]))
 
@@ -3630,7 +4208,9 @@ def collection_additional(request, pk_bundle):
     if request.user != bundle.user:
         return redirect('main:restricted_access')
     form_additional_collections = AdditionalCollectionForm(request.POST or None, bundle=bundle)
-    return render(request, 'build/collections/collection_additional.html', {"pk_bundle": pk_bundle, "bundle": bundle, "form_additional_collections": form_additional_collections})
+    return render(request, 'build/collections/collection_additional.html', {
+        "pk_bundle": pk_bundle, "bundle": bundle, "form_additional_collections": form_additional_collections,
+        "walkthrough": walkthrough.progress(bundle, 'collection_additional')})
 
 @login_required
 def data(request, pk_bundle, pk_data):
@@ -3910,7 +4490,7 @@ def document(request, pk_bundle):
     print('------------------------------ DEBUGGER ---------------------------------')
 
     # Get forms
-    form_product_document = ProductDocumentForm(request.POST or None)
+    form_product_document = ProductDocumentForm(request.POST or None, bundle=bundle)
     bundle = Bundle.objects.get(pk=pk_bundle)
 
     # Declare context_dict for template
@@ -3976,6 +4556,9 @@ def document(request, pk_bundle):
         print(
             '\n----------------End Build Internal_Reference for Document-------------------')
 
+        rebuild_collection_inventories(bundle)
+        mirror_citation_into_data_products(bundle)
+
     return render(request, 'build/document/document.html', context_dict)
 
 def annex_product_document(request, pk_bundle, pk_product_document):
@@ -3997,14 +4580,14 @@ def annex_product_document(request, pk_bundle, pk_product_document):
             "document_std_id":product_document.document_std_id,
         }
 
-        annex_form_product_document = AnnexProductDocumentForm(request.POST or None, initial=initial_product)
+        annex_form_product_document = AnnexProductDocumentForm(request.POST or None, request.FILES or None, initial=initial_product, bundle=bundle, editing=product_document)
         documents = Product_Document.objects.filter(bundle=bundle)
         
         if annex_form_product_document.is_valid() and annex_form_product_document.has_changed():
             
             all_labels = []
             product_bundle = Product_Bundle.objects.get(bundle=bundle)
-            product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+            product_collections_list = bundle_label_targets(bundle)
             # We need to check for Product_Collections associated with Data products now.
                     
             all_labels.append(product_bundle)
@@ -4038,6 +4621,11 @@ def annex_product_document(request, pk_bundle, pk_product_document):
                 
             product_document.save()
 
+            # A replacement file, stored before the label is rebuilt so it names the new
+            # file; the old one is removed if the name changed.
+            if annex_form_product_document.prepared_file is not None:
+                document_files.store(product_document, annex_form_product_document.prepared_file)
+
             label_root = label_list[1]
 
             # fix the document name path change error - deric
@@ -4052,6 +4640,10 @@ def annex_product_document(request, pk_bundle, pk_product_document):
             print(' ... Closing Label ... ')
             close_label(product_document.label(), label_root, label_list[2])
 
+        # An edit can change the document's identifier, which is what the inventory
+        # lists, so the table has to be rewritten here as well as on the add.
+        rebuild_collection_inventories(bundle)
+        mirror_citation_into_data_products(bundle)
 
         print('Changed: {}'.format(annex_form_product_document.changed_data))
 
@@ -4092,7 +4684,7 @@ def product_document(request, pk_bundle, pk_product_document):
                 "document_std_id":product_document.document_std_id,
             }
             # When editing the product document via the bundle page, we want to use the external form for external bundles
-            form_product_document = AnnexProductDocumentForm(request.POST or None, initial=initial_product)
+            form_product_document = AnnexProductDocumentForm(request.POST or None, request.FILES or None, initial=initial_product, bundle=bundle, editing=product_document)
         else:
             initial_product = {
                 'author_list':product_document.author_list,
@@ -4111,7 +4703,7 @@ def product_document(request, pk_bundle, pk_product_document):
                 'document_std_id': product_document.document_std_id,
             }
             
-            form_product_document = ProductDocumentForm(request.POST or None, initial=initial_product)
+            form_product_document = ProductDocumentForm(request.POST or None, request.FILES or None, initial=initial_product, bundle=bundle, editing=product_document)
         documents = Product_Document.objects.filter(bundle=bundle)
         
         if form_product_document.is_valid() and form_product_document.has_changed():
@@ -4119,7 +4711,7 @@ def product_document(request, pk_bundle, pk_product_document):
             
             all_labels = []
             product_bundle = Product_Bundle.objects.get(bundle=bundle)
-            product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+            product_collections_list = bundle_label_targets(bundle)
             # We need to check for Product_Collections associated with Data products now.
                     
             all_labels.append(product_bundle)
@@ -4183,6 +4775,11 @@ def product_document(request, pk_bundle, pk_product_document):
                 
                 product_document.save()
 
+            # A replacement file, stored before the label is rebuilt so it names the new
+            # file; the old one is removed if the name changed.
+            if form_product_document.prepared_file is not None:
+                document_files.store(product_document, form_product_document.prepared_file)
+
             label_root = label_list[1]
 
             # fix the document name path change error - deric
@@ -4197,8 +4794,18 @@ def product_document(request, pk_bundle, pk_product_document):
             print(' ... Closing Label ... ')
             close_label(product_document.label(), label_root, label_list[2])
 
+            # An edit can change the document's identifier, which is what the inventory
+            # lists, so the tables are rewritten before the page moves on. Inside this
+            # block because the redirect below returns: placed after it, as it was before
+            # the redirect existed, this never ran for a successful edit.
+            rebuild_collection_inventories(bundle)
+            mirror_citation_into_data_products(bundle)
+
             messages.success(request, "Document successfully updated.")
 
+            # Opened from the bundle page's document list: go back to it.
+            if walkthrough.returning_to_bundle(request):
+                return redirect(walkthrough.bundle_url(bundle, 'doc_collection'))
             return redirect(
                 'build:product_document',
                 pk_bundle=bundle.pk,
@@ -4222,6 +4829,35 @@ def product_document(request, pk_bundle, pk_product_document):
     else:
         print('unauthorized user attempting to access a restricted area.')
         return redirect('main:restricted_access')
+
+@login_required
+@xframe_options_sameorigin
+def document_file(request, pk_bundle, pk_product_document):
+    """The file a document product is, so its owner can see what they uploaded.
+
+    Shown in place (the bundle page previews it in a window, which is why this one
+    response may be framed by ELSA's own pages); ?download=1 saves it instead.
+    """
+    bundle = get_object_or_404(Bundle, pk=pk_bundle)
+    if request.user != bundle.user:
+        return redirect('main:restricted_access')
+    product_document = get_object_or_404(Product_Document, pk=pk_product_document, bundle=bundle)
+
+    path = document_files.servable_path(product_document)
+    if not path:
+        raise Http404('This document has no file attached.')
+
+    response = FileResponse(
+        open(path, 'rb'),
+        content_type=document_files.content_type(product_document),
+        as_attachment=request.GET.get('download') == '1',
+        filename=product_document.file_name,
+    )
+    response['X-Content-Type-Options'] = 'nosniff'
+    # A replaced file keeps its URL, so never show a stale copy.
+    response['Cache-Control'] = 'private, no-cache'
+    return response
+
 
 def delete_product_document(request, pk_bundle, pk_product_document):
     print('\n\n')
@@ -4257,8 +4893,17 @@ def delete_product_document(request, pk_bundle, pk_product_document):
             else:
                 print('XML file not found at path: {}'.format(xml_path))
 
+        # And the document's own file, which lives next to its label. Removed while the
+        # record still says where it is, per the rule for deletes.
+        document_files.remove(product_document)
+
         # Delete the product_document from the database
         product_document.delete()
+
+        # Rewrite the inventory so it stops naming a product that is no longer there.
+        # Done after the delete, so member_lidvids() sees the new membership.
+        for product_collection in product_collections_list:
+            product_collection.build_inventory()
 
         return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
 
@@ -4662,7 +5307,7 @@ def delete_target(request, pk_bundle, pk_target):
     target = Target.objects.get(pk=pk_target)
 
     product_bundle = Product_Bundle.objects.get(bundle=bundle)
-    product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+    product_collections_list = bundle_label_targets(bundle)
 
     remove_from_label(target, product_bundle, product_collections_list)
 
@@ -4680,7 +5325,7 @@ def delete_modification_history(request, pk_bundle, pk_modification_history):
     modification_history = Modification_History.objects.get(pk=pk_modification_history)
 
     product_bundle = Product_Bundle.objects.get(bundle=bundle)
-    product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+    product_collections_list = bundle_label_targets(bundle)
 
     remove_from_label(modification_history, product_bundle, product_collections_list)
     bundle.modification_history.remove(modification_history)
@@ -4692,9 +5337,13 @@ def delete_citation_information(request, pk_bundle, pk_citation_information):
     citation_information = Citation_Information.objects.get(pk=pk_citation_information)
 
     product_bundle = Product_Bundle.objects.get(bundle=bundle)
-    product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+    product_collections_list = bundle_label_targets(bundle)
 
     remove_from_label(citation_information, product_bundle, product_collections_list)
+    # And out of the data product labels, which otherwise keep a citation the bundle
+    # no longer has: the bundle then says it has none while one of its own products
+    # still carries one.
+    mirror_citation_into_data_products(bundle)
     bundle.citation_information.remove(citation_information)
 
     return HttpResponseRedirect(reverse('build:citation_information', args=[pk_bundle]))
@@ -4710,12 +5359,17 @@ def delete_instrument(request, pk_bundle, pk_instrument):
     print(instrument_host)
 
     product_bundle = Product_Bundle.objects.get(bundle=bundle)
-    product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+    product_collections_list = bundle_label_targets(bundle)
 
     remove_from_label(instrument, product_bundle, product_collections_list)
 
     bundle.instruments.remove(instrument)
     # instrument.delete()
+
+    # Removed from the bundle page's own list: go back to it, not to a context search
+    # page the user never asked for.
+    if walkthrough.returning_to_bundle(request):
+        return redirect(walkthrough.bundle_url(bundle))
 
     # Need to add to redirect to ask for a new instrument from
     # re_path(r'^(?P<pk_bundle>\d+)/contextsearch/investigation/(?P<pk_investigation>\d+)/instrument_host/(?P<pk_instrument_host>\d+)/instrument/$', views.context_search_instrument, name='context_search_instrument')
@@ -4736,7 +5390,7 @@ def delete_instrument_host(request, pk_bundle, pk_instrument_host):
     investigation = instrument_host.investigations.first()
 
     product_bundle = Product_Bundle.objects.get(bundle=bundle)
-    product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+    product_collections_list = bundle_label_targets(bundle)
 
     for bundle_instrument in bundle.instruments.all():
         if bundle_instrument in instrument_host.instruments.all():
@@ -4747,7 +5401,12 @@ def delete_instrument_host(request, pk_bundle, pk_instrument_host):
 
     bundle.instrument_hosts.remove(instrument_host)
 
-    if Instrument_Host.objects.filter(investigations=investigation.pk).count == 1:
+    # Removed from the bundle page's own list: go back to it, not to a context search
+    # page the user never asked for.
+    if walkthrough.returning_to_bundle(request):
+        return redirect(walkthrough.bundle_url(bundle))
+
+    if Instrument_Host.objects.filter(investigations=investigation.pk).count() == 1:
         # have screen to choose between deleting investigation or choosing new host
         # return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/contextsearch/investigation/' + str(investigation.pk) + '/instrument_host_or_facility/')
         return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/contextsearch/investigation/' + str(investigation.pk) + '/instrument_host_or_facility/')
@@ -4764,7 +5423,7 @@ def delete_facility(request, pk_bundle, pk_facility):
     investigation = facility.investigations.first()
 
     product_bundle = Product_Bundle.objects.get(bundle=bundle)
-    product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+    product_collections_list = bundle_label_targets(bundle)
 
     for bundle_instrument in bundle.instruments.all():
         if bundle_instrument in facility.instruments.all():
@@ -4775,7 +5434,12 @@ def delete_facility(request, pk_bundle, pk_facility):
 
     bundle.facilities.remove(facility)
 
-    if Facility.objects.filter(investigations=investigation.pk).count == 1:
+    # Removed from the bundle page's own list: go back to it, not to a context search
+    # page the user never asked for.
+    if walkthrough.returning_to_bundle(request):
+        return redirect(walkthrough.bundle_url(bundle))
+
+    if Facility.objects.filter(investigations=investigation.pk).count() == 1:
         # have screen to choose between deleting investigation or choosing new host
         # return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/contextsearch/investigation/' + str(investigation.pk) + '/instrument_host_or_facility/')
         return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/contextsearch/investigation/' + str(investigation.pk) + '/instrument_host_or_facility/')
@@ -4787,7 +5451,7 @@ def delete_investigation(request, pk_bundle, pk_investigation):
     investigation = Investigation.objects.get(pk=pk_investigation)
 
     product_bundle = Product_Bundle.objects.get(bundle=bundle)
-    product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+    product_collections_list = bundle_label_targets(bundle)
 
     for bundle_instrument_host in bundle.instrument_hosts.all():
         if bundle_instrument_host in investigation.instrument_hosts.all():
@@ -4824,9 +5488,13 @@ def delete_citation_information(request, pk_bundle, pk_citation_information):
         citation_information = Citation_Information.objects.get(pk=pk_citation_information)
 
         product_bundle = Product_Bundle.objects.get(bundle=bundle)
-        product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+        product_collections_list = bundle_label_targets(bundle)
 
         remove_from_label(citation_information, product_bundle, product_collections_list)
+        # And out of the data product labels, which otherwise keep a citation the
+        # bundle no longer has: the bundle then says it has none while one of its
+        # own products still carries one.
+        mirror_citation_into_data_products(bundle)
 
         citation_information.delete()
 
@@ -4851,7 +5519,7 @@ def delete_modification_history(request, pk_bundle, pk_modification_history):
         modification_history = Modification_History.objects.get(pk=pk_modification_history)
 
         product_bundle = Product_Bundle.objects.get(bundle=bundle)
-        product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+        product_collections_list = bundle_label_targets(bundle)
 
         remove_from_label(modification_history, product_bundle, product_collections_list)
 
@@ -4873,12 +5541,17 @@ def delete_instrument(request, pk_bundle, pk_instrument):
     print(instrument_host)
 
     product_bundle = Product_Bundle.objects.get(bundle=bundle)
-    product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+    product_collections_list = bundle_label_targets(bundle)
 
     remove_from_label(instrument, product_bundle, product_collections_list)
 
     bundle.instruments.remove(instrument)
     # instrument.delete()
+
+    # Removed from the bundle page's own list: go back to it, not to a context search
+    # page the user never asked for.
+    if walkthrough.returning_to_bundle(request):
+        return redirect(walkthrough.bundle_url(bundle))
 
     # Need to add to redirect to ask for a new instrument from
     # re_path(r'^(?P<pk_bundle>\d+)/contextsearch/investigation/(?P<pk_investigation>\d+)/instrument_host/(?P<pk_instrument_host>\d+)/instrument/$', views.context_search_instrument, name='context_search_instrument')
@@ -4899,7 +5572,7 @@ def delete_instrument_host(request, pk_bundle, pk_instrument_host):
     investigation = instrument_host.investigations.first()
 
     product_bundle = Product_Bundle.objects.get(bundle=bundle)
-    product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+    product_collections_list = bundle_label_targets(bundle)
 
     for bundle_instrument in bundle.instruments.all():
         if bundle_instrument in instrument_host.instruments.all():
@@ -4910,7 +5583,12 @@ def delete_instrument_host(request, pk_bundle, pk_instrument_host):
 
     bundle.instrument_hosts.remove(instrument_host)
 
-    if Instrument_Host.objects.filter(investigations=investigation.pk).count == 1:
+    # Removed from the bundle page's own list: go back to it, not to a context search
+    # page the user never asked for.
+    if walkthrough.returning_to_bundle(request):
+        return redirect(walkthrough.bundle_url(bundle))
+
+    if Instrument_Host.objects.filter(investigations=investigation.pk).count() == 1:
         # have screen to choose between deleting investigation or choosing new host
         # return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/contextsearch/investigation/' + str(investigation.pk) + '/instrument_host_or_facility/')
         return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/contextsearch/investigation/' + str(investigation.pk) + '/instrument_host_or_facility/')
@@ -4927,7 +5605,7 @@ def delete_facility(request, pk_bundle, pk_facility):
     investigation = facility.investigations.first()
 
     product_bundle = Product_Bundle.objects.get(bundle=bundle)
-    product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+    product_collections_list = bundle_label_targets(bundle)
 
     for bundle_instrument in bundle.instruments.all():
         if bundle_instrument in facility.instruments.all():
@@ -4938,7 +5616,12 @@ def delete_facility(request, pk_bundle, pk_facility):
 
     bundle.facilities.remove(facility)
 
-    if Facility.objects.filter(investigations=investigation.pk).count == 1:
+    # Removed from the bundle page's own list: go back to it, not to a context search
+    # page the user never asked for.
+    if walkthrough.returning_to_bundle(request):
+        return redirect(walkthrough.bundle_url(bundle))
+
+    if Facility.objects.filter(investigations=investigation.pk).count() == 1:
         # have screen to choose between deleting investigation or choosing new host
         # return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/contextsearch/investigation/' + str(investigation.pk) + '/instrument_host_or_facility/')
         return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/contextsearch/investigation/' + str(investigation.pk) + '/instrument_host_or_facility/')
@@ -4950,7 +5633,7 @@ def delete_investigation(request, pk_bundle, pk_investigation):
     investigation = Investigation.objects.get(pk=pk_investigation)
 
     product_bundle = Product_Bundle.objects.get(bundle=bundle)
-    product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+    product_collections_list = bundle_label_targets(bundle)
 
     for bundle_instrument_host in bundle.instrument_hosts.all():
         if bundle_instrument_host in investigation.instrument_hosts.all():
@@ -5159,6 +5842,32 @@ def _ama_namespaces():
     return NS
 
 
+def _label_prolog(template_path):
+    """The XML declaration and xml-model instructions that belong above the root element.
+
+    ElementTree keeps only the element tree, so the processing instructions sitting above
+    the root of the template are dropped on parse and cannot be serialized back out. Those
+    instructions are what point validate at the schematrons: without them the tool reports
+    warning.label.missing_schematron_spec, "No schematrons specified in the label", and then
+    silently skips every schematron rule. That is where the PDS4 value constraints live,
+    including the assertion that information_model_version matches the referenced schema, so
+    the label passes while roughly 500 checks never run. Copy them from the template verbatim
+    so the schema references stay defined in exactly one place.
+    """
+    prolog = ['<?xml version="1.0" encoding="UTF-8"?>']
+
+    with open(template_path, encoding='utf-8') as template:
+        for line in template:
+            stripped = line.strip()
+            if stripped.startswith('<?xml-model'):
+                prolog.append(stripped)
+            elif stripped.startswith('<') and not stripped.startswith('<?'):
+                # Reached the root element; there is nothing above it left to copy.
+                break
+
+    return '\n'.join(prolog) + '\n'
+
+
 def _fill_ama_container(container, values, NS, unit_attributes=None):
     """Replace a container's children with only the non-blank values, in LDD sequence order.
 
@@ -5282,6 +5991,12 @@ def regenerate_netcdf_labels(bundle, netcdf_objs=None):
             nc_obj.save(update_fields=['processed', 'processing_error'])
             errors.append('{}: {}'.format(nc_obj.title, e))
 
+    # Membership changed, so every collection inventory in this bundle is rewritten.
+    # build_inventory() only lists files whose label was written successfully, so a
+    # failed harvest drops out of the inventory rather than pointing at a missing label.
+    for additional_collection in AdditionalCollections.objects.filter(bundle=bundle):
+        additional_collection.build_inventory()
+
     return errors
 
 
@@ -5335,6 +6050,12 @@ def variable_coord_to_product(bundle, netcdf_objs, collection_directory):
             nc_obj.processing_error = str(e)
             nc_obj.save(update_fields=['processed', 'processing_error'])
             errors.append('{}: {}'.format(nc_obj.title, e))
+
+    # Membership changed, so every collection inventory in this bundle is rewritten.
+    # build_inventory() only lists files whose label was written successfully, so a
+    # failed harvest drops out of the inventory rather than pointing at a missing label.
+    for additional_collection in AdditionalCollections.objects.filter(bundle=bundle):
+        additional_collection.build_inventory()
 
     return errors
 
@@ -5429,17 +6150,33 @@ def _process_single_netcdf(bundle, nc_path, collection_directory, NS, allowed_va
 
     if id_area is not None:
 
-        # Find Existing Element <pds:logical_identifier> and Append to It
+        # Build the identifier from the bundle rather than from the template.
+        #
+        # This used to append the collection and file name onto whatever the template
+        # already said, and the template says "urn:nasa:pds-ama:sample_bundle". So
+        # every NetCDF product ELSA has written carries sample_bundle where the real
+        # bundle id belongs: unfindable, and not the product the bundle's own
+        # Bundle_Member_Entry and collection inventory point at. PDS reports the
+        # member as missing, which is a confusing way to be told the label is wrong.
+        #
+        # Composed the same way AdditionalCollections.member_lidvids() composes it,
+        # so the inventory and the label it names cannot disagree.
         # (must be prefixed: unprefixed find() misses default-namespace elements
         # and the else branch would append a duplicate logical_identifier)
+        # pds_lid_segment, not .lower(): PDS4 restricts a LID segment to lowercase
+        # letters, digits, hyphen, dot and underscore, and neither a collection
+        # directory nor an uploaded file name is bound by that. A file copied on
+        # Windows arrives as "... - Copy.nc" and produced a LID with a capital C in
+        # it, which PDS rejected and which the user had no way to act on. Applied on
+        # both segments, matching AdditionalCollections.member_lidvids exactly, so
+        # the inventory and this label cannot name the product differently.
+        product_lid = "{}:{}:{}".format(bundle.lid(),
+                                        pds_lid_segment(subdir_name),
+                                        pds_lid_segment(nc_filename))
         lid_elem = id_area.find("pds:logical_identifier", namespaces=NS)
-        if lid_elem is not None and lid_elem.text:
-            # Append your suffix
-            lid_elem.text = f"{lid_elem.text}:{subdir_name.lower()}:{nc_filename}"
-        else:
-            # If missing or empty, just set it
+        if lid_elem is None:
             lid_elem = ET.SubElement(id_area, f"{{{NS['pds']}}}logical_identifier")
-            lid_elem.text = f"urn:nasa:pds-ama:sample_bundle:{subdir_name.lower()}:{nc_filename}"
+        lid_elem.text = product_lid
 
         # Find the <pds:title> Element and Populate
         title_elem = id_area.find("pds:title", namespaces=NS)
@@ -5506,6 +6243,7 @@ def _process_single_netcdf(bundle, nc_path, collection_directory, NS, allowed_va
     # 7. Write to Output File
     # =====================================================================================
     with open(output_path, "w", encoding="utf-8") as f:
+        f.write(_label_prolog(source_file))
         f.write(ET.tostring(root, encoding='unicode'))
 
     update = Version()
@@ -5727,3 +6465,204 @@ def submit_feedback(request):
     return JsonResponse({'success': True})
 
         
+
+
+# ------------------------------------------------------------------------------------------------ #
+#                                    PDS validation
+# ------------------------------------------------------------------------------------------------ #
+
+
+@login_required
+def start_validation(request, pk_bundle):
+    """Queue a validation run for a bundle and report where it got to.
+
+    POST only: it starts work. Answers with the run's state rather than a redirect,
+    so the page that asked can go straight into polling without a round trip.
+
+    An already-running validation is returned instead of a second one being started;
+    see validate_runner.start.
+    """
+    bundle = get_object_or_404(Bundle, pk=pk_bundle)
+
+    if request.user != bundle.user:
+        print('unauthorized user attempting to access a restricted area.')
+        return redirect('main:restricted_access')
+
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+
+    tier = request.POST.get('tier', ValidationRun.TIER_STRUCTURE)
+    if tier not in dict(ValidationRun.TIER_CHOICES):
+        tier = ValidationRun.TIER_STRUCTURE
+
+    validation_run = validate_runner.start(bundle, tier)
+    return JsonResponse(_validation_state(validation_run))
+
+
+@login_required
+def validation_status(request, pk_bundle):
+    """The current state of this bundle's most recent validation, for polling.
+
+    Deliberately small and side-effect free: it is hit every couple of seconds while
+    a run is in flight. 404 rather than 500 on a bundle that is gone, because a user
+    deleting a bundle with the panel open is ordinary, and a polled endpoint that
+    raises fills the log with something nobody needs to read.
+    """
+    bundle = get_object_or_404(Bundle, pk=pk_bundle)
+
+    if request.user != bundle.user:
+        print('unauthorized user attempting to access a restricted area.')
+        return redirect('main:restricted_access')
+
+    tier = request.GET.get('tier') or None
+    validation_run = validate_runner.latest_run_for(bundle, tier)
+
+    # Whether the Review & Submit window should start a check when it opens: never
+    # checked, or changed since. Decided here rather than in the page so the page
+    # and the background check follow one rule.
+    needs = validate_runner.needs_check(bundle)
+
+    if validation_run is None:
+        return JsonResponse({'status': 'none', 'needs_check': needs})
+
+    state = _validation_state(validation_run)
+    state['needs_check'] = needs
+    return JsonResponse(state)
+
+
+@login_required
+def validation_panel(request, pk_bundle):
+    """The validation panel's contents, rendered fresh, for the page to swap in.
+
+    When a check finishes the panel used to say "Results updated. Refresh to see the
+    details", which asked someone to reload a page in order to see a result the
+    server already had.
+
+    A page reload is not the fix. This used to reload, and it broke NetCDF uploads:
+    a check starts by itself on page load, the upload posts over XMLHttpRequest, and
+    a reload firing mid-upload tore the request down with the progress bar still
+    saying "Processing". Nothing the user did was wrong and nothing told them what
+    had happened.
+
+    So the page fetches this instead and replaces the panel's contents in place.
+    Nothing else on the page is disturbed, an upload in flight stays in flight, and
+    the rendering happens once, here, rather than being duplicated in JavaScript
+    where it would drift from the template.
+    """
+    bundle = get_object_or_404(Bundle, pk=pk_bundle)
+
+    if request.user != bundle.user:
+        print('unauthorized user attempting to access a restricted area.')
+        return redirect('main:restricted_access')
+
+    context = validation_context(bundle, request.user)
+    context['bundle'] = bundle
+    # Also carries the Review & Submit window's verdict band and Submit button, which
+    # depend on the same result and used to be left behind when the panel refreshed.
+    context['status_dict'] = _submission_status(bundle)
+    return render(request, 'build/validation/fragments.html', context)
+
+
+def _validation_state(validation_run):
+    """What a polling client needs, and nothing it does not.
+
+    Findings are summarised rather than sent in full: a poll every two seconds does
+    not need the whole list, and the Phase 2 panel will render them from a page load
+    once the run is complete.
+    """
+    return {
+        'id': validation_run.pk,
+        'status': validation_run.status,
+        'status_label': validation_run.get_status_display(),
+        'tier': validation_run.tier,
+        'phase': validation_run.phase,
+        'phase_label': validation_run.phase_label(),
+        'percent': validation_run.percent_complete(),
+        'products_done': validation_run.products_done,
+        'products_total': validation_run.products_total,
+        'errors': validation_run.error_count,
+        'warnings': validation_run.warning_count,
+        # The translated count, which is what the Bundle Components badge shows. The
+        # raw error count is a different and much larger number (43 against 3 on a
+        # real AMA bundle), so sending only that would make the badge jump the moment
+        # a check finished, from what the page rendered to what the poll reported.
+        #
+        # ELSA's own requirements are counted too, exactly as the page counts them on
+        # load. Without them a clean check turned the badge to "Passed" on a bundle
+        # with no target, while the list inside said a target was missing, and only a
+        # reload brought back "1 to fix". PDS cannot see a missing target, so its
+        # silence is not a pass.
+        'blocking': validate_rules.summarise(
+            validation_run.findings or [],
+            preflight.requirements(validation_run.bundle))['blocking'],
+        'finished': validation_run.status in (
+            ValidationRun.STATUS_DONE, ValidationRun.STATUS_FAILED),
+        # A completed run whose bundle has since changed still describes a real
+        # bundle, just not this one. The client has to be able to say so.
+        'stale': validation_run.is_stale(),
+        'failure_reason': validation_run.failure_reason,
+        # Refused because the server was already running its limit. Never saved, so
+        # it has no id; the page waits and asks again rather than reporting a result.
+        'busy': validation_run.pk is None,
+    }
+
+
+@login_required
+def validation_report(request, pk_run):
+    """Staff view of one run: every finding, grouped, with the raw report available.
+
+    Staff-only on purpose. In this phase nothing is translated for data providers
+    yet, and raw validate output shown to someone who does not read PDS4 is worse
+    than showing them nothing - which is exactly the mistake this phase exists to
+    avoid making at scale.
+    """
+    if not request.user.is_staff:
+        print('unauthorized user attempting to access a restricted area.')
+        return redirect('main:restricted_access')
+
+    validation_run = get_object_or_404(
+        ValidationRun.objects.select_related('bundle'), pk=pk_run)
+    findings = validation_run.findings or []
+
+    context_dict = {
+        'run': validation_run,
+        'bundle': validation_run.bundle,
+        'errors': validate_report.errors(findings),
+        'warnings': validate_report.warnings(findings),
+        'by_location': sorted(
+            validate_report.group_by_location(findings).items(),
+            key=lambda item: (-len(item[1]), item[0])),
+        'by_type': sorted(
+            validate_report.summarise_types(findings).items(),
+            key=lambda item: (-item[1], item[0])),
+    }
+    return render(request, 'build/validation/report.html', context_dict)
+
+
+@login_required
+def validation_runs(request):
+    """Staff list of recent runs across every bundle.
+
+    This is the phase's actual deliverable: what findings occur in the wild, so the
+    Phase 2 rule table is built from observation rather than from the one bundle
+    that happened to be at hand.
+    """
+    if not request.user.is_staff:
+        print('unauthorized user attempting to access a restricted area.')
+        return redirect('main:restricted_access')
+
+    runs = ValidationRun.objects.select_related('bundle', 'bundle__user')[:100]
+
+    # Aggregated across every stored run, which is the view worth having: a message
+    # type that shows up on most bundles is the first thing worth translating.
+    type_counts = {}
+    for validation_run in ValidationRun.objects.exclude(findings=None):
+        for finding_type, count in validate_report.summarise_types(
+                validation_run.findings or []).items():
+            type_counts[finding_type] = type_counts.get(finding_type, 0) + count
+
+    context_dict = {
+        'runs': runs,
+        'by_type': sorted(type_counts.items(), key=lambda item: (-item[1], item[0])),
+    }
+    return render(request, 'build/validation/runs.html', context_dict)

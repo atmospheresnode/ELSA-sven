@@ -117,17 +117,25 @@ urlpatterns = [
     re_path(r'^(?P<pk_bundle>\d+)/document/product_document/(?P<pk_product_document>\d+)/$', views.product_document, name='product_document'),
     re_path(r'^(?P<pk_bundle>\d+)/document/annex_product_document/(?P<pk_product_document>\d+)/$', views.annex_product_document, name='annex_product_document'),
 
+    re_path(r'^(?P<pk_bundle>\d+)/document/product_document/(?P<pk_product_document>\d+)/file/$', views.document_file, name='document_file'),
     #delete product document
     re_path(r'^(?P<pk_bundle>\d+)/document/product_document/(?P<pk_product_document>\d+)/delete/$', views.delete_product_document, name='delete_product_document'),    
 
     #delete net cdf file
     re_path(r'^(?P<pk_bundle>\d+)/netcdf/bulk_delete/$', views.bulk_delete_netcdf, name='bulk_delete_netcdf'),
 
+    # Disk-space check before a NetCDF upload, and the report a user can send when it fails
+    re_path(r'^(?P<pk_bundle>\d+)/netcdf/storage/check/$', views.netcdf_storage_check, name='netcdf_storage_check'),
+    re_path(r'^(?P<pk_bundle>\d+)/netcdf/storage/draft/$', views.netcdf_storage_draft, name='netcdf_storage_draft'),
+    re_path(r'^(?P<pk_bundle>\d+)/netcdf/storage/report/$', views.netcdf_storage_report, name='netcdf_storage_report'),
+
     # One generated label's XML, fetched on demand by the Files tree
     re_path(r'^(?P<pk_bundle>\d+)/label_content/$', views.label_content, name='label_content'),
 
     # AMA discipline metadata (the parts of the AMA area the NetCDF harvest cannot supply)
     re_path(r'^(?P<pk_bundle>\d+)/ama/collection/(?P<pk_collection>\d+)/$', views.ama_collection_defaults, name='ama_collection_defaults'),
+    re_path(r'^(?P<pk_bundle>\d+)/netcdf/(?P<pk_netcdf>\d+)/file/$', views.netcdf_file, name='netcdf_file'),
+    re_path(r'^(?P<pk_bundle>\d+)/netcdf/(?P<pk_netcdf>\d+)/inspect/$', views.netcdf_inspect, name='netcdf_inspect'),
     re_path(r'^(?P<pk_bundle>\d+)/netcdf/(?P<pk_netcdf>\d+)/ama/$', views.netcdf_ama, name='netcdf_ama'),
     re_path(r'^(?P<pk_bundle>\d+)/netcdf/(?P<pk_netcdf>\d+)/ama/reset/$', views.netcdf_ama_reset, name='netcdf_ama_reset'),
     re_path(r'^(?P<pk_bundle>\d+)/netcdf/(?P<pk_netcdf>\d+)/ama/copy/$', views.netcdf_ama_copy, name='netcdf_ama_copy'),
@@ -135,6 +143,15 @@ urlpatterns = [
     
     # Submit Bundle for Review
     re_path(r'^(?P<pk_bundle>\d+)/submit/$', views.submit_bundle_internal, name='submit_bundle_internal'),
+
+    # PDS validation. The two bundle-scoped routes are hit by the page itself; the
+    # two report routes are staff-only and exist so we can see what findings occur
+    # in the wild before anything is shown to data providers.
+    re_path(r'^(?P<pk_bundle>\d+)/validate/start/$', views.start_validation, name='start_validation'),
+    re_path(r'^(?P<pk_bundle>\d+)/validate/status/$', views.validation_status, name='validation_status'),
+    re_path(r'^(?P<pk_bundle>\d+)/validate/panel/$', views.validation_panel, name='validation_panel'),
+    re_path(r'^validation/runs/$', views.validation_runs, name='validation_runs'),
+    re_path(r'^validation/run/(?P<pk_run>\d+)/$', views.validation_report, name='validation_report'),
 
     # Beta Feedback
     re_path(r'^feedback/$', views.submit_feedback, name='submit_feedback'),

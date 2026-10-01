@@ -10,6 +10,7 @@ from queue import Empty
 from enum import unique
 from queue import Empty
 from django.db import models
+from django.utils import timezone
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.validators import MaxValueValidator, MinValueValidator, FileExtensionValidator
@@ -25,6 +26,7 @@ from shutil import *
 import datetime
 import re
 import shutil
+import hashlib
 import os
 import copy
 
@@ -74,6 +76,201 @@ def get_most_current_version():
 
 """
 """
+
+
+
+# PDS4 Target_Identification/type is a closed list, spelled exactly this way in
+# the schematron. The context crawler stores whatever the PDS registry returned,
+# which is usually upper case: of 1548 stored targets, 1490 hold a value PDS
+# rejects ('ASTEROID', 'TRANS-NEPTUNIAN OBJECT'). Writing type_of straight through
+# therefore made almost every target a user could pick an error in their label,
+# reported against them as though they had typed it.
+PDS_TARGET_TYPES = (
+    'Asteroid', 'Astrophysical', 'Calibration', 'Calibration Field', 'Calibrator',
+    'Centaur', 'Comet', 'Dust', 'Dwarf Planet', 'Equipment', 'Exoplanet System',
+    'Galaxy', 'Globular Cluster', 'Laboratory Analog', 'Lunar Sample',
+    'Magnetic Field', 'Meteorite', 'Meteoroid', 'Meteoroid Stream', 'Nebula',
+    'Open Cluster', 'Planet', 'Planetary Nebula', 'Planetary System',
+    'Plasma Cloud', 'Plasma Stream', 'Ring', 'Sample', 'Satellite', 'Sky', 'Star',
+    'Star Cluster', 'Synthetic Sample', 'Terrestrial Sample',
+    'Trans-Neptunian Object',
+)
+
+_PDS_TARGET_TYPE_BY_KEY = {value.lower(): value for value in PDS_TARGET_TYPES}
+
+# Which reference_type a Target_Identification carries depends on what is doing the
+# referring. 'is_target', which this used to write for everything that was not a
+# Product_Observational, is not a PDS4 value at all and never has been.
+TARGET_REFERENCE_TYPES = {
+    'Product_Bundle': 'bundle_to_target',
+    'Product_Collection': 'collection_to_target',
+    'Product_Observational': 'data_to_target',
+    'Product_Document': 'document_to_target',
+    # Every AMA data product is a Product_External, so leaving this out meant the
+    # fallback wrote collection_to_target into the one label type AMA bundles are
+    # made of. Missed because the fixture bundles had no target selected: nothing
+    # writes a Target_Identification until someone picks one.
+    'Product_External': 'external_to_target',
+}
+
+
+# Context_Area is an xs:sequence in PDS4, so its children have a fixed order and a
+# child appended to the end is invalid wherever a later one already exists. AMA
+# labels always carry a Discipline_Area, which sorts after Target_Identification, so
+# appending a target to one produced "Invalid content was found starting with
+# element 'Target_Identification'" on every AMA product with a target selected.
+CONTEXT_AREA_ORDER = (
+    'comment', 'Time_Coordinates', 'Primary_Result_Summary', 'Investigation_Area',
+    'Observing_System', 'Target_Identification', 'Mission_Area', 'Discipline_Area',
+)
+
+
+def insert_in_context_area(Context_Area, element):
+    """Put element into Context_Area where the PDS4 sequence says it belongs.
+
+    Appends when nothing that sorts after it is present, which is the common case
+    and what the old code always did.
+    """
+    try:
+        position = CONTEXT_AREA_ORDER.index(etree.QName(element).localname)
+    except ValueError:
+        Context_Area.append(element)
+        return element
+
+    for existing in Context_Area:
+        name = etree.QName(existing).localname
+        if name in CONTEXT_AREA_ORDER and CONTEXT_AREA_ORDER.index(name) > position:
+            existing.addprevious(element)
+            return element
+
+    Context_Area.append(element)
+    return element
+
+
+# PDS4 Document_Edition/language is a closed list of one: the schematron asserts
+# it "must be equal to the value 'English'". A free-text field in front of a rule
+# like that only produces errors, so what the user typed is normalised to the value
+# PDS accepts when it plainly means the same thing, and passed through otherwise so
+# PDS can report a value ELSA has no business guessing about.
+def _require_text(parent, tag, value, fallback):
+    """Give a required element a value, creating it if the template lacks one.
+
+    PDS4 has no notion of an empty required element: a blank one is reported the
+    same way a wrong one is, so a field the form left optional still needs
+    something defensible written into it.
+    """
+    if parent is None:
+        return None
+    element = parent.find('{}{}'.format(NAMESPACE, tag))
+    if element is None:
+        element = etree.SubElement(parent, '{}{}'.format(NAMESPACE, tag))
+    text = (value or '').strip() if isinstance(value, str) else value
+    element.text = text or fallback
+    return element
+
+
+PDS_DOCUMENT_LANGUAGE = 'English'
+
+_LANGUAGE_ALIASES = ('english', 'en', 'eng', 'en-us', 'en_us')
+
+
+def pds_document_language(value):
+    """The spelling PDS accepts for a document's language."""
+    cleaned = (value or '').strip()
+    if not cleaned or cleaned.lower() in _LANGUAGE_ALIASES:
+        return PDS_DOCUMENT_LANGUAGE
+    return cleaned
+
+
+def pds_context_title(name, type_of):
+    """The title PDS publishes for a context product, which is what it checks against.
+
+    validate compares Investigation_Area/name to the title of the registered context
+    product and warns when they differ. PDS titles those products "<name> <type>":
+    the registered title for the AMA investigation is "Atmospheric Modeling Annex
+    Individual Investigation", while ELSA's crawler stored only "Atmospheric
+    Modeling Annex", so every AMA bundle carried a warning nobody could act on.
+
+    Idempotent, so a crawled name that already includes its type is left alone
+    rather than having it appended twice.
+    """
+    name = (name or '').strip()
+    type_of = (type_of or '').strip()
+    if not name or not type_of:
+        return name
+    if name.lower().endswith(type_of.lower()):
+        return name
+    return '{} {}'.format(name, type_of)
+
+
+def pds_target_type(value):
+    """The PDS spelling of a stored target type.
+
+    Falls back to title case for a value not in the list, which keeps the label
+    closer to valid and leaves PDS to report the value as unknown, which it is.
+    """
+    if not value:
+        return value
+    cleaned = value.strip()
+    return _PDS_TARGET_TYPE_BY_KEY.get(cleaned.lower(), cleaned.title())
+
+
+# PDS4 constrains every segment of a logical identifier to this set, via the pattern
+# urn(:[\p{Ll}\p{Nd}\-._]+){3,5} on the logical_identifier type: lowercase letters,
+# digits, hyphen, dot and underscore. Nothing else, and in particular no uppercase.
+_LID_ALLOWED = re.compile(r'[^a-z0-9._-]')
+
+
+def pds_lid_segment(value):
+    """One segment of a logical identifier, made to satisfy the PDS4 pattern.
+
+    A NetCDF uploaded as "00000.atmos_average_pstd_-_Copy.nc" produced the LID
+    urn:nasa:pds-ama:sept_ama:new:00000.atmos_average_pstd_-_Copy.nc, which PDS
+    rejects: \p{Ll} is lowercase-only and the file name carried a capital C and P.
+    The user had done nothing wrong. A file name may be mixed case in PDS4, and
+    file_name in the label keeps it; only the identifier built from it may not.
+
+    So the derivation is fixed here rather than asked of the user, the same way the
+    document format decides its own extension. Anything outside the permitted set
+    becomes an underscore instead of being dropped, because dropping characters can
+    collide two distinct names into one identifier.
+
+    Callers must apply this on *segments*, never on a whole LID: the colons that
+    separate them are not permitted inside one.
+    """
+    if not value:
+        return value
+    return _LID_ALLOWED.sub('_', value.strip().lower())
+
+
+def target_reference_type(label_root):
+    """The reference_type a Target_Identification needs in this kind of label.
+
+    The fallback is deliberately the one PDS accepts in the most places rather than
+    a guess, but every product class ELSA writes should be in the table above: a
+    fallback that happens to be wrong is how external_to_target went missing.
+    """
+    localname = etree.QName(label_root).localname
+    return TARGET_REFERENCE_TYPES.get(localname, 'collection_to_target')
+
+
+def context_container(Context_Area, tag):
+    """Find a Context_Area child, creating it in the PDS namespace when absent.
+
+    The bundle and collection templates no longer ship empty Investigation_Area and
+    Observing_System containers. An empty one is a validation error on every bundle
+    that has not had context products added yet, and both are optional in
+    Context_Area, so they are created here the first time there is something to put
+    in them.
+
+    Created with the namespace, because the find() above is namespaced: an element
+    built bare would be invisible to the next lookup, which is the failure that made
+    build_internal_reference collapse two documents into one.
+    """
+    child = Context_Area.find('{}{}'.format(NAMESPACE, tag))
+    if child is None:
+        child = etree.SubElement(Context_Area, '{}{}'.format(NAMESPACE, tag))
+    return child
 
 
 def get_upload_path(instance, filename):
@@ -232,14 +429,11 @@ class Version(models.Model):
         ''''Original version of this function, to be replaced with above and 
         renamed (or deleted?) once I'm positive the new one works. Keep this 
         one around for now, for reference and for when the new one breaks.'''
-        
-        j=0
-        i=0
 
         #read the bundle and collection template files and store their contents in strings.
         #If the file is invalid a statement will be printed and the function will quit.
         try: 
-            fil = open(inFile,'r')
+            fil = open(inFile, 'r', encoding='utf-8')
 
             fileText = fil.read()
 
@@ -248,22 +442,19 @@ class Version(models.Model):
             print(inFile + " is an invalid file")
             return
 
-        print(inFile)
-
-        # A label that has already been stamped, or a template that never carried a
-        # placeholder, is a copy rather than a substitution. Only say so; not an error.
+        # Templates pinned to a single information model version (the External ones,
+        # which are tied to the AMA LDD build) carry no placeholder, so this is a copy
+        # rather than a substitution. Only say so; it is not an error.
         if 'AAAA' not in fileText:
             print(inFile + " has no 'AAAA' placeholder; copying its version as pinned.")
 
         # information_model_version holds the dotted form of the version (1.24.0.0);
         # every other placeholder is part of a schema or schematron filename and holds
         # the four-character build number (1O00). Fill the dotted one first so the
-        # blanket replace below cannot claim it.
-        #
-        # Keyed off the tag rather than off the placeholder's position in the file.
-        # This used to walk the text counting occurrences of AAAA and treat the third
-        # one as the dotted field, which is only right for templates that carry
-        # exactly the expected number of placeholders in exactly the expected order.
+        # blanket replace below cannot claim it. Keying off the tag instead of off the
+        # placeholder's position in the file keeps this right for templates that carry
+        # a different number of placeholders, and for labels that lost their xml-model
+        # instructions to an ElementTree round-trip before reaching us.
         fileText = re.sub(
             r'(<(?:\w+:)?information_model_version>)AAAA(</(?:\w+:)?information_model_version>)',
             r'\g<1>{}\g<2>'.format(self.with_dots(number)),
@@ -274,13 +465,11 @@ class Version(models.Model):
 
         # write the new bundle and collection to the xmls
 
-        fil = open(outFile, 'w')
+        fil = open(outFile, 'w', encoding='utf-8')
 
         fil.write(fileText)
 
         fil.close()
-
-        pass
 
 
 """
@@ -807,26 +996,49 @@ class Investigation(models.Model):
         return self.name
 
     def fill_label(self, label_root):
-        if label_root.find('{}Context_Area'.format(NAMESPACE)):
-            Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE))
-        else:
+        # 'is None', not truthiness: an lxml element with no children is falsy today,
+        # so an empty Context_Area would fall through and look for an Observation_Area
+        # that is not there. lxml also warns that truth-testing will always return True
+        # in a future release, which would break the Product_Observational path instead.
+        Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE))
+        if Context_Area is None:
             Context_Area = label_root.find('{}Observation_Area'.format(NAMESPACE))
 
-        Investigation_Area = Context_Area.find('{}Investigation_Area'.format(NAMESPACE))
+        Investigation_Area = context_container(Context_Area, 'Investigation_Area')
 
-        Investigation_Area.find('{}name'.format(NAMESPACE)).text = self.name
-        Investigation_Area.find('{}type'.format(NAMESPACE)).text = self.type_of
+        # The template no longer carries these, so build whichever are missing.
+        name = Investigation_Area.find('{}name'.format(NAMESPACE))
+        if name is None:
+            name = etree.SubElement(Investigation_Area, '{}name'.format(NAMESPACE))
+        name.text = pds_context_title(self.name, self.type_of)
+
+        investigation_type = Investigation_Area.find('{}type'.format(NAMESPACE))
+        if investigation_type is None:
+            investigation_type = etree.SubElement(
+                Investigation_Area, '{}type'.format(NAMESPACE))
+        investigation_type.text = self.type_of
         # Investigation_Area.name.text = self.name
         # Investigation_Area.type.text = self.type_of
 
         Internal_Reference = Investigation_Area.find('{}Internal_Reference'.format(NAMESPACE))
-        Internal_Reference.find('{}lid_reference'.format(NAMESPACE)).text = self.lid
+        if Internal_Reference is None:
+            Internal_Reference = etree.SubElement(
+                Investigation_Area, '{}Internal_Reference'.format(NAMESPACE))
+        lid_reference = Internal_Reference.find('{}lid_reference'.format(NAMESPACE))
+        if lid_reference is None:
+            lid_reference = etree.SubElement(
+                Internal_Reference, '{}lid_reference'.format(NAMESPACE))
+        lid_reference.text = self.lid
+        reference_type = Internal_Reference.find('{}reference_type'.format(NAMESPACE))
+        if reference_type is None:
+            reference_type = etree.SubElement(
+                Internal_Reference, '{}reference_type'.format(NAMESPACE))
         if label_root.tag == '{http://pds.nasa.gov/pds4/pds/v1}Product_Bundle':
-            Internal_Reference.find('{}reference_type'.format(NAMESPACE)).text = 'bundle_to_investigation'
+            reference_type.text = 'bundle_to_investigation'
         elif label_root.tag == '{http://pds.nasa.gov/pds4/pds/v1}Product_Observational':
-            Internal_Reference.find('{}reference_type'.format(NAMESPACE)).text = 'data_to_investigation'
+            reference_type.text = 'data_to_investigation'
         else:
-            Internal_Reference.find('{}reference_type'.format(NAMESPACE)).text = 'collection_to_investigation'
+            reference_type.text = 'collection_to_investigation'
         # Internal_Reference.lid_reference.text = self.lid
         # Internal_Reference.reference_type.text = 'is_investigation'
 
@@ -910,19 +1122,24 @@ class Investigation(models.Model):
 
     def remove_xml(self, label_root):
         Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE))
+        if Context_Area is None:
+            # This label never got a Context_Area, so there is nothing to take out.
+            return label_root
 
         Investigation_Area = Context_Area.find('{}Investigation_Area'.format(NAMESPACE))
 
-        Investigation_Area.find('{}name'.format(NAMESPACE)).text = ''
-        Investigation_Area.find('{}type'.format(NAMESPACE)).text = ''
-        # Investigation_Area.name.text = self.name
-        # Investigation_Area.type.text = self.type_of
-
-        Internal_Reference = Investigation_Area.find('{}Internal_Reference'.format(NAMESPACE))
-        Internal_Reference.find('{}lid_reference'.format(NAMESPACE)).text = ''
-        Internal_Reference.find('{}reference_type'.format(NAMESPACE)).text = ''
+        # Remove the whole Investigation_Area rather than blanking its fields. Emptying
+        # them leaves a container full of empty elements, each of which is a validation
+        # error, so removing an investigation used to swap one problem for several.
+        # Investigation_Area is optional in Context_Area, and fill_label rebuilds it
+        # from nothing when another investigation is added.
+        if Investigation_Area is not None:
+            Context_Area.remove(Investigation_Area)
 
         Observing_System = Context_Area.find('{}Observing_System'.format(NAMESPACE))
+        if Observing_System is None:
+            # Nothing was ever added, so there is nothing to take out.
+            return label_root
 
         for component in Observing_System:
 
@@ -1141,12 +1358,15 @@ class Instrument(models.Model):
         self.save()
 
     def fill_label(self, label_root):
-        if label_root.find('{}Context_Area'.format(NAMESPACE)):
-            Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE))
-        else:
+        # 'is None', not truthiness: an lxml element with no children is falsy today,
+        # so an empty Context_Area would fall through and look for an Observation_Area
+        # that is not there. lxml also warns that truth-testing will always return True
+        # in a future release, which would break the Product_Observational path instead.
+        Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE))
+        if Context_Area is None:
             Context_Area = label_root.find('{}Observation_Area'.format(NAMESPACE))
 
-        Observing_System = Context_Area.find('{}Observing_System'.format(NAMESPACE))
+        Observing_System = context_container(Context_Area, 'Observing_System')
         
 
         # Add Facility to Observing System
@@ -1220,8 +1440,14 @@ class Instrument(models.Model):
 
     def remove_xml(self, label_root):
         Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE))
+        if Context_Area is None:
+            # This label never got a Context_Area, so there is nothing to take out.
+            return label_root
 
         Observing_System = Context_Area.find('{}Observing_System'.format(NAMESPACE))
+        if Observing_System is None:
+            # Nothing was ever added, so there is nothing to take out.
+            return label_root
 
         for component in Observing_System:
 
@@ -1360,35 +1586,30 @@ class Target(models.Model):
         self.save()
 
     def fill_label(self, label_root):
-        if label_root.find('{}Context_Area'.format(NAMESPACE)):
-            Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE))
-        else:
+        # 'is None', not truthiness: an lxml element with no children is falsy today,
+        # so an empty Context_Area would fall through and look for an Observation_Area
+        # that is not there. lxml also warns that truth-testing will always return True
+        # in a future release, which would break the Product_Observational path instead.
+        Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE))
+        if Context_Area is None:
             Context_Area = label_root.find('{}Observation_Area'.format(NAMESPACE))
 
         # Observing_System = Context_Area.find('{}Observing_System'.format(NAMESPACE))
 
-        # Add Facility to Observing System
-        Observing_System_Component = etree.SubElement(
-            Context_Area, 'Target_Identification')
-        name = etree.SubElement(Observing_System_Component, 'name')
+        Target_Identification = insert_in_context_area(
+            Context_Area, etree.SubElement(Context_Area, 'Target_Identification'))
+        name = etree.SubElement(Target_Identification, 'name')
         name.text = self.name.title()
-        facility_type = etree.SubElement(
-            Observing_System_Component, 'type')
-        facility_type.text = self.type_of
+        target_type = etree.SubElement(Target_Identification, 'type')
+        target_type.text = pds_target_type(self.type_of)
         Internal_Reference = etree.SubElement(
-            Observing_System_Component, 'Internal_Reference')
+            Target_Identification, 'Internal_Reference')
         lid_reference = etree.SubElement(
             Internal_Reference, 'lid_reference')
         lid_reference.text = self.lid
-
-        if label_root.tag == '{http://pds.nasa.gov/pds4/pds/v1}Product_Observational':
-            reference_type = etree.SubElement(
-                Internal_Reference, 'reference_type')
-            reference_type.text = 'data_to_target'
-        else:
-            reference_type = etree.SubElement(
-                Internal_Reference, 'reference_type')
-            reference_type.text = 'is_target'
+        reference_type = etree.SubElement(
+            Internal_Reference, 'reference_type')
+        reference_type.text = target_reference_type(label_root)
 
         return label_root
 
@@ -1557,12 +1778,15 @@ class Instrument_Host(models.Model):
         self.save()
 
     def fill_label(self, label_root):
-        if label_root.find('{}Context_Area'.format(NAMESPACE)):
-            Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE))
-        else:
+        # 'is None', not truthiness: an lxml element with no children is falsy today,
+        # so an empty Context_Area would fall through and look for an Observation_Area
+        # that is not there. lxml also warns that truth-testing will always return True
+        # in a future release, which would break the Product_Observational path instead.
+        Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE))
+        if Context_Area is None:
             Context_Area = label_root.find('{}Observation_Area'.format(NAMESPACE))
 
-        Observing_System = Context_Area.find('{}Observing_System'.format(NAMESPACE))
+        Observing_System = context_container(Context_Area, 'Observing_System')
 
         # Add Facility to Observing System
         Observing_System_Component = etree.SubElement(
@@ -1633,8 +1857,14 @@ class Instrument_Host(models.Model):
 
     def remove_xml(self, label_root):
         Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE))
+        if Context_Area is None:
+            # This label never got a Context_Area, so there is nothing to take out.
+            return label_root
 
         Observing_System = Context_Area.find('{}Observing_System'.format(NAMESPACE))
+        if Observing_System is None:
+            # Nothing was ever added, so there is nothing to take out.
+            return label_root
 
         for component in Observing_System:
             if(component.tag == "{http://pds.nasa.gov/pds4/pds/v1}Observing_System_Component"):
@@ -1724,7 +1954,7 @@ class Facility(models.Model):
     def fill_label(self, label_root):
         Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE)) # <- This is the issue
 
-        Observing_System = Context_Area.find('{}Observing_System'.format(NAMESPACE))
+        Observing_System = context_container(Context_Area, 'Observing_System')
 
         # Add Facility to Observing System
         Observing_System_Component = etree.SubElement(
@@ -1800,8 +2030,14 @@ class Facility(models.Model):
 
     def remove_xml(self, label_root):
         Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE))
+        if Context_Area is None:
+            # This label never got a Context_Area, so there is nothing to take out.
+            return label_root
 
         Observing_System = Context_Area.find('{}Observing_System'.format(NAMESPACE))
+        if Observing_System is None:
+            # Nothing was ever added, so there is nothing to take out.
+            return label_root
 
         for component in Observing_System:
             if(component.tag == "{http://pds.nasa.gov/pds4/pds/v1}Observing_System_Component"):
@@ -1899,12 +2135,15 @@ class Telescope(models.Model):
         self.save()
 
     def fill_label(self, label_root):
-        if label_root.find('{}Context_Area'.format(NAMESPACE)):
-            Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE))
-        else:
+        # 'is None', not truthiness: an lxml element with no children is falsy today,
+        # so an empty Context_Area would fall through and look for an Observation_Area
+        # that is not there. lxml also warns that truth-testing will always return True
+        # in a future release, which would break the Product_Observational path instead.
+        Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE))
+        if Context_Area is None:
             Context_Area = label_root.find('{}Observation_Area'.format(NAMESPACE))
 
-        Observing_System = Context_Area.find('{}Observing_System'.format(NAMESPACE))
+        Observing_System = context_container(Context_Area, 'Observing_System')
 
         # Add Facility to Observing System
         Observing_System_Component = etree.SubElement(
@@ -2047,6 +2286,53 @@ class Bundle(models.Model):
         return bundle_directory
 
 
+    def content_fingerprint(self):
+        """A short digest of every file in this bundle, as it is on disk right now.
+
+        Used to tell whether a validation result still describes the bundle. The
+        obvious alternative, Bundle.updated_at, does not work: it is auto_now, so it
+        moves only when Bundle.save() is called, and none of the views that edit a
+        bundle's metadata save the bundle. Adding a modification history rewrote four
+        labels and left updated_at untouched, so nothing ever looked stale and the
+        automatic re-check had no reason to run.
+
+        Files are stat-ed, never read, so a bundle holding a 200MB NetCDF costs the
+        same as an empty one. Size and modification time together catch every edit
+        ELSA makes, all of which rewrite a whole label. Paths are included so that
+        adding or deleting a file registers even when nothing else changes.
+
+        Returns '' when the directory does not exist yet, which callers read as
+        "nothing to compare".
+        """
+        # Deliberately not cached on the instance. Caching it saves a few directory
+        # walks per page load, and those walks only stat files, so the saving is
+        # negligible; what it costs is a value that is wrong the moment anything in
+        # the same request writes a label, which is a whole class of bug for no real
+        # gain. Measured on a bundle holding a 190MB NetCDF, the walk is not visible.
+        directory = self.directory()
+        if not os.path.isdir(directory):
+            return ''
+
+        digest = hashlib.sha256()
+        for dirpath, dirnames, filenames in os.walk(directory):
+            # Sorted, so the digest depends on the contents and not on the order the
+            # filesystem happens to hand them back.
+            dirnames.sort()
+            for filename in sorted(filenames):
+                path = os.path.join(dirpath, filename)
+                try:
+                    stat = os.stat(path)
+                except OSError:
+                    # A file that vanished mid-walk is itself a change; record the
+                    # name so the digest still moves.
+                    digest.update(os.path.relpath(path, directory).encode('utf-8'))
+                    continue
+                digest.update('{}|{}|{}'.format(
+                    os.path.relpath(path, directory),
+                    stat.st_size,
+                    stat.st_mtime_ns).encode('utf-8'))
+        return digest.hexdigest()
+
     def relative_dir(self):
         # rel_dir = os.path.join('archive/', self.user.username)
         rel_dir = os.path.join(self.user.username, self.name_directory_case())
@@ -2121,6 +2407,13 @@ class Bundle(models.Model):
         else:
             bundle_id = self.name_lid_case()
 
+        # The bundle name and ID are free text on the form, bounded only in length.
+        # "Mars & Venus" or "test#1" would otherwise put a character in the LID that
+        # PDS4 does not permit there, and the user would be told about it in terms of
+        # a pattern they never saw. With this, nothing a user can type reaches a LID
+        # unpermitted, so the rule for that error is ELSA's own bug, not theirs.
+        bundle_id = pds_lid_segment(bundle_id)
+
         if self.bundle_type == 'External':
             return 'urn:nasa:pds-ama:{0}'.format(bundle_id)
         else:
@@ -2184,12 +2477,13 @@ class Bundle(models.Model):
     def get_status(self):
         if self.submitted_at is not None:
             return 'submitted'
-        required_complete = all([
-            self.modification_history_set.exists(),
-            self.citation_information_set.exists(),
-            self.targets.exists(),
-        ])
-        return 'ready' if required_complete else 'in_progress'
+        # ELSA's requirements are written down once, in build.preflight, which the
+        # panel and the submission gate also read. This used to keep its own copy of
+        # the first three, so the Bundle Hub would have said "Ready" on a bundle the
+        # gate refuses for having no author or no NetCDF file. Imported here because
+        # preflight reads these models.
+        from build import preflight
+        return 'ready' if preflight.met(self) else 'in_progress'
 
     def update(self, product):
 
@@ -2279,6 +2573,39 @@ class Collections(models.Model):
         make_directory(collection_directory)
 
 
+def _local_name(element):
+    return etree.QName(element).localname if isinstance(element.tag, str) else ''
+
+
+def bundle_member_entries(label_root):
+    """The Bundle_Member_Entry elements of a bundle label, as (element, lid_reference).
+
+    Matched on the local name, because an entry added in this request has no namespace
+    (build_additional_bundle_member_entry creates it bare) while one read back from
+    disk is in the PDS namespace.
+    """
+    entries = []
+    for element in label_root:
+        if _local_name(element) != 'Bundle_Member_Entry':
+            continue
+        lid = ''
+        for child in element:
+            if _local_name(child) == 'lid_reference':
+                lid = (child.text or '').strip()
+        entries.append((element, lid))
+    return entries
+
+
+def remove_bundle_member_entries(label_root, lid):
+    """Remove every Bundle_Member_Entry naming this LID. Returns how many went."""
+    removed = 0
+    for element, entry_lid in bundle_member_entries(label_root):
+        if entry_lid == lid:
+            label_root.remove(element)
+            removed += 1
+    return removed
+
+
 class AdditionalCollections(models.Model):
     #External Data Collections should only be of type external
     ADDITIONAL_COLLECTION_CHOICES = (
@@ -2340,6 +2667,22 @@ class AdditionalCollections(models.Model):
         # return name_edit
         
 
+    def bundle_member_lid(self):
+        """The lid_reference this collection has in the bundle label, and its own LID."""
+        return '{}:{}'.format(self.bundle.lid(), self.collection_name.lower())
+
+    def remove_xml(self, label_root):
+        """Take this collection out of a label: its entry in the bundle's member list.
+
+        delete_collection calls this through remove_from_label, and it used not to
+        exist. The AttributeError was caught and printed, so every deleted collection
+        stayed listed in the bundle label: PDS then reported a member that could not
+        be found, and creating a collection of the same name again listed it twice.
+        The collection labels passed alongside carry no such entry and are unchanged.
+        """
+        remove_bundle_member_entries(label_root, self.bundle_member_lid())
+        return label_root
+
     def label(self):
         return os.path.join(self.directory(), self.name_label_case())
     
@@ -2357,6 +2700,32 @@ class AdditionalCollections(models.Model):
         update.version_update_old(self.bundle.version, source_file,label_file)
 
         return
+
+    def member_lidvids(self):
+        """The LIDVID of every NetCDF product filed into this collection.
+
+        Only files whose label was written successfully belong in the inventory: a
+        failed harvest leaves a NetCDFFile row with no product label to point at.
+        """
+        # Derived exactly the way views._process_single_netcdf builds the product's own
+        # logical_identifier: the bundle LID, the collection's directory name, then the
+        # file's basename with its extension intact. Both sides read the same directory,
+        # so the inventory cannot drift from the labels it points at.
+        # pds_lid_segment on both, exactly as views._process_single_netcdf applies
+        # it: a collection directory or a file name may carry characters a LID may
+        # not, and if only one side cleaned them the inventory would name products
+        # whose labels call themselves something else.
+        collection_segment = pds_lid_segment(os.path.basename(self.directory()))
+        return ['{}:{}:{}::1.0'.format(self.bundle.lid(), collection_segment,
+                                       pds_lid_segment(os.path.basename(nc.file.name)))
+                for nc in self.netcdf_files.filter(processed=True).order_by('id')]
+
+    def build_inventory(self):
+        """Write this collection's inventory table and update its label to match.
+
+        Safe to call again whenever membership changes; it rewrites both from scratch.
+        """
+        return write_collection_inventory(self.label(), self.member_lidvids())
 
     def fill_base_case(self, root):
         Product_Collection = root
@@ -2760,34 +3129,26 @@ class Product_Bundle(models.Model):
 
     def build_internal_reference(self, root, relation):
 
-        print('---DEBUG---')
-        print('Root: {}'.format(root))
-
         Reference_List = root.find('{}Reference_List'.format(NAMESPACE))
 
-        # Using .append
+        # Every element has to be created in the PDS namespace. The previous version
+        # built them bare - etree.Element("Internal_Reference") - which the namespaced
+        # find() below could not see, so each call appended an invisible stray element
+        # and then wrote its values into the template's placeholder instead. A second
+        # reference re-filled that same placeholder, so a bundle with two documents
+        # emitted one mangled reference with duplicated empty children rather than two
+        # good ones. Building each element in the namespace and holding on to it means
+        # the template needs no placeholder at all.
+        Internal_Reference = etree.SubElement(
+            Reference_List, '{}Internal_Reference'.format(NAMESPACE))
 
-        Reference_List.append(etree.Element("Internal_Reference"))
-        Internal_Reference = Reference_List.find('{}Internal_Reference'.format(NAMESPACE))
-
-        Internal_Reference.append(etree.Element("lid_reference"))
-        lid_reference = Internal_Reference.find('{}lid_reference'.format(NAMESPACE))
+        lid_reference = etree.SubElement(
+            Internal_Reference, '{}lid_reference'.format(NAMESPACE))
         lid_reference.text = relation.lid()
 
-        Internal_Reference.append(etree.Element("reference_type"))
-        lid_reference = Internal_Reference.find('{}reference_type'.format(NAMESPACE))
-        lid_reference.text = 'bundle_to_{}'.format(relation.reference_type())
-
-        # using .subelement
-
-        # Internal_Reference = etree.SubElement(
-        #     Reference_List, 'Internal_Reference')
-
-        # lid_reference = etree.SubElement(Internal_Reference, 'lid_reference')
-        # lid_reference.text = relation.lid()
-
-        # reference_type = etree.SubElement(Internal_Reference, 'reference_type')
-        # reference_type.text = 'bundle_to_{}'.format(relation.reference_type())
+        reference_type = etree.SubElement(
+            Internal_Reference, '{}reference_type'.format(NAMESPACE))
+        reference_type.text = 'bundle_to_{}'.format(relation.reference_type())
 
         return root
 
@@ -2837,10 +3198,18 @@ class Product_Bundle(models.Model):
         print('Root: {}'.format(root))
 
         
+        lid = '{}:{}'.format(self.bundle.lid(), collection.collection_name.lower())
+
+        # Once per collection. A collection deleted and created again under the same
+        # name used to be appended a second time, and PDS rejects a bundle listing one
+        # member twice.
+        if any(entry_lid == lid for _element, entry_lid in bundle_member_entries(root)):
+            return root
+
         Bundle_Member_Entry = etree.SubElement(root, 'Bundle_Member_Entry')
 
         lid_reference = etree.SubElement(Bundle_Member_Entry, 'lid_reference')
-        lid_reference.text = '{}:{}'.format(self.bundle.lid(), collection.collection_name.lower())
+        lid_reference.text = lid
 
         member_status = etree.SubElement(Bundle_Member_Entry, 'member_status')
         member_status.text = 'Primary'
@@ -3043,6 +3412,25 @@ class Product_Collection(models.Model):
         #copyfile(source_file, label_file)
 
         return
+
+    def member_lidvids(self):
+        """The LIDVID of every product in this collection, for the inventory table.
+
+        Only the Document collection has members ELSA tracks as products today; Context
+        and XML Schema collections are placeholders with nothing filed into them yet.
+        """
+        if self.collection != 'Document':
+            return []
+        return ['{}::1.0'.format(document.lid())
+                for document in Product_Document.objects.filter(bundle=self.bundle)]
+
+    def build_inventory(self):
+        """Write this collection's inventory table and update its label to match.
+
+        Safe to call again whenever membership changes; it rewrites both from scratch.
+        """
+        return write_collection_inventory(self.label(), self.member_lidvids())
+
 
     def build_base_case_data(self, data):
 
@@ -3941,8 +4329,11 @@ class Product_Observational(models.Model):
         edit_name = '{}.xml'.format(self.name_label_case())
         label_file = os.path.join(self.data.directory(), edit_name)
 
-        # Copy the base case template to the correct directory
-        copyfile(source_file, label_file)
+        # set selected version
+        # Stamps the bundle's information model version in while copying the
+        # template across, the same way every other Archive label is built.
+        update = Version()
+        update.version_update_old(self.data.bundle.version, source_file, label_file)
 
         return
 
@@ -4134,6 +4525,16 @@ Referenced from        Product_Document
 """
 
 # @python_2_unicode_compatible
+def pds_document_standard(value):
+    """The PDS4 name for a document's format.
+
+    Documents saved before uploads existed chose their format from a list whose plain
+    text option was stored as "ASCII", which is not a value PDS4 accepts; its name for
+    it is "7-Bit ASCII Text". Uploads record the right value themselves.
+    """
+    return {'ASCII': '7-Bit ASCII Text'}.get((value or '').strip(), value)
+
+
 class Product_Document(models.Model):
     # Attributes
     bundle = models.ForeignKey(Bundle, on_delete=models.CASCADE)
@@ -4182,6 +4583,16 @@ class Product_Document(models.Model):
         collection_directory = os.path.join(
             self.bundle.directory(), 'document')
         return collection_directory
+
+    def stored_file_size(self):
+        """Bytes of the uploaded document file on disk, or None. For templates."""
+        from build import document_files
+        return document_files.size(self)
+
+    def text_excerpt(self):
+        """The first lines of a plain text document, for its thumbnail. For templates."""
+        from build import document_files
+        return document_files.text_excerpt(self)
 
     def name_label_case(self):
         """
@@ -4283,11 +4694,20 @@ class Product_Document(models.Model):
                 if self.document_std_id:
                     encoding_standard_id = Encoded_External.find(
                         '{}encoding_standard_id'.format(NAMESPACE))
-                    encoding_standard_id.text = self.document_std_id
+                    encoding_standard_id.text = pds_document_standard(self.document_std_id)
             if File is not None:
+                # A document added without a comment has no comment element left in its
+                # label, so giving it one in the editor was a 500. Made when needed (last
+                # in File, where PDS puts it), and removed when the comment is cleared
+                # rather than left saying what it used to.
+                comment = File.find('{}comment'.format(NAMESPACE))
                 if self.comment:
-                    comment = File.find('{}comment'.format(NAMESPACE))
+                    if comment is None:
+                        comment = File.makeelement('{}comment'.format(NAMESPACE), {})
+                        File.append(comment)
                     comment.text = self.comment
+                elif comment is not None:
+                    File.remove(comment)
                 if self.file_name:
                     file_name = File.find('{}file_name'.format(NAMESPACE))
                     file_name.text = self.file_name
@@ -4310,9 +4730,16 @@ class Product_Document(models.Model):
             # if self.doi:
             #     doi = etree.SubElement(Document, 'doi')
             #     doi.text = self.doi
-            if self.author_list:
-                author_list = Document.find('{}author_list'.format(NAMESPACE))
-                author_list.text = self.author_list
+            # author_list is deprecated in PDS4 and validate says so on every
+            # document that carries one: "pds:Document/pds:author_list is
+            # deprecated and should not be used." The field stays on the model and
+            # on the form, because it is how a user records who wrote the document
+            # and removing it would lose that; it simply no longer goes into the
+            # label. The template's empty element is dropped so it does not become
+            # an empty-value error in its place.
+            author_list = Document.find('{}author_list'.format(NAMESPACE))
+            if author_list is not None:
+                Document.remove(author_list)
             # if self.editor_list:
             #     editor_list = etree.SubElement(Document, 'editor_list')
             #     editor_list.text = self.editor_list
@@ -4337,9 +4764,16 @@ class Product_Document(models.Model):
                 edition_name = Document_Edition.find(
                     '{}edition_name'.format(NAMESPACE))
                 edition_name.text = self.edition_name
-            if self.language:
-                language = Document_Edition.find('{}language'.format(NAMESPACE))
-                language.text = self.language
+            # PDS4 accepts exactly one value here: "pds:Document_Edition/pds:language
+            # must be equal to the value 'English'." Anything else a user types,
+            # including "english" or "EN", is rejected. language is required by the
+            # schema, so it is always written rather than only when the model has a
+            # value.
+            language = Document_Edition.find('{}language'.format(NAMESPACE))
+            if language is None:
+                language = etree.SubElement(
+                    Document_Edition, '{}language'.format(NAMESPACE))
+            language.text = pds_document_language(self.language)
             if self.files:
                 files = Document_Edition.find('{}files'.format(NAMESPACE))
                 files.text = self.files
@@ -4352,7 +4786,7 @@ class Product_Document(models.Model):
             if self.document_std_id:
                 document_std_id = Files.find(
                     '{}document_standard_id'.format(NAMESPACE))
-                document_std_id.text = self.document_std_id
+                document_std_id.text = pds_document_standard(self.document_std_id)
 
             
 
@@ -4362,10 +4796,42 @@ class Product_Document(models.Model):
             file_count = int(self.files)
         except (TypeError, ValueError):
             file_count = 0
-        for i in range(file_count - 1):
-            cloned_file = copy.deepcopy(Files)
-            Document_Edition.append(cloned_file)
-        
+
+        # Both of these belong to the Archive shape of the label. An External
+        # document has a File_Area_External and no Document_Edition at all, so
+        # neither Document_Edition nor Files exists on that path.
+        if self.bundle.bundle_type != 'External':
+            for i in range(file_count - 1):
+                cloned_file = copy.deepcopy(Files)
+                Document_Edition.append(cloned_file)
+
+            # PDS4 requires these three and the form does not, so a document saved
+            # without them shipped a label with empty required elements. An empty
+            # value is not a valid value, so each has to carry something: the
+            # edition being described is the first unless the user says otherwise,
+            # a document is one file unless it says otherwise, and language has
+            # exactly one accepted value.
+            # publication_date is required by PDS4 and by the Archive document form,
+            # but not by the annex form, which is what an AMA bundle's documents go
+            # through. A document added that way had an empty required element.
+            _require_text(Document, 'publication_date', self.publication_date,
+                          timezone.localdate().isoformat())
+            _require_text(Document_Edition, 'edition_name', self.edition_name, '1.0')
+            _require_text(Document_Edition, 'files', self.files,
+                          str(max(file_count, 1)))
+            _require_text(Document_Edition, 'language',
+                          pds_document_language(self.language),
+                          PDS_DOCUMENT_LANGUAGE)
+
+        # Everything the template offers that this document has nothing to say
+        # about. Optional in PDS4 and therefore better absent than blank: a document
+        # with no copyright line is not a document with an empty copyright.
+        # Imported here rather than at module scope: label_repair imports from
+        # chocolate, which models already imports, and a top-level import would
+        # close that loop.
+        from build.label_repair import prune_blank_containers
+        prune_blank_containers(root)
+
         return root
     
     def build_internal_reference(self, root, relation):
@@ -4389,10 +4855,10 @@ class Product_Document(models.Model):
             if logical_identifier is not None and logical_identifier.text == self.lid():
                 Identification_Area.remove(logical_identifier)
 
-    # Remove the title if it matches the document_name
-        title = Identification_Area.find('{}title'.format(NAMESPACE))
-        if title is not None and title.text == self.document_name:
-            Identification_Area.remove(title)
+            # Remove the title if it matches the document_name
+            title = Identification_Area.find('{}title'.format(NAMESPACE))
+            if title is not None and title.text == self.document_name:
+                Identification_Area.remove(title)
 
         return label_root
 
@@ -4491,8 +4957,16 @@ class Alias(models.Model):
             Identification_Area.insert(Identification_Area.index(Citation_Information), Alias_List)
 
         else:
-    
-            Identification_Area.insert(Identification_Area.index(Modification_History), Alias_List)
+            # PDS4 fixes the order inside Identification_Area: Alias_List comes after
+            # product_class and before Citation_Information and Modification_History.
+            # Either of those may legitimately be absent now that empty ones are no
+            # longer shipped, so anchor on whichever exists and fall back to appending,
+            # which lands Alias_List straight after product_class.
+            if Modification_History is not None:
+                Identification_Area.insert(
+                    Identification_Area.index(Modification_History), Alias_List)
+            else:
+                Identification_Area.append(Alias_List)
 
         return label_root
 
@@ -4509,6 +4983,11 @@ class Alias(models.Model):
 
         # Add Alias information
         Alias = Alias_List.find('{}Alias'.format(NAMESPACE))
+        if Alias is None:
+            # A freshly made Alias_List has no Alias in it yet, and a label that
+            # was written before this alias existed has nothing here to edit.
+            # fill_label is what puts an Alias in; this only ever updates one.
+            return label_root
         if self.alternate_id:
             alternate_id = Alias.find('{}alternate_id'.format(NAMESPACE))
             alternate_id.text = self.alternate_id
@@ -4523,12 +5002,28 @@ class Alias(models.Model):
 
     def remove_xml(self, label_root):
         Identification_Area = label_root.find('{}Identification_Area'.format(NAMESPACE))
+        if Identification_Area is None:
+            return label_root
 
         Alias_List = Identification_Area.find('{}Alias_List'.format(NAMESPACE))
+        if Alias_List is None:
+            # Collection labels do not ship an Alias_List; fill_label adds one the
+            # first time an alias is written. A collection made after that alias
+            # therefore has no Alias_List at all, and there is nothing to remove.
+            return label_root
 
-        for alias in Alias_List:
-            if alias and alias[0].text and alias[0].text.title() == self.alternate_id.title():
-                alias.getparent().remove(alias)
+        for alias in Alias_List.findall('{}Alias'.format(NAMESPACE)):
+            # By tag, not by position: alternate_id is optional, so it is not
+            # reliably the first child.
+            alternate_id = alias.find('{}alternate_id'.format(NAMESPACE))
+            if alternate_id is None or not alternate_id.text or not self.alternate_id:
+                continue
+            if alternate_id.text.title() == self.alternate_id.title():
+                Alias_List.remove(alias)
+
+        # An Alias_List with nothing left in it is not valid PDS4, so it goes too.
+        if not len(Alias_List):
+            Identification_Area.remove(Alias_List)
 
         return label_root
 
@@ -4597,6 +5092,93 @@ Referenced from        Identification_Area
 
 
 # @python_2_unicode_compatible
+def mirror_citation_into_data_products(bundle):
+    """Make every data product label agree with the bundle label about the citation.
+
+    Data product labels carry a Citation_Information of their own and were in no
+    write path at all: adding, editing or deleting a citation rewrote the bundle and
+    its collections and left every NetCDF product holding whatever it was born with.
+    That produced two different wrong states. A label written before the names were
+    entered kept a blank <given_name/>, which PDS reports as an error on a citation
+    the user had just filled in; and a citation that was then deleted stayed behind
+    in the data product, so the bundle said it had no citation while one of its
+    products still carried one.
+
+    Mirroring rather than replaying the edit: the bundle label is the source of
+    truth, so if it has a citation every data product gets a copy, and if it does not
+    every data product loses its own. One rule covers all three operations, which is
+    why this is called from each of them rather than each one growing its own.
+
+    Returns the number of labels changed.
+    """
+    try:
+        product_bundle = Product_Bundle.objects.get(bundle=bundle)
+        source_path = product_bundle.label()
+    except (Product_Bundle.DoesNotExist, AttributeError):
+        return 0
+    if not source_path or not os.path.exists(source_path):
+        return 0
+
+    try:
+        source_root = etree.parse(source_path).getroot()
+    except (etree.XMLSyntaxError, OSError):
+        return 0
+
+    source = source_root.find(
+        '{0}Identification_Area/{0}Citation_Information'.format(NAMESPACE))
+
+    # Every product label in the bundle, not only the NetCDF ones. A document is a
+    # product too, and its label carries a Citation_Information the schematron asks
+    # for; leaving documents out meant adding one to an Archive bundle produced a
+    # label the panel then reported as missing its citation, on a bundle whose
+    # citation was filled in.
+    products = list(NetCDFFile.objects.filter(bundle=bundle))
+    products.extend(Product_Document.objects.filter(bundle=bundle))
+
+    changed = 0
+    for product in products:
+        try:
+            label_path = product.label()
+        except (AttributeError, ValueError):
+            continue
+        if not label_path or not os.path.exists(label_path):
+            continue
+        try:
+            target_list = open_label_with_tree(label_path)
+        except (etree.XMLSyntaxError, OSError):
+            continue
+        target_root = target_list[1]
+        identification = target_root.find('{}Identification_Area'.format(NAMESPACE))
+        if identification is None:
+            continue
+
+        existing = identification.find('{}Citation_Information'.format(NAMESPACE))
+
+        if source is None:
+            if existing is None:
+                continue
+            identification.remove(existing)
+        else:
+            replacement = copy.deepcopy(source)
+            if existing is not None:
+                identification.replace(existing, replacement)
+            else:
+                # Citation_Information precedes Modification_History in the PDS4
+                # content model, so it cannot simply be appended.
+                modification = identification.find(
+                    '{}Modification_History'.format(NAMESPACE))
+                if modification is not None:
+                    identification.insert(
+                        identification.index(modification), replacement)
+                else:
+                    identification.append(replacement)
+
+        close_label(label_path, target_root, target_list[2])
+        changed += 1
+
+    return changed
+
+
 class Citation_Information(models.Model):
 
     bundle = models.ForeignKey(Bundle, on_delete=models.CASCADE)
@@ -4611,6 +5193,109 @@ class Citation_Information(models.Model):
     description = models.CharField(max_length=MAX_TEXT_FIELD)
     keyword = models.CharField(max_length=MAX_CHAR_FIELD, blank=True)
     
+
+    def _recorded_citation_element(self):
+        """A copy of the Citation_Information the bundle label carries, or None.
+
+        The bundle label is the source of truth for the citation: it is written
+        first everywhere the citation is written, so it always holds the newest
+        values by the time the other labels are reached.
+        """
+        try:
+            product_bundle = Product_Bundle.objects.get(bundle=self.bundle)
+            source_path = product_bundle.label()
+        except (Product_Bundle.DoesNotExist, AttributeError):
+            return None
+        if not source_path or not os.path.exists(source_path):
+            return None
+        try:
+            source_root = etree.parse(source_path).getroot()
+        except (etree.XMLSyntaxError, OSError):
+            return None
+        source = source_root.find(
+            '{0}Identification_Area/{0}Citation_Information'.format(NAMESPACE))
+        return copy.deepcopy(source) if source is not None else None
+
+    def _recorded_people(self):
+        """The author and editor values this bundle has already recorded.
+
+        Author names are held only in the XML; the model stores how many there are
+        and nothing else. A label created after the citation was filled in therefore
+        has nowhere to learn the names from, and used to be written with the blank
+        skeleton fill_label produces. PDS then reported the blank as an error on a
+        citation the user had demonstrably filled in, which read to them as the
+        author not having saved.
+
+        The bundle label is the one always written first and always the target of
+        the edit form, so it is where the values are read back from. A bundle whose
+        label does not exist yet, or which has no citation in it yet, returns
+        nothing and the skeleton stays blank, which is correct at that point.
+        """
+        empty = {'author_people': [], 'author_orgs': [],
+                 'editor_people': [], 'editor_orgs': []}
+        try:
+            product_bundle = Product_Bundle.objects.get(bundle=self.bundle)
+            path = product_bundle.label()
+        except (Product_Bundle.DoesNotExist, AttributeError):
+            return empty
+        if not path or not os.path.exists(path):
+            return empty
+
+        try:
+            root = etree.parse(path).getroot()
+        except (etree.XMLSyntaxError, OSError):
+            # An unreadable label is a different problem and not one this can fix.
+            return empty
+
+        citation = root.find('{0}Identification_Area/{0}Citation_Information'.format(NAMESPACE))
+        if citation is None:
+            return empty
+
+        def text(element, tag):
+            found = element.find('{}{}'.format(NAMESPACE, tag))
+            return found.text if found is not None else None
+
+        def people(container):
+            values = []
+            for person in container.findall('{}Person'.format(NAMESPACE)):
+                affiliation = person.find('{}Affiliation'.format(NAMESPACE))
+                values.append({
+                    'given_name': text(person, 'given_name'),
+                    'family_name': text(person, 'family_name'),
+                    'person_orcid': text(person, 'person_orcid'),
+                    'organization_name': (text(affiliation, 'organization_name')
+                                          if affiliation is not None else None),
+                })
+            return values
+
+        def organizations(container):
+            values = []
+            for organization in container.findall('{}Organization'.format(NAMESPACE)):
+                parent = organization.find('{}Parent_Organization'.format(NAMESPACE))
+                values.append({
+                    'organization_name': text(organization, 'organization_name'),
+                    'organization_rorid': text(organization, 'organization_rorid'),
+                    'sequence_number': text(organization, 'sequence_number'),
+                    'parent_organization_name': (
+                        text(parent, 'parent_organization_name')
+                        if parent is not None else None),
+                })
+            return values
+
+        recorded = dict(empty)
+        list_author = citation.find('{}List_Author'.format(NAMESPACE))
+        if list_author is not None:
+            recorded['author_people'] = people(list_author)
+            recorded['author_orgs'] = organizations(list_author)
+
+        list_editor = citation.find('{}List_Editor'.format(NAMESPACE))
+        if list_editor is not None:
+            # The first two Persons are the fixed ATM editors, which fill_label
+            # writes for itself; only the user-added ones after them are carried.
+            recorded['editor_people'] = people(list_editor)[2:]
+            recorded['editor_orgs'] = organizations(list_editor)
+
+        return recorded
 
     # Builders
     def fill_label(self, label_root):
@@ -4645,27 +5330,38 @@ class Citation_Information(models.Model):
         description = etree.SubElement(Citation_Information, 'description')
         description.text = self.description
 
+        # What this bundle already knows about its authors, so a label created after
+        # the citation was filled in is born with the names rather than with blanks.
+        recorded = self._recorded_people()
+
+        def recorded_value(kind, index, field):
+            values = recorded.get(kind) or []
+            return values[index].get(field) if index < len(values) else None
+
         # Add Citation_Information information
         if self.number_of_authors_people > 0 or self.number_of_authors_organization > 0:
             list_author = etree.SubElement(Citation_Information, 'List_Author')
 
-            for _ in range(self.number_of_authors_people):
+            for index in range(self.number_of_authors_people):
                 author = etree.SubElement(list_author, 'Person')
-                given_name = etree.SubElement(author, 'given_name')
-                family_name = etree.SubElement(author, 'family_name')
-                person_orcid = etree.SubElement(author, 'person_orcid')
+                for field in ('given_name', 'family_name', 'person_orcid'):
+                    element = etree.SubElement(author, field)
+                    element.text = recorded_value('author_people', index, field)
                 affiliation = etree.SubElement(author, 'Affiliation')
-
                 organization_name = etree.SubElement(affiliation, 'organization_name')
+                organization_name.text = recorded_value(
+                    'author_people', index, 'organization_name')
 
-            for _ in range(self.number_of_authors_organization):
+            for index in range(self.number_of_authors_organization):
                 organization = etree.SubElement(list_author, 'Organization')
-                organization_name = etree.SubElement(organization, 'organization_name')
-                organization_rorid = etree.SubElement(organization, 'organization_rorid')
-                sequence_number = etree.SubElement(organization, 'sequence_number')
+                for field in ('organization_name', 'organization_rorid', 'sequence_number'):
+                    element = etree.SubElement(organization, field)
+                    element.text = recorded_value('author_orgs', index, field)
                 parent_organization = etree.SubElement(organization, 'Parent_Organization')
-
-                parent_organization_name = etree.SubElement(parent_organization, 'parent_organization_name')
+                parent_organization_name = etree.SubElement(
+                    parent_organization, 'parent_organization_name')
+                parent_organization_name.text = recorded_value(
+                    'author_orgs', index, 'parent_organization_name')
 
 
         # Default editors are Lynn Neakrase and Lyle Huber -- Could be changed later on
@@ -4688,31 +5384,121 @@ class Citation_Information(models.Model):
         # User-added editors follow the two fixed ATM editors. Like authors,
         # empty skeletons are created here and filled in on the edit page
         # (fill_label_values).
-        for _ in range(self.number_of_editors_people):
+        for index in range(self.number_of_editors_people):
             editor = etree.SubElement(list_editor, 'Person')
-            etree.SubElement(editor, 'given_name')
-            etree.SubElement(editor, 'family_name')
-            etree.SubElement(editor, 'person_orcid')
+            for field in ('given_name', 'family_name', 'person_orcid'):
+                element = etree.SubElement(editor, field)
+                element.text = recorded_value('editor_people', index, field)
             affiliation = etree.SubElement(editor, 'Affiliation')
-            etree.SubElement(affiliation, 'organization_name')
+            organization_name = etree.SubElement(affiliation, 'organization_name')
+            organization_name.text = recorded_value(
+                'editor_people', index, 'organization_name')
 
-        for _ in range(self.number_of_editors_organization):
+        for index in range(self.number_of_editors_organization):
             organization = etree.SubElement(list_editor, 'Organization')
-            etree.SubElement(organization, 'organization_name')
-            etree.SubElement(organization, 'organization_rorid')
-            etree.SubElement(organization, 'sequence_number')
+            for field in ('organization_name', 'organization_rorid', 'sequence_number'):
+                element = etree.SubElement(organization, field)
+                element.text = recorded_value('editor_orgs', index, field)
             parent_organization = etree.SubElement(organization, 'Parent_Organization')
-            etree.SubElement(parent_organization, 'parent_organization_name')
+            parent_organization_name = etree.SubElement(
+                parent_organization, 'parent_organization_name')
+            parent_organization_name.text = recorded_value(
+                'editor_orgs', index, 'parent_organization_name')
 
         return label_root
+
+    def sync_into_label(self, label_path):
+        """Give the label at this path the citation the bundle label carries.
+
+        Copies the whole Citation_Information element rather than editing field by
+        field, which keeps labels in step even when they disagree about how many
+        authors there are: a label written when the citation had one author cannot
+        be filled correctly from a form that now has three, and a per-field copy
+        would leave the extra ones blank, which is the error being fixed.
+
+        Returns True if it wrote anything.
+        """
+        try:
+            product_bundle = Product_Bundle.objects.get(bundle=self.bundle)
+            source_path = product_bundle.label()
+        except (Product_Bundle.DoesNotExist, AttributeError):
+            return False
+        if not source_path or not os.path.exists(source_path):
+            return False
+        if os.path.abspath(source_path) == os.path.abspath(label_path):
+            return False            # the source of truth needs no copy of itself
+        if not os.path.exists(label_path):
+            return False
+
+        try:
+            source_root = etree.parse(source_path).getroot()
+            target_list = open_label_with_tree(label_path)
+        except (etree.XMLSyntaxError, OSError):
+            return False
+
+        source = source_root.find(
+            '{0}Identification_Area/{0}Citation_Information'.format(NAMESPACE))
+        if source is None:
+            return False
+
+        target_root = target_list[1]
+        identification = target_root.find('{}Identification_Area'.format(NAMESPACE))
+        if identification is None:
+            return False
+
+        replacement = copy.deepcopy(source)
+        existing = identification.find('{}Citation_Information'.format(NAMESPACE))
+        if existing is not None:
+            identification.replace(existing, replacement)
+        else:
+            # Citation_Information precedes Modification_History in the PDS4 content
+            # model, so it cannot simply be appended.
+            modification = identification.find(
+                '{}Modification_History'.format(NAMESPACE))
+            if modification is not None:
+                identification.insert(identification.index(modification), replacement)
+            else:
+                identification.append(replacement)
+
+        close_label(label_path, target_root, target_list[2])
+        return True
+
 
     def fill_label_values(self, label_root, cleaned_form):
         # Find Identification_Area
         Identification_Area = label_root.find(
             '{}Identification_Area'.format(NAMESPACE))
+        if Identification_Area is None:
+            return label_root
 
         # Find Citation_Information.  If no Citation_Information is found, make one.
         Citation_Information = Identification_Area.find('{}Citation_Information'.format(NAMESPACE))
+
+        if Citation_Information is None:
+            # The comment above has always said it would make one; it never did, and
+            # every label this ran against happened to have one already, so nothing
+            # noticed. That stopped being true when the edit was widened to reach the
+            # collections a user adds: a collection created while the bundle had no
+            # citation has no Citation_Information at all, and this walked straight
+            # into .find() on None and 500ed the edit.
+            #
+            # Copied whole from the bundle label rather than filled field by field.
+            # The bundle label is the first entry in the list this loop walks, so by
+            # the time a collection is reached it already carries the values being
+            # saved; and the per-field path below assumes a shape a label without a
+            # citation does not have, which is the bug being fixed rather than a
+            # foundation to build on.
+            replacement = self._recorded_citation_element()
+            if replacement is None:
+                return label_root
+            modification = Identification_Area.find(
+                '{}Modification_History'.format(NAMESPACE))
+            if modification is not None:
+                Identification_Area.insert(
+                    Identification_Area.index(modification), replacement)
+            else:
+                Identification_Area.append(replacement)
+            return label_root
 
         if self.number_of_authors_people > 0 or self.number_of_authors_organization > 0:
             list_author = Citation_Information.find('{}List_Author'.format(NAMESPACE))
@@ -4824,6 +5610,8 @@ class Citation_Information(models.Model):
     
     def remove_xml(self, label_root):
         Identification_Area = label_root.find('{}Identification_Area'.format(NAMESPACE))
+        if Identification_Area is None:
+            return label_root
 
         Citation_Information = Identification_Area.find('{}Citation_Information'.format(NAMESPACE))
         
@@ -4862,49 +5650,65 @@ class Modification_History(models.Model):
         Identification_Area = label_root.find(
             '{}Identification_Area'.format(NAMESPACE))
 
-        # Find Alias_List.  If no Alias_List is found, make one.
+        # The templates no longer ship an empty Modification_History: the class requires
+        # at least one Modification_Detail, so an empty one is a validation error on
+        # every bundle that has not had an entry added yet. It is created here, the
+        # first time there is something to put in it.
         Modification_History = Identification_Area.find(
             '{}Modification_History'.format(NAMESPACE))
-
-        # Double check but I'm pretty sure Modification_History is only added once.
-        # if Modification_History is None:
-        # Modification_History = etree.SubElement(
-        #     Identification_Area, 'Modification_History')
+        if Modification_History is None:
+            Modification_History = etree.SubElement(
+                Identification_Area, '{}Modification_History'.format(NAMESPACE))
 
         # Add Modification_Detail information
         Modification_Detail = etree.SubElement(
             Modification_History, '{}Modification_Detail'.format(NAMESPACE))
-        
-        # Add Modification_History information
-        modification_date = etree.SubElement(Modification_Detail, 'modification_date')
+
+        # Built in the PDS namespace like everything else. These three came out
+        # correct anyway, because lxml resolves an unprefixed child against the
+        # default namespace on serialization, but an in-memory tree where some
+        # elements are namespaced and some are not is a trap for the next person
+        # who tries to find() one of them before it is written.
+        modification_date = etree.SubElement(
+            Modification_Detail, '{}modification_date'.format(NAMESPACE))
         modification_date.text = self.modification_date
         if self.version_id:
-            version_id = etree.SubElement(Modification_Detail, 'version_id')
+            version_id = etree.SubElement(
+                Modification_Detail, '{}version_id'.format(NAMESPACE))
             version_id.text = self.version_id
-        description = etree.SubElement(Modification_Detail, 'description')
+        description = etree.SubElement(
+            Modification_Detail, '{}description'.format(NAMESPACE))
         description.text = self.description
-        
+
         return label_root
 
     def remove_xml(self, label_root):
         Identification_Area = label_root.find('{}Identification_Area'.format(NAMESPACE))
+        if Identification_Area is None:
+            return label_root
 
-        Modification_History = Identification_Area.find('{}Modification_History'.format(NAMESPACE))
+        Modification_History = Identification_Area.find(
+            '{}Modification_History'.format(NAMESPACE))
+        if Modification_History is None:
+            # Collection labels do not ship a Modification_History; fill_label adds
+            # one the first time an entry is written. A collection made after that
+            # entry therefore has none, and there is nothing to remove.
+            return label_root
 
-        # Modification_History.getparent().remove(Modification_History)
+        for modification_detail in Modification_History.findall(
+                '{}Modification_Detail'.format(NAMESPACE)):
+            # By tag, not by position: version_id is optional, so description is
+            # not reliably the third child and indexing it raises IndexError on
+            # every entry saved without a version.
+            description = modification_detail.find('{}description'.format(NAMESPACE))
+            if description is None or not description.text or not self.description:
+                continue
+            if description.text.title() == self.description.title():
+                Modification_History.remove(modification_detail)
 
-        # for tag in Modification_History.iter():
-        #     modification_detail = Modification_History.find('{}Modification_Detail'.format(NAMESPACE))
-        #     if tag == modification_detail:
-        #         print(tag[2].text.title())
-        #         print(self.description.title())
-        #         print(tag)
-        #         if(tag[2].text.title() == self.description.title()):
-        #             tag.getparent().remove(tag)
-
-        for modification_detail in Modification_History:
-            if modification_detail[2].text.title() == self.description.title():
-                modification_detail.getparent().remove(modification_detail)
+        # A Modification_History with nothing left in it is not valid PDS4.
+        if not len(Modification_History):
+            Identification_Area.remove(Modification_History)
 
         return label_root
 
@@ -5397,6 +6201,45 @@ class NetCDFFile(models.Model):
             return self.collection.directory()
         return self.bundle.directory()
 
+    def label(self):
+        """The PDS4 label for this file.
+
+        Named the way _process_single_netcdf names it when it writes the label: a
+        trailing .nc is dropped if present and .xml appended, so an extensionless
+        upload does not get an extensionless label.
+
+        This exists so a NetCDF product can join the label-writing paths that
+        bundle-level metadata already walks. Without it these labels were reachable
+        only by regenerating them from the NetCDF file, which is why editing a
+        citation updated the bundle and its collections and left every data product
+        holding whatever it was born with.
+        """
+        base = os.path.basename(self.file.name)
+        stem = base[:-3] if base.endswith('.nc') else base
+        return os.path.join(self.directory(), stem + '.xml')
+
+    def stored_path(self):
+        """Where this file actually is on disk, or None if it is nowhere.
+
+        file.path and file.url are stale for every processed upload: processing moves the file
+        out of MEDIA_ROOT into its collection's directory and leaves the field naming the upload
+        area. Checked in the order the delete views check: the collection directory, the bundle
+        root for rows that predate collections, then the upload area for files whose processing
+        never got as far as the move.
+        """
+        name = os.path.basename(self.file.name)
+        candidates = [os.path.join(self.directory(), name)]
+        if self.bundle_id is not None:
+            candidates.append(os.path.join(self.bundle.directory(), name))
+        try:
+            candidates.append(self.file.path)
+        except ValueError:
+            pass
+        for candidate in candidates:
+            if os.path.isfile(candidate):
+                return candidate
+        return None
+
 
 # ------------------------------------------------------------------------------------------------ #
 #                              AMA Discipline Dictionary user-supplied classes
@@ -5663,3 +6506,182 @@ class FileDescription(AMACollectionScopedMixin):
         if self.netcdf_file_id is None:
             return 'File Description default for {}'.format(self.collection)
         return 'File Description for {}'.format(self.netcdf_file)
+
+# ------------------------------------------------------------------------------------------------ #
+#                                    PDS validation runs
+# ------------------------------------------------------------------------------------------------ #
+
+
+class ValidationRun(models.Model):
+    """One execution of the PDS validate tool against one bundle.
+
+    Kept as a row rather than a cached blob so that a run has a lifecycle a page can
+    poll, and so staff can see what a data provider saw when they submitted.
+
+    Two tiers, because the cost differs by orders of magnitude. STRUCTURE skips
+    content validation and takes a few seconds, which is cheap enough to run whenever
+    a bundle changes. FULL reads inside every data file and is the one that has to
+    happen before submission.
+    """
+
+    STATUS_QUEUED = 'q'
+    STATUS_RUNNING = 'r'
+    STATUS_DONE = 'd'
+    STATUS_FAILED = 'f'
+    STATUS_CHOICES = (
+        (STATUS_QUEUED, 'Queued'),
+        (STATUS_RUNNING, 'Running'),
+        (STATUS_DONE, 'Complete'),
+        (STATUS_FAILED, 'Failed'),
+    )
+
+    TIER_STRUCTURE = 'structure'
+    TIER_FULL = 'full'
+    TIER_CHOICES = (
+        (TIER_STRUCTURE, 'Structure only'),
+        (TIER_FULL, 'Full, including data content'),
+    )
+
+    # Phases validate moves through, in order. It emits nothing at all while it
+    # compiles the schemas, which takes about five seconds, so that period has to be
+    # shown as indeterminate rather than as a bar sitting at zero.
+    PHASE_LOADING = 'loading'
+    PHASE_LABELS = 'labels'
+    PHASE_CONTENT = 'content'
+    PHASE_REFERENCES = 'references'
+    PHASE_DONE = 'done'
+
+    # The passes each tier actually makes over the bundle's products. A structure run
+    # skips content validation, so it makes two passes; a full run makes three. This
+    # is what percent_complete divides by, rather than a set of invented weights.
+    #
+    # Note that validate emits a [content.validation] counter even when content
+    # validation is skipped, so the pass list - not the counter's presence - is what
+    # decides whether a structure run can be in the content phase.
+    PASSES = {
+        TIER_STRUCTURE: [PHASE_LABELS, PHASE_REFERENCES],
+        TIER_FULL: [PHASE_LABELS, PHASE_CONTENT, PHASE_REFERENCES],
+    }
+
+    bundle = models.ForeignKey(Bundle, on_delete=models.CASCADE, related_name='validation_runs')
+    tier = models.CharField(max_length=16, choices=TIER_CHOICES, default=TIER_STRUCTURE)
+    status = models.CharField(max_length=1, choices=STATUS_CHOICES, default=STATUS_QUEUED)
+
+    requested_at = models.DateTimeField(auto_now_add=True)
+    started_at = models.DateTimeField(null=True, blank=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+
+    # Snapshot of the bundle as it was when this run started. Kept for runs recorded
+    # before content_fingerprint existed, and as a fallback when the bundle directory
+    # cannot be read; see is_stale().
+    bundle_updated_at = models.DateTimeField(null=True, blank=True)
+
+    # What the bundle's files looked like when this run started.
+    #
+    # Staleness used to be Bundle.updated_at moving, which sounds right and never
+    # worked: updated_at is auto_now, so it only changes when Bundle.save() is
+    # called, and not one of the views that edits a bundle's metadata saves the
+    # bundle. Adding a modification history wrote four labels and left updated_at
+    # exactly where it was, so no result was ever stale and the automatic check
+    # never had a reason to fire.
+    #
+    # The validator reads files, so this is what a fingerprint of those files says.
+    # It cannot be forgotten by a view that writes a label without telling anyone.
+    content_fingerprint = models.CharField(max_length=64, blank=True, default='')
+
+    # Progress, driven by the counters validate streams as it works.
+    phase = models.CharField(max_length=16, default=PHASE_LOADING)
+    products_total = models.PositiveIntegerField(default=0)
+    products_done = models.PositiveIntegerField(default=0)
+
+    error_count = models.PositiveIntegerField(default=0)
+    warning_count = models.PositiveIntegerField(default=0)
+
+    # Where the raw JSON report landed, and the findings parsed out of it. The raw
+    # file is kept because staff will want to see exactly what the tool said, and
+    # because a parser change should be re-runnable against old reports.
+    report_path = models.CharField(max_length=MAX_CHAR_FIELD, blank=True, default='')
+    findings = models.JSONField(null=True, blank=True)
+
+    # Why a run failed to produce a report at all: validate missing, Java missing,
+    # a crash, a timeout. Distinct from a bundle that validated and had errors.
+    failure_reason = models.TextField(blank=True, default='')
+
+    class Meta:
+        ordering = ['-requested_at']
+        indexes = [
+            models.Index(fields=['bundle', '-requested_at']),
+        ]
+
+    def __str__(self):
+        return '{} validation of {} ({})'.format(
+            self.get_tier_display(), self.bundle.name, self.get_status_display())
+
+    def is_active(self):
+        """Queued or running, so a second request should join it rather than start another."""
+        return self.status in (self.STATUS_QUEUED, self.STATUS_RUNNING)
+
+    def is_stale(self):
+        """True when the bundle changed after this run started.
+
+        The findings still describe a real bundle, just not the current one. Saying so
+        is the difference between a user trusting the panel and learning to ignore it:
+        the alternative is showing them errors they already fixed, or a clean result
+        that no longer applies.
+
+        Measured against the files, because that is what was validated. The timestamp
+        comparison this used to do could never be true: Bundle.updated_at is auto_now
+        and no view that edits a bundle's metadata saves the bundle.
+
+        Runs recorded before the fingerprint existed fall back to the timestamp, which
+        is wrong in the same old way but is all those rows have; they age out.
+        """
+        if self.content_fingerprint:
+            current = self.bundle.content_fingerprint()
+            if not current:
+                # The directory is gone. That is a change, but not one re-running can
+                # describe, and saying "out of date" about a bundle with no files is
+                # less useful than leaving the last result standing.
+                return False
+            return current != self.content_fingerprint
+
+        if self.bundle_updated_at is None or self.bundle.updated_at is None:
+            return False
+        return self.bundle.updated_at > self.bundle_updated_at
+
+    def duration_seconds(self):
+        if self.started_at is None or self.finished_at is None:
+            return None
+        return (self.finished_at - self.started_at).total_seconds()
+
+    def percent_complete(self):
+        """0-100, or None while validate is still compiling schemas.
+
+        None is not zero. Returning 0 during the loading phase would show a bar that
+        sits still for five seconds and then jumps, which reads as a hang.
+
+        Each pass over the products is an equal share of the bar, so the figure is
+        (passes finished + progress through this one) / passes this tier makes.
+        """
+        if self.status == self.STATUS_DONE:
+            return 100
+        if self.phase == self.PHASE_LOADING or not self.products_total:
+            return None
+
+        passes = self.PASSES.get(self.tier, [self.PHASE_LABELS])
+        if self.phase not in passes:
+            return None
+
+        finished = passes.index(self.phase)
+        within = min(1.0, self.products_done / self.products_total)
+        return min(100, int(100 * (finished + within) / len(passes)))
+
+    def phase_label(self):
+        """What this run is doing, in words, for the progress indicator."""
+        return {
+            self.PHASE_LOADING: 'Loading PDS schemas',
+            self.PHASE_LABELS: 'Checking labels',
+            self.PHASE_CONTENT: 'Checking data files',
+            self.PHASE_REFERENCES: 'Checking references',
+            self.PHASE_DONE: 'Finished',
+        }.get(self.phase, self.phase)

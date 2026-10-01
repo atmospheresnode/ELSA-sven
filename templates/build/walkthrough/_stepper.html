@@ -1,0 +1,50 @@
+{% comment %}
+Where the user is in the guided walkthrough, and the way out of it.
+
+Rendered at the top of every walkthrough page from build.walkthrough.progress(), which
+holds the order of the steps for each bundle type. The exit is always there: a user who
+only wanted to change one thing should never have to finish the walkthrough to get back
+to their bundle. Plain links and its own class names rather than .btn, because several
+walkthrough pages restyle .btn for their own buttons.
+{% endcomment %}
+{% if walkthrough %}
+<div class="row justify-content-center">
+   <div class="col-12 col-lg-9 col-xl-10">
+      <nav class="elsa-stepper" aria-label="Walkthrough progress" data-walkthrough-step="{{ walkthrough.number }}">
+         <div class="elsa-stepper-head">
+            <span class="elsa-stepper-title">
+               <i class="bi bi-signpost-split me-1" aria-hidden="true"></i>
+               Guided walkthrough: step {{ walkthrough.number }} of {{ walkthrough.total }}
+            </span>
+            <a class="elsa-stepper-exit" href="{{ walkthrough.exit_url }}">
+               <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Exit to bundle page
+            </a>
+         </div>
+         <ol class="elsa-stepper-steps">
+            {% for step in walkthrough.steps %}
+            <li class="elsa-step elsa-step-{{ step.state }}"{% if step.state == 'current' %} aria-current="step"{% endif %}>
+               <span class="elsa-step-num" aria-hidden="true">{% if step.state == 'done' %}<i class="bi bi-check-lg"></i>{% else %}{{ step.number }}{% endif %}</span>
+               {% if step.url %}<a href="{{ step.url }}">{{ step.label }}</a>{% else %}<span>{{ step.label }}</span>{% endif %}
+            </li>
+            {% endfor %}
+         </ol>
+      </nav>
+   </div>
+</div>
+<style>
+   .elsa-stepper { background: #fff; border: 1px solid #dee2e6; border-radius: 12px; padding: 10px 16px; margin-bottom: 16px; }
+   .elsa-stepper-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 16px; margin-bottom: 8px; }
+   .elsa-stepper-title { font-size: 0.85rem; font-weight: 600; color: #2F4F4F; }
+   .elsa-stepper-exit { font-size: 0.85rem; color: #006d6d; text-decoration: none; font-weight: 600; }
+   .elsa-stepper-exit:hover { text-decoration: underline; color: #004f4f; }
+   .elsa-stepper-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 18px; }
+   .elsa-step { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; color: #6c757d; }
+   .elsa-step a { color: #006d6d; text-decoration: none; }
+   .elsa-step a:hover { text-decoration: underline; }
+   .elsa-step-num { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px;
+                    border-radius: 50%; border: 1px solid #adb5bd; font-size: 0.75rem; flex-shrink: 0; }
+   .elsa-step-done .elsa-step-num { background: #008B8B; border-color: #008B8B; color: #fff; }
+   .elsa-step-current { color: #212529; font-weight: 600; }
+   .elsa-step-current .elsa-step-num { border: 2px solid #008B8B; color: #006d6d; }
+</style>
+{% endif %}
