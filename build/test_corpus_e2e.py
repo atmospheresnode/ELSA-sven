@@ -29,13 +29,9 @@ VERDICTS = {}
 
 # Defects ELSA is known to produce that are product gaps rather than bugs in label
 # generation. Named so the gate stays strict about everything else instead of being
-# switched off, and so the list stays short and visible.
-#
-#   document-file-missing -- ELSA records a document and its file name but offers no
-#   way to upload the file itself. Neither document form carries a FileField and no
-#   template offers a file input, so every bundle containing a document names a file
-#   that is not there. Closing it is a feature, not a fix.
-KNOWN_GAPS = {'document-file-missing'}
+# switched off, and so the list stays short and visible. Empty now: the last one,
+# document-file-missing, closed when documents gained a file upload.
+KNOWN_GAPS = set()
 
 
 def build_corpus(archive, media, reports):

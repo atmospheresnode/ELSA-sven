@@ -117,6 +117,7 @@ urlpatterns = [
     re_path(r'^(?P<pk_bundle>\d+)/document/product_document/(?P<pk_product_document>\d+)/$', views.product_document, name='product_document'),
     re_path(r'^(?P<pk_bundle>\d+)/document/annex_product_document/(?P<pk_product_document>\d+)/$', views.annex_product_document, name='annex_product_document'),
 
+    re_path(r'^(?P<pk_bundle>\d+)/document/product_document/(?P<pk_product_document>\d+)/file/$', views.document_file, name='document_file'),
     #delete product document
     re_path(r'^(?P<pk_bundle>\d+)/document/product_document/(?P<pk_product_document>\d+)/delete/$', views.delete_product_document, name='delete_product_document'),    
 
@@ -133,6 +134,8 @@ urlpatterns = [
 
     # AMA discipline metadata (the parts of the AMA area the NetCDF harvest cannot supply)
     re_path(r'^(?P<pk_bundle>\d+)/ama/collection/(?P<pk_collection>\d+)/$', views.ama_collection_defaults, name='ama_collection_defaults'),
+    re_path(r'^(?P<pk_bundle>\d+)/netcdf/(?P<pk_netcdf>\d+)/file/$', views.netcdf_file, name='netcdf_file'),
+    re_path(r'^(?P<pk_bundle>\d+)/netcdf/(?P<pk_netcdf>\d+)/inspect/$', views.netcdf_inspect, name='netcdf_inspect'),
     re_path(r'^(?P<pk_bundle>\d+)/netcdf/(?P<pk_netcdf>\d+)/ama/$', views.netcdf_ama, name='netcdf_ama'),
     re_path(r'^(?P<pk_bundle>\d+)/netcdf/(?P<pk_netcdf>\d+)/ama/reset/$', views.netcdf_ama_reset, name='netcdf_ama_reset'),
     re_path(r'^(?P<pk_bundle>\d+)/netcdf/(?P<pk_netcdf>\d+)/ama/copy/$', views.netcdf_ama_copy, name='netcdf_ama_copy'),

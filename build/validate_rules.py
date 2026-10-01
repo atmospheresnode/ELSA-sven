@@ -20,6 +20,9 @@ CARD_CONTEXT = ('Context Products', 'context_modal', None)
 CARD_DOCUMENT = ('Documents', 'document_modal', None)
 CARD_DATA = ('Data Products', 'data_product_modal', None)
 CARD_NETCDF = ('NetCDF Files', None, 'collections_card')
+# An existing document is fixed from its own edit page, reached from the document list
+# in the Collections card; the Documents window only adds new ones.
+CARD_DOCUMENT_FILES = ('Documents', None, 'collections_card')
 CARD_AMA = ('Model Metadata', None, 'collections_card')
 CARD_NONE = (None, None, None)
 
@@ -283,19 +286,31 @@ RULES = [
          # Without showing it the row said "a file name" and nothing more.
          subject='path'),
 
-    # A document's file is missing because ELSA has no way to attach one: neither
-    # document form carries a FileField and no template offers a file input, so a
-    # document can be declared but its file never uploaded. Telling the submitter to
-    # "re-upload it" names an action the product does not offer, and with the
-    # submission gate on it would block every bundle containing a document. It is
-    # ELSA's gap, so it is counted against ELSA and reported to the node rather than
-    # to the person who cannot act on it.
-    Rule('document-file-missing', ELSA,
-         'A document has no file, because ELSA cannot attach one',
-         'ELSA records a document and its file name but offers no way to upload the '
-         'file itself, so the label names a file that is not in the bundle.',
+    # A document whose label names a file that is not in the bundle. Until uploads
+    # existed this was ELSA's gap, since there was no way to attach a file; now the
+    # document's edit page takes one, so it is the user's to fix, and documents saved
+    # before uploads existed are exactly the ones that show it.
+    Rule('document-file-missing', USER,
+         'Attach the file for this document',
+         'The document is described, but its file is not in the bundle yet. In the '
+         'Collections card, open the document with Edit and upload its file: a PDF/A-1 '
+         '(.pdf) or a plain text (.txt) file.',
+         card=CARD_DOCUMENT_FILES,
          types=('missing_file',),
          when=in_document_collection,
+         subject='path'),
+
+    # validate runs veraPDF over a document declared PDF/A (Archive documents) and
+    # only accepts PDF/A-1. Upload already refuses a PDF that does not claim PDF/A-1,
+    # so this is a file that claims it without conforming, or one from before uploads.
+    Rule('document-not-pdfa', USER,
+         "A document's PDF is not PDF/A-1",
+         'PDS archives documents as PDF/A-1, and the validation tool found this PDF does '
+         'not conform. Export it again as PDF/A-1b (Word on Windows: File > Export > '
+         'Create PDF/XPS, tick "ISO 19005-1 compliant"; LibreOffice: Export as PDF, '
+         'Archive (PDF/A), PDF/A-1b), then open the document with Edit and upload it.',
+         card=CARD_DOCUMENT_FILES,
+         types=('not_pdfa_compliant',),
          subject='path'),
 
     Rule('missing-file', USER,

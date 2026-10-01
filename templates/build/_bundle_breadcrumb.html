@@ -1,0 +1,28 @@
+{% comment %}
+The way back to the bundle from any build page that is about one.
+
+Included by base-derk.html, so every such page has it whether or not its own template
+remembered a back button: a page that is reached by a redirect nobody planned for (a
+failed save, a delete that lands somewhere else) still leaves the user one click from
+their bundle. Not on the bundle page itself, and not on walkthrough pages, whose
+stepper has its own exit.
+{% endcomment %}
+{% if bundle.pk and bundle.user == request.user and not walkthrough and request.resolver_match.app_name == 'build' and request.resolver_match.url_name != 'bundle' %}
+<div class="row justify-content-center">
+   <div class="col-12 col-lg-9 col-xl-10">
+      <nav aria-label="breadcrumb" class="elsa-bundle-crumb">
+         <ol class="breadcrumb mb-3">
+            <li class="breadcrumb-item"><a href="{{ request.user.userprofile.get_absolute_url }}">Bundle Hub</a></li>
+            <li class="breadcrumb-item">
+               <a href="{% url 'build:bundle' bundle.pk %}" data-crumb="bundle"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>{{ bundle.name }}</a>
+            </li>
+         </ol>
+      </nav>
+   </div>
+</div>
+<style>
+   .elsa-bundle-crumb .breadcrumb { font-size: 0.9rem; }
+   .elsa-bundle-crumb a { color: #006d6d; text-decoration: none; font-weight: 600; }
+   .elsa-bundle-crumb a:hover { text-decoration: underline; }
+</style>
+{% endif %}

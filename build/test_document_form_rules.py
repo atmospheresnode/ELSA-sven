@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
-"""Document file names and titles are checked while the user is still on the form.
+"""Document titles and author names are checked while the user is still on the form.
 
 Both rules are PDS4's, both were reaching real bundles, and both were only caught
 by the validator: by then the document had been written, labelled, listed in an
 inventory, and shown back to its owner as an error to go and undo.
 
-A real bundle had two documents named "11" with file names "111" and "aa".
+A real bundle had two documents named "11" with file names "111" and "aa". File
+names are no longer typed: they come from the uploaded file, and test_document_upload
+covers them.
 """
 
 from __future__ import unicode_literals
@@ -17,66 +19,9 @@ from django.contrib.auth.models import User
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
+from build.corpus.builder import document_upload
 from build.forms import AnnexProductDocumentForm, ProductDocumentForm
 from build.models import Bundle, Investigation, Product_Document
-
-
-class FileNameRuleTests(TestCase):
-    """The pattern is PDS4's own, not an approximation of it."""
-
-    def field(self, value, document_std_id=''):
-        """Errors for a file name, with no declared format by default.
-
-        No format on purpose: with one, ELSA completes the extension itself rather
-        than refusing, so these cases have to be posed as a name ELSA cannot finish.
-        """
-        form = AnnexProductDocumentForm({
-            'document_name': 'a doc', 'document_id': 'doc1',
-            'file_name': value, 'comment': '',
-            'document_std_id': document_std_id})
-        form.is_valid()
-        return form.errors.get('file_name')
-
-    def test_a_normal_name_is_accepted(self):
-        for value in ('User_Guide.pdf', 'readme.txt', 'a1.b2', 'v1.2.3.tar'):
-            self.assertIsNone(self.field(value), value)
-
-    def test_a_name_with_no_extension_is_refused_when_nothing_implies_one(self):
-        """With a declared format ELSA supplies it; without one it cannot guess."""
-        for value in ('111', 'aa', 'no_extension'):
-            self.assertIsNotNone(self.field(value), value)
-
-    def test_the_same_name_is_accepted_once_a_format_says_what_it_is(self):
-        for value in ('111', 'aa', 'no_extension'):
-            self.assertIsNone(self.field(value, 'PDF/A'), value)
-
-    def test_the_message_names_the_value_and_shows_a_good_one(self):
-        errors = self.field('111')
-        self.assertIsNotNone(errors)
-        self.assertIn('111', errors[0])
-        self.assertIn('.pdf', errors[0])
-
-    def test_a_space_is_refused(self):
-        self.assertIsNotNone(self.field('User Guide.pdf'))
-
-    def test_a_name_that_does_not_start_alphanumeric_is_refused(self):
-        for value in ('.hidden', '-starts.pdf', '_leading.pdf'):
-            self.assertIsNotNone(self.field(value), value)
-
-    def test_the_archive_form_has_the_same_rule(self):
-        form = ProductDocumentForm({'document_name': 'a doc',
-                                    'publication_date': '2026-01-15',
-                                    'file_name': '111'})
-        form.is_valid()
-        self.assertIn('file_name', form.errors)
-
-    def test_the_archive_form_also_completes_the_extension(self):
-        form = ProductDocumentForm({'document_name': 'a doc',
-                                    'publication_date': '2026-01-15',
-                                    'file_name': 'User_Guide',
-                                    'document_std_id': 'PDF/A'})
-        self.assertTrue(form.is_valid(), form.errors)
-        self.assertEqual(form.cleaned_data['file_name'], 'User_Guide.pdf')
 
 
 class DuplicateDocumentNameTests(TestCase):
@@ -102,16 +47,15 @@ class DuplicateDocumentNameTests(TestCase):
 
     def form(self, name, **kwargs):
         return AnnexProductDocumentForm(
-            {'document_name': name, 'document_id': 'd1',
-             'file_name': 'guide.pdf', 'comment': '', 'document_std_id': 'PDF/A'},
+            {'document_name': name, 'document_id': 'd1', 'comment': ''},
+            {'document_file': document_upload('new_guide')},
             bundle=self.bundle, **kwargs)
 
     def add(self, name):
         return self.client.post(
             reverse('build:annex_collection_document', args=[str(self.bundle.pk)]),
             {'form_name': 'document_form', 'document_name': name, 'document_id': name,
-             'file_name': name + '.pdf', 'comment': '', 'document_std_id': 'PDF/A',
-             'source': 'bundle'})
+             'document_file': document_upload(name), 'comment': '', 'source': 'bundle'})
 
     def test_a_first_document_is_fine(self):
         self.assertTrue(self.form('User Guide').is_valid())
@@ -142,9 +86,8 @@ class DuplicateDocumentNameTests(TestCase):
             'version': '1O00', 'bundleID': ''})
         other = Bundle.objects.get(name='other bundle')
         form = AnnexProductDocumentForm(
-            {'document_name': 'guide', 'document_id': 'd1',
-             'file_name': 'guide.pdf', 'comment': '', 'document_std_id': 'PDF/A'},
-            bundle=other)
+            {'document_name': 'guide', 'document_id': 'd1', 'comment': ''},
+            {'document_file': document_upload('guide')}, bundle=other)
         self.assertTrue(form.is_valid(), form.errors)
 
     def test_editing_a_document_without_renaming_it_is_not_a_duplicate(self):
@@ -166,8 +109,8 @@ class DuplicateDocumentNameTests(TestCase):
         """Callers that never passed a bundle keep working."""
         self.add('guide')
         form = AnnexProductDocumentForm(
-            {'document_name': 'guide', 'document_id': 'd1',
-             'file_name': 'guide.pdf', 'comment': '', 'document_std_id': 'PDF/A'})
+            {'document_name': 'guide', 'document_id': 'd1', 'comment': ''},
+            {'document_file': document_upload('guide')})
         self.assertTrue(form.is_valid(), form.errors)
 
 
@@ -250,59 +193,3 @@ class AccentedNameTests(TestCase):
         form.is_valid()
         self.assertIn('outside that set',
                       form.errors['author_person_0_given_name'][0])
-
-
-class FormatImpliesTheExtensionTests(TestCase):
-    """The form already asks for the file format, so the extension is derivable.
-
-    Telling someone to go back and add ".pdf" to a name when they have already said
-    the file is a PDF is asking them to repeat themselves. PDS requires the
-    extension; ELSA can supply it.
-    """
-
-    def field(self, file_name, document_std_id='PDF/A'):
-        form = AnnexProductDocumentForm({
-            'document_name': 'a doc', 'document_id': 'doc1',
-            'file_name': file_name, 'comment': '',
-            'document_std_id': document_std_id})
-        form.is_valid()
-        return form
-
-    def test_a_bare_name_gets_the_extension_its_format_implies(self):
-        form = self.field('User_Guide', 'PDF/A')
-        self.assertTrue(form.is_valid(), form.errors)
-        self.assertEqual(form.cleaned_data['file_name'], 'User_Guide.pdf')
-
-    def test_ascii_implies_txt(self):
-        form = self.field('readme', 'ASCII')
-        self.assertTrue(form.is_valid(), form.errors)
-        self.assertEqual(form.cleaned_data['file_name'], 'readme.txt')
-
-    def test_a_name_that_already_has_one_is_left_alone(self):
-        form = self.field('guide.pdf', 'PDF/A')
-        self.assertTrue(form.is_valid(), form.errors)
-        self.assertEqual(form.cleaned_data['file_name'], 'guide.pdf')
-
-    def test_a_name_with_its_own_different_extension_is_respected(self):
-        """The user knows what the file is; the format field is a declaration."""
-        form = self.field('data.csv', 'ASCII')
-        self.assertTrue(form.is_valid(), form.errors)
-        self.assertEqual(form.cleaned_data['file_name'], 'data.csv')
-
-    def test_the_names_that_used_to_fail_now_succeed(self):
-        """111, aa and awd are the real ones from a real bundle."""
-        for bare in ('111', 'aa', 'awd'):
-            form = self.field(bare, 'PDF/A')
-            self.assertTrue(form.is_valid(), '{}: {}'.format(bare, form.errors))
-            self.assertEqual(form.cleaned_data['file_name'], bare + '.pdf')
-
-    def test_a_genuinely_bad_name_is_still_refused(self):
-        """Completing the extension must not become a way to smuggle anything in."""
-        form = self.field('my guide', 'PDF/A')
-        self.assertFalse(form.is_valid())
-        self.assertIn('file_name', form.errors)
-
-    def test_no_format_means_the_old_message_still_applies(self):
-        form = self.field('User_Guide', '')
-        self.assertFalse(form.is_valid())
-        self.assertIn('extension', form.errors['file_name'][0])

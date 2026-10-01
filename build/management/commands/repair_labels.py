@@ -35,7 +35,8 @@ def labels_of(bundle):
 
 
 class Command(BaseCommand):
-    help = 'Remove empty stubs from old labels and rewrite collection inventories.'
+    help = ('Remove empty stubs from old labels, correct the old AMA investigation '
+            'reference, fix bundle member entries and rewrite collection inventories.')
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -55,6 +56,8 @@ class Command(BaseCommand):
         total_removed = 0
         touched_bundles = 0
         total_members = 0
+        skipped = []
+        skipped_labels = []
 
         for bundle in bundles:
             labels = labels_of(bundle)
@@ -63,24 +66,34 @@ class Command(BaseCommand):
 
             removed_here = []
             for label_path in labels:
-                if apply_changes:
-                    removed = repair_label(label_path)
-                else:
-                    removed = self._would_remove(label_path)
+                try:
+                    if apply_changes:
+                        removed = repair_label(label_path)
+                    else:
+                        removed = self._would_remove(label_path)
+                except Exception as error:               # noqa: BLE001 - one label
+                    skipped_labels.append((label_path, error))
+                    continue
                 if removed:
                     removed_here.append((os.path.basename(label_path), removed))
 
-            # Before the inventories are rebuilt, so they are rebuilt from the bundle
-            # label as it will stay.
-            members = (repair_bundle_members(bundle) if apply_changes
-                       else stale_bundle_members(bundle))
+            # One bundle's bad data must not stop the rest. Production has bundles no
+            # label path can be built for (no bundleID); a run over every bundle used
+            # to crash on the first of them, part way through an --apply.
+            members, inventories = [], 0
+            try:
+                # Before the inventories are rebuilt, so they are rebuilt from the
+                # bundle label as it will stay.
+                members = (repair_bundle_members(bundle) if apply_changes
+                           else stale_bundle_members(bundle))
 
-            inventories = 0
-            if apply_changes:
-                # Membership has not changed, but the table and the record count may
-                # never have been written at all.
-                inventories = len(bundle_label_targets(bundle))
-                rebuild_collection_inventories(bundle)
+                if apply_changes:
+                    # Membership has not changed, but the table and the record count
+                    # may never have been written at all.
+                    inventories = len(bundle_label_targets(bundle))
+                    rebuild_collection_inventories(bundle)
+            except Exception as error:                   # noqa: BLE001 - see comment
+                skipped.append((bundle, error))
 
             if removed_here or inventories or members:
                 touched_bundles += 1
@@ -89,8 +102,8 @@ class Command(BaseCommand):
                 for name, removed in removed_here:
                     total_labels += 1
                     total_removed += len(removed)
-                    self.stdout.write('    {:44} {} empty container{}: {}'.format(
-                        name, len(removed), '' if len(removed) == 1 else 's',
+                    self.stdout.write('    {:44} {} fix{}: {}'.format(
+                        name, len(removed), '' if len(removed) == 1 else 'es',
                         ', '.join(sorted(set(removed)))))
                 for lid, reason in members:
                     total_members += 1
@@ -102,11 +115,18 @@ class Command(BaseCommand):
                             '', inventories))
 
         self.stdout.write('')
+        for label_path, error in skipped_labels:
+            self.stdout.write(self.style.WARNING('Skipped {}: {}: {}'.format(
+                label_path, type(error).__name__, error)))
+        for bundle, error in skipped:
+            self.stdout.write(self.style.WARNING(
+                'Skipped the bundle label and inventories of {} (#{}): {}: {}'.format(
+                    bundle.name, bundle.pk, type(error).__name__, error)))
         if not touched_bundles:
             self.stdout.write(self.style.SUCCESS('Nothing to repair.'))
             return
 
-        self.stdout.write('{} empty container(s) across {} label(s) in {} bundle(s).'
+        self.stdout.write('{} fix(es) across {} label(s) in {} bundle(s).'
                           .format(total_removed, total_labels, touched_bundles))
         if total_members:
             self.stdout.write('{} duplicate or orphaned bundle member entr{}.'.format(
@@ -121,9 +141,9 @@ class Command(BaseCommand):
     def _would_remove(self, label_path):
         """What --apply would remove, without touching the file."""
         from lxml import etree
-        from build.label_repair import prune_blank_containers
+        from build.label_repair import fix_ama_investigation, prune_blank_containers
         try:
             root = etree.parse(label_path).getroot()
         except (etree.XMLSyntaxError, OSError):
             return []
-        return prune_blank_containers(root)
+        return prune_blank_containers(root) + fix_ama_investigation(root)

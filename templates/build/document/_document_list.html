@@ -1,0 +1,223 @@
+{% comment %}
+The documents in a bundle's document collection as a grid of tiles, for Archive and
+External alike. Each tile shows the document itself: the top of a PDF's first page, or
+the opening lines of a text file. Clicking that opens the shared #documentPreviewModal.
+Under it are the name, the file, and Download, Edit and Delete. Delete opens the shared
+#documentDeleteModal (_document_delete_modal.html). Both modals must be on the page.
+The last tile adds a document.
+
+PDF thumbnails are drawn in the browser by PDF.js, loaded only when a PDF tile scrolls
+into view. Nothing runs on the server against uploaded files (see document_files on why
+not), and a thumbnail that cannot be drawn just keeps its icon. PDFs over 15 MB keep the
+icon too, rather than being fetched whole for a picture.
+
+Needs `documents`, `bundle` and `bundle_type`. `add_target` is the modal the add tile
+and the empty state open.
+{% endcomment %}
+<style>
+   .doc-grid-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: .75rem; font-size: .875rem; color: #6c757d; }
+   .doc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 1rem; }
+   .doc-tile { display: flex; flex-direction: column; border: 1px solid #dee2e6; border-radius: .75rem; background: #fff;
+               overflow: hidden; transition: box-shadow .15s ease, transform .15s ease; }
+   .doc-tile:hover { box-shadow: 0 6px 18px rgba(0, 0, 0, .10); transform: translateY(-1px); }
+
+   /* The thumbnail: a sheet of paper on a grey desk, its top edge showing. */
+   .doc-thumb { position: relative; display: block; width: 100%; height: 170px; padding: 14px 18px 0; border: 0;
+                background: #eef1f4; overflow: hidden; cursor: pointer; text-align: left; text-decoration: none; }
+   .doc-thumb-sheet { position: relative; display: block; height: 100%; background: #fff; border-radius: 3px 3px 0 0;
+                      box-shadow: 0 1px 4px rgba(0, 0, 0, .14); overflow: hidden; }
+   .doc-thumb-sheet canvas { display: block; width: 100%; height: auto; opacity: 0; transition: opacity .25s ease; }
+   .doc-thumb-sheet canvas.is-ready { opacity: 1; }
+   .doc-thumb-icon { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 2.6rem; color: #c62828; }
+   .doc-thumb-sheet canvas.is-ready + .doc-thumb-icon { display: none; }
+   .doc-thumb-text { margin: 0; padding: .6rem .7rem; font-size: .58rem; line-height: 1.35; color: #495057;
+                     white-space: pre-wrap; word-break: break-word; font-family: SFMono-Regular, Menlo, Consolas, monospace; }
+   .doc-thumb-sheet::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 36px;
+                             background: linear-gradient(rgba(255, 255, 255, 0), #fff); pointer-events: none; }
+   /* Bottom corner, over the fade, so it never covers the page's first line. */
+   .doc-thumb-kind { position: absolute; bottom: 8px; right: 10px; z-index: 2; font-size: .65rem; font-weight: 700; letter-spacing: .04em;
+                     padding: .1rem .4rem; border-radius: .25rem; color: #fff; background: #6c757d; }
+   .doc-thumb-kind.is-pdf { background: #c62828; }
+   .doc-thumb-hover { position: absolute; inset: 0; z-index: 3; display: flex; align-items: center; justify-content: center;
+                      background: rgba(33, 37, 41, .45); color: #fff; font-weight: 600; opacity: 0; transition: opacity .15s ease; }
+   .doc-thumb:hover .doc-thumb-hover, .doc-thumb:focus-visible .doc-thumb-hover { opacity: 1; }
+   .doc-thumb:focus-visible { outline: 3px solid #0d6efd; outline-offset: -3px; }
+   .doc-thumb.is-missing { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .3rem; padding: 0;
+                           background: #fff8e1; color: #8a6d00; font-size: .85rem; text-align: center; }
+   .doc-thumb.is-missing .bi { font-size: 1.8rem; }
+
+   .doc-tile-body { display: flex; flex-direction: column; flex: 1 1 auto; padding: .7rem .8rem .6rem; min-width: 0; }
+   .doc-tile-title { font-weight: 600; color: #212529; text-decoration: none; line-height: 1.3;
+                     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+   .doc-tile-title:hover { color: #212529; text-decoration: underline; }
+   .doc-tile-meta { font-size: .78rem; color: #6c757d; margin-top: .2rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+   .doc-tile-foot { display: flex; align-items: center; justify-content: space-between; gap: .4rem; margin-top: auto; padding-top: .55rem; }
+   .doc-tile-foot .when { font-size: .75rem; color: #6c757d; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+   .doc-tile-actions { display: flex; gap: .3rem; flex: none; }
+   .doc-tile-actions .btn-icon { width: 1.9rem; height: 1.9rem; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
+
+   .doc-tile-add { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .4rem; min-height: 260px;
+                   border: 2px dashed #ced4da; border-radius: .75rem; background: transparent; color: #6c757d; font-weight: 600; }
+   .doc-tile-add:hover, .doc-tile-add:focus-visible { border-color: #6c757d; color: #212529; background: #f8f9fa; }
+   .doc-tile-add .bi { font-size: 1.8rem; }
+
+   .doc-empty { text-align: center; padding: 2.5rem 1rem; color: #6c757d; border: 2px dashed #dee2e6; border-radius: .75rem; }
+   .doc-empty > .bi { font-size: 2.25rem; display: block; margin-bottom: .5rem; color: #adb5bd; }
+
+   @media (max-width: 575.98px) {
+      .doc-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; }
+      .doc-thumb { height: 130px; padding: 10px 12px 0; }
+      .doc-tile-add { min-height: 200px; }
+   }
+</style>
+{% if documents %}
+<div class="doc-grid-head">
+   <span>{{ documents|length }} document{{ documents|length|pluralize }}</span>
+   <span class="d-none d-sm-inline">Click a page to preview it</span>
+</div>
+<div class="doc-grid">
+   {% for document in documents %}
+   {% url 'build:document_file' bundle.pk document.pk as file_url %}
+   {% url 'build:product_document' bundle.pk document.pk as edit_url %}{% comment %}?next=bundle: the editor comes back here once saved.{% endcomment %}
+   {% with size=document.stored_file_size is_pdf=document.file_name|lower|slice:"-4:" %}
+   <article class="doc-tile">
+      {% if size is None %}
+      <a class="doc-thumb is-missing" href="{{ edit_url }}?next=bundle">
+         <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+         <span>No file attached</span>
+         <span class="fw-bold">Attach it</span>
+      </a>
+      {% else %}
+      <button type="button" class="doc-thumb btn-keep-bg"
+              data-bs-toggle="modal" data-bs-target="#documentPreviewModal"
+              data-doc-url="{{ file_url }}" data-doc-name="{{ document.file_name }}"
+              aria-label="View {{ document.file_name }}">
+         {% if is_pdf == ".pdf" %}
+         <span class="doc-thumb-kind is-pdf">PDF</span>
+         <span class="doc-thumb-sheet">
+            <canvas {% if size <= 15728640 %}data-pdf-thumb="{{ file_url }}"{% endif %} aria-hidden="true"></canvas>
+            <span class="doc-thumb-icon" aria-hidden="true"><i class="bi bi-file-earmark-pdf"></i></span>
+         </span>
+         {% else %}
+         <span class="doc-thumb-kind">TXT</span>
+         <span class="doc-thumb-sheet"><pre class="doc-thumb-text" aria-hidden="true">{{ document.text_excerpt }}</pre></span>
+         {% endif %}
+         <span class="doc-thumb-hover" aria-hidden="true"><i class="bi bi-eye me-2"></i>Preview</span>
+      </button>
+      {% endif %}
+
+      <div class="doc-tile-body">
+         <a class="doc-tile-title" href="{{ edit_url }}?next=bundle" title="{{ document.document_name }}">{{ document.document_name }}</a>
+         {% if size is not None %}
+         <div class="doc-tile-meta" title="{{ document.file_name }}">{{ document.file_name }} &middot; {{ size|filesizeformat }}</div>
+         {% endif %}
+         {% if bundle_type == "Archive" and document.author_list %}
+         <div class="doc-tile-meta" title="{{ document.author_list }}">{{ document.author_list }}</div>
+         {% elif bundle_type != "Archive" and document.comment %}
+         <div class="doc-tile-meta" title="{{ document.comment }}">{{ document.comment }}</div>
+         {% endif %}
+         <div class="doc-tile-foot">
+            <span class="when">{% if bundle_type == "Archive" and document.publication_date %}{{ document.publication_date }}{% endif %}</span>
+            <div class="doc-tile-actions">
+               {% if size is not None %}
+               <a class="btn btn-sm btn-outline-secondary btn-keep-bg btn-icon" href="{{ file_url }}?download=1"
+                  title="Download" aria-label="Download {{ document.file_name }}"><i class="bi bi-download"></i></a>
+               {% endif %}
+               <a class="btn btn-sm btn-outline-secondary btn-keep-bg btn-icon" href="{{ edit_url }}?next=bundle"
+                  title="Edit details" aria-label="Edit {{ document.document_name }}"><i class="bi bi-pencil"></i></a>
+               <button type="button" class="btn btn-sm btn-outline-danger btn-keep-bg btn-icon"
+                       title="Delete" aria-label="Delete {{ document.document_name }}"
+                       data-bs-toggle="modal" data-bs-target="#documentDeleteModal"
+                       data-delete-url="{% url 'build:delete_product_document' bundle.pk document.pk %}"
+                       data-doc-name="{{ document.document_name }}">
+                  <i class="bi bi-trash"></i>
+               </button>
+            </div>
+         </div>
+      </div>
+   </article>
+   {% endwith %}
+   {% endfor %}
+   <button type="button" class="doc-tile-add btn-keep-bg" data-bs-toggle="modal" data-bs-target="{{ add_target|default:'#document_modal' }}">
+      <i class="bi bi-plus-lg" aria-hidden="true"></i>
+      Add a document
+   </button>
+</div>
+{% else %}
+<div class="doc-empty">
+   <i class="bi bi-file-earmark-plus" aria-hidden="true"></i>
+   <div class="fw-bold text-dark mb-1">No documents yet</div>
+   <div class="small mb-3">Add a user guide or other documentation people will need to use your data.</div>
+   <button type="button" class="btn btn-sm" data-bs-toggle="modal" data-bs-target="{{ add_target|default:'#document_modal' }}">
+      <i class="bi bi-plus-lg me-1"></i>Add a document
+   </button>
+</div>
+{% endif %}
+<script>
+   /* PDF thumbnails: the top of page one, drawn once the tile is on screen. Guarded so
+      the two includes on the bundle page (Archive and External) set up only once. */
+   (function () {
+      if (window.elsaDocThumbs) { window.elsaDocThumbs.scan(); return; }
+      var LIB = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+      var LIB_SRI = 'sha384-/1qUCSGwTur9vjf/z9lmu/eCUYbpOTgSjmpbMQZ1/CtX2v/WcAIKqRv+U1DUCG6e';
+      var WORKER = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      var loading = null;
+
+      function library() {
+         if (!loading) {
+            loading = new Promise(function (resolve, reject) {
+               var script = document.createElement('script');
+               script.src = LIB;
+               script.integrity = LIB_SRI;
+               script.crossOrigin = 'anonymous';
+               script.onload = function () {
+                  window.pdfjsLib.GlobalWorkerOptions.workerSrc = WORKER;
+                  resolve(window.pdfjsLib);
+               };
+               script.onerror = reject;
+               document.head.appendChild(script);
+            });
+         }
+         return loading;
+      }
+
+      function draw(canvas) {
+         library().then(function (pdfjs) {
+            return pdfjs.getDocument({ url: canvas.getAttribute('data-pdf-thumb'), isEvalSupported: false }).promise;
+         }).then(function (pdf) {
+            return pdf.getPage(1).then(function (page) {
+               var width = (canvas.parentElement.clientWidth || 200) * (window.devicePixelRatio || 1);
+               var viewport = page.getViewport({ scale: width / page.getViewport({ scale: 1 }).width });
+               canvas.width = Math.floor(viewport.width);
+               canvas.height = Math.floor(viewport.height);
+               return page.render({ canvasContext: canvas.getContext('2d'), viewport: viewport }).promise;
+            }).then(function () {
+               canvas.classList.add('is-ready');
+               pdf.destroy();
+            });
+         }).catch(function () { /* the icon stays */ });
+      }
+
+      var observer = 'IntersectionObserver' in window ? new IntersectionObserver(function (entries) {
+         entries.forEach(function (entry) {
+            if (!entry.isIntersecting) { return; }
+            observer.unobserve(entry.target);
+            draw(entry.target);
+         });
+      }, { rootMargin: '200px' }) : null;
+
+      function scan() {
+         document.querySelectorAll('canvas[data-pdf-thumb]:not([data-thumb-seen])').forEach(function (canvas) {
+            canvas.setAttribute('data-thumb-seen', '1');
+            if (observer) { observer.observe(canvas); } else { draw(canvas); }
+         });
+      }
+
+      window.elsaDocThumbs = { scan: scan };
+      if (document.readyState === 'loading') {
+         document.addEventListener('DOMContentLoaded', scan);
+      } else {
+         scan();
+      }
+   })();
+</script>

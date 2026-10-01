@@ -366,3 +366,29 @@ class UserAddedCollectionInventoryTests(CollectionTypeE2ETests):
         named = root.findtext(
             'pds:File_Area_Inventory/pds:File/pds:file_name', '', NS).strip()
         self.assertTrue(named, 'the document collection lost its inventory')
+
+
+class AMAInvestigationLookupTests(CollectionTypeE2ETests):
+    """The External branch finds the AMA investigation by LID, whatever the row is named.
+
+    On prod the crawler had stored the row under PDS's full title, "Atmospheric Modeling
+    Annex Individual Investigation", and migration 0075 kept that row and deleted the one
+    named "Atmospheric Modeling Annex". The view looked the row up by the short name, got
+    None, and every External bundle creation 500ed in write_into_label.
+    """
+
+    AMA_LID = 'urn:nasa:pds:context:investigation:individual.atmospheric_modeling_annex'
+
+    def setUp(self):
+        super(AMAInvestigationLookupTests, self).setUp()
+        Investigation.objects.filter(lid=self.AMA_LID).update(
+            name='Atmospheric Modeling Annex Individual Investigation')
+
+    def test_external_bundle_is_created_when_the_row_has_the_published_title(self):
+        bundle = self.build_bundle('ama full title', 'External')
+        label = Product_Bundle.objects.get(bundle=bundle).label()
+        root = ET.parse(label).getroot()
+        self.assertEqual(
+            root.findtext('pds:Context_Area/pds:Investigation_Area/pds:Internal_Reference/'
+                          'pds:lid_reference', '', NS).strip(),
+            self.AMA_LID)

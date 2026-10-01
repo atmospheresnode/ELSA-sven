@@ -629,6 +629,31 @@ class AMABrowserTestCase(StaticLiveServerTestCase):
             ".getBoundingClientRect(); return r.top < window.innerHeight && r.bottom > 0; })()",
             timeout=10000)
 
+    @override_settings(VALIDATE_AUTO_CHECK=False, VALIDATE_BLOCKS_SUBMISSION=True)
+    def test_fix_in_the_validation_window_replaces_it_with_the_form(self):
+        """Reported: Fix opened Citation Information behind the PDS Validation window,
+        with both up and two backdrops. The validation window has to close first."""
+        from django.utils import timezone
+        from build.models import ValidationRun
+        ValidationRun.objects.create(
+            bundle=self.bundle, status=ValidationRun.STATUS_DONE, findings=[],
+            finished_at=timezone.now(), content_fingerprint=self.bundle.content_fingerprint())
+
+        self.open_bundle()
+        self.page.evaluate(
+            "bootstrap.Modal.getOrCreateInstance(document.getElementById('validation_modal')).show()")
+        self.page.locator('#validation_modal').wait_for(state='visible')
+        item = self.page.locator('#validation_modal .list-group-item',
+                                 has_text='Add Citation Information')
+        item.locator('button', has_text='Fix').click()
+
+        self.page.locator('#citation_information_modal').wait_for(state='visible', timeout=10000)
+        self.page.wait_for_timeout(500)
+        self.assertEqual(self.page.evaluate(
+            "[...document.querySelectorAll('.modal.show')].map(m => m.id)"),
+            ['citation_information_modal'])
+        self.assertEqual(self.page.locator('.modal-backdrop').count(), 1)
+
     @override_settings(VALIDATE_AUTO_CHECK=False)
     def test_a_citation_with_no_author_is_refused_and_the_reason_is_shown(self):
         """Refused where an author can still be added, and said on screen: the window
@@ -750,7 +775,7 @@ class AMABrowserTestCase(StaticLiveServerTestCase):
         followed removed files the user could not see from that tab."""
         self.open_bundle(self.alpha)
 
-        select_all = self.pane(self.alpha).locator('#selectAllWrapper')
+        select_all = self.pane(self.alpha).locator('.select-all-btn')
         # No style override any more: the button used to ship with display:none and nothing ever
         # unhid it, so this test had to reveal it before it could click it.
         select_all.click()
@@ -774,7 +799,7 @@ class AMABrowserTestCase(StaticLiveServerTestCase):
             'input.netcdf-checkbox[value="{}"]'.format(self.nc_beta.pk)).evaluate(
                 'el => el.checked = true')
 
-        self.pane(self.alpha).locator('#bulkDeleteBtn').click()
+        self.pane(self.alpha).locator('.bulk-delete-btn').click()
         self.page.locator('#bulkDeleteNetCDFModal').wait_for(state='visible', timeout=10000)
 
         values = self.page.eval_on_selector_all(
@@ -788,7 +813,7 @@ class AMABrowserTestCase(StaticLiveServerTestCase):
 
     def test_the_upload_cancel_button_is_hidden_until_an_upload_starts(self):
         self.open_bundle()
-        self.assertFalse(self.pane(self.alpha).locator('#uploadCancelBtn').is_visible())
+        self.assertFalse(self.pane(self.alpha).locator('.upload-cancel-btn').is_visible())
 
     def test_a_collection_can_be_deleted_from_a_tab_you_are_not_standing_on(self):
         """The reason the modals had to leave the panes.
@@ -1126,7 +1151,7 @@ class AMABrowserTestCase(StaticLiveServerTestCase):
 
         pane = self.pane(collection)
         pane.locator('input[name="netcdf_files"]').set_input_files(paths)
-        pane.locator('#uploadBtn').click()
+        pane.locator('.upload-btn').click()
         if expect_notice:
             # The post finishes, then the page reloads itself 1.5s later. The dialog exists only on
             # the far side of that reload, so waiting for it waits for the whole round trip.
@@ -1165,10 +1190,10 @@ class AMABrowserTestCase(StaticLiveServerTestCase):
         self.assertIn('No AMA metadata yet', notice)
 
         # 3. The uploaded files list names it in full and spends its width on the name.
-        listing = self.pane(self.beta).locator('#bulkDeleteNetCDFForm')
+        listing = self.pane(self.beta).locator('.bulk-delete-netcdf-form')
         self.assertIn(name, listing.inner_text())
         self.assertNotIn('Own metadata', listing.inner_text())
-        width = listing.locator('a[title="{}"]'.format(name)).evaluate(
+        width = listing.locator('span[title="{}"]'.format(name)).evaluate(
             'el => el.getBoundingClientRect().width')
         self.assertGreater(width, 150, 'the filename is still capped at the old fixed width')
 

@@ -39,5 +39,13 @@ Common actions:
 - Delete a bundle: red Delete Bundle button on the bundle page (confirmation
   modal), or bulk-delete several at once from the Bundle Hub via the card
   checkboxes. Both remove the bundle and its files permanently.
+- Get back to a bundle: any page about one bundle (a document editor, a context
+  product page) has a "Bundle Hub / <bundle name>" link at the top that returns
+  to it. Saving from a bundle page window or an Edit link comes back to the
+  bundle page; if the save is refused, the window stays open with the reason
+  under the field and nothing typed or chosen is lost.
+- Guided walkthrough: each step shows "step N of M" and an "Exit to bundle page"
+  link, so a user can leave at any step; whatever was already saved is kept,
+  and the rest can be filled in from the bundle page.
 - Get help or report problems: ask this assistant, or use the Contact page. The
   assistant can also send feedback (bugs, suggestions) to the ELSA team for you.

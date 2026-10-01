@@ -23,6 +23,18 @@ from django.urls import reverse
 from build.models import (AdditionalCollections, Bundle, Citation_Information,
                           Investigation, NetCDFFile, Target)
 
+DOCUMENT_FIXTURES = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'fixtures', 'documents')
+
+
+
+def document_upload(name, fixture='guide_pdfa1b.pdf', as_name=None):
+    """A fixture document file, uploaded as name plus the fixture's extension, or
+    under as_name exactly as a browser would send it."""
+    with open(os.path.join(DOCUMENT_FIXTURES, fixture), 'rb') as handle:
+        return SimpleUploadedFile(
+            as_name or name + os.path.splitext(fixture)[1], handle.read())
+
 AMA_INVESTIGATION = {
     'name': 'Atmospheric Modeling Annex',
     'type_of': 'Individual Investigation',
@@ -99,13 +111,13 @@ class BundleBuilder(object):
              'description': description})
         return self
 
-    def add_document(self, name='user_guide', file_name=None):
+    def add_document(self, name='user_guide', fixture='guide_pdfa1b.pdf', as_name=None):
+        """A document with its file, uploaded as name + the fixture's extension."""
         self.client.post(
             reverse('build:annex_collection_document', args=[str(self.bundle.pk)]),
-            {'form_name': 'document_form', 'document_name': name,
-             'document_id': name, 'file_name': file_name or (name + '.pdf'),
-             'comment': 'a document', 'document_std_id': 'PDF/A',
-             'source': 'bundle'})
+            {'form_name': 'document_form', 'document_name': name, 'document_id': name,
+             'document_file': document_upload(name, fixture, as_name),
+             'comment': 'a document', 'source': 'bundle'})
         return self
 
     def add_target(self):

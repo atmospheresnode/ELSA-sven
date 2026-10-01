@@ -97,6 +97,10 @@ def prune_blank_containers(root):
     protected = set(PROTECTED)
 
     for element in reversed(list(root.iter())):
+        # Comments and processing instructions have no tag name; QName raises on them.
+        # Production labels carry comments, and a run over them crashed part way.
+        if not isinstance(element.tag, str):
+            continue
         name = etree.QName(element).localname
         if name in protected:
             continue
@@ -121,8 +125,52 @@ def prune_blank_containers(root):
     return removed
 
 
+# -- the AMA investigation reference ----------------------------------------------
+#
+# Migration 0075 corrected the AMA investigation's LID in the database and left labels
+# on disk alone, on the understanding they would pick it up when rebuilt. Nothing
+# rebuilds a bundle or collection label wholesale, so External bundles written before
+# it still reference an investigation PDS does not know, which validate reports as
+# "Context product not found". The same values as the migration, kept here rather than
+# imported, because a migration module's name starts with a digit.
+AMA_WRONG_LID = ('urn:nasa:pds:context:investigation:'
+                 'individual_investigation.atmospheric-modeling-annex')
+AMA_LID = 'urn:nasa:pds:context:investigation:individual.atmospheric_modeling_annex'
+# The title PDS publishes for it, which the current templates write.
+AMA_NAME = 'Atmospheric Modeling Annex Individual Investigation'
+
+
+def _local(element):
+    return etree.QName(element).localname if isinstance(element.tag, str) else ''
+
+
+def fix_ama_investigation(root):
+    """Point any Investigation_Area still at the old AMA LID at the correct one.
+
+    Only an Investigation_Area whose reference is exactly the old LID is touched, and
+    its name is set to the published title along with it, since PDS also checks the
+    name against the context product. Returns one entry per area fixed.
+    """
+    fixed = []
+    for area in root.iter():
+        if _local(area) != 'Investigation_Area':
+            continue
+        references = [element for element in area.iter() if _local(element) == 'lid_reference'
+                      and (element.text or '').strip() == AMA_WRONG_LID]
+        if not references:
+            continue
+        for reference in references:
+            reference.text = AMA_LID
+        for child in area:
+            if _local(child) == 'name':
+                child.text = AMA_NAME
+        fixed.append('AMA investigation reference')
+    return fixed
+
+
 def repair_label(label_path):
-    """Repair one label in place. Returns the list of containers removed."""
+    """Repair one label in place. Returns what was fixed: containers removed, and the
+    AMA investigation reference if it was corrected."""
     if not os.path.exists(label_path):
         return []
 
@@ -131,7 +179,7 @@ def repair_label(label_path):
     except (etree.XMLSyntaxError, OSError):
         return []
 
-    removed = prune_blank_containers(root)
+    removed = prune_blank_containers(root) + fix_ama_investigation(root)
     if removed:
         close_label(label_path, root, tree)
     return removed
@@ -186,7 +234,9 @@ def stale_bundle_members(bundle):
 
     try:
         label_path = Product_Bundle.objects.get(bundle=bundle).label()
-    except Product_Bundle.DoesNotExist:
+    except (Product_Bundle.DoesNotExist, AttributeError, TypeError):
+        # AttributeError: production has bundles with no bundleID, from which no label
+        # path can be built at all. There is nothing to compare, so nothing is removed.
         return []
     if not label_path or not os.path.exists(label_path):
         return []

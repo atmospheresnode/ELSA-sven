@@ -1331,7 +1331,7 @@ class AMATemplateTests(AMATestCaseMixin, TestCase):
         and a default-type button would submit the delete form."""
         content = self.bundle_page()
 
-        start = content.index('id="bulkDeleteNetCDFForm"')
+        start = content.index('class="bulk-delete-netcdf-form"')
         end = content.index('</form>', start)
         file_list = content[start:end]
 
@@ -1427,8 +1427,8 @@ class AMATemplateTests(AMATestCaseMixin, TestCase):
         # The inside of it is untouched: upload on the left, the file list on the right.
         self.assertIn('Add NetCDF files', content)
         self.assertIn('Uploaded files', content)
-        self.assertIn('id="netcdfUploadForm"', content)
-        self.assertIn('id="bulkDeleteNetCDFForm"', content)
+        self.assertIn('class="netcdf-upload-form"', content)
+        self.assertIn('class="bulk-delete-netcdf-form"', content)
 
     def test_no_empty_modal_footer_rules_across_a_collection_pane(self):
         """.modal-footer outside a modal still draws its border-top and padding, so the wrapper for
@@ -1483,7 +1483,7 @@ class AMATemplateTests(AMATestCaseMixin, TestCase):
 
     def test_upload_cancel_button_is_present_and_wired(self):
         content = self.bundle_page()
-        self.assertIn('id="uploadCancelBtn"', content)
+        self.assertIn('upload-cancel-btn', content)
         self.assertIn('_netcdfUploadXhr', content)
 
     def test_the_upload_survives_its_own_reload(self):

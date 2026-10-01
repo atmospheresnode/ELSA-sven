@@ -1,13 +1,13 @@
 <!-- watches: build/views.py#build, build/models.py#Bundle, build/models.py#AdditionalCollections, build/models.py#NetCDFFile, templates/build/bundle/bundle.html -->
 <!-- fingerprint:
-     build/views.py#build                  = 6dde137f9726
+     build/views.py#build                  = 980d9ee37f6a
      build/models.py#Bundle                = 7e1c83a0d383
      build/models.py#AdditionalCollections = 597619b2a6fd
      build/models.py#NetCDFFile            = 83f3987e85ee
-     templates/build/bundle/bundle.html    = 60b8deb789cb
+     templates/build/bundle/bundle.html    = 86f6157155b0
 -->
 <!-- reviewed: 2026-09-25 -->
-<!-- baseline: ab4b3d05a8abea19bfcea67d16b5677bf0ad42d4 -->
+<!-- baseline: 7294b1cab0ba188a0fba03e8de9f5e8367bf1b5a -->
 # External Bundle Workflow (AMA)
 
 External bundles are ELSA's lighter-weight bundle type, used for the Atmospheres
@@ -42,7 +42,7 @@ does not judge anything; whether something needs changing is the left column's j
 
 The last row of the Bundle Components card is "Label check", under a PDS
 Validation heading. Its badge says where the bundle stands: "Passed", a red
-count such as "3 to fix", or "Checking…" while a check runs in the background.
+count such as "3 to fix", or "Checking..." while a check runs in the background.
 "Out of date" and "Not checked" only appear when automatic checking is switched
 off. Clicking the row opens the PDS Validation window.
 

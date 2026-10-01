@@ -63,7 +63,7 @@ class StorageDialogBrowserTests(test_ama_browser.AMABrowserTestCase):
         return pane
 
     def upload(self, files=(('big.nc', NC_HEADER),), collection=None):
-        self.pick(files, collection).locator('#uploadBtn').click()
+        self.pick(files, collection).locator('.upload-btn').click()
 
     def wait_for_draft(self):
         self.dialog().wait_for(state='visible', timeout=10000)
@@ -145,7 +145,7 @@ class StorageDialogBrowserTests(test_ama_browser.AMABrowserTestCase):
         # Closing hands the page back with the upload button usable for a later try.
         dialog.locator('.ess-close').click()
         self.wait_closed()
-        button = self.pane(self.alpha).locator('#uploadBtn')
+        button = self.pane(self.alpha).locator('.upload-btn')
         self.assertTrue(button.is_enabled())
         self.assertEqual(button.inner_text().strip(), 'Upload')
 

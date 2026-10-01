@@ -534,3 +534,38 @@ class SchemaCacheIntegrityTests(TestCase):
 
             cached = os.listdir(command_module.schema_dir())
         self.assertEqual(cached, [], 'an HTML error page was cached as a schema')
+
+
+class FailureSaysWhyTests(RunnerRobustnessTests):
+    """Production, 2026-09-25: a permission change left validation/reports unwritable
+    for apache. Every check then failed with "validate exited with status 1 without
+    writing a report", and the reason, which validate had printed, was thrown away."""
+
+    test_a_hung_tool_is_stopped_by_the_timeout = None
+
+    def test_the_reason_validate_gave_is_in_the_failure(self):
+        home = fake_validate(
+            self.workdir,
+            'echo "[label.validation] 1 products completed."\n'
+            'echo "Picked up _JAVA_OPTIONS: -Xmx2g"\n'
+            'echo "java.io.FileNotFoundException: /x/reports/run-19.json (Permission denied)"\n'
+            'exit 1\n')
+        run = ValidationRun.objects.create(bundle=self.bundle)
+        with self.settings_for(home):
+            validate_runner.run(run.pk)
+        run.refresh_from_db()
+        self.assertEqual(run.status, ValidationRun.STATUS_FAILED)
+        self.assertIn('Permission denied', run.failure_reason)
+        self.assertIn('run-19.json', run.failure_reason)
+        # The routine lines are not quoted as if they were the problem.
+        self.assertNotIn('products completed', run.failure_reason)
+        self.assertNotIn('_JAVA_OPTIONS', run.failure_reason)
+
+    def test_a_silent_exit_still_reads_as_before(self):
+        home = fake_validate(self.workdir, 'exit 1\n')
+        run = ValidationRun.objects.create(bundle=self.bundle)
+        with self.settings_for(home):
+            validate_runner.run(run.pk)
+        run.refresh_from_db()
+        self.assertEqual(run.failure_reason,
+                         'validate exited with status 1 without writing a report.')

@@ -433,7 +433,7 @@ class Version(models.Model):
         #read the bundle and collection template files and store their contents in strings.
         #If the file is invalid a statement will be printed and the function will quit.
         try: 
-            fil = open(inFile,'r')
+            fil = open(inFile, 'r', encoding='utf-8')
 
             fileText = fil.read()
 
@@ -465,7 +465,7 @@ class Version(models.Model):
 
         # write the new bundle and collection to the xmls
 
-        fil = open(outFile, 'w')
+        fil = open(outFile, 'w', encoding='utf-8')
 
         fil.write(fileText)
 
@@ -4525,6 +4525,16 @@ Referenced from        Product_Document
 """
 
 # @python_2_unicode_compatible
+def pds_document_standard(value):
+    """The PDS4 name for a document's format.
+
+    Documents saved before uploads existed chose their format from a list whose plain
+    text option was stored as "ASCII", which is not a value PDS4 accepts; its name for
+    it is "7-Bit ASCII Text". Uploads record the right value themselves.
+    """
+    return {'ASCII': '7-Bit ASCII Text'}.get((value or '').strip(), value)
+
+
 class Product_Document(models.Model):
     # Attributes
     bundle = models.ForeignKey(Bundle, on_delete=models.CASCADE)
@@ -4573,6 +4583,16 @@ class Product_Document(models.Model):
         collection_directory = os.path.join(
             self.bundle.directory(), 'document')
         return collection_directory
+
+    def stored_file_size(self):
+        """Bytes of the uploaded document file on disk, or None. For templates."""
+        from build import document_files
+        return document_files.size(self)
+
+    def text_excerpt(self):
+        """The first lines of a plain text document, for its thumbnail. For templates."""
+        from build import document_files
+        return document_files.text_excerpt(self)
 
     def name_label_case(self):
         """
@@ -4674,11 +4694,20 @@ class Product_Document(models.Model):
                 if self.document_std_id:
                     encoding_standard_id = Encoded_External.find(
                         '{}encoding_standard_id'.format(NAMESPACE))
-                    encoding_standard_id.text = self.document_std_id
+                    encoding_standard_id.text = pds_document_standard(self.document_std_id)
             if File is not None:
+                # A document added without a comment has no comment element left in its
+                # label, so giving it one in the editor was a 500. Made when needed (last
+                # in File, where PDS puts it), and removed when the comment is cleared
+                # rather than left saying what it used to.
+                comment = File.find('{}comment'.format(NAMESPACE))
                 if self.comment:
-                    comment = File.find('{}comment'.format(NAMESPACE))
+                    if comment is None:
+                        comment = File.makeelement('{}comment'.format(NAMESPACE), {})
+                        File.append(comment)
                     comment.text = self.comment
+                elif comment is not None:
+                    File.remove(comment)
                 if self.file_name:
                     file_name = File.find('{}file_name'.format(NAMESPACE))
                     file_name.text = self.file_name
@@ -4757,7 +4786,7 @@ class Product_Document(models.Model):
             if self.document_std_id:
                 document_std_id = Files.find(
                     '{}document_standard_id'.format(NAMESPACE))
-                document_std_id.text = self.document_std_id
+                document_std_id.text = pds_document_standard(self.document_std_id)
 
             
 
@@ -6188,6 +6217,28 @@ class NetCDFFile(models.Model):
         base = os.path.basename(self.file.name)
         stem = base[:-3] if base.endswith('.nc') else base
         return os.path.join(self.directory(), stem + '.xml')
+
+    def stored_path(self):
+        """Where this file actually is on disk, or None if it is nowhere.
+
+        file.path and file.url are stale for every processed upload: processing moves the file
+        out of MEDIA_ROOT into its collection's directory and leaves the field naming the upload
+        area. Checked in the order the delete views check: the collection directory, the bundle
+        root for rows that predate collections, then the upload area for files whose processing
+        never got as far as the move.
+        """
+        name = os.path.basename(self.file.name)
+        candidates = [os.path.join(self.directory(), name)]
+        if self.bundle_id is not None:
+            candidates.append(os.path.join(self.bundle.directory(), name))
+        try:
+            candidates.append(self.file.path)
+        except ValueError:
+            pass
+        for candidate in candidates:
+            if os.path.isfile(candidate):
+                return candidate
+        return None
 
 
 # ------------------------------------------------------------------------------------------------ #

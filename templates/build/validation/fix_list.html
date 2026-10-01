@@ -6,9 +6,10 @@ window. The Review & Submit window used to keep a checklist of its own, which co
 tick Citation Information green while this list said an author on it had no name.
 Now both show this list, so they cannot say different things.
 
-`switch_from` names the modal it is rendered inside when that is not the validation
-window. Bootstrap cannot open one modal over another, so from there a Fix button has
-to close this window before opening the form, which is what switchToModal does.
+`switch_from` names the modal it is rendered inside. Bootstrap cannot open one modal
+over another (both stay up with two backdrops), so a Fix button has to close this
+window before opening the form, which is what switchToModal does. Both windows are
+modals now, so both pass it; the plain toggle is only for a list rendered on the page.
 {% endcomment %}
          {% for card_name, items in validation_cards %}
          <div class="d-flex align-items-center gap-2 mb-2">

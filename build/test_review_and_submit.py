@@ -290,3 +290,24 @@ class ExternalRequirementsOnThePageTests(ReviewAndSubmitTests.__bases__[0]):
         card = hub.split('urn:nasa:pds-ama:review_bundle</p>')[1][:900]
         self.assertIn('In Progress', card)
         self.assertNotIn('Ready', card)
+
+
+class RawTabCountTests(ReviewAndSubmitTests.__bases__[0]):
+    """The Validation output tab counts ELSA's share in the same unit as the total."""
+
+    setUp = ReviewAndSubmitTests.setUp
+    checked = ReviewAndSubmitTests.checked
+    page = ReviewAndSubmitTests.page
+
+    def test_when_every_problem_is_elsas_the_tab_says_so(self):
+        elsa = lambda path, line: {
+            'severity': 'ERROR', 'type': 'error.label.schema',
+            'message': "cvc-minLength-valid: Value '' with length = '0' is not facet-valid",
+            'label': 'b.xml', 'label_path': '/b.xml', 'line': line, 'element_path': path}
+        self.checked([elsa('Product_Bundle/Context_Area/Time_Coordinates/start_date_time', 5),
+                      elsa('Product_Bundle/Context_Area/Time_Coordinates/stop_date_time', 6),
+                      elsa('Product_Bundle/Reference_List/Internal_Reference/reference_type', 9)],
+                     error_count=6)                  # PDS reports each one twice
+        body = ' '.join(self.page().split())
+        self.assertIn('3 distinct problems', body)
+        self.assertIn('3 of these are caused by ELSA', body)

@@ -956,10 +956,13 @@ def friend_useraccount(request):
 # profile_settings NOTE:  It is important to NOT rename this as simply settings.  Since we import django.conf import settings, when our user goes to register, settings.ARCHIVE_DIR does not pull from our settings.py file.  Rather, Django comes to this function (if named settings) and notices there is no ARCHIVE_DIR declared here.  Big boo boo that cost me (k) a couple days to figure out.
 @login_required
 def friend_settings(request, pk_user):
+    # Only allow users to edit their own account.
+    if request.user.pk != int(pk_user):
+        return redirect('main:restricted_access')
 
     updated = False # This is a flag to determine if the user has updated their profile.
     context_dict = {}
-    context_dict['userprofile'] = UserProfile.objects.get(pk=pk_user)
+    context_dict['userprofile'] = UserProfile.objects.get(user_id=pk_user)
     context_dict['user'] = User.objects.get(userprofile=context_dict['userprofile'])
     
     user = context_dict['user']
