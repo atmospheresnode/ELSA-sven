@@ -7,6 +7,7 @@ from __future__ import print_function
 
 # imports for MediaInfo and MediaObject
 from django.template import Context, loader
+from django.core.exceptions import ValidationError
 from lxml import etree
 from xml.dom import minidom
 from django.utils.encoding import *
@@ -198,6 +199,10 @@ def remove_from_label(product, product_bundle, product_collections_list):
         print(' ... Closing Label ... ')
         close_label(label.label(), label_root, label_list[2])
 
+# Validate the path component of a form to prevent the user from being able to traverse directories.
+def validate_path_component(value):
+    if (value in {'.', '..'} or any(character in value for character in '/\\:\x00')):
+        raise ValidationError("Enter a name without slashes, backslashes, colons, or null characters ('.' and '..' are not allowed).")
 
 #    Tests
 # We can test the above functions by making function calls.  To make a function call, simply state the name of the function and give it paramaters.  Por ejemplo: name_of_function(parameter1, parameter2).  When the computer reads this line, it grabs the function defined above named name_of_function.  It then passes two parameters, namely parameter1 and parameter2.  By running this script in the terminal, we can see the output of the stated function.  The output is normally whatever the function returns but this isn't always the case.  The output could also include the creation of new model objects in the database, new labels or directories in the archive, or a deletion of a model object in a directory, or a deletion of labels or directories in the archive, ... .  

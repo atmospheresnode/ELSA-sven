@@ -2,6 +2,7 @@ from builtins import object
 from django import forms
 from django.contrib.auth.models import User
 from .chocolate import replace_all
+from .chocolate import validate_path_component
 from django.utils.safestring import mark_safe
 
 #from django.forms import modelformset_factory
@@ -522,7 +523,7 @@ class CollectionsForm(forms.ModelForm):
 
 
 class AdditionalCollectionForm(forms.ModelForm):
-    collection_name = forms.CharField(required=True, max_length=100, widget=forms.TextInput(attrs={
+    collection_name = forms.CharField(required=True, validators=[validate_path_component], max_length=100, widget=forms.TextInput(attrs={
         'class': 'form-control form-outline',
         'id': 'col_name'
     }))
@@ -578,7 +579,8 @@ class DataEnum(forms.ModelForm):
 
 
 class DataForm(forms.ModelForm):
-    name = forms.CharField(required=True)
+    name = forms.CharField(required=True, validators=[validate_path_component],)
+
     class Meta(object):
         model = Data
         # exclude = ('bundle',)
