@@ -1,0 +1,19 @@
+{% extends 'friends/email/_layout.html' %}
+{% block headline %}{{ headline }}{% endblock %}
+{% block lead %}Hello{% if first_name %} {{ first_name }}{% endif %}, {{ lead }}{% endblock %}
+{% block content %}
+<tr>
+  <td style="padding:16px 32px 0;">
+    <p style="margin:0;font-size:13px;color:#888888;">When: {{ when }}</p>
+  </td>
+</tr>
+<tr>
+  <td style="padding:20px 32px 32px;">
+    <div style="background-color:#f8f8f8;border-left:4px solid #2bbbad;border-radius:4px;padding:16px 20px;font-size:14px;color:#333333;line-height:1.6;">
+      If you made this change, there is nothing more to do.  If you did not,
+      <a href="{{ reset_url }}" style="color:#1f8a7f;">reset your password</a> straight away and
+      <a href="{{ contact_url }}" style="color:#1f8a7f;">let the ELSA team know</a>.
+    </div>
+  </td>
+</tr>
+{% endblock %}

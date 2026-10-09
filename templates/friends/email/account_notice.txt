@@ -1,0 +1,21 @@
+{% autoescape off %}ELSA -- Educational Labeling System @Atmospheres
+
+{{ headline }}
+
+Hello{% if first_name %} {{ first_name }}{% endif %}, {{ lead }}
+
+When: {{ when }}
+
+If you made this change, there is nothing more to do.  If you did not,
+reset your password straight away:
+
+    {{ reset_url }}
+
+and let the ELSA team know:
+
+    {{ contact_url }}
+
+--
+Sent automatically by ELSA, Planetary Data System Atmospheres Node,
+New Mexico State University.
+{% endautoescape %}

@@ -58,11 +58,15 @@
 
                     <form id="form_bundle" method="post" action="{% url 'build:build' %}">
                         {% csrf_token %}
+                        {% if form_bundle.non_field_errors %}
+                        <div class="alert alert-danger py-2" role="alert">{% for error in form_bundle.non_field_errors %}{{ error }} {% endfor %}</div>
+                        {% endif %}
 
                         <!-- Bundle Name -->
                         <div class="mb-4">
                             <label for="bundle_name" class="form-label fw-medium">Bundle Name <span class="text-danger">*</span></label>
                             {{ form_bundle.name }}
+                            {% for error in form_bundle.name.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
                             <div class="form-text">Use a unique, descriptive name. Spaces will be converted to underscores automatically.</div>
                         </div>
 
@@ -70,6 +74,7 @@
                         <div class="mb-4">
                             <label for="bundleID" class="form-label fw-medium">Bundle ID <span class="text-muted fw-normal small">(optional)</span></label>
                             {{ form_bundle.bundleID }}
+                            {% for error in form_bundle.bundleID.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
                             <div class="form-text">A short custom identifier. Leave blank to auto-generate from the bundle name.</div>
                         </div>
 

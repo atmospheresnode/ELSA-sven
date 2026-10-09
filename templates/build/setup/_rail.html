@@ -1,0 +1,25 @@
+{% comment %}
+The setup page's list of steps. Replaced whole after every save (the page fetches
+itself again), so its ticks always say what the bundle holds now. A tick means the
+bundle has that information; it is never given for having passed a step. No status
+badges: a red "Missing" on a bundle nobody has touched yet read as an error, and the
+step itself says whether it is required.
+{% endcomment %}
+<nav class="setup-rail" id="setupRail" aria-label="Setup steps">
+   <ol>
+      {% for step in setup.steps %}
+      <li>
+         <a class="setup-step{% if step.done %} is-done{% endif %}" href="#{{ step.key }}" data-step-link="{{ step.key }}">
+            <span class="setup-num" aria-hidden="true">{% if step.done %}<i class="bi bi-check-lg"></i>{% else %}{{ step.number }}{% endif %}</span>
+            <span class="setup-step-label">{{ step.label }}</span>{% if step.done %}<span class="visually-hidden"> (done)</span>{% endif %}
+         </a>
+      </li>
+      {% endfor %}
+      <li>
+         <a class="setup-step" href="#finish" data-step-link="finish">
+            <span class="setup-num" aria-hidden="true"><i class="bi bi-flag"></i></span>
+            <span class="setup-step-label">Finish</span>
+         </a>
+      </li>
+   </ol>
+</nav>

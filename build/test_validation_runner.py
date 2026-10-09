@@ -116,7 +116,10 @@ class CommandBuildingTests(TestCase):
 
     def build(self, tier):
         run = ValidationRun.objects.create(bundle=self.bundle, tier=tier)
-        with override_settings(VALIDATE_HOME=self.home, VALIDATE_WORK_DIR=self.workdir):
+        # An explicit Java: these fakes have no jar for 'auto' to read, and what is
+        # tested here is the command, not which Java runs it.
+        with override_settings(VALIDATE_HOME=self.home, VALIDATE_WORK_DIR=self.workdir,
+                               VALIDATE_JAVA_HOME=''):
             return validate_runner.build_command(run, os.path.join(self.workdir, 'r.json'))
 
     def test_content_validation_is_not_skipped_by_default(self):

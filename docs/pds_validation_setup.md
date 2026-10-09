@@ -4,33 +4,52 @@ What has to exist on a server before ELSA can validate a bundle. Nothing here is
 user-facing yet: Phase 1 runs validate, stores the results and shows them to staff.
 Data providers see nothing until the translation layer exists.
 
-## 1. Java 17
+## 1. Java 25
 
-validate 4.2.0 is compiled to class file version 61, so Java 11 fails at startup:
+validate 5.0.0 is compiled to class file version 69, so any older Java fails at
+startup:
 
-    UnsupportedClassVersionError: ... class file version 61.0, this version of the
-    Java Runtime only recognizes class file versions up to 55.0
+    UnsupportedClassVersionError: ... class file version 69.0, this version of the
+    Java Runtime only recognizes class file versions up to 61.0
 
-which names neither Java nor a version anyone recognises. On the current host Java 17
-is already installed alongside 11:
+which names neither Java nor a version anyone recognises (61 is Java 17, 69 is Java
+25). On the current host Temurin 25 is already installed alongside 8, 11 and 17:
 
-    /usr/lib/jvm/java-17-openjdk
+    /usr/lib/jvm/java-25-temurin-jdk
 
-The system default stays whatever it is; ELSA points at 17 explicitly through
+The system default stays whatever it is; ELSA points at 25 explicitly through
 `VALIDATE_JAVA_HOME`, so nothing else on the machine is affected.
+
+validate 4.2.0 and earlier ran on Java 17. Changing `VALIDATE_HOME` to 5.0.0 without
+changing `VALIDATE_JAVA_HOME` gives the error above: every check fails as "could not
+run" (which never blocks a submission), so change the two together.
 
 ## 2. The validate tool
 
-Installed outside the repository, so ~70MB of Java binaries stays out of git history:
+Installed outside the repository, so ~75MB of Java binaries stays out of git history.
+On atmos the team keeps every release under `/home/atmos4/PDS/` (a link to
+`/export/atmos4/PDS/`), and ELSA uses `/home/atmos4/PDS/validate-5.0.0` from there.
+The shared copy matches the GitHub release, apart from one commented-out line added to
+`bin/validate`. Every directory on that path is world-readable, which apache needs.
+On a host without that folder:
 
     cd /opt
-    curl -sL https://github.com/NASA-PDS/validate/releases/download/v4.2.0/validate-4.2.0-bin.tar.gz | tar xz
-    chmod +x /opt/validate-4.2.0/bin/validate
+    curl -sL https://github.com/NASA-PDS/validate/releases/download/v5.0.0/validate-5.0.0-bin.tar.gz | tar xz
+    chmod +x /opt/validate-5.0.0/bin/validate
 
 Check it before going further. `--version` exercises the Java path without touching
 any bundle:
 
-    JAVA_HOME=/usr/lib/jvm/java-17-openjdk /opt/validate-4.2.0/bin/validate --version
+    JAVA_HOME=/usr/lib/jvm/java-25-temurin-jdk /home/atmos4/PDS/validate-5.0.0/bin/validate --version
+
+From 5.0.0, validate exits non-zero when it finds no products at all. ELSA does not
+read the exit code (see "How it runs"), so this changes nothing here.
+
+Each run records the release named in its own report (`ValidationRun.tool_version`,
+migration 0081), and the PDS Validation window tells the bundle's owner which release
+checked it ("Last checked ... by NASA PDS Validate 5.0.0"). Moving a host to a newer
+release therefore needs no code change: the next check names the new one, and older
+results keep naming the release that produced them.
 
 ## 3. Settings
 
@@ -44,8 +63,8 @@ configured. It will not crash on a settings file that predates this work.
 
 In `elsa/secrets.py`, per host:
 
-    VALIDATE_HOME = '/opt/validate-4.2.0'
-    VALIDATE_JAVA_HOME = '/usr/lib/jvm/java-17-openjdk'
+    VALIDATE_HOME = '/home/atmos4/PDS/validate-5.0.0'
+    VALIDATE_JAVA_HOME = '/usr/lib/jvm/java-25-temurin-jdk'
 
 Optionally in `elsa/settings.py`, if the defaults do not suit; add after the other
 path definitions near `TEMPORARY_DIR`:
@@ -128,6 +147,96 @@ archived files, and some belong to bundles already submitted for review.
 Worth doing before validation is switched on for users, or their first check will
 report something they cannot fix.
 
+## 7. Following new releases
+
+NASA publishes validate releases a few times a year. ELSA finds each one, checks it,
+and tells you; a person decides when to switch.
+
+**How a host follows releases.** Instead of naming a versioned directory, a host's
+`VALIDATE_HOME` names a link that ELSA manages, and Java is chosen per release:
+
+    VALIDATE_HOME = '<VALIDATE_WORK_DIR>/validate-current'
+    VALIDATE_JAVA_HOME = 'auto'
+
+`'auto'` reads the Java version a release needs from its own jar and uses the oldest
+installed Java (under `/usr/lib/jvm`) that can run it. That is what makes a release
+needing a newer Java, as 5.0.0 did, a switch rather than two settings changed in step.
+If no suitable Java is installed, checks fail as "could not run" with a reason naming
+the Java needed, and never block a submission.
+
+Releases are unpacked under `VALIDATE_WORK_DIR/releases/` (`VALIDATE_RELEASES_DIR`),
+one directory per version, about 90MB each; the downloaded archive is deleted once
+unpacked. Nothing is ever unpacked over a release in use.
+
+Old releases are removed after every `switch` and `rollback`, and when the monthly
+check installs a new one. Kept: the release in use, the one before it (what
+`rollback` returns to; `VALIDATE_RELEASES_KEEP_PREVIOUS` raises that), and a newer
+release installed but not yet switched to. So at most three, about 300MB. Only
+directories ELSA installed are touched, and nothing at all is removed when nothing
+says which release is in use. `validate_release prune --dry-run` shows the decision.
+Anything older is in the team's collection under `/home/atmos4/PDS/`.
+
+**The command.**
+
+    python3 manage.py validate_release status            # what runs here, what is out
+    python3 manage.py validate_release install 5.1.0     # download + verify only
+    python3 manage.py validate_release qualify 5.1.0     # compare with the one in use
+    python3 manage.py validate_release switch 5.1.0      # the human step
+    python3 manage.py validate_release rollback          # undo the last switch
+
+`install` checks the download against the SHA-256 GitHub states for it and refuses a
+release that has none. `switch` refuses a release that does not start (it runs
+`--version` and validates an empty directory under the Java it will get), and one the
+web server could not read; `--private` allows the latter on a development host whose
+server runs as you. The link is replaced in one rename, so a check starting at that
+moment gets one release or the other. Every switch is recorded in
+`VALIDATE_WORK_DIR/upgrades/history.json`, which is what `rollback` reads.
+
+**The monthly check.** `validate_release check` is meant for cron. When GitHub has a
+stable release newer than the one in use, it installs and verifies it, makes sure a
+suitable Java exists, then compares the two releases over every bundle under
+`VALIDATE_QUALIFY_ROOTS` (read-only), and runs the validation test suites with each
+where the host has them. Differences are judged on what a user would see: the
+plain-language items, anything unmapped, and above all whether the submission gate
+flips. The exit code is ignored, as ELSA ignores it. It then emails
+`VALIDATE_UPGRADE_RECIPIENTS` once: "ready" when nothing changes, "needs a look" with a
+bundle-by-bundle report when something does, or what is blocking it (a Java to
+install, a bad download). It never switches anything. A blocked release is retried
+every month and reported again only when it moves on. A month with nothing new costs
+one request to GitHub and downloads nothing. Recipients are Rupak only for now.
+
+`--trial --release 5.0.0 --baseline 4.2.0` sends a sample of the real email (subject
+marked [Trial]) comparing two installed releases; like `--no-email`, it records
+nothing and removes nothing, so it cannot stop a real report being sent later.
+
+On atmos it runs from the development checkout, which can read production's bundles:
+
+    # crontab -e, as rupakdey: 07:00 on the 1st of each month
+    0 7 1 * * cd /home/rupakdey/elsa/ELSA-sven && nice -n 10 /home/rupakdey/elsa/Virtual_Env/bin/python manage.py validate_release check >> validation/upgrades/cron.log 2>&1
+
+A full comparison of about 300 bundles takes around half an hour with two JVMs
+(`VALIDATE_QUALIFY_WORKERS`, default `VALIDATE_MAX_CONCURRENT`), plus a few minutes
+per release for the test suites.
+
+**Moving a host onto the link, once.** On production, as sajomont:
+
+    cd /export/atmos1/htdocs/elsa
+    chmod o-w validation
+    /usr/local/venvs/ELSA_3.11/bin/python manage.py validate_release switch 5.0.0 --install
+
+`chmod o-w` comes first because `switch` refuses a link that every user could
+replace: the web server runs whatever it points at. `validation/` was left
+world-writable so apache could create `tmp/`; that exists now (owned by apache), and
+`reports/`, the other directory apache writes, keeps its own permissions.
+
+Then, still as sajomont, in `elsa/secrets.py`:
+
+    VALIDATE_HOME = '/export/atmos1/htdocs/elsa/validation/validate-current'
+    VALIDATE_JAVA_HOME = 'auto'
+
+and `touch elsa/wsgi.py`. After that, a switch on production is the `switch` line
+alone, and secrets.py never changes again.
+
 ## How it runs
 
 A view creates a `ValidationRun` row and launches `manage.py run_validation <id>` as
@@ -151,7 +260,7 @@ The common ones:
 |---|---|
 | `VALIDATE_HOME is not set` | Settings missing; see step 3. |
 | `No validate launcher at ...` | `VALIDATE_HOME` points at the parent, not the release directory. |
-| `UnsupportedClassVersionError` in the log | `VALIDATE_JAVA_HOME` is not pointing at Java 17. |
+| `UnsupportedClassVersionError` in the log | `VALIDATE_JAVA_HOME` is older than the release needs: Java 25 for validate 5.0.0. |
 | `exited ... without writing a report` | validate crashed. Run the command by hand to see its output. |
 | Run stuck at Running | The child died without recording anything. `run_validation <id>` re-runs it in the foreground. |
 

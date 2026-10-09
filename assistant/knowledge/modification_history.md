@@ -21,7 +21,10 @@ Attributes of Modification_Detail (all required):
 - version_id [1..1], the product version this modification produced (e.g. 1.0).
 - description [1..1], what changed in this round.
 
-In ELSA: Modification History is one of the three required components before an
-External bundle can be submitted. For a new bundle, the first entry typically has
-version 1.0 with a description like "Initial creation of the bundle". Users add
-further entries when they revise a previously archived bundle.
+In ELSA: Modification History is required before a bundle can be submitted, and
+ELSA writes the first entry itself when a bundle is created: version 1.0, the
+creation date, and the description "Bundle creation". Nobody needs to add it, and
+it is not a step of the guided walkthrough. It can be changed in the Modification
+History window on the bundle page (for example to set the delivery date). Users
+add further entries only when they deliver a revised version of a bundle that was
+already archived, not for each edit made in ELSA.

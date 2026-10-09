@@ -73,6 +73,7 @@ should depend on it.
       z-index: 1090;
       max-width: min(92vw, 26rem);
    }
+   body.modal-open .elsa-toasts { pointer-events: none; }
    .elsa-toast {
       background-color: #fff;
       box-shadow: 0 .5rem 1.25rem rgba(16, 24, 40, .16);
@@ -109,6 +110,17 @@ should depend on it.
       } else {
          start();
       }
+      /* Toasts sit above dialogs (see the z-index above), in the corner where a
+         dialog's own buttons are. A success toast left over from the last save
+         covered the Save button of the next dialog opened, and took its click.
+         Opening a dialog says the user has moved on, so successes go; a warning or
+         error stays in view but lets clicks through while the dialog is open. */
+      document.addEventListener('show.bs.modal', function () {
+         if (!window.bootstrap || !window.bootstrap.Toast) return;
+         document.querySelectorAll('#elsaToasts .elsa-toast.show').forEach(function (el) {
+            if (el.dataset.autohide !== 'false') window.bootstrap.Toast.getOrCreateInstance(el).hide();
+         });
+      });
    })();
 </script>
 {% endif %}

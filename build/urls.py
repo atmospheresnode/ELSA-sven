@@ -32,6 +32,9 @@ urlpatterns = [
     re_path(r'^(?P<bundle>\d+)/data_prep/$', views.data_prep, name='data_prep'),
     # Yes Intro Page (walkthrough enabled)
     re_path(r'^(?P<bundle_id>\d+)/walkthrough/yes_intro/$', views.yes_intro_page, name='yes_intro_page'),
+    # The guided setup: every walkthrough step on one page, and its citation save.
+    re_path(r'^(?P<pk_bundle>\d+)/setup/$', views.setup, name='setup'),
+    re_path(r'^(?P<pk_bundle>\d+)/setup/citation/$', views.setup_citation, name='setup_citation'),
     # No Intro Page (walkthrough not enabled)
     re_path(r'^(?P<bundle_id>\d+)/walkthrough/no_intro/$', views.no_intro_page, name='no_intro_page'),
 

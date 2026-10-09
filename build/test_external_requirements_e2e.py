@@ -150,19 +150,18 @@ class ExternalRequirementsEndToEndTests(TransactionTestCase):
     # -- authors -------------------------------------------------------------------
 
     def test_the_citation_form_refuses_an_external_citation_with_no_author(self):
-        """The only moment an author can be added is when the citation is created, so
-        that is where it is enforced, and the refusal is shown rather than lost."""
+        """The bundle page's Citation Information window refuses a citation with no
+        author, and says so in the window rather than losing it."""
         b = Builder(username='ext_e2e')
         b.create('ext req form refuses', 'External')
-        response = b.client.post(reverse('build:bundle', args=[b.bundle.pk]), {
-            'number_of_authors_people': 0, 'number_of_authors_organization': 0,
-            'number_of_editors_people': 0, 'number_of_editors_organization': 0,
-            'publication_year': '2026', 'description': 'A test bundle', 'keyword': 'winds'})
+        response = b.client.post(reverse('build:setup_citation', args=[b.bundle.pk]), {
+            'source': 'bundle', 'publication_year': '2026', 'description': 'A test bundle',
+            'keyword': 'winds'},
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest', HTTP_X_ELSA_INPLACE='citation')
         self.assertFalse(Citation_Information.objects.filter(bundle=b.bundle).exists())
-        body = response.content.decode()
-        self.assertIn('Add at least one author, a person or an organization', body)
-        self.assertTrue(response.context['reopen_citation_modal'])
-        self.assertIn("document.getElementById('citation_information_modal');", body)
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('Add at least one author: a person or an organization',
+                      response.content.decode())
 
         # The same numbers with one author go through.
         b.add_citation(authors=1)
@@ -202,19 +201,19 @@ class ExternalRequirementsEndToEndTests(TransactionTestCase):
         self.assertEqual(self.requirement_keys(b), ['author-missing'])
         window = self.review_window(b)
         self.assertIn('Add at least one author to the citation', window)
-        self.assertIn('delete this citation, and create it again', window)
+        self.assertIn('Open Citation Information and add a person or an organization', window)
         self.assertFalse(self.submit(b))
         self.assertEqual(b.bundle.get_status(), 'in_progress')
 
     def test_the_advice_on_an_authorless_citation_can_be_followed(self):
-        """Delete the citation, create it again with an author, and it submits."""
+        """Add an author in the setup page's Citation step, and it submits."""
         b = self.legacy_authorless('ext req follow advice')
-        citation = Citation_Information.objects.get(bundle=b.bundle)
-        b.client.post(reverse('build:citation_information_delete',
-                              args=[b.bundle.pk, citation.pk]))
-        self.assertFalse(Citation_Information.objects.filter(bundle=b.bundle).exists())
-
-        b.add_citation(authors=1).fill_authors()
+        response = b.client.post(reverse('build:setup_citation', args=[b.bundle.pk]), {
+            'publication_year': '2026', 'description': 'A description',
+            'author_person_0_given_name': 'Ada', 'author_person_0_family_name': 'Lovelace'},
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest')
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(Citation_Information.objects.filter(bundle=b.bundle).count(), 1)
         self.assertEqual(self.requirement_keys(b), [])
         run = self.check(b.bundle)
         self.assertEqual(self.user_items(run), [], run.findings)

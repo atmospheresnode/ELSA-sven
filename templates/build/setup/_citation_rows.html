@@ -1,0 +1,94 @@
+{% comment %}
+One author or editor. Used for the entries already saved and, with index "__i__", for
+the blank entry the page copies when "Add" is pressed. The field names are the ones
+the bundle page's citation editor uses (author_person_0_given_name and so on), which
+is what build.bundle_setup.CitationListForm reads; the number only groups an entry's
+fields.
+
+An entry that has a name is shown as who it is (initials, name, affiliation, ORCID iD)
+with Edit and Remove; its fields open in place only while it is being edited. An open
+form for every person read as unfinished work, even for people already added. A new
+entry, or one the server refused, opens with its fields showing. The fields are always
+in the form either way, so what is saved is what the fields say.
+
+Parameters: kind ('person' or 'org'), prefix ('author_person', 'author_org',
+'editor_person', 'editor_org'), i, row, who ('Author' or 'Editor').
+{% endcomment %}
+{% if kind == 'person' %}
+<div class="cite-entry" data-row {% if row.given_name and row.family_name %}data-state="view"{% else %}data-state="edit" data-new{% endif %}>
+   <div class="cite-view">
+      <span class="cite-avatar" aria-hidden="true">{{ row.given_name|slice:":1"|upper }}{{ row.family_name|slice:":1"|upper }}</span>
+      <div class="cite-text">
+         <div><span class="cite-name" data-cite-name>{{ row.given_name }} {{ row.family_name }}</span></div>
+         <div class="cite-meta"></div>
+      </div>
+      <div class="cite-actions">
+         <button type="button" class="cite-icon" data-cite-edit aria-label="Edit {{ row.given_name }} {{ row.family_name }}" title="Edit"><i class="bi bi-pencil" aria-hidden="true"></i></button>
+         <button type="button" class="cite-icon is-remove" data-remove-row aria-label="Remove {{ row.given_name }} {{ row.family_name }}" title="Remove"><i class="bi bi-trash3" aria-hidden="true"></i></button>
+      </div>
+   </div>
+   <div class="cite-edit">
+      <span class="cite-edit-title">{{ who }}, person</span>
+      <div class="cite-fields">
+         <div>
+            <label class="form-label" for="{{ prefix }}_{{ i }}_given_name">Given name<span class="setup-req" title="Required">*</span></label>
+            <input type="text" class="form-control" id="{{ prefix }}_{{ i }}_given_name" name="{{ prefix }}_{{ i }}_given_name" value="{{ row.given_name }}" maxlength="255" autocomplete="off">
+         </div>
+         <div>
+            <label class="form-label" for="{{ prefix }}_{{ i }}_family_name">Family name<span class="setup-req" title="Required">*</span></label>
+            <input type="text" class="form-control" id="{{ prefix }}_{{ i }}_family_name" name="{{ prefix }}_{{ i }}_family_name" value="{{ row.family_name }}" maxlength="255" autocomplete="off">
+         </div>
+         <div>
+            <label class="form-label" for="{{ prefix }}_{{ i }}_orcid">ORCID iD <a href="https://orcid.org/orcid-search/search" target="_blank" rel="noopener" class="setup-lookup">Look up</a></label>
+            <input type="text" class="form-control" id="{{ prefix }}_{{ i }}_orcid" name="{{ prefix }}_{{ i }}_orcid" value="{{ row.orcid }}" maxlength="255" placeholder="0000-0000-0000-0000" autocomplete="off">
+         </div>
+         <div>
+            <label class="form-label" for="{{ prefix }}_{{ i }}_affiliation">Affiliation</label>
+            <input type="text" class="form-control" id="{{ prefix }}_{{ i }}_affiliation" name="{{ prefix }}_{{ i }}_affiliation" value="{{ row.affiliation }}" maxlength="255" placeholder="e.g. New Mexico State University" autocomplete="off">
+         </div>
+      </div>
+      <div class="cite-problem" role="alert"></div>
+      <div class="cite-edit-actions">
+         <button type="button" class="cite-done" data-cite-done>Done</button>
+         <button type="button" class="cite-cancel" data-cite-cancel>Cancel</button>
+         <button type="button" class="cite-remove-text" data-remove-row aria-label="Remove this {{ who|lower }}">Remove</button>
+      </div>
+   </div>
+</div>
+{% else %}
+<div class="cite-entry" data-row {% if row.name %}data-state="view"{% else %}data-state="edit" data-new{% endif %}>
+   <div class="cite-view">
+      <span class="cite-avatar" aria-hidden="true"><i class="bi bi-building"></i></span>
+      <div class="cite-text">
+         <div><span class="cite-name" data-cite-name>{{ row.name }}</span><span class="cite-role">Organization</span></div>
+         <div class="cite-meta"></div>
+      </div>
+      <div class="cite-actions">
+         <button type="button" class="cite-icon" data-cite-edit aria-label="Edit {{ row.name }}" title="Edit"><i class="bi bi-pencil" aria-hidden="true"></i></button>
+         <button type="button" class="cite-icon is-remove" data-remove-row aria-label="Remove {{ row.name }}" title="Remove"><i class="bi bi-trash3" aria-hidden="true"></i></button>
+      </div>
+   </div>
+   <div class="cite-edit">
+      <span class="cite-edit-title">{{ who }}, organization</span>
+      <div class="cite-fields">
+         <div>
+            <label class="form-label" for="{{ prefix }}_{{ i }}_name">Organization name<span class="setup-req" title="Required">*</span></label>
+            <input type="text" class="form-control" id="{{ prefix }}_{{ i }}_name" name="{{ prefix }}_{{ i }}_name" value="{{ row.name }}" maxlength="255" placeholder="e.g. MCS Science Team" autocomplete="off">
+         </div>
+         <div>
+            <label class="form-label" for="{{ prefix }}_{{ i }}_rorid">ROR ID <a href="https://ror.org/search" target="_blank" rel="noopener" class="setup-lookup">Look up</a></label>
+            <input type="text" class="form-control" id="{{ prefix }}_{{ i }}_rorid" name="{{ prefix }}_{{ i }}_rorid" value="{{ row.rorid }}" maxlength="255" autocomplete="off">
+         </div>
+      </div>
+      {# Kept as they were: the bundle page's old editor could set these, and a save here must not drop them. #}
+      <input type="hidden" name="{{ prefix }}_{{ i }}_sequence_number" value="{{ row.sequence_number }}">
+      <input type="hidden" name="{{ prefix }}_{{ i }}_parent_org_name" value="{{ row.parent_org_name }}">
+      <div class="cite-problem" role="alert"></div>
+      <div class="cite-edit-actions">
+         <button type="button" class="cite-done" data-cite-done>Done</button>
+         <button type="button" class="cite-cancel" data-cite-cancel>Cancel</button>
+         <button type="button" class="cite-remove-text" data-remove-row aria-label="Remove this organization">Remove</button>
+      </div>
+   </div>
+</div>
+{% endif %}

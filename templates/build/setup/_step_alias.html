@@ -1,0 +1,51 @@
+<section class="setup-panel" id="step-alias" data-step="alias" aria-labelledby="step-alias-title">
+   <header class="setup-panel-head">
+      <span class="setup-kicker">Step {{ step.number }} of {{ setup.steps|length }} &middot; Optional</span>
+      <h2 id="step-alias-title" tabindex="-1">Alias</h2>
+      <p class="setup-why">Another name or identifier this bundle is known by, such as a team's internal ID.</p>
+      <details class="setup-more">
+         <summary>More about this</summary>
+         <p>PDS4 lets you list alternate names and IDs for a bundle. You can give an alternate ID, an alternate title, or both. Most bundles do not need one, and you can add one later from the bundle page.</p>
+      </details>
+   </header>
+
+   {% if aliases %}
+   <ul class="setup-list">
+      {% for alias in aliases %}
+      <li><i class="bi bi-tag me-2" aria-hidden="true"></i>{% if alias.alternate_id %}<span class="setup-mono">{{ alias.alternate_id }}</span>{% endif %}{% if alias.alternate_id and alias.alternate_title %} &middot; {% endif %}{{ alias.alternate_title }}</li>
+      {% endfor %}
+   </ul>
+   <details class="setup-add">
+      <summary>Add another alias</summary>
+   {% endif %}
+      <form id="setup-form-alias" class="setup-form" method="post" action="{% url 'build:bundle' bundle.pk %}" data-setup-form="alias" data-then="{% if aliases %}stay{% else %}next{% endif %}">
+         {% csrf_token %}
+         <input type="hidden" name="source" value="bundle">
+         <div class="setup-grid-2">
+            <div>
+               <label class="form-label" for="{{ form_alias.alternate_id.id_for_label }}">Alternate ID</label>
+               {{ form_alias.alternate_id }}
+            </div>
+            <div>
+               <label class="form-label" for="{{ form_alias.alternate_title.id_for_label }}">Alternate title</label>
+               {{ form_alias.alternate_title }}
+            </div>
+         </div>
+         <div>
+            <label class="form-label" for="{{ form_alias.comment.id_for_label }}">Comment <span class="text-muted fw-normal">(optional)</span></label>
+            {{ form_alias.comment }}
+         </div>
+         {% if aliases %}
+         <div><button type="submit" class="btn setup-btn-ghost" data-then="stay">Add alias</button></div>
+         {% endif %}
+      </form>
+   {% if aliases %}
+   </details>
+   {% endif %}
+
+   {% if aliases %}
+   {% include 'build/setup/_actions.html' with step=step primary='continue' %}
+   {% else %}
+   {% include 'build/setup/_actions.html' with step=step primary='save' form_id='setup-form-alias' %}
+   {% endif %}
+</section>

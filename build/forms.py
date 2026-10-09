@@ -145,7 +145,10 @@ MAX_BUNDLE_NAME = 150
 
 
 class BundleForm(forms.ModelForm):
-    name = forms.CharField(required=True, max_length=MAX_BUNDLE_NAME, widget = forms.TextInput(attrs={
+    # The name becomes a folder under the owner's archive, so it must be one
+    # path segment: "../someone/x" used to land in another user's archive.
+    name = forms.CharField(required=True, max_length=MAX_BUNDLE_NAME,
+                           validators=[validate_path_component], widget = forms.TextInput(attrs={
             'class': 'form-control',
             'id': 'bundle_name',
             'placeholder': 'Bundle Name'

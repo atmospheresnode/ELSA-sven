@@ -45,18 +45,27 @@ additional editor persons/organizations on the citation form, then fill in
 their names on the citation details page (Editors tab). Citation Information is
 required before a bundle can be submitted.
 
+**Add me as an author**: the Authors section has a button that adds you, with
+the name on your account and, if you have saved them on the Account page, your
+ORCID iD and affiliation. It fills an empty author row or adds a new one, and
+will not add you twice.
+
 An External bundle's citation needs at least one author, a person or an
 organization. PDS4 lets a citation leave authors out, so the validation tool does
 not report it, but a citation with no one to credit cannot be cited or given a
-DOI. The author count is set only when the citation is created (the details page
-fills in names but cannot change how many there are), so for an External bundle
-the form refuses a count of zero people and zero organizations and says why. A
-citation that already has no authors has to be deleted and created again with at
-least one.
+DOI.
+
+A citation is written or changed in the Citation Information window on the
+bundle page (Bundle Components card), or in the Citation step of the guided
+setup; both show the same form. The authors and editors are a list: "Add a
+person" and "Add an organization" add a row, the X removes one, and the list can
+be changed at any time, including after the citation was saved. Each person needs
+a given and family name; ORCID and affiliation are optional and are left out of
+the label when blank. Saving updates every label in the bundle.
 
 A bundle holds one Citation Information section (PDS4 allows exactly one per
-bundle). Once it exists, the modal shows the current citation with edit and
-delete actions instead of the create form.
+bundle). Once it exists, the window opens with it filled in, ready to change, and
+a "Delete citation" button removes it from every label.
 
 Where it is stored: the counts, publication year, description and keyword are
 columns on the Citation_Information row, but the author and editor names are

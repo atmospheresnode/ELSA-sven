@@ -203,6 +203,12 @@
                                                 </span>
                                                 {% endwith %}
                                             {% endif %}
+                                            {% if bundle.files_missing %}
+                                                <span class="badge rounded-pill bg-danger btn-keep-bg" style="font-size: 0.7rem;"
+                                                      title="ELSA cannot find this bundle's files. Contact ELSA support before deleting it.">
+                                                    <i class="fa fa-exclamation-triangle me-1"></i>Files missing
+                                                </span>
+                                            {% endif %}
                                             {% if bundle.updated_at %}
                                             <p class="card-text mb-2">
                                                 <small class="text-muted">

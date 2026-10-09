@@ -1,0 +1,53 @@
+{% comment %}
+The last stop. The list is build.preflight.REQUIREMENTS, the same one the bundle
+page's Review & Submit gate and validation panel read, so this page can never call a
+bundle ready that the gate would refuse.
+{% endcomment %}
+<section class="setup-panel" id="step-finish" data-step="finish" aria-labelledby="step-finish-title">
+   <header class="setup-panel-head">
+      <span class="setup-kicker">Last step</span>
+      <h2 id="step-finish-title" tabindex="-1">{% if finish.ready %}Everything ELSA needs is in place{% else %}Almost there{% endif %}</h2>
+      {% if finish.ready %}
+      <p class="setup-why">{% if bundle.bundle_type == 'External' %}Next, Review &amp; Submit checks every label with the PDS validator and sends the bundle to the ATM node for review.{% else %}Carry on from the bundle page, where you can add context products, documents and data collections.{% endif %}</p>
+      {% else %}
+      <p class="setup-why">These are what ELSA needs before the bundle can be sent for review. Everything else can be added or changed later from the bundle page.</p>
+      {% endif %}
+   </header>
+
+   <ul class="setup-checklist">
+      {% for item in finish.items %}
+      <li class="{% if item.ok %}is-ok{% else %}is-missing{% endif %}">
+         <span class="setup-mark" aria-hidden="true">{% if item.ok %}<i class="bi bi-check-lg"></i>{% else %}<i class="bi bi-exclamation-lg"></i>{% endif %}</span>
+         <span class="setup-check-text">
+            <span class="setup-check-title">{{ item.title }}</span>
+            <span class="setup-check-state">{% if item.ok %}Done{% else %}Still needed{% endif %}</span>
+         </span>
+         {% if not item.ok and item.step %}<a class="btn setup-btn-ghost btn-sm" href="#{{ item.step }}">Go to step</a>
+         {% elif not item.ok %}<a class="btn setup-btn-ghost btn-sm" href="{% url 'build:bundle' bundle.pk %}">Add on the bundle page</a>{% endif %}
+      </li>
+      {% endfor %}
+   </ul>
+
+   {% if initial_version %}
+   <div class="setup-note">
+      <i class="bi bi-clock-history" aria-hidden="true"></i>
+      <p><strong>About versions.</strong> ELSA recorded this bundle as version {{ initial_version.version_id }}
+      in its modification history when you created it. You do not add entries while building. Once this
+      version has been archived, if you later deliver a corrected or extended version, add an entry
+      describing what changed in the bundle page's Modification History window.</p>
+   </div>
+   {% endif %}
+
+   {% if setup.skipped %}
+   <p class="setup-hint">Optional steps not done yet: {{ setup.skipped|join:", " }}. You can add these at any time.</p>
+   {% endif %}
+
+   <div class="setup-actions">
+      <a class="btn setup-btn-ghost" href="#{{ setup.last }}"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Back</a>
+      <span class="setup-spacer"></span>
+      <a class="btn {% if finish.ready and bundle.bundle_type == 'External' %}setup-btn-ghost{% else %}setup-btn-primary{% endif %}" href="{% url 'build:bundle' bundle.pk %}">Go to bundle page</a>
+      {% if finish.ready and bundle.bundle_type == 'External' %}
+      <a class="btn setup-btn-primary" href="{% url 'build:bundle' bundle.pk %}#review"><i class="bi bi-clipboard-check me-1" aria-hidden="true"></i>Review &amp; Submit</a>
+      {% endif %}
+   </div>
+</section>

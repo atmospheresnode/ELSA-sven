@@ -17,7 +17,14 @@ email, agency (NASA, ESA, or JAXA), and a password. Each email address and
 username can only be used once, and the password has to pass ELSA's strength
 rules. ELSA emails you a one-time verification code (OTP), enter it on the
 verification page to activate the account. Until the code is verified the
-account stays inactive.
+account stays inactive. Once it is confirmed, ELSA shows a short, optional
+welcome step: add your ORCID iD and affiliation (used by "Add me as an author"
+in citations) or skip it, then, on a device that supports it, an offer to set up
+a passkey, and finally the Bundle Hub, where you create your first bundle.
+If you closed the page before entering the code, sign
+in with your username and password and ELSA sends a fresh code. An account
+that is never confirmed may be removed after about a week, which frees the
+username and email address to register again.
 
 Logging in: the landing page asks for your **username only**, then a
 **Continue** button. There is no password box on that first screen. What
@@ -27,7 +34,11 @@ happens next depends on the account:
   passkey screen and your browser asks for your fingerprint, face, or device
   PIN. That signs you in on its own, no password and no emailed code.
 - Otherwise ELSA shows a password screen. After the password it emails you a
-  one-time code to finish signing in.
+  one-time code to finish signing in. On your own computer you can tick
+  **Remember this device for 30 days** above the code boxes: for 30 days that
+  browser then signs in with just your password. You can forget a remembered
+  device at any time on the Account page, and changing your password forgets
+  them all.
 
 If your device already holds a saved passkey, your browser will usually offer
 it as soon as you click the username box, so you never reach the second screen

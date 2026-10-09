@@ -1,0 +1,27 @@
+{% comment %}
+The bar at the foot of every step. Back and Skip are plain links to other steps, so
+they work without the page's script. The main button either saves the step's form
+(primary='save', with form_id) or moves on (primary='continue'). A required step
+that is still missing something says so instead of moving on; Skip is always there.
+
+Parameters: step (from walkthrough.summary), primary, form_id, blocked.
+{% endcomment %}
+<div class="setup-actions">
+   {% if step.prev %}
+   <a class="btn setup-btn-ghost" href="#{{ step.prev }}"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Back</a>
+   {% endif %}
+   <span class="setup-spacer"></span>
+   {% if not step.done %}
+   <a class="setup-skip" href="#{{ step.next }}">Skip for now</a>
+   {% endif %}
+   {% if primary == 'save' %}
+   <button type="submit" form="{{ form_id }}" class="btn setup-btn-primary" data-then="next">
+      Save and continue
+   </button>
+   {% else %}
+   <a class="btn setup-btn-primary" href="#{{ step.next }}" data-continue{% if step.required and not step.done %} data-blocked="{{ blocked }}"{% endif %}>
+      Continue<i class="bi bi-arrow-right ms-1" aria-hidden="true"></i>
+   </a>
+   {% endif %}
+</div>
+<p class="setup-blocked" role="alert" hidden></p>

@@ -1,0 +1,39 @@
+<section class="setup-panel" id="step-investigation" data-step="investigation" aria-labelledby="step-investigation-title">
+   <header class="setup-panel-head">
+      <span class="setup-kicker">Step {{ step.number }} of {{ setup.steps|length }} &middot; Optional</span>
+      <h2 id="step-investigation-title" tabindex="-1">Investigation</h2>
+      <p class="setup-why">The mission or campaign this data comes from. The targets listed for it are offered first on the next step.</p>
+      <details class="setup-more">
+         <summary>More about this</summary>
+         <p>Investigations are the top level of the PDS context system: individual investigations, missions, field campaigns, observing campaigns and others. Choosing one links your bundle to it. Instruments and instrument hosts can be added afterwards from the bundle page's Context Products window.</p>
+      </details>
+   </header>
+
+   {% if investigations %}
+   <ul class="setup-list">
+      {% for investigation in investigations %}
+      <li><i class="bi bi-rocket-takeoff me-2" aria-hidden="true"></i>{{ investigation.name }}</li>
+      {% endfor %}
+   </ul>
+   {% endif %}
+
+   <form id="setup-form-investigation" class="setup-form setup-inline" method="post" action="{% url 'build:bundle' bundle.pk %}" data-setup-form="investigation" data-then="stay">
+      {% csrf_token %}
+      <input type="hidden" name="source" value="bundle">
+      <div class="setup-inline-field">
+         <label class="form-label" for="setup_investigation">{% if investigations %}Add another investigation{% else %}Investigation{% endif %}</label>
+         <input type="search" class="form-control form-control-sm setup-filter" data-filter-for="setup_investigation" placeholder="Type to search the list" aria-label="Search investigations" aria-controls="setup_investigation" autocomplete="off">
+         <select name="investigation" id="setup_investigation" class="form-select" required>
+            <option value="">Choose an investigation</option>
+            {% for value, label in form_investigation.fields.investigation.choices %}{% if value %}
+            <option value="{{ value }}">{{ label }}</option>
+            {% endif %}{% endfor %}
+         </select>
+         <div class="setup-filter-count" data-filter-count aria-live="polite"></div>
+      </div>
+      <button type="submit" class="btn setup-btn-ghost">Add</button>
+   </form>
+   <p class="setup-hint">Not listed? <a href="{% url 'main:contact' %}" target="_blank" rel="noopener">Contact the ATM node</a> and we will add it.</p>
+
+   {% include 'build/setup/_actions.html' with step=step primary='continue' %}
+</section>

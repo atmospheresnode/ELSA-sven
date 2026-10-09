@@ -74,6 +74,9 @@
         if (error.name === 'AbortError') {
             return 'The request was cancelled.';
         }
+        if (error.name === 'NotSupportedError') {
+            return 'This browser or device cannot use a passkey here. Sign in with your password instead.';
+        }
         if (error.reason === 'unknown_credential') {
             return 'That passkey is no longer registered with ELSA. It was probably '
                  + 'removed from your account. Sign in with your password, then set '

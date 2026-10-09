@@ -329,8 +329,9 @@
             window.location.href = data.redirect;
         });
     }).catch(function (error) {
-        // A cancelled prompt is routine; only report a genuine failure.
-        if (error && error.name !== 'NotAllowedError' && error.name !== 'AbortError') {
+        // Nobody asked for this prompt, so a cancelled one, or a browser that
+        // cannot offer passkeys in autofill, is routine; only report a genuine failure.
+        if (error && ['NotAllowedError', 'AbortError', 'NotSupportedError'].indexOf(error.name) === -1) {
             alertBox.className = 'alert alert-danger py-2 px-3 mb-3';
             alertBox.textContent = window.ElsaPasskeys.describe(error);
         }

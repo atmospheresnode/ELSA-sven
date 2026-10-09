@@ -1,0 +1,43 @@
+{% autoescape off %}ELSA -- Educational Labeling System @Atmospheres
+
+{{ headline }}
+{% if trial %}
+TRIAL: sent so you can see what this email looks like. Every number is real
+(validate {{ version }} was just compared with {{ current }}), but nothing new has
+been released and nothing needs doing.
+{% endif %}
+{{ lead }}
+
+{{ verdict_title }}
+{{ verdict_text }}
+{% if tiles %}
+{% for tile in tiles %}  {{ tile.label }}: {{ tile.value }}
+{% endfor %}{% endif %}{% if changed %}
+What would change:
+{% for bundle in changed %}
+  {{ bundle.name }}{% if bundle.gate %} (gate flips){% endif %}
+  {{ bundle.dir }}
+{% for line in bundle.changes %}    {{ line }}
+{% endfor %}{% endfor %}{% if changed_more %}  And {{ changed_more }} more in the attached report.
+{% endif %}{% endif %}{% if problem %}
+What happened:
+{{ problem }}
+{% endif %}{% if steps %}
+{{ steps_title }}:
+{% for step in steps %}
+  {{ step.label }}
+{% for line in step.command.splitlines %}    {{ line }}
+{% endfor %}{% endfor %}{% if steps_note %}
+{{ steps_note }}
+{% endif %}{% endif %}
+Details:
+{% for label, value in details %}  {{ label }}: {{ value }}
+{% endfor %}{% if notes_url %}
+Release notes: {{ notes_url }}
+{% endif %}
+{{ footer }}
+
+--
+Sent automatically by ELSA, Planetary Data System Atmospheres Node,
+New Mexico State University.
+{% endautoescape %}

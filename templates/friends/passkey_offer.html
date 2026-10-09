@@ -10,6 +10,8 @@
 {% block auth_body %}
 <div class="text-center">
 
+    {% if onboarding %}<p class="auth-step">Step 2 of 2</p>{% endif %}
+
     <div class="auth-mark">
         <svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
             <path d="M8 1a2 2 0 0 1 2 2v4H6V3a2 2 0 0 1 2-2zm3 6V3a3 3 0 0 0-6 0v4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2zM8 10a1 1 0 0 1 .5 1.866V13a.5.5 0 0 1-1 0v-1.134A1 1 0 0 1 8 10z"/>
@@ -36,7 +38,8 @@
     <div class="mt-3">
         <form method="post" action="{% url 'friends:passkey_offer_dismiss' %}">
             {% csrf_token %}
-            <button type="submit" class="btn-link-elsa" id="skip-btn">Not now</button>
+            {% if onboarding %}<input type="hidden" name="then" value="hub">{% endif %}
+            <button type="submit" class="btn-link-elsa" id="skip-btn">{% if onboarding %}Skip for now{% else %}Not now{% endif %}</button>
         </form>
     </div>
 
@@ -91,7 +94,7 @@ You can always set this up later from your account page.
             options: "{% url 'friends:passkey_register_options' %}",
             verify: "{% url 'friends:passkey_register_verify' %}"
         }, csrf, label.trim() || 'Passkey').then(function () {
-            window.location.href = "{% url 'main:index' %}";
+            window.location.href = "{{ done_url }}";
         }).catch(function (error) {
             button.disabled = false;
             show('danger', window.ElsaPasskeys.describe(error));
@@ -99,4 +102,9 @@ You can always set this up later from your account page.
     });
 })();
 </script>
+{% endblock %}
+
+{% block auth_css %}
+    .auth-step { margin: -0.5rem 0 0.75rem; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.06em;
+                 text-transform: uppercase; color: #6a737d; }
 {% endblock %}

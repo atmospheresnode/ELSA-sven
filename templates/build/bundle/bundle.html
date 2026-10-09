@@ -5014,6 +5014,14 @@ Kept outside every card for the same reason as the dialog above.{% endcomment %}
     * Whether a check is needed is the server's call (validate_runner.needs_check),
     * the same rule the page's background check follows. */
    var reviewModal = document.getElementById('reviewBundleModal');
+   /* The setup page's finish step links here with #review: open the window it named.
+    * Dropped from the URL so a reload does not open it again. */
+   if (reviewModal && window.location.hash === '#review' && window.bootstrap && bootstrap.Modal) {
+      try { history.replaceState(null, '', window.location.pathname + window.location.search); } catch (err) {}
+      document.addEventListener('DOMContentLoaded', function () {
+         bootstrap.Modal.getOrCreateInstance(reviewModal).show();
+      });
+   }
    if (reviewModal) {
       reviewModal.addEventListener('show.bs.modal', function () {
          fetch(statusUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })

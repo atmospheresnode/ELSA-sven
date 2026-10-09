@@ -42,6 +42,18 @@
 
     <title>ELSA: Educational Labeling System @Atmospheres</title>
     {% block extra_css %}{% endblock %}
+    {% comment %} The browser's time zone, so pages and account emails show local times
+       without asking. Only written when it changes. {% endcomment %}
+    <script>
+    (function () {
+        try {
+            var zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            if (zone && document.cookie.indexOf('elsa_tz=' + encodeURIComponent(zone)) === -1) {
+                document.cookie = 'elsa_tz=' + encodeURIComponent(zone) + '; path=/; max-age=31536000; SameSite=Lax';
+            }
+        } catch (e) {}
+    })();
+    </script>
 </head>
 
 <body>

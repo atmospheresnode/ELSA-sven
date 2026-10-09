@@ -52,7 +52,9 @@ def run_validate(directory, report_path, catalog=None):
         command += ['-C', catalog]
 
     environment = dict(os.environ)
-    java_home = getattr(settings, 'VALIDATE_JAVA_HOME', '')
+    # Resolved the way the application resolves it, so 'auto' means a Java here too.
+    from build.validate_runner import configured_java_home
+    java_home = configured_java_home()
     if java_home:
         environment['JAVA_HOME'] = java_home
         environment['PATH'] = os.path.join(java_home, 'bin') + os.pathsep + \

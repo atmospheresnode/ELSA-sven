@@ -216,13 +216,13 @@ class OTPEmailTests(CaptchaPassing, TestCase):
     def test_logo_asset_stays_small(self):
         # The whole point of the pre-built asset: every message carries this,
         # so a regression to the 70KB source would bloat every send.
-        from friends.views import _elsa_logo_png
+        from friends.mail import _elsa_logo_png
         self.assertLess(len(_elsa_logo_png()), 12 * 1024)
 
     def test_code_still_goes_out_if_the_logo_is_unreadable(self):
         # A decorative image must never be able to break sign-in.
         from unittest import mock
-        with mock.patch('friends.views._elsa_logo_png', side_effect=IOError('gone')):
+        with mock.patch('friends.mail._elsa_logo_png', side_effect=IOError('gone')):
             self.client.post(reverse('friends:login'),
                              {'username': 'vhartwick', 'password': 'correct-horse'})
 
@@ -499,7 +499,7 @@ class PasskeyRenderTests(TestCase):
 
         response = self.client.get(reverse('friends:useraccount'))
         self.assertContains(response, 'Add a passkey')
-        self.assertContains(response, 'You have no passkeys yet')
+        self.assertContains(response, 'None yet')
 
         Passkey.objects.create(user=self.user, credential_id='c1',
                                public_key=b'k', name='Work laptop')
@@ -1424,25 +1424,25 @@ class ThrottleTests(CaptchaPassing, TestCase):
         self.assertNotIn('_auth_user_id', self.client.session)
 
     def test_signing_in_normally_never_uses_up_the_allowance(self):
-        from django.core.cache import cache
+        from friends import throttle
         from friends.views import _password_key
 
         self._try_password('wrong')
-        self.assertEqual(cache.get(_password_key('rupak')), 1)
+        self.assertEqual(throttle.count(_password_key('rupak')), 1)
 
         self._try_password('correct-horse-battery')
-        self.assertIsNone(cache.get(_password_key('rupak')))
+        self.assertEqual(throttle.count(_password_key('rupak')), 0)
 
     def test_the_counter_is_per_account(self):
-        from django.core.cache import cache
+        from friends import throttle
         from friends.views import _password_key
 
         self._try_password('wrong')
         self.client.post(reverse('friends:login_identify'), {'username': 'someone-else'})
         self.client.post(reverse('friends:login_password'), {'password': 'wrong'})
 
-        self.assertEqual(cache.get(_password_key('rupak')), 1)
-        self.assertEqual(cache.get(_password_key('someone-else')), 1)
+        self.assertEqual(throttle.count(_password_key('rupak')), 1)
+        self.assertEqual(throttle.count(_password_key('someone-else')), 1)
 
     def test_scripted_sign_ups_are_capped(self):
         from friends.views import SIGNUP_PER_HOUR
@@ -1465,7 +1465,7 @@ class ThrottleTests(CaptchaPassing, TestCase):
     def test_a_forged_forwarded_header_does_not_reset_the_counter(self):
         # X-Forwarded-For is client-controlled unless a proxy is trusted, so it
         # must not be readable by default.
-        from django.core.cache import cache
+        from friends import throttle
         from friends.views import _password_key
 
         self._try_password('wrong')
@@ -1473,7 +1473,7 @@ class ThrottleTests(CaptchaPassing, TestCase):
         self.client.post(reverse('friends:login_password'), {'password': 'wrong'},
                          HTTP_X_FORWARDED_FOR='1.2.3.4')
 
-        self.assertEqual(cache.get(_password_key('rupak')), 2)
+        self.assertEqual(throttle.count(_password_key('rupak')), 2)
 
 
 class SignupCaptchaTests(CaptchaPassing, TestCase):

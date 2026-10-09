@@ -1,0 +1,9 @@
+<ol class="account-steps" aria-label="Step {{ at }} of 2">
+    <li class="step {% if at == 1 %}active{% else %}done{% endif %}" {% if at == 1 %}aria-current="step"{% endif %}>
+        <span class="step-mark" aria-hidden="true">{% if at == 1 %}1{% else %}<i class="bi bi-check"></i>{% endif %}</span>{{ first }}
+    </li>
+    <li class="step-sep" aria-hidden="true"><i class="bi bi-chevron-right"></i></li>
+    <li class="step {% if at == 2 %}active{% endif %}" {% if at == 2 %}aria-current="step"{% endif %}>
+        <span class="step-mark" aria-hidden="true">2</span>{{ second }}
+    </li>
+</ol>

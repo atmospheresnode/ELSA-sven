@@ -1,0 +1,564 @@
+{% extends 'base-derk.html' %}
+{% load static %}
+
+{% block body_block %}
+{% comment %}
+The guided setup: the walkthrough as one page, one step showing at a time.
+
+Steps save in place through the views the bundle page already uses (see
+build/bundle_setup.py), and the page then fetches itself again and swaps in the
+fresh step list and panels, so what it shows is always what the bundle holds. Each
+step has its own address (#citation), which keeps refresh, the back button and links
+from elsewhere working. Without JavaScript every step is shown, one under another.
+
+Body text is the face the rest of ELSA uses (Bootstrap's system stack, from
+base-derk.html); Outfit appears once, on the bundle name, as on the bundle page.
+{% endcomment %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600&display=swap" rel="stylesheet">
+
+<div class="elsa-setup" id="elsaSetup" data-setup-url="{% url 'build:setup' bundle.pk %}" data-bundle="{{ bundle.pk }}">
+   <header class="setup-head">
+      <div class="setup-title">
+         <span class="setup-kicker">Guided walkthrough &middot; {{ bundle.bundle_type }} bundle</span>
+         <h1>{{ bundle.name }}</h1>
+         <p class="setup-intro">Take the steps in any order. Each one saves when you press its button, and anything you skip can be added later from the bundle page.</p>
+      </div>
+      <a class="setup-exit" href="{% url 'build:bundle' bundle.pk %}" data-exit>Go to bundle page<i class="bi bi-arrow-right ms-1" aria-hidden="true"></i></a>
+   </header>
+
+   <div class="setup-body">
+      {% include 'build/setup/_rail.html' %}
+      <div class="setup-panels">
+         {% for step in setup.steps %}
+         {% with template_name='build/setup/_step_'|add:step.key|add:'.html' %}
+         {% include template_name with step=step %}
+         {% endwith %}
+         {% endfor %}
+         {% include 'build/setup/_step_finish.html' %}
+      </div>
+   </div>
+</div>
+
+{% include "includes/_toasts.html" %}
+
+<style>
+   .elsa-setup {
+      --setup-teal: #008B8B; --setup-teal-ink: #006d6d; --setup-teal-deep: #004f4f;
+      --setup-tint: #e6f3f3; --setup-line: #dee2e6; --setup-muted: #5f6b6b;
+      --setup-missing: #dc3545; --setup-optional: #ffc107; --setup-added: #198754;
+      max-width: 1180px; margin: 0 auto; display: grid; gap: 16px;
+   }
+   .elsa-setup .setup-kicker { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--setup-muted); }
+   .elsa-setup .setup-head { display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: flex-end; justify-content: space-between; padding: 4px 4px 0; }
+   .elsa-setup .setup-title { display: grid; gap: 2px; min-width: 0; flex: 1 1 420px; }
+   .elsa-setup .setup-title h1 { font-family: 'Outfit', sans-serif; font-weight: 600; font-size: 1.9rem; margin: 0; overflow-wrap: anywhere; }
+   .elsa-setup .setup-intro { margin: 2px 0 0; color: var(--setup-muted); max-width: 68ch; }
+   .elsa-setup .setup-exit { font-weight: 600; color: var(--setup-teal-ink); white-space: nowrap; padding-bottom: 2px; }
+   .elsa-setup .setup-exit:hover { text-decoration: underline; color: var(--setup-teal-deep); }
+
+   .elsa-setup .setup-body { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 16px; align-items: start; }
+   .elsa-setup .setup-rail { background: #fff; border: 1px solid var(--setup-line); border-radius: 12px; padding: 8px; position: sticky; top: 12px; }
+   .elsa-setup .setup-rail ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+   .elsa-setup .setup-step { display: flex; gap: 10px; align-items: center; padding: 10px; border-radius: 8px; color: #212529; }
+   .elsa-setup .setup-step:hover { background: var(--setup-tint); color: #212529; }
+   .elsa-setup .setup-step[aria-current="step"] { background: var(--setup-tint); box-shadow: inset 3px 0 0 var(--setup-teal); }
+   .elsa-setup .setup-num { flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%; border: 1.5px solid #a9b4b4; display: inline-flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; color: var(--setup-muted); }
+   .elsa-setup .setup-step[aria-current="step"] .setup-num { border: 2px solid var(--setup-teal); color: var(--setup-teal-ink); }
+   .elsa-setup .setup-step.is-done .setup-num { background: var(--setup-teal); border-color: var(--setup-teal); color: #fff; }
+   .elsa-setup .setup-step-label { font-weight: 600; font-size: 0.92rem; }
+   .elsa-setup .setup-step.is-done .setup-step-label { color: var(--setup-teal-ink); }
+
+   .elsa-setup .setup-panel { background: #fff; border: 1px solid var(--setup-line); border-radius: 12px; padding: 22px 24px; display: grid; gap: 16px; min-width: 0; }
+   .elsa-setup.is-enhanced .setup-panel:not(.is-current) { display: none; }
+   .elsa-setup .setup-panels { display: grid; gap: 16px; min-width: 0; }
+   .elsa-setup .setup-panel-head { display: grid; gap: 6px; }
+   .elsa-setup .setup-panel-head h2 { font-size: 1.35rem; margin: 0; }
+   .elsa-setup .setup-panel-head h2:focus { outline: none; }
+   .elsa-setup .setup-why { margin: 0; max-width: 70ch; }
+   .elsa-setup .setup-more { font-size: 0.9rem; color: var(--setup-muted); }
+   .elsa-setup .setup-more summary, .elsa-setup .setup-add summary { cursor: pointer; color: var(--setup-teal-ink); font-weight: 600; width: fit-content; }
+   .elsa-setup .setup-more p { margin: 8px 0 0; max-width: 70ch; }
+   .elsa-setup .setup-add { border-top: 1px solid var(--setup-line); padding-top: 12px; }
+   .elsa-setup .setup-add[open] summary { margin-bottom: 12px; }
+
+   .elsa-setup .setup-form { display: grid; gap: 14px; }
+   .elsa-setup .setup-grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+   .elsa-setup .setup-inline { grid-template-columns: minmax(0, 1fr) auto; align-items: end; }
+   .elsa-setup .setup-inline-field { min-width: 0; display: grid; gap: 6px; }
+   .elsa-setup .setup-inline-field .form-label { margin-bottom: 0; }
+   .elsa-setup .setup-filter-count { font-size: 0.8rem; color: var(--setup-muted); min-height: 1em; }
+   .elsa-setup .setup-filter-count:empty { display: none; }
+   .elsa-setup .form-label { font-size: 0.85rem; font-weight: 600; margin-bottom: 4px; }
+   .elsa-setup .setup-req { color: var(--setup-missing); margin-left: 2px; }
+   .elsa-setup .setup-subhead { margin: 0; font-weight: 600; font-size: 0.9rem; }
+   .elsa-setup .setup-hint { margin: 0; font-size: 0.85rem; color: var(--setup-muted); }
+   .elsa-setup .setup-hint a, .elsa-setup .setup-panel-head a { color: var(--setup-teal-ink); text-decoration: underline; }
+   .elsa-setup .setup-info { display: flex; margin: 0; background: #e7f6fb; border: 1px solid #b6e0ee; border-radius: 8px; padding: 10px 12px; font-size: 0.88rem; }
+   .elsa-setup .setup-mono { font-family: var(--bs-font-monospace); font-size: 0.85em; overflow-wrap: anywhere; }
+   .elsa-setup .setup-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+   .elsa-setup .setup-list li { border: 1px solid var(--setup-line); border-radius: 8px; padding: 8px 12px; font-size: 0.9rem; overflow-wrap: anywhere; }
+
+   .elsa-setup .setup-tags { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+   .elsa-setup .setup-tag { display: inline-flex; align-items: center; gap: 2px; background: var(--setup-tint); color: var(--setup-teal-deep); border-radius: 999px; padding: 3px 4px 3px 12px; font-size: 0.88rem; font-weight: 600; }
+   .elsa-setup .setup-tag-remove { color: inherit; display: inline-flex; padding: 2px 4px; border-radius: 999px; font-size: 1rem; line-height: 1; }
+   .elsa-setup .setup-tag-remove:hover { background: #cde6e6; color: var(--setup-missing); }
+
+   .elsa-setup .setup-collections { display: grid; gap: 8px; }
+   .elsa-setup .setup-collection { border: 1px solid var(--setup-line); border-radius: 8px; padding: 10px 12px; display: grid; gap: 6px; }
+   .elsa-setup .setup-files { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 0.88rem; }
+   .elsa-setup .setup-file-ok { color: var(--setup-teal-ink); font-size: 0.8rem; font-weight: 600; white-space: nowrap; }
+   .elsa-setup .setup-file-bad { color: var(--setup-missing); font-size: 0.8rem; font-weight: 600; white-space: nowrap; }
+   .elsa-setup .setup-files li { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
+   .elsa-setup .setup-drop { border: 2px dashed #b3c4c4; border-radius: 10px; padding: 18px; text-align: center; display: grid; gap: 4px; justify-items: center; color: var(--setup-muted); cursor: pointer; margin: 0; }
+   .elsa-setup .setup-drop:hover, .elsa-setup .setup-drop:focus-within { border-color: var(--setup-teal); background: #f6fbfb; }
+   .elsa-setup .setup-drop .bi { font-size: 1.6rem; color: var(--setup-teal); }
+   .elsa-setup .setup-drop strong { color: #212529; }
+   .elsa-setup .setup-drop input { max-width: 100%; font-size: 0.85rem; }
+   .elsa-setup .setup-picked { font-size: 0.85rem; color: #212529; overflow-wrap: anywhere; }
+   .elsa-setup .setup-progress { display: grid; gap: 4px; font-size: 0.85rem; }
+   .elsa-setup .setup-progress[hidden] { display: none; }
+   .elsa-setup .setup-progress-row { display: flex; justify-content: space-between; font-weight: 600; color: var(--setup-teal-ink); }
+   .elsa-setup .setup-bar { height: 8px; background: var(--setup-tint); border-radius: 999px; overflow: hidden; }
+   .elsa-setup .setup-bar i { display: block; height: 100%; width: 0; background: var(--setup-teal); transition: width 0.2s linear; }
+   .elsa-setup .setup-upload-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+   .elsa-setup .setup-note { display: flex; gap: 10px; align-items: flex-start; background: #f6f8f8; border: 1px solid var(--setup-line); border-radius: 8px; padding: 10px 12px; font-size: 0.88rem; }
+   .elsa-setup .setup-note p { margin: 0; max-width: 72ch; }
+   .elsa-setup .setup-note .bi { color: var(--setup-teal-ink); margin-top: 2px; }
+   .elsa-setup .setup-checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+   .elsa-setup .setup-checklist li { display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; gap: 10px; align-items: center; border: 1px solid var(--setup-line); border-radius: 8px; padding: 10px 12px; }
+   .elsa-setup .setup-mark { width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 0.85rem; }
+   .elsa-setup .is-ok .setup-mark { background: var(--setup-added); color: #fff; }
+   .elsa-setup .is-missing .setup-mark { background: #fdecee; color: var(--setup-missing); border: 1.5px solid var(--setup-missing); }
+   .elsa-setup .setup-check-text { display: grid; min-width: 0; }
+   .elsa-setup .setup-check-title { font-weight: 600; font-size: 0.92rem; }
+   .elsa-setup .setup-check-state { font-size: 0.8rem; color: var(--setup-muted); }
+
+   .elsa-setup .setup-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; border-top: 1px solid var(--setup-line); padding-top: 16px; }
+   .elsa-setup .setup-spacer { flex: 1; }
+   .elsa-setup .setup-skip { color: var(--setup-muted); text-decoration: underline; font-size: 0.92rem; padding: 0 4px; }
+   .elsa-setup .setup-skip:hover { color: #212529; }
+   .elsa-setup .setup-btn-primary { background: var(--setup-teal); border: 1px solid var(--setup-teal); color: #fff; font-weight: 600; }
+   .elsa-setup .setup-btn-primary:hover, .elsa-setup .setup-btn-primary:focus-visible { background: var(--setup-teal-ink); border-color: var(--setup-teal-ink); color: #fff; }
+   .elsa-setup .setup-btn-ghost { background: #fff; border: 1px solid #bcd6d6; color: var(--setup-teal-ink); font-weight: 600; }
+   .elsa-setup .setup-btn-ghost:hover, .elsa-setup .setup-btn-ghost:focus-visible { background: var(--setup-tint); color: var(--setup-teal-deep); border-color: #9fc9c9; }
+   .elsa-setup .btn:disabled { opacity: 0.65; }
+   .elsa-setup .setup-blocked { margin: 0; color: var(--setup-missing); font-size: 0.88rem; font-weight: 600; }
+   .elsa-setup .setup-blocked[hidden] { display: none; }
+   .elsa-setup .setup-form-error { margin: 0; }
+   .elsa-setup .setup-busy { width: 0.9rem; height: 0.9rem; border-width: 0.15em; }
+
+   @media (max-width: 900px) {
+      .elsa-setup .setup-body { grid-template-columns: minmax(0, 1fr); }
+      .elsa-setup .setup-rail { position: static; padding: 6px; }
+      .elsa-setup .setup-rail ol { display: flex; gap: 4px; }
+      .elsa-setup .setup-rail li { flex: 0 0 auto; }
+      /* Every step fits on one line: circles, and the name of the current one only. */
+      .elsa-setup .setup-rail ol { flex-wrap: wrap; }
+      .elsa-setup .setup-step { padding: 6px; }
+      .elsa-setup .setup-step:not([aria-current]) .setup-step-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+      .elsa-setup .setup-step[aria-current] { padding-right: 12px; }
+      .elsa-setup .setup-panel { padding: 16px; }
+   }
+   @media (max-width: 520px) {
+      .elsa-setup .setup-inline { grid-template-columns: minmax(0, 1fr); }
+   }
+   @media (prefers-reduced-motion: reduce) {
+      .elsa-setup .setup-bar i { transition: none; }
+   }
+</style>
+
+<script>
+(function () {
+   'use strict';
+   var root = document.getElementById('elsaSetup');
+   if (!root || !window.fetch || !window.FormData || !window.DOMParser) return;
+   root.classList.add('is-enhanced');
+
+   var SETUP_URL = root.getAttribute('data-setup-url');
+   var current = null;
+
+   function panel(key) { return key ? document.getElementById('step-' + key) : null; }
+   function order() {
+      return Array.prototype.map.call(root.querySelectorAll('[data-step-link]'), function (a) {
+         return a.getAttribute('data-step-link');
+      });
+   }
+   function nextOf(key) {
+      var keys = order();
+      var i = keys.indexOf(key);
+      return i >= 0 && i + 1 < keys.length ? keys[i + 1] : 'finish';
+   }
+
+   // With no step named in the address: the first one still to do, or the finish.
+   function defaultStep() {
+      var links = root.querySelectorAll('.setup-step[data-step-link]');
+      for (var i = 0; i < links.length; i++) {
+         var key = links[i].getAttribute('data-step-link');
+         if (key !== 'finish' && !links[i].classList.contains('is-done')) return key;
+      }
+      return 'finish';
+   }
+
+   function markCurrent() {
+      root.querySelectorAll('[data-step-link]').forEach(function (a) {
+         if (a.getAttribute('data-step-link') === current) a.setAttribute('aria-current', 'step');
+         else a.removeAttribute('aria-current');
+      });
+      root.querySelectorAll('.setup-panel').forEach(function (p) {
+         p.classList.toggle('is-current', p.getAttribute('data-step') === current);
+      });
+   }
+
+   function show(key, focus) {
+      if (!panel(key)) {
+         key = defaultStep();
+         try { history.replaceState(null, '', '#' + key); } catch (err) {}
+      }
+      current = key;
+      markCurrent();
+      var p = panel(key);
+      p.querySelectorAll('.setup-blocked').forEach(function (m) { m.hidden = true; });
+      if (focus) {
+         var heading = p.querySelector('h2');
+         if (heading) heading.focus({ preventScroll: true });
+         var top = root.getBoundingClientRect().top;
+         if (top < 0) root.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      }
+   }
+
+   window.addEventListener('hashchange', function () { show(location.hash.slice(1), true); });
+   show(location.hash.slice(1), false);
+
+   // -- unsaved typing is kept when the page refreshes its steps ------------------------
+   function markDirty(e) {
+      var p = e.target.closest && e.target.closest('.setup-panel');
+      if (p) p.setAttribute('data-dirty', '1');
+   }
+   root.addEventListener('input', markDirty);
+   root.addEventListener('change', markDirty);
+
+   // -- the page fetches itself again after a save ---------------------------------------
+   function startToasts(doc) {
+      var fresh = doc.querySelectorAll('#elsaToasts .elsa-toast');
+      if (!fresh.length) return;
+      var box = document.getElementById('elsaToasts');
+      if (!box) {
+         box = document.createElement('div');
+         box.className = 'toast-container position-fixed bottom-0 end-0 p-3 elsa-toasts';
+         box.id = 'elsaToasts';
+         document.body.appendChild(box);
+      }
+      fresh.forEach(function (node) {
+         var toast = document.importNode(node, true);
+         box.appendChild(toast);
+         if (window.bootstrap && window.bootstrap.Toast) {
+            var keep = toast.getAttribute('data-autohide') === 'false';
+            new window.bootstrap.Toast(toast, {
+               autohide: !keep,
+               delay: parseInt(toast.getAttribute('data-delay') || '6500', 10)
+            }).show();
+         }
+      });
+   }
+
+   function refresh(saved) {
+      return fetch(SETUP_URL, { credentials: 'same-origin' })
+         .then(function (r) { return r.text(); })
+         .then(function (html) {
+            var doc = new DOMParser().parseFromString(html, 'text/html');
+            ['setupRail'].forEach(function (id) {
+               var fresh = doc.getElementById(id), old = document.getElementById(id);
+               if (fresh && old) old.replaceWith(document.importNode(fresh, true));
+            });
+            doc.querySelectorAll('.setup-panel').forEach(function (fresh) {
+               var key = fresh.getAttribute('data-step');
+               var old = panel(key);
+               if (!old) return;
+               // A step the user is part way through keeps what they typed.
+               if (old.hasAttribute('data-dirty') && key !== saved) return;
+               old.replaceWith(document.importNode(fresh, true));
+            });
+            markCurrent();
+            startToasts(doc);
+            // Scripts in swapped-in panels do not run; this lets them catch up.
+            document.dispatchEvent(new CustomEvent('elsa:setup-refreshed'));
+         });
+   }
+
+   // -- saving ---------------------------------------------------------------------------
+   function clearErrors(form) {
+      form.querySelectorAll('[data-setup-error]').forEach(function (el) { el.remove(); });
+      form.querySelectorAll('.is-invalid').forEach(function (el) { el.classList.remove('is-invalid'); el.removeAttribute('aria-invalid'); });
+   }
+
+   function messageOf(entry) { return typeof entry === 'string' ? entry : (entry && entry.message) || ''; }
+
+   function showErrors(form, errors) {
+      var general = [];
+      var first = null;
+      Object.keys(errors).forEach(function (name) {
+         var text = (errors[name] || []).map(messageOf).join(' ');
+         var field = name === '__all__' ? null : form.querySelector('[name="' + name + '"]:not([type="hidden"])');
+         if (!field) { general.push(text); return; }
+         field.classList.add('is-invalid');
+         field.setAttribute('aria-invalid', 'true');
+         var note = document.createElement('div');
+         note.className = 'invalid-feedback d-block';
+         note.setAttribute('data-setup-error', '');
+         note.textContent = text;
+         field.insertAdjacentElement('afterend', note);
+         first = first || field;
+      });
+      if (general.length) {
+         var alert = document.createElement('div');
+         alert.className = 'alert alert-danger py-2 small setup-form-error';
+         alert.setAttribute('data-setup-error', '');
+         alert.setAttribute('role', 'alert');
+         alert.textContent = general.join(' ');
+         form.insertAdjacentElement('afterbegin', alert);
+         if (!first) alert.scrollIntoView({ block: 'nearest' });
+      }
+      if (first) first.focus();
+   }
+
+   function busy(button, on) {
+      if (!button) return;
+      if (on) {
+         button.disabled = true;
+         button.setAttribute('data-label', button.innerHTML);
+         button.innerHTML = '<span class="spinner-border setup-busy me-1" aria-hidden="true"></span>Saving...';
+      } else if (button.hasAttribute('data-label')) {
+         button.disabled = false;
+         button.innerHTML = button.getAttribute('data-label');
+         button.removeAttribute('data-label');
+      }
+   }
+
+   function save(form, button, then) {
+      var step = form.closest('.setup-panel').getAttribute('data-step');
+      clearErrors(form);
+      busy(button, true);
+      fetch(form.action, {
+         method: 'POST',
+         body: new FormData(form),
+         credentials: 'same-origin',
+         headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-Elsa-Inplace': form.getAttribute('data-setup-form') }
+      })
+         .then(function (r) {
+            return r.json().catch(function () {
+               return { ok: false, errors: { __all__: ['Something went wrong on the server, and nothing was saved. Please try again.'] } };
+            });
+         })
+         .then(function (reply) {
+            if (!reply.ok) { busy(button, false); showErrors(form, reply.errors || {}); return; }
+            return refresh(step).then(function () {
+               if (then === 'next') { location.hash = nextOf(step); }
+               else {
+                  var again = panel(step);
+                  var field = again && again.querySelector('.setup-form input:not([type="hidden"]), .setup-form select');
+                  if (field && current === step) field.focus();
+               }
+            });
+         })
+         .catch(function () {
+            busy(button, false);
+            showErrors(form, { __all__: ['ELSA could not be reached, so nothing was saved. Check your connection and try again.'] });
+         });
+   }
+
+   root.addEventListener('submit', function (e) {
+      var form = e.target.closest('form[data-setup-form]');
+      if (!form) return;
+      e.preventDefault();
+      var button = e.submitter || null;
+      var then = (button && button.getAttribute('data-then')) || form.getAttribute('data-then') || 'stay';
+      save(form, button, then);
+   });
+
+   // -- searching a long list ------------------------------------------------------------
+   // The Archive target list has about 1500 entries and the investigations about 150;
+   // a plain dropdown of that length cannot be read. Typing narrows the list in place,
+   // keeping its groups ("Listed for ..."), and shows the matches as an open list. The
+   // full list is kept per select, so a panel swapped in after a save starts afresh.
+   var fullLists = new WeakMap();
+   function matches(option, q) { return option.textContent.toLowerCase().indexOf(q) >= 0; }
+   root.addEventListener('input', function (e) {
+      var box = e.target.closest && e.target.closest('[data-filter-for]');
+      if (!box) return;
+      var select = document.getElementById(box.getAttribute('data-filter-for'));
+      if (!select) return;
+      if (!fullLists.has(select)) fullLists.set(select, select.cloneNode(true));
+      var full = fullLists.get(select);
+      var q = box.value.trim().toLowerCase();
+      var chosen = select.value;
+      var shown = 0, total = 0, groups = 0;
+      select.innerHTML = '';
+      Array.prototype.forEach.call(full.children, function (node) {
+         if (node.tagName === 'OPTGROUP') {
+            var group = node.cloneNode(false);
+            Array.prototype.forEach.call(node.children, function (option) {
+               total++;
+               if (!q || matches(option, q)) { group.appendChild(option.cloneNode(true)); shown++; }
+            });
+            if (group.children.length) { select.appendChild(group); groups++; }
+         } else if (!node.value) {
+            if (!q) select.appendChild(node.cloneNode(true));   // "Choose a ..." only when not searching
+         } else {
+            total++;
+            if (!q || matches(node, q)) { select.appendChild(node.cloneNode(true)); shown++; }
+         }
+      });
+      if (q) {
+         // A group's heading takes a line of the list too.
+         select.size = Math.min(Math.max(shown + groups, 2), 9);
+         if (shown === 1) select.selectedIndex = 0;
+         else if (chosen) select.value = chosen;
+      } else {
+         select.removeAttribute('size');
+         select.value = chosen;
+      }
+      var count = box.parentNode.querySelector('[data-filter-count]');
+      if (count) count.textContent = q ? (shown ? shown + ' of ' + total + ' shown' : 'Nothing matches "' + box.value.trim() + '".') : '';
+   });
+   // Enter in the search box picks the first match instead of submitting an empty choice.
+   root.addEventListener('keydown', function (e) {
+      var box = e.target.closest && e.target.closest('[data-filter-for]');
+      if (!box || e.key !== 'Enter') return;
+      e.preventDefault();
+      var select = document.getElementById(box.getAttribute('data-filter-for'));
+      if (select && select.options.length) { if (!select.value) select.selectedIndex = 0; select.focus(); }
+   });
+
+   // -- moving on --------------------------------------------------------------------------
+   root.addEventListener('click', function (e) {
+      var go = e.target.closest('[data-continue][data-blocked]');
+      if (!go) return;
+      e.preventDefault();
+      var note = go.closest('.setup-panel').querySelector('.setup-blocked');
+      note.textContent = go.getAttribute('data-blocked');
+      note.hidden = false;
+   });
+
+   // -- removing a target ---------------------------------------------------------------------
+   root.addEventListener('click', function (e) {
+      var remove = e.target.closest('[data-setup-remove]');
+      if (!remove) return;
+      e.preventDefault();
+      var step = remove.closest('.setup-panel').getAttribute('data-step');
+      remove.setAttribute('aria-disabled', 'true');
+      fetch(remove.href, { credentials: 'same-origin', redirect: 'manual' })
+         .then(function () { return refresh(step); })
+         .catch(function () { remove.removeAttribute('aria-disabled'); });
+   });
+
+   // -- NetCDF upload ---------------------------------------------------------------------------
+   root.addEventListener('change', function (e) {
+      if (!e.target.matches('#setup_netcdf_files')) return;
+      var picked = e.target.closest('form').querySelector('[data-picked]');
+      var names = Array.prototype.map.call(e.target.files, function (f) { return f.name; });
+      picked.textContent = names.length ? names.join(', ') : '';
+   });
+
+   root.addEventListener('submit', function (e) {
+      var form = e.target.closest('form[data-setup-upload]');
+      if (!form) return;
+      e.preventDefault();
+      clearErrors(form);
+      var input = form.querySelector('input[name="netcdf_files"]');
+      var files = Array.prototype.slice.call(input.files || []);
+      if (!files.length) {
+         showErrors(form, { netcdf_files: ['Choose at least one NetCDF file to upload.'] });
+         return;
+      }
+      var button = form.querySelector('[data-upload-button]');
+      var cancel = form.querySelector('[data-upload-cancel]');
+      var progress = form.querySelector('[data-progress]');
+      var bar = form.querySelector('[data-progress-bar]');
+      var pct = form.querySelector('[data-progress-pct]');
+      var text = form.querySelector('[data-progress-text]');
+      var csrf = (form.querySelector('input[name="csrfmiddlewaretoken"]') || {}).value || '';
+      var collection = (form.querySelector('[name="collection"]') || {}).value || '';
+
+      function reset() {
+         progress.hidden = true;
+         bar.style.width = '0%';
+         button.disabled = false;
+         button.textContent = 'Upload';
+         cancel.hidden = true;
+      }
+
+      button.disabled = true;
+      button.textContent = 'Checking space...';
+      // Asked before a byte is sent, as the bundle page does: refusing afterwards is too
+      // late on a nearly full disk. If the check cannot be made, the upload goes ahead and
+      // the view repeats it.
+      fetch(form.getAttribute('data-storage-url'), {
+         method: 'POST',
+         credentials: 'same-origin',
+         headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': csrf },
+         body: JSON.stringify({ collection: collection, files: files.map(function (f) { return { name: f.name, size: f.size }; }) })
+      })
+         .then(function (r) { return r.ok ? r.json() : null; })
+         .catch(function () { return null; })
+         .then(function (space) {
+            if (space && space.ok === false) {
+               reset();
+               showErrors(form, { __all__: ['The server does not have enough storage space for this upload right now (' + space.needed + ' needed, ' + space.available + ' free). Nothing was added to your bundle. Please contact the ATM node.'] });
+               return;
+            }
+            upload();
+         });
+
+      function upload() {
+         var xhr = new XMLHttpRequest();
+         progress.hidden = false;
+         text.textContent = 'Uploading...';
+         button.textContent = 'Uploading...';
+         cancel.hidden = false;
+         cancel.onclick = function () { xhr.abort(); };
+         xhr.upload.addEventListener('progress', function (ev) {
+            if (!ev.lengthComputable) return;
+            var p = Math.round(ev.loaded / ev.total * 100);
+            bar.style.width = p + '%';
+            pct.textContent = p + '%';
+            if (p >= 100) {
+               // Every byte is sent and the server is reading the files; cancelling now would
+               // not stop that, so the offer is withdrawn.
+               text.textContent = 'Processing NetCDF...';
+               button.textContent = 'Processing...';
+               cancel.hidden = true;
+            }
+         });
+         xhr.addEventListener('abort', function () {
+            reset();
+            showErrors(form, { __all__: ['Upload cancelled. Nothing was added to this bundle.'] });
+         });
+         xhr.addEventListener('error', function () {
+            reset();
+            showErrors(form, { __all__: ['The upload failed before it reached ELSA. Please try again.'] });
+         });
+         xhr.addEventListener('load', function () {
+            cancel.hidden = true;
+            if (xhr.status >= 400) {
+               var message = 'The upload failed. Please try again.';
+               try { message = JSON.parse(xhr.responseText).error || message; } catch (err) {}
+               reset();
+               showErrors(form, { __all__: [message] });
+               return;
+            }
+            bar.style.width = '100%';
+            pct.textContent = '100%';
+            text.textContent = 'Done!';
+            refresh('data');
+         });
+         xhr.open('POST', form.action);
+         xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+         xhr.send(new FormData(form));
+      }
+   });
+})();
+</script>
+{% endblock %}
