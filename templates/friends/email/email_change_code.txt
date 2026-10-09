@@ -1,0 +1,17 @@
+{% autoescape off %}ELSA -- Educational Labeling System @Atmospheres
+
+Hello{% if first_name %} {{ first_name }}{% endif %}, someone signed in to the ELSA account
+"{{ username }}" asked to use this address for it.  Enter this code in
+ELSA to confirm:
+
+    Confirmation code:  {{ code }}
+
+The code expires in {{ ttl_minutes }} minutes.  Until you confirm, sign-in
+codes and password resets keep going to the old address.  ELSA staff will
+never ask you for this code.  If you did not ask for this, you can ignore
+this message.
+
+--
+Sent automatically by ELSA, Planetary Data System Atmospheres Node,
+New Mexico State University.
+{% endautoescape %}

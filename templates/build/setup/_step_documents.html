@@ -1,0 +1,48 @@
+<section class="setup-panel" id="step-documents" data-step="documents" aria-labelledby="step-documents-title">
+   <header class="setup-panel-head">
+      <span class="setup-kicker">Step {{ step.number }} of {{ setup.steps|length }} &middot; Optional</span>
+      <h2 id="step-documents-title" tabindex="-1">Documents</h2>
+      <p class="setup-why">A user guide or other documentation that helps people understand and use your data.</p>
+      <details class="setup-more">
+         <summary>More about this</summary>
+         <p>ATM suggests including a user guide. Documents must be PDF/A-1 (.pdf) or plain 7-bit ASCII text (.txt). ELSA writes a label for each one. You can add more documents, or change a document's label, later from the bundle page.</p>
+      </details>
+   </header>
+
+   {% if documents %}
+   <ul class="setup-list">
+      {% for document in documents %}
+      <li><i class="bi bi-file-earmark-text me-2" aria-hidden="true"></i><strong>{{ document.document_name }}</strong>{% if document.file_name %} <span class="setup-mono text-muted">{{ document.file_name }}</span>{% endif %}</li>
+      {% endfor %}
+   </ul>
+   {% endif %}
+
+   <form id="setup-form-documents" class="setup-form" method="post" action="{% url 'build:annex_collection_document' bundle.pk %}" enctype="multipart/form-data" data-setup-form="document" data-then="stay">
+      {% csrf_token %}
+      <input type="hidden" name="form_name" value="document_form">
+      <input type="hidden" name="source" value="bundle">
+      {% if documents %}<p class="setup-subhead">Add another document</p>{% endif %}
+      <div class="setup-grid-2">
+         <div>
+            <label class="form-label" for="{{ form_document.document_name.id_for_label }}">Document title<span class="setup-req" title="Required">*</span></label>
+            {{ form_document.document_name }}
+         </div>
+         <div>
+            <label class="form-label" for="{{ form_document.document_id.id_for_label }}">Document ID<span class="setup-req" title="Required">*</span> <span class="text-muted fw-normal">(used in the URN)</span></label>
+            {{ form_document.document_id }}
+         </div>
+      </div>
+      <div>
+         <label class="form-label" for="{{ form_document.comment.id_for_label }}">Comment <span class="text-muted fw-normal">(optional)</span></label>
+         {{ form_document.comment }}
+      </div>
+      <div>
+         <label class="form-label" for="{{ form_document.document_file.id_for_label }}">File</label>
+         {{ form_document.document_file }}
+         <div class="form-text">{{ form_document.document_file.help_text }}</div>
+      </div>
+      <div><button type="submit" class="btn setup-btn-ghost">Add document</button></div>
+   </form>
+
+   {% include 'build/setup/_actions.html' with step=step primary='continue' %}
+</section>

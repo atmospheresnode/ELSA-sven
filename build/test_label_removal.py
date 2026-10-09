@@ -274,8 +274,9 @@ class DeleteThroughTheViewTests(TestCase):
 
     def test_the_bundle_label_still_loses_the_entry_it_was_asked_to_lose(self):
         # Tolerating a missing container must not turn the delete into a no-op
-        # on the labels that do have one.
-        entry = Modification_History.objects.filter(bundle=self.bundle).first()
+        # on the labels that do have one. By description: a bundle also has the
+        # "Bundle creation" entry ELSA writes when it is created.
+        entry = Modification_History.objects.get(bundle=self.bundle, description='Initial delivery')
         self.client.get('/build/{}/{}/modification_history/'.format(
             self.bundle.pk, entry.pk))
 

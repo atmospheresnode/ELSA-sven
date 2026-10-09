@@ -1,0 +1,48 @@
+{% extends "friends/auth_base.html" %}
+
+{% comment %} Shown once, right after a new account confirms its email. Optional:
+   sign-up already collected everything ELSA needs. {% endcomment %}
+
+{% block auth_title %}Welcome to ELSA{% if user.first_name %}, {{ user.first_name }}{% endif %}{% endblock %}
+
+{% block auth_body %}
+{% if steps > 1 %}<p class="auth-step">Step 1 of {{ steps }}</p>{% endif %}
+
+<p class="text-muted mb-4" style="font-size: 0.9375rem;">
+    Your account is ready. One optional step: add your author details, and ELSA can
+    fill you in as an author when you cite your bundles.
+</p>
+
+<form method="post" novalidate>
+    {% csrf_token %}
+    <div class="mb-3">
+        <label for="welcome-orcid" class="auth-label">ORCID iD
+            <a href="https://orcid.org/orcid-search/search" target="_blank" rel="noopener" class="btn-link-elsa ms-1" style="font-size: 0.75rem;">Look up</a></label>
+        <input type="text" id="welcome-orcid" name="orcid" class="form-control-elsa font-monospace{% if form.orcid.errors %} is-invalid{% endif %}"
+               value="{{ form.orcid.value|default:'' }}" placeholder="0000-0000-0000-0000" maxlength="60"
+               autocomplete="off" spellcheck="false">
+        {% for error in form.orcid.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+    </div>
+    <div class="mb-4">
+        <label for="welcome-affiliation" class="auth-label">Affiliation</label>
+        <input type="text" id="welcome-affiliation" name="affiliation" class="form-control-elsa{% if form.affiliation.errors %} is-invalid{% endif %}"
+               value="{{ form.affiliation.value|default:'' }}" placeholder="e.g. New Mexico State University"
+               maxlength="255" autocomplete="organization">
+        {% for error in form.affiliation.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+    </div>
+
+    <button type="submit" class="btn-elsa w-100" name="save">Save and continue</button>
+    <div class="text-center mt-3">
+        <button type="submit" class="btn-link-elsa" name="skip" formnovalidate>Skip for now</button>
+    </div>
+</form>
+{% endblock %}
+
+{% block auth_foot %}
+You can add or change these any time on your account page.
+{% endblock %}
+
+{% block auth_css %}
+    .auth-step { margin: -0.5rem 0 0.75rem; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.06em;
+                 text-transform: uppercase; color: #6a737d; }
+{% endblock %}

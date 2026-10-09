@@ -25,6 +25,7 @@ from .chocolate import *
 from shutil import *
 import datetime
 import re
+import logging
 import shutil
 import hashlib
 import os
@@ -2437,6 +2438,12 @@ class Bundle(models.Model):
 
     """
 
+    def directory_is_contained(self):
+        """Whether directory() resolves to somewhere strictly inside ARCHIVE_DIR/<owner>/."""
+        owner_root = os.path.realpath(os.path.join(settings.ARCHIVE_DIR, self.user.username))
+        path = os.path.realpath(self.directory())
+        return os.path.commonpath([path, owner_root]) == owner_root and path != owner_root
+
     def remove_bundle(self):
         # Declarations
         debug_status = True
@@ -2449,7 +2456,15 @@ class Bundle(models.Model):
             print('remove_bundle \n\n')
             print('bundle_directory: {}'.format(self.directory()))
 
-        if os.path.isdir(self.directory()):
+        # A name like "../someone/x" used to resolve into another user's
+        # archive, and this rmtree followed it there.  BundleForm now refuses
+        # such names, but rows created before that still exist, so the disk is
+        # only touched when the path really is this owner's.
+        if not self.directory_is_contained():
+            logging.getLogger(__name__).warning(
+                'remove_bundle: %r resolves outside %s\'s archive; files left in place',
+                self.directory(), self.user.username)
+        elif os.path.isdir(self.directory()):
 
             if debug_status == True:
                 print('os.path.isdir(self.directory()): True')
@@ -5308,6 +5323,23 @@ class Citation_Information(models.Model):
         Modification_History = Identification_Area.find(
             '{}Modification_History'.format(NAMESPACE))
 
+        # A label made after the citation (a collection or document added later) gets a
+        # copy of the one the bundle label carries, as sync_into_label does, rather than
+        # a skeleton rebuilt from the counts. The skeleton has an element for every
+        # optional field whether or not it was filled in, and PDS refuses an empty one;
+        # the setup page's citation leaves blank fields out, and a rebuilt skeleton put
+        # them back. Only the bundle label's own first citation is still built here.
+        recorded = self._recorded_citation_element()
+        if recorded is not None:
+            existing = Identification_Area.find('{}Citation_Information'.format(NAMESPACE))
+            if existing is not None:
+                Identification_Area.replace(existing, recorded)
+            elif Modification_History is not None:
+                Identification_Area.insert(Identification_Area.index(Modification_History), recorded)
+            else:
+                Identification_Area.append(recorded)
+            return label_root
+
         # Find Citation_Information.  If no Citation_Information is found, make one.
         Citation_Information = Identification_Area.find('{}Citation_Information'.format(NAMESPACE))
         if Citation_Information is None:
@@ -5342,16 +5374,9 @@ class Citation_Information(models.Model):
         if self.number_of_authors_people > 0 or self.number_of_authors_organization > 0:
             list_author = etree.SubElement(Citation_Information, 'List_Author')
 
-            for index in range(self.number_of_authors_people):
-                author = etree.SubElement(list_author, 'Person')
-                for field in ('given_name', 'family_name', 'person_orcid'):
-                    element = etree.SubElement(author, field)
-                    element.text = recorded_value('author_people', index, field)
-                affiliation = etree.SubElement(author, 'Affiliation')
-                organization_name = etree.SubElement(affiliation, 'organization_name')
-                organization_name.text = recorded_value(
-                    'author_people', index, 'organization_name')
-
+            # List_Author is a sequence in the PDS4 schema: every Organization comes
+            # before every Person, so a citation with both was schema-invalid when the
+            # people were written first.
             for index in range(self.number_of_authors_organization):
                 organization = etree.SubElement(list_author, 'Organization')
                 for field in ('organization_name', 'organization_rorid', 'sequence_number'):
@@ -5363,9 +5388,31 @@ class Citation_Information(models.Model):
                 parent_organization_name.text = recorded_value(
                     'author_orgs', index, 'parent_organization_name')
 
+            for index in range(self.number_of_authors_people):
+                author = etree.SubElement(list_author, 'Person')
+                for field in ('given_name', 'family_name', 'person_orcid'):
+                    element = etree.SubElement(author, field)
+                    element.text = recorded_value('author_people', index, field)
+                affiliation = etree.SubElement(author, 'Affiliation')
+                organization_name = etree.SubElement(affiliation, 'organization_name')
+                organization_name.text = recorded_value(
+                    'author_people', index, 'organization_name')
+
 
         # Default editors are Lynn Neakrase and Lyle Huber -- Could be changed later on
         list_editor = etree.SubElement(Citation_Information, 'List_Editor')
+        # Organizations first, as in List_Author: the schema orders them before Persons.
+        for index in range(self.number_of_editors_organization):
+            organization = etree.SubElement(list_editor, 'Organization')
+            for field in ('organization_name', 'organization_rorid', 'sequence_number'):
+                element = etree.SubElement(organization, field)
+                element.text = recorded_value('editor_orgs', index, field)
+            parent_organization = etree.SubElement(organization, 'Parent_Organization')
+            parent_organization_name = etree.SubElement(
+                parent_organization, 'parent_organization_name')
+            parent_organization_name.text = recorded_value(
+                'editor_orgs', index, 'parent_organization_name')
+
         for given, family, orcid in [
             ('Lynn', 'Neakrase', '0000-0002-6370-5791'),
             ('Lyle', 'Huber',    '0000-0002-1232-1982'),
@@ -5393,17 +5440,6 @@ class Citation_Information(models.Model):
             organization_name = etree.SubElement(affiliation, 'organization_name')
             organization_name.text = recorded_value(
                 'editor_people', index, 'organization_name')
-
-        for index in range(self.number_of_editors_organization):
-            organization = etree.SubElement(list_editor, 'Organization')
-            for field in ('organization_name', 'organization_rorid', 'sequence_number'):
-                element = etree.SubElement(organization, field)
-                element.text = recorded_value('editor_orgs', index, field)
-            parent_organization = etree.SubElement(organization, 'Parent_Organization')
-            parent_organization_name = etree.SubElement(
-                parent_organization, 'parent_organization_name')
-            parent_organization_name.text = recorded_value(
-                'editor_orgs', index, 'parent_organization_name')
 
         return label_root
 
@@ -6602,6 +6638,15 @@ class ValidationRun(models.Model):
     # because a parser change should be re-runnable against old reports.
     report_path = models.CharField(max_length=MAX_CHAR_FIELD, blank=True, default='')
     findings = models.JSONField(null=True, blank=True)
+
+    # The validate release that produced the findings, e.g. '5.0.0', as the report
+    # itself states it. Read from the report rather than from settings, so a result
+    # keeps naming the tool that judged it after the host moves to a newer release.
+    # Blank for runs that wrote no report, and for runs made before this was recorded.
+    # Nullable on purpose: a process still running older code (a wsgi worker between
+    # migrate and reload, another checkout sharing the dev database) inserts rows
+    # without this column, and NOT NULL would make MariaDB refuse them.
+    tool_version = models.CharField(max_length=32, null=True, blank=True, default='')
 
     # Why a run failed to produce a report at all: validate missing, Java missing,
     # a crash, a timeout. Distinct from a bundle that validated and had errors.

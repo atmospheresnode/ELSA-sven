@@ -167,10 +167,9 @@ REQUIREMENTS = [
         'Add at least one author to the citation',
         'A citation needs someone to credit: a person or an organization. PDS4 lets a '
         'citation leave its authors out, so the validation tool will not report '
-        'this, but without one the data cannot be cited or given a DOI. The number '
-        'of authors is set when a citation is created and cannot be changed after, '
-        'so open Citation Information, delete this citation, and create it again '
-        'with at least one author.',
+        'this, but without one the data cannot be cited or given a DOI. Open '
+        'Citation Information and add a person or an organization; authors can be '
+        'added or removed there at any time.',
         CARD_CITATION, check=_has_author, bundle_types=('External',),
         applies=_has_citation),
 

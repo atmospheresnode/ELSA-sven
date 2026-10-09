@@ -1,117 +1,128 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 from __future__ import print_function
-from email.message import EmailMessage
 
-from django.core.mail import EmailMessage, EmailMultiAlternatives
-from django.template.loader import render_to_string
-from django.conf import settings
-from django.contrib import messages
-from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib.auth.models import User
-from django.contrib.auth.decorators import login_required
-from django.core.cache import cache
-from django.db import transaction
-from django.urls import reverse
-from django.http import HttpResponseRedirect, HttpResponse, JsonResponse
-from django.views.decorators.http import require_POST
-from django.shortcuts import render, redirect
-from django.views import generic
-from .forms import *
-from .models import *
-from .models import OTP_TTL
-from build.models import Bundle
-from . import passkeys
 import json
+from urllib.parse import unquote
+import logging
 import os
 
-from email.mime.image import MIMEImage
-from functools import lru_cache
-
+from django.conf import settings
+from django.contrib import messages
+from django.contrib.auth import login, logout, update_session_auth_hash
+from django.contrib.auth import views as auth_views
+from django.contrib.auth.backends import AllowAllUsersModelBackend
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.forms import PasswordResetForm
+from django.contrib.auth.models import User
+from django.contrib.auth.password_validation import (MinimumLengthValidator,
+                                                     get_default_password_validators)
+from django.core.mail import EmailMessage
+from django.db import transaction
+from django.http import HttpResponseRedirect, JsonResponse
+from django.shortcuts import redirect, render
+from django.template.loader import render_to_string
+from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
+from django.views.decorators.http import require_POST
 from datetime import timedelta
 
+from build.models import Bundle
+from . import passkeys, throttle
+from . import devices, drafting
+from .closure import close_account
+from .forms import (AgencyRequestForm, AgencySendForm, CloseAccountForm,
+                    ElsaPasswordChangeForm, EmailChangeForm, EmailCodeForm, NameForm,
+                    PasskeyNameForm, ResearchProfileForm, UserForm,
+                    UserProfileForm, UsernameForm, flag_invalid_fields)
+from .rename import RenameRefused, rename_user
+# Re-exported: other apps send branded mail with these.
+from .mail import (EMAIL_LOGO_CID, FROM_ADDRESS, _elsa_logo_attachment,
+                   _elsa_logo_png, build_branded, send_branded)
+from .middleware import BROWSER_ZONE_COOKIE, zone_for
+from .models import OTP_TTL, AccountEvent, Passkey, TrustedDevice, UserProfile, UserSession
+
+
+logger = logging.getLogger(__name__)
+
+
+#----------------------------------------------------------------------------------------
+# The archive directory.  A username becomes a directory under ARCHIVE_DIR, so
+# every path built from one is checked to stay there.
 #----------------------------------------------------------------------------------------
 
+def is_inside(path, root):
+    """Whether ``path`` resolves to somewhere strictly below ``root``."""
+    path = os.path.realpath(path)
+    root = os.path.realpath(root)
+    return os.path.commonpath([path, root]) == root and path != root
 
-# Useful functions.
-def makedirs(path):
+
+def archive_dir_for(username):
+    path = os.path.join(settings.ARCHIVE_DIR, username)
+    if not is_inside(path, settings.ARCHIVE_DIR):
+        raise ValueError('username {0!r} escapes the archive'.format(username))
+    return path
+
+
+def profile_for(user):
+    """The user's profile, created if somehow missing (the signal makes one)."""
     try:
-        os.mkdir(path)
-    except OSError as e:
-        if e.errno ==17:
-            # Dir already exists.  This shouldn't happen since pk is unique.
-            print("Something is wrong.  Registration is trying to create two users with non-unique pk")
-            pass
-
-def check():
-    print(settings.MEDIA_DIR)
-    print(os.path.join(settings.MEDIA_DIR, 'user'))
+        return user.userprofile
+    except UserProfile.DoesNotExist:
+        return UserProfile.objects.create(user=user, directory=archive_dir_for(user.username))
 
 
-#----------------------------------------------------------------------------------------
+def absolute_url(request, path):
+    """
+    A link for an email.  https outside DEBUG, for the reason in
+    passkeys.expected_origin: behind TLS terminated upstream request.scheme
+    says http, and a reset or confirmation link should never travel that way.
+    """
+    scheme = request.scheme if settings.DEBUG else 'https'
+    return '{0}://{1}{2}'.format(scheme, request.get_host(), path)
 
 
+def create_archive_dir(username):
+    """
+    Creates the user's archive folder and returns its path.  Real failures
+    (permissions, a full disk) propagate, so registration rolls back instead of
+    leaving an account with nowhere to put its bundles.
+    """
+    path = archive_dir_for(username)
+    if os.path.isdir(path):
+        # Usernames are unique, so this is a folder left behind by a deleted
+        # account.  Worth a look by an admin, but not worth refusing sign-up.
+        logger.warning('archive folder for new user %s already exists', username)
+    os.makedirs(path, exist_ok=True)
+    return path
 
 
-
-
-
-
-
-
-# Create your views here.
-
-
-
-
-# Saving Team for when Teams are implemented
-#@login_required
-#class Team(generic.ListView):
-#    model = User
-#    context_object_name = 'friend_list'
-    #queryset = User.objects.all()
-#    template_name = 'friends/index.html'
-
-
-
-# Redirecting accounts/login to elsa/ (taking the user to the new UI)
-def redirect_to_elsa_home(request): 
-    return HttpResponseRedirect(reverse('main:index'))
-
-
-
-# Normal profile page for users.  Displays the user, associated userprofile, and a list of related bundles.
+# The old Bundle Hub address, /accounts/<profile id>/.  Kept so bookmarks still
+# work.  It used to render the hub itself and, on every visit, delete the
+# record of any bundle whose folder it could not see: a disk or NFS hiccup
+# became permanent data loss, and it ran before the ownership check, so anyone
+# signed in could trigger it on someone else's bundles.
 @login_required
 def profile(request, pk_user):
-    
-    context_dict = {}
-    context_dict['userprofile'] = UserProfile.objects.get(pk=pk_user)
-    context_dict['user'] = User.objects.get(userprofile=context_dict['userprofile'])
-    context_dict['bundles'] = Bundle.objects.filter(user=context_dict['user'])
-    context_dict['bundle_count'] = Bundle.objects.filter(user=context_dict['user']).count()
-    context_dict['archive_bundles'] = context_dict['bundles'].filter(bundle_type='Archive')
-    context_dict['external_bundles'] = context_dict['bundles'].filter(bundle_type='External')
-
-    #This block checks that all bundles actually exist in the archive-
-    #if not, it deletes that bundle from the database.
-    for b in context_dict['bundles']:
-        if os.path.isdir(b.directory()):
-            pass
-        else:
-            b.remove_bundle()
-            context_dict['bundles'] = Bundle.objects.filter(user=context_dict['user'])
-            context_dict['bundle_count'] = Bundle.objects.filter(user=context_dict['user']).count()
-
-
-    if request.user == context_dict['user']:
-        return render(request, 'friends/bundle_hub.html', context_dict)
-
-    else:
+    if not UserProfile.objects.filter(pk=pk_user, user=request.user).exists():
         return redirect('main:restricted_access')
+    return redirect('friends:bundle_hub')
 
+
+
+def admin_login(request, extra_context=None):
+    """
+    Stands in for AdminSite.login, which never renders its password form.
+    Staff arrive already signed in through ELSA, second factor included.
+    """
+    if not request.user.is_authenticated:
+        messages.info(request, "Sign in to ELSA first, then open the admin again.")
+        return HttpResponseRedirect(reverse('main:index'))
+    if request.user.is_active and request.user.is_staff:
+        return redirect('admin:index')
+    return redirect('main:restricted_access')
 
 
 # Keys holding the half-finished login while the user reads their email.  The
@@ -123,8 +134,8 @@ OTP_SESSION_TTL = timedelta(minutes=15)
 
 
 # ---------------------------------------------------------------------------
-# Throttles.  Same cache-counter shape the assistant app uses, so the DB-backed
-# cache is shared across worker processes rather than resetting per process.
+# Throttles.  Counted in the database by friends/throttle.py, one UPDATE per
+# hit, so parallel requests cannot slip past a limit together.
 # ---------------------------------------------------------------------------
 
 SIGNUP_PER_HOUR = 5
@@ -133,6 +144,12 @@ SIGNUP_PER_DAY = 20
 PASSWORD_WINDOW = 15 * 60
 PASSWORD_FAILURES_PER_ACCOUNT = 10
 PASSWORD_FAILURES_PER_IP = 30
+
+# Each of these sends an email, so they cap how hard one client can make ELSA
+# mail somebody.
+RESET_PER_HOUR_PER_IP = 10
+RESET_PER_HOUR_PER_ADDRESS = 3
+EMAIL_CHANGE_PER_HOUR = 5
 
 
 def _client_ip(request):
@@ -151,28 +168,23 @@ def _client_ip(request):
     return request.META.get('REMOTE_ADDR') or 'unknown'
 
 
-def _bump(key, timeout):
-    """Increment a cache counter, tolerating the add/incr expiry race."""
-    cache.add(key, 0, timeout=timeout)
-    try:
-        return cache.incr(key)
-    except ValueError:
-        return 1
-
-
 def _signup_throttled(request):
     """
     Caps sign-up attempts per address.  Unique emails already stop one inbox
     being bombed repeatedly; this stops a script working through many.
     """
     ip = _client_ip(request)
-    if _bump('signup-rl-hour-{0}'.format(ip), 3600) > SIGNUP_PER_HOUR:
+    if throttle.hit('signup-hour-{0}'.format(ip), 3600) > SIGNUP_PER_HOUR:
         return True
-    return _bump('signup-rl-day-{0}'.format(ip), 86400) > SIGNUP_PER_DAY
+    return throttle.hit('signup-day-{0}'.format(ip), 86400) > SIGNUP_PER_DAY
 
 
 def _password_key(username):
-    return 'pwd-rl-user-{0}'.format((username or '').lower()[:120])
+    return 'pwd-user-{0}'.format((username or '').lower()[:120])
+
+
+def _password_ip_key(request):
+    return 'pwd-ip-{0}'.format(_client_ip(request))
 
 
 def _password_throttled(request, username):
@@ -181,18 +193,18 @@ def _password_throttled(request, username):
     password in front of it did not.  Counted per account and per address, and
     only failures count, so signing in normally never uses up the allowance.
     """
-    if cache.get(_password_key(username), 0) >= PASSWORD_FAILURES_PER_ACCOUNT:
+    if throttle.count(_password_key(username)) >= PASSWORD_FAILURES_PER_ACCOUNT:
         return True
-    return cache.get('pwd-rl-ip-{0}'.format(_client_ip(request)), 0) >= PASSWORD_FAILURES_PER_IP
+    return throttle.count(_password_ip_key(request)) >= PASSWORD_FAILURES_PER_IP
 
 
 def _record_password_failure(request, username):
-    _bump(_password_key(username), PASSWORD_WINDOW)
-    _bump('pwd-rl-ip-{0}'.format(_client_ip(request)), PASSWORD_WINDOW)
+    throttle.hit(_password_key(username), PASSWORD_WINDOW)
+    throttle.hit(_password_ip_key(request), PASSWORD_WINDOW)
 
 
 def _clear_password_failures(username):
-    cache.delete(_password_key(username))
+    throttle.reset(_password_key(username))
 
 
 def _mask_email(address):
@@ -211,73 +223,39 @@ def _mask_email(address):
     return '{0}{1}{2}@{3}'.format(name[:2], '*' * (len(name) - 3), name[-1], domain)
 
 
-EMAIL_LOGO_CID = 'elsa_logo'
-
-# The white logo pre-scaled to 240px (twice its 120px display width), flattened
-# onto the teal band and reduced to a 128-colour palette: 7KB against the 70KB
-# source.  Built once as a checked-in asset rather than resized on every send,
-# so no image processing happens on the sign-in path.
-EMAIL_LOGO_PATH = os.path.join(settings.STATIC_DIR, 'images', 'ELSA-Logo-email.png')
-
-
-@lru_cache(maxsize=1)
-def _elsa_logo_png():
-    """The email logo asset, read once per process."""
-    with open(EMAIL_LOGO_PATH, 'rb') as handle:
-        return handle.read()
-
-
-def _elsa_logo_attachment():
-    """
-    The logo as an inline MIME part, or None if the asset cannot be read.  A
-    missing logo must never stop a sign-in code from going out, so failure
-    here is swallowed and the header falls back to its text wordmark.
-    """
-    try:
-        image = MIMEImage(_elsa_logo_png())
-    except Exception:
-        return None
-
-    image.add_header('Content-ID', '<{0}>'.format(EMAIL_LOGO_CID))
-    image.add_header('Content-Disposition', 'inline', filename='elsa-logo.png')
-    return image
-
-
 def _send_otp(user, code, purpose):
     """Emails a one-time code.  purpose is 'login' or 'register'."""
     subject = ("ELSA: confirm your email address" if purpose == 'register'
                else "ELSA: your sign-in code")
 
-    # Carried with the message rather than linked, so the logo renders without
-    # the reader having to approve remote images.
-    logo = _elsa_logo_attachment()
-
-    context = {
+    send_branded([user.email], subject, 'friends/email/otp_code', {
         'code': code,
         'purpose': purpose,
         'first_name': user.first_name,
         'ttl_minutes': int(OTP_TTL.total_seconds() // 60),
-        'logo_cid': EMAIL_LOGO_CID if logo else '',
-    }
+    })
 
-    # Rendered from templates rather than an inline string so the markup is
-    # editable without touching the view, and sent as multipart so clients that
-    # refuse HTML still get a readable code.
-    email = EmailMultiAlternatives(
-        subject=subject,
-        body=render_to_string('friends/email/otp_code.txt', context),
-        from_email='atm-elsa@nmsu.edu',
-        to=[user.email]
-    )
-    email.attach_alternative(render_to_string('friends/email/otp_code.html', context), 'text/html')
 
-    if logo:
-        # multipart/related tells the client the image belongs to the HTML part
-        # rather than being a file the user is meant to download.
-        email.mixed_subtype = 'related'
-        email.attach(logo)
+def _user_zone(user):
+    zone = zone_for(UserProfile.objects.filter(user=user).values_list('timezone', flat=True).first())
+    return zone or timezone.get_default_timezone()
 
-    email.send(fail_silently=True)
+
+def _send_security_notice(request, user, to, subject, headline, lead, detail=''):
+    """
+    Tells someone that a sensitive change was made to their account, with
+    the way out if it was not them.  Sent after the change is saved; a failure
+    is logged and does not undo it.
+    """
+    return send_branded(to, subject, 'friends/email/account_notice', {
+        'headline': headline,
+        'first_name': user.first_name,
+        'lead': lead,
+        'detail': detail,
+        'when': timezone.localtime(timezone=_user_zone(user)).strftime('%B %d, %Y at %I:%M %p %Z'),
+        'reset_url': absolute_url(request, reverse('friends:password_reset')),
+        'contact_url': absolute_url(request, reverse('main:contact')),
+    })
 
 
 def _stage_pending_user(request, user, purpose):
@@ -464,7 +442,13 @@ def _continue_with_password(request, username, password):
                                 "minutes and try again.")
         return redirect('friends:login_password')
 
-    user = authenticate(username=username, password=password)
+    # Inactive accounts are visible here on purpose.  authenticate() would turn
+    # them away with "Invalid username or password", which stranded everyone
+    # who signed up but did not enter their code in time: told their correct
+    # password was wrong, refused a reset, and holding their username and
+    # address forever.  One hash either way, so timing stays the same.
+    user = AllowAllUsersModelBackend().authenticate(request, username=username,
+                                                    password=password)
 
     if not user:
         _record_password_failure(request, username)
@@ -473,15 +457,27 @@ def _continue_with_password(request, username, password):
 
     _clear_password_failures(username)
 
+    profile = profile_for(user)
+
     if not user.is_active:
+        if _never_verified(user, profile):
+            lock = profile.otp_lock_remaining()
+            if lock:
+                _otp_lock_message(request, lock)
+                return HttpResponseRedirect(reverse('main:index'))
+            messages.info(request, "Your email address is not confirmed yet.  "
+                                   "Enter the code we sent to finish setting up your account.")
+            return _stage_otp_challenge(request, user, profile, 'register')
         return render(request, 'friends/inactive.html', {'user': user})
 
-    try:
-        profile = user.userprofile
-    except UserProfile.DoesNotExist:
-        user_path = os.path.join(settings.ARCHIVE_DIR, user.username)
-        makedirs(user_path)
-        profile = UserProfile.objects.create(user=user, directory=user_path)
+    # A browser the user asked ELSA to remember has already passed the second
+    # factor once; with the right password it signs straight in.  The OTP lock
+    # guards code guessing, which does not happen on this path.
+    if devices.trusted_device_for(request, user):
+        request.elsa_sign_in_method = 'password on a remembered device'
+        login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+        _clear_login_session(request)
+        return HttpResponseRedirect(reverse('main:index'))
 
     # A registered passkey is the stronger second factor, but only ask for one
     # this browser has actually used.  Owning a passkey on another machine is
@@ -498,6 +494,16 @@ def _continue_with_password(request, username, password):
         return HttpResponseRedirect(reverse('main:index'))
 
     return _stage_otp_challenge(request, user, profile, 'login')
+
+
+def _never_verified(user, profile):
+    """
+    An account that registered and never confirmed its address, as opposed to
+    one an administrator switched off.  Only the first may reactivate itself.
+    Both tests, so an account from before email_verified_at existed that has
+    ever signed in counts as verified.
+    """
+    return profile.email_verified_at is None and user.last_login is None
 
 
 # let's elsa's friends login
@@ -519,8 +525,6 @@ def friend_login(request):
     return _continue_with_password(request, username, request.POST.get('password'))
 
 
-# friends/views.py
-
 def otp_verify(request):
     """
     Verifies OTP, Activates User (if new), and Logs them in.
@@ -541,14 +545,20 @@ def otp_verify(request):
         if ok:
             # Only the registration flow may flip a user live.  A login must
             # never resurrect an account an admin has deactivated.
-            if purpose == 'register':
+            if purpose == 'register' and _never_verified(user, profile):
                 user.is_active = True
-                user.save()
+                user.save(update_fields=['is_active'])
+
+            if purpose == 'register' and profile.email_verified_at is None:
+                profile.email_verified_at = timezone.now()
+                profile.save(update_fields=['email_verified_at'])
 
             if not user.is_active:
                 _clear_otp_session(request)
                 return render(request, 'friends/inactive.html', {'user':user})
 
+            request.elsa_sign_in_method = ('new account confirmed' if purpose == 'register'
+                                           else 'password and emailed code')
             login(request, user, backend='django.contrib.auth.backends.ModelBackend')
             _clear_otp_session(request)
             _clear_login_session(request)
@@ -557,10 +567,18 @@ def otp_verify(request):
             # Enrolling can only ever happen after authentication: a passkey
             # created by anyone who merely typed a username would be a
             # permanent way in to that account.
-            if _should_offer_passkey(request, user):
-                return redirect('friends:passkey_offer')
+            if purpose == 'register':
+                # A brand-new account: one optional setup step, then the hub.
+                request.session[ONBOARDING_KEY] = True
+                response = redirect('friends:welcome')
+            elif _should_offer_passkey(request, user):
+                response = redirect('friends:passkey_offer')
+            else:
+                response = HttpResponseRedirect(reverse('main:index'))
 
-            return HttpResponseRedirect(reverse('main:index'))
+            if purpose == 'login' and request.POST.get('remember_device'):
+                devices.remember_device(request, response, user)
+            return response
 
         if reason == 'locked':
             _clear_otp_session(request)
@@ -734,6 +752,7 @@ def passkey_register_verify(request):
         return JsonResponse({'error': error}, status=400)
 
     messages.success(request, 'Passkey "{0}" added.'.format(passkey.name))
+    devices.record(request.user, AccountEvent.PASSKEY_ADDED, request, detail=passkey.name)
 
     response = JsonResponse({'ok': True, 'name': passkey.name})
     return _remember_passkey_device(request, response, request.user)
@@ -750,6 +769,7 @@ def passkey_delete(request, pk):
 
     name = passkey.name
     passkey.delete()
+    devices.record(request.user, AccountEvent.PASSKEY_REMOVED, request, detail=name)
     messages.success(request, 'Passkey "{0}" removed.'.format(name))
 
     response = redirect('friends:useraccount')
@@ -807,6 +827,7 @@ def passkey_auth_verify(request):
         _clear_login_session(request)
         return JsonResponse({'error': 'That account is not active.'}, status=403)
 
+    request.elsa_sign_in_method = 'passkey'
     login(request, user, backend='django.contrib.auth.backends.ModelBackend')
     _clear_otp_session(request)
     _clear_login_session(request)
@@ -844,11 +865,17 @@ def passkey_offer(request):
     can sign in as this account indefinitely, so it has to sit behind a
     completed authentication, not stand in for one.
     """
+    # The last onboarding step, if this is one: the flag ends here.
+    onboarding = bool(request.session.pop(ONBOARDING_KEY, False))
+    done = reverse('friends:bundle_hub') if onboarding else reverse('main:index')
+
     if not _should_offer_passkey(request, request.user):
-        return HttpResponseRedirect(reverse('main:index'))
+        return HttpResponseRedirect(done)
 
     return render(request, 'friends/passkey_offer.html', {
         'has_passkey_elsewhere': request.user.passkeys.exists(),
+        'onboarding': onboarding,
+        'done_url': done,
     })
 
 
@@ -862,7 +889,9 @@ def passkey_offer_dismiss(request):
     hint = _read_passkey_hint(request)
     hint['declined'][request.user.pk] = timezone.now().isoformat()
 
-    return _write_passkey_hint(redirect('main:index'), hint)
+    # Only these two destinations: "then" comes from the page, not trusted input.
+    target = 'friends:bundle_hub' if request.POST.get('then') == 'hub' else 'main:index'
+    return _write_passkey_hint(redirect(target), hint)
 
 
 @require_POST
@@ -905,10 +934,6 @@ def friend_logout(request):
 
 
 # let's people sign up to be one of elsa's friends
-# friends/views.py
-
-# friends/views.py
-
 def register(request):
     if request.method == 'POST' and _signup_throttled(request):
         messages.error(request, "Too many sign-up attempts from this connection. "
@@ -920,21 +945,18 @@ def register(request):
 
     if user_form.is_valid() and profile_form.is_valid():
 
-        # One transaction: makedirs raising anything other than "already
-        # exists" used to leave a user row behind with no archive directory.
+        # One transaction, and the folder is made inside it: if that fails the
+        # user row rolls back rather than being left with nowhere to work.
         with transaction.atomic():
             user = user_form.save(commit=False)
             user.set_password(user.password)
             user.is_active = False
             user.save()
 
-            user_path = os.path.join(settings.ARCHIVE_DIR, user.username)
-            makedirs(user_path)
-
             profile = user.userprofile
             profile.agency = profile_form.cleaned_data.get('agency')
-            profile.directory = user_path
-            profile.save()
+            profile.directory = create_archive_dir(user.username)
+            profile.save(update_fields=['agency', 'directory'])
 
         return _stage_otp_challenge(request, user, profile, 'register')
 
@@ -944,115 +966,689 @@ def register(request):
                   {'user_form': user_form, 'profile_form': profile_form})
 
 
-# user account page
+#----------------------------------------------------------------------------------------
+# Onboarding.  A new account gets one optional step (author details), then the
+# passkey offer if this device can use one, then the Bundle Hub.  Nothing in it
+# is required: sign-up already collected everything ELSA needs.
+#----------------------------------------------------------------------------------------
+
+ONBOARDING_KEY = 'elsa_onboarding'
+
+
+def _onboarding_next(request):
+    if _should_offer_passkey(request, request.user):
+        return redirect('friends:passkey_offer')     # step 2; it ends onboarding
+    request.session.pop(ONBOARDING_KEY, None)
+    return redirect('friends:bundle_hub')
+
+
+@login_required
+def welcome(request):
+    if not request.session.get(ONBOARDING_KEY):
+        # Only right after sign-up; later visits belong on the account page.
+        return redirect('friends:useraccount')
+
+    profile = profile_for(request.user)
+    form = ResearchProfileForm(request.POST or None,
+                               initial={'orcid': profile.orcid, 'affiliation': profile.affiliation})
+
+    if request.method == 'POST':
+        if 'skip' in request.POST:
+            return _onboarding_next(request)
+        if form.is_valid():
+            UserProfile.objects.filter(user=request.user).update(
+                orcid=form.cleaned_data['orcid'], affiliation=form.cleaned_data['affiliation'])
+            return _onboarding_next(request)
+
+    return render(request, 'friends/welcome.html', {
+        'form': form,
+        'steps': 2 if _should_offer_passkey(request, request.user) else 1,
+    })
+
+
+#----------------------------------------------------------------------------------------
+# The account page.
+#
+# One page for everything about the account: each setting is a row with its
+# current value, and each Edit opens a small modal for that one thing.  The
+# modals post to the JSON endpoints below and the page updates in place, so
+# nothing reloads and nobody is sent elsewhere to change one field.
+#----------------------------------------------------------------------------------------
+
+STAFF_RECIPIENTS = ['lneakras@nmsu.edu', 'rupakdey@nmsu.edu']
+
+# Which modal ?edit= may open on arrival, for links from elsewhere.
+ACCOUNT_MODALS = ('name', 'email', 'username', 'password', 'agency', 'research', 'close')
+
+USERNAME_CHANGES_PER_DAY = 3
+AGENCY_DRAFTS_PER_HOUR = 10
+AGENCY_REQUESTS_PER_DAY = 3
+
+
 @login_required
 def friend_useraccount(request):
-    context_dict = {}
-    context_dict['bundle_count'] = Bundle.objects.filter(user=request.user).count()
-    context_dict['passkeys'] = request.user.passkeys.all()
-    return render(request, 'friends/useraccount.html', context_dict)
+    profile = profile_for(request.user)
+    edit = request.GET.get('edit')
+    bundles = Bundle.objects.filter(user=request.user)
+    return render(request, 'friends/useraccount.html', {
+        'initials': _initials(request.user),
+        'archive_count': bundles.filter(bundle_type='Archive').count(),
+        'external_count': bundles.filter(bundle_type='External').count(),
+        'zone_name': timezone.get_current_timezone_name(),
+        'zone_from_browser': zone_for(unquote(request.COOKIES.get(BROWSER_ZONE_COOKIE, ''))) is not None,
+        'sessions': devices.active_sessions(request),
+        'remembered': devices.trusted_devices(request),
+        'events': devices.recent_events(request.user),
+        'userprofile': profile,
+        'agency_label': profile.get_agency_display(),
+        'agency_choices': [c for c in UserProfile.AGENCY_CHOICES if c[0] != profile.agency],
+        'bundle_count': Bundle.objects.filter(user=request.user).count(),
+        'passkeys': request.user.passkeys.all(),
+        'email_pending': profile.email_change_pending(),
+        'email_resend_wait': profile.seconds_until_email_resend(),
+        'code_ttl_minutes': int(OTP_TTL.total_seconds() // 60),
+        'open_modal': edit if edit in ACCOUNT_MODALS else '',
+        'password_min_length': _password_min_length(),
+    })
+
+
+
+def _initials(user):
+    """'VH' for Victoria Hartwick; the username's first two letters otherwise."""
+    parts = [p for p in (user.first_name.strip(), user.last_name.strip()) if p]
+    if parts:
+        return ''.join(p[0] for p in parts[:2]).upper()
+    return (user.username[:2] or '?').upper()
+
+
+def _password_min_length():
+    """The configured minimum, so the on-page checklist cannot drift from the validator."""
+    for validator in get_default_password_validators():
+        if isinstance(validator, MinimumLengthValidator):
+            return validator.min_length
+    return 1
 
 
 # profile_settings NOTE:  It is important to NOT rename this as simply settings.  Since we import django.conf import settings, when our user goes to register, settings.ARCHIVE_DIR does not pull from our settings.py file.  Rather, Django comes to this function (if named settings) and notices there is no ARCHIVE_DIR declared here.  Big boo boo that cost me (k) a couple days to figure out.
 @login_required
 def friend_settings(request, pk_user):
-    # Only allow users to edit their own account.
+    """The old Profile Settings address.  Settings now live on the account page."""
     if request.user.pk != int(pk_user):
         return redirect('main:restricted_access')
+    return HttpResponseRedirect(reverse('friends:useraccount') + '?edit=name')
 
-    updated = False # This is a flag to determine if the user has updated their profile.
-    context_dict = {}
-    context_dict['userprofile'] = UserProfile.objects.get(user_id=pk_user)
-    context_dict['user'] = User.objects.get(userprofile=context_dict['userprofile'])
-    
-    user = context_dict['user']
-    userProfile = context_dict['userprofile']
 
-    first_form = UpdateNameFirstForm(request.POST or None)
-    last_form = UpdateNameLastForm(request.POST or None)
-    agency_form = UpdateAgencyForm(request.POST or None)
-    email_form = UpdateEmailForm(request.POST or None)
-    password_form = UpdatePasswordForm(request.POST or None)
-    
-    if first_form.is_valid():
-        nameF = first_form.save()
-        user.first_name = nameF.first_name
-        user.save()
-        updated = True
+def _form_errors(form):
+    """A form's errors as {field: [message, ...]}, with '__all__' for the rest."""
+    return {field: [str(message) for message in messages_]
+            for field, messages_ in form.errors.items()}
 
-    if last_form.is_valid():
-        nameL = last_form.save()
-        user.last_name = nameL.last_name
-        user.save()
-        updated = True
 
-    if email_form.is_valid():
-        email = email_form.save()
-        user.email = email.email
-        user.save()
-        updated = True
+def _json_error(message, status=400, field='__all__'):
+    return JsonResponse({'ok': False, 'errors': {field: [message]}}, status=status)
 
-    if password_form.is_valid():
-        pwdForm = password_form.save()
-        if user.check_password(pwdForm.current_password):
-            print("Valid")
-            if pwdForm.new_password == pwdForm.confirm_password:
-                print("Valid")
-                user.set_password(pwdForm.new_password)
-                user.save()
-                updated = True
 
-            else:
-                    return render(request, 'friends/settings/mismatched_password.html', context_dict)
-        else:
-            return render(request, 'friends/settings/wrong_password.html', context_dict)
+def _json_form_errors(form):
+    return JsonResponse({'ok': False, 'errors': _form_errors(form)}, status=400)
 
-    if updated == True:
-        email_user = EmailMessage(
-            subject = "ELSA User Profile Updated",
-            body = 'Your ELSA user profile has been updated. If you did not make this change, please visit https://atmos.nmsu.edu/elsa/contact/ to report this incident. Thank you for using ELSA! \n\nRegards,\nTeam ELSA',
-            from_email = 'atm-elsa@nmsu.edu',
-            to=[user.email]
-        )
-        email_user.send()
 
-    if request.user == context_dict['user']:
-        return render(request, 'friends/settings.html', context_dict)
+def _password_guard(request):
+    """A 429 once password guessing is throttled, else None."""
+    if _password_throttled(request, request.user.username):
+        return _json_error("Too many incorrect passwords. Please wait a few minutes "
+                           "and try again.", status=429)
+    return None
 
+
+@login_required
+@require_POST
+def account_name(request):
+    form = NameForm(request.POST, instance=User.objects.get(pk=request.user.pk))
+    if not form.is_valid():
+        return _json_form_errors(form)
+    user = form.save()
+    return JsonResponse({'ok': True, 'message': 'Your name has been updated.',
+                         'first_name': user.first_name, 'last_name': user.last_name,
+                         'full_name': user.get_full_name()})
+
+
+def _send_email_code(user, new_email, code):
+    return send_branded([new_email], "ELSA: confirm your new email address",
+                        'friends/email/email_change_code', {
+                            'first_name': user.first_name,
+                            'username': user.username,
+                            'code': code,
+                            'ttl_minutes': int(OTP_TTL.total_seconds() // 60),
+                        })
+
+
+def _email_step_payload(profile):
+    return {'ok': True, 'pending_email': profile.pending_email,
+            'resend_wait': profile.seconds_until_email_resend()}
+
+
+@login_required
+@require_POST
+def account_email_start(request):
+    """Step one: the new address and the current password.  Mails a code to the address."""
+    blocked = _password_guard(request)
+    if blocked:
+        return blocked
+
+    user = request.user
+    form = EmailChangeForm(user, request.POST)
+    if not form.is_valid():
+        if 'current_password' in form.errors:
+            _record_password_failure(request, user.username)
+        return _json_form_errors(form)
+
+    if throttle.hit('email-change-{0}'.format(user.pk), 3600) > EMAIL_CHANGE_PER_HOUR:
+        return _json_error("Too many email changes requested. Please try again later.", 429)
+
+    profile = profile_for(user)
+    new_email = form.cleaned_data['new_email']
+    if not _send_email_code(user, new_email, profile.start_email_change(new_email)):
+        profile.cancel_email_change()
+        return _json_error("We could not send the code. Please try again in a few minutes.", 503)
+
+    return JsonResponse(_email_step_payload(profile))
+
+
+@login_required
+@require_POST
+def account_email_verify(request):
+    """Step two: the code from the new inbox.  Switches the address."""
+    profile = profile_for(request.user)
+    if not profile.pending_email:
+        return _json_error("There is no email change waiting. Please start again.", 409)
+
+    form = EmailCodeForm(request.POST)
+    if not form.is_valid():
+        return _json_form_errors(form)
+
+    new_email, reason = profile.verify_email_change(form.cleaned_data['code'])
+    if reason == 'invalid':
+        remaining = profile.email_attempts_remaining()
+        return _json_error("That code is not right. {0} attempt{1} remaining.".format(
+            remaining, '' if remaining == 1 else 's'), field='code')
+    if reason == 'expired':
+        return _json_error("That code has expired. Send a new one below.", field='code')
+    if reason == 'exhausted':
+        return _json_error("Too many incorrect codes. Please start the change again.", 409)
+
+    with transaction.atomic():
+        user = User.objects.select_for_update().get(pk=request.user.pk)
+        # Checked again: another account may have claimed it meanwhile.
+        if User.objects.filter(email__iexact=new_email).exclude(pk=user.pk).exists():
+            profile.cancel_email_change()
+            return _json_error("An account already uses that email address.", 409)
+        old_email = user.email
+        user.email = new_email
+        user.save(update_fields=['email'])
+        UserProfile.objects.filter(user=user).update(
+            email_verified_at=timezone.now(), pending_email=None)
+
+    devices.record(user, AccountEvent.EMAIL_CHANGED, request, detail='{0} to {1}'.format(old_email, new_email))
+
+    # To the old address: if this was not them, that inbox is the one they
+    # still have.
+    _send_security_notice(
+        request, user, [old_email],
+        "ELSA: your email address was changed",
+        "Your email address was changed",
+        "The email address on your ELSA account ({0}) was changed from {1} to {2}. "
+        "Sign-in codes and password resets now go to the new address.".format(
+            user.username, old_email, new_email))
+
+    return JsonResponse({'ok': True, 'email': new_email,
+                         'message': 'Your email address is now {0}.'.format(new_email)})
+
+
+@login_required
+@require_POST
+def account_email_resend(request):
+    profile = profile_for(request.user)
+    if not profile.pending_email:
+        return _json_error("There is no email change waiting. Please start again.", 409)
+
+    wait = profile.seconds_until_email_resend()
+    if wait:
+        return _json_error("Please wait {0} more second{1}.".format(wait, '' if wait == 1 else 's'), 429)
+
+    # A resend is another email to an address that is not verified yet, so it
+    # counts against the same hourly allowance as starting a change.
+    if throttle.hit('email-change-{0}'.format(request.user.pk), 3600) > EMAIL_CHANGE_PER_HOUR:
+        return _json_error("Too many codes requested. Please try again later.", 429)
+
+    if not _send_email_code(request.user, profile.pending_email, profile.reissue_email_code()):
+        return _json_error("We could not send the code. Please try again in a few minutes.", 503)
+
+    payload = _email_step_payload(profile)
+    payload['message'] = 'A new code is on its way to {0}.'.format(profile.pending_email)
+    return JsonResponse(payload)
+
+
+@login_required
+@require_POST
+def account_email_cancel(request):
+    profile_for(request.user).cancel_email_change()
+    return JsonResponse({'ok': True})
+
+
+@login_required
+@require_POST
+def account_password(request):
+    blocked = _password_guard(request)
+    if blocked:
+        return blocked
+
+    user = request.user
+    form = ElsaPasswordChangeForm(user, request.POST)
+    if not form.is_valid():
+        if 'old_password' in form.errors:
+            _record_password_failure(request, user.username)
+        return _json_form_errors(form)
+
+    form.save()
+    # Changing the password invalidates every session, including this one.
+    # Keep this one: the user just proved who they are.
+    update_session_auth_hash(request, form.user)
+    _clear_password_failures(user.username)
+    UserProfile.objects.filter(user=user).update(password_changed_at=timezone.now())
+    # The other sessions just ended with the old password; so does any trust.
+    UserSession.objects.filter(user=user).exclude(session_key=request.session.session_key).delete()
+    devices.forget_all_devices(user)
+    devices.record(user, AccountEvent.PASSWORD_CHANGED, request)
+
+    _send_security_notice(
+        request, user, [user.email],
+        "ELSA: your password was changed",
+        "Your password was changed",
+        "The password for your ELSA account ({0}) was just changed, and every other "
+        "device signed in to it has been signed out.".format(user.username))
+
+    return JsonResponse({'ok': True, 'message': 'Your password has been changed.',
+                         'changed_label': 'Last changed just now'})
+
+
+@login_required
+@require_POST
+def account_close(request):
+    """Closes the account.  Its bundles stay, for the ELSA team only."""
+    blocked = _password_guard(request)
+    if blocked:
+        return blocked
+
+    user = request.user
+    if user.is_superuser:
+        # Closing one's own admin account could leave nobody able to administer
+        # ELSA; another admin deactivates it instead.
+        return _json_error("Administrator accounts cannot be closed here. Ask another "
+                           "ELSA administrator to deactivate it.", 403)
+
+    form = CloseAccountForm(user, request.POST)
+    if not form.is_valid():
+        if 'current_password' in form.errors:
+            _record_password_failure(request, user.username)
+        return _json_form_errors(form)
+
+    first_name = user.first_name
+    record = close_account(user)
+
+    send_branded([record['email']], "Goodbye from ELSA: your account has been closed",
+                 'friends/email/account_closed', {
+                     'first_name': first_name,
+                     'username': record['username'],
+                     'bundle_count': len(record['bundles']),
+                     'contact_url': absolute_url(request, reverse('main:contact')),
+                 })
+    _notify_staff_of_closure(record)
+
+    list(messages.get_messages(request))
+    logout(request)
+    messages.success(request, "Your account has been closed. Goodbye from ELSA, and thank you.")
+    return JsonResponse({'ok': True, 'redirect': reverse('main:index')})
+
+
+def _notify_staff_of_closure(record):
+    """Plain mail to the team, in the codebase's usual EmailMessage form."""
+    lines = [
+        'An ELSA user closed their account.',
+        '',
+        'Username:  {0}'.format(record['username']),
+        'Name:      {0}'.format(record['full_name'] or '(not given)'),
+        'Email:     {0}'.format(record['email']),
+        'Closed:    {0}'.format(timezone.localtime(record['closed_at']).strftime('%B %d, %Y at %I:%M %p %Z')),
+        'Archive:   {0}'.format(record['archive_path'] or '(no folder on disk)'),
+        '',
+        'Bundles retained ({0}):'.format(len(record['bundles'])),
+    ] + ['  - {0}'.format(name) for name in record['bundles']] + [
+        '',
+        'The name and email above were removed from ELSA\'s database and appear only '
+        'in this message. The bundles are listed in the admin under Bundles, '
+        'filtered by "Owner: closed by user", and the folder is linked from '
+        'archive/_closed_accounts/.',
+    ]
+    try:
+        EmailMessage(subject='ELSA: account closed by user ({0})'.format(record['username']),
+                     body='\n'.join(lines), from_email=FROM_ADDRESS,
+                     to=STAFF_RECIPIENTS).send()
+    except Exception:
+        logger.exception('closure notice for %s failed', record['username'])
+
+
+@login_required
+@require_POST
+def account_username(request):
+    blocked = _password_guard(request)
+    if blocked:
+        return blocked
+
+    user = request.user
+    form = UsernameForm(user, request.POST)
+    if not form.is_valid():
+        if 'current_password' in form.errors:
+            _record_password_failure(request, user.username)
+        return _json_form_errors(form)
+
+    if throttle.hit('username-change-{0}'.format(user.pk), 86400) > USERNAME_CHANGES_PER_DAY:
+        return _json_error("You have changed your username several times today. "
+                           "Please try again tomorrow.", 429)
+
+    try:
+        old_username = rename_user(user, form.cleaned_data['new_username'])
+    except RenameRefused as refusal:
+        return _json_error(str(refusal), 409, field='new_username')
+    except OSError:
+        logger.exception('rename of %s failed on disk', user.username)
+        return _json_error("ELSA could not move your files. Nothing was changed; please "
+                           "contact the ELSA team.", 500)
+
+    devices.record(user, AccountEvent.USERNAME_CHANGED, request,
+                   detail='{0} to {1}'.format(old_username, user.username))
+    _send_security_notice(
+        request, user, [user.email],
+        "ELSA: your username was changed",
+        "Your username was changed",
+        "The username on your ELSA account was changed from {0} to {1}. Sign in with "
+        "{1} from now on; your bundles moved with it.".format(old_username, user.username))
+
+    return JsonResponse({'ok': True, 'username': user.username,
+                         'message': 'Your username is now {0}.'.format(user.username)})
+
+
+def _agency_facts(user, profile, requested, note=''):
+    labels = dict(UserProfile.AGENCY_CHOICES)
+    bundles = Bundle.objects.filter(user=user)
+    return {
+        'name': user.get_full_name(),
+        'username': user.username,
+        'current': profile.agency,
+        'current_label': labels.get(profile.agency, profile.agency),
+        'requested': requested,
+        'requested_label': labels.get(requested, requested),
+        'bundle_count': bundles.count(),
+        'archive_count': bundles.filter(bundle_type='Archive').count(),
+        'external_count': bundles.filter(bundle_type='External').count(),
+        'note': note or '',
+    }
+
+
+@login_required
+@require_POST
+def account_agency_draft(request):
+    """Drafts the request email.  Nothing is sent: the user reviews it first."""
+    profile = profile_for(request.user)
+    form = AgencyRequestForm(profile, request.POST)
+    if not form.is_valid():
+        return _json_form_errors(form)
+
+    if throttle.hit('agency-draft-{0}'.format(request.user.pk), 3600) > AGENCY_DRAFTS_PER_HOUR:
+        subject, body = drafting.template_draft(_agency_facts(
+            request.user, profile, form.cleaned_data['agency'], form.cleaned_data['note']))
+        source = 'template'
     else:
-        return redirect('main:restricted_access')
-    
+        subject, body, source = drafting.draft(_agency_facts(
+            request.user, profile, form.cleaned_data['agency'], form.cleaned_data['note']))
+
+    return JsonResponse({'ok': True, 'subject': subject, 'body': body, 'source': source})
+
+
+@login_required
+@require_POST
+def account_agency_send(request):
+    user = request.user
+    profile = profile_for(user)
+    form = AgencySendForm(profile, request.POST)
+    if not form.is_valid():
+        return _json_form_errors(form)
+
+    if throttle.hit('agency-send-{0}'.format(user.pk), 86400) > AGENCY_REQUESTS_PER_DAY:
+        return _json_error("You have sent several requests today. The team will reply "
+                           "by email; please wait for their answer.", 429)
+
+    facts = _agency_facts(user, profile, form.cleaned_data['agency'])
+    # Written by ELSA, not by the user or the model, so the team can trust it
+    # whatever the message below says.
+    verified = '\n'.join([
+        'Agency change request, sent from the ELSA account page.',
+        '',
+        'Account:          {username}',
+        'Email:            {email}',
+        'Current agency:   {current_label} ({current})',
+        'Requested agency: {requested_label} ({requested})',
+        'Bundles:          {bundle_count} ({archive_count} Archive, {external_count} External)',
+        'Admin:            {admin}',
+        '',
+        '---- Message from the user (they may have edited it) ----',
+        '',
+    ]).format(email=user.email,
+              admin=absolute_url(request, reverse('admin:friends_userprofile_change', args=[profile.pk])),
+              **facts)
+
+    try:
+        EmailMessage(subject='ELSA agency request ({0}): {1}'.format(user.username, form.cleaned_data['subject']),
+                     body=verified + form.cleaned_data['body'], from_email=FROM_ADDRESS,
+                     to=STAFF_RECIPIENTS, reply_to=[user.email]).send()
+    except Exception:
+        logger.exception('agency request from %s failed', user.username)
+        return _json_error("Your request could not be sent. Please try again in a few minutes.", 503)
+
+    # Their own copy, so they have a record of what was asked.
+    try:
+        EmailMessage(subject='Copy of your request: {0}'.format(form.cleaned_data['subject']),
+                     body='This is a copy of the request you sent to the ELSA team. They will '
+                          'reply to this address.\n\n' + form.cleaned_data['body'],
+                     from_email=FROM_ADDRESS, to=[user.email]).send()
+    except Exception:
+        logger.exception('agency request copy to %s failed', user.username)
+
+    return JsonResponse({'ok': True,
+                         'message': 'Request sent. The ELSA team will reply to {0}.'.format(user.email)})
+
+
+@login_required
+@require_POST
+def account_research(request):
+    form = ResearchProfileForm(request.POST)
+    if not form.is_valid():
+        return _json_form_errors(form)
+    UserProfile.objects.filter(user=request.user).update(
+        orcid=form.cleaned_data['orcid'], affiliation=form.cleaned_data['affiliation'])
+    return JsonResponse({'ok': True, 'orcid': form.cleaned_data['orcid'],
+                         'affiliation': form.cleaned_data['affiliation'],
+                         'message': 'Your researcher details have been saved.'})
+
+
+@login_required
+@require_POST
+def account_session_end(request, pk):
+    row = UserSession.objects.filter(pk=pk, user=request.user).first()
+    if row is None:
+        return _json_error("That device is no longer signed in.", 404)
+    if row.session_key == request.session.session_key:
+        return _json_error("To sign out this device, use Sign out in the menu.", 400)
+    label = devices.device_label(row.user_agent)
+    devices.end_session(request.user, row.session_key)
+    devices.record(request.user, AccountEvent.SESSION_ENDED, request, detail=label)
+    return JsonResponse({'ok': True, 'message': '{0} has been signed out.'.format(label)})
+
+
+@login_required
+@require_POST
+def account_sessions_end_others(request):
+    count = devices.end_other_sessions(request)
+    # Being remembered only helps someone who also knows the password, but a
+    # lost laptop is exactly when to stop trusting it.
+    current = devices.current_trusted_device(request)
+    others = TrustedDevice.objects.filter(user=request.user)
+    if current is not None:
+        others = others.exclude(pk=current.pk)
+    others.delete()
+    devices.record(request.user, AccountEvent.OTHERS_SIGNED_OUT, request)
+    return JsonResponse({'ok': True, 'count': count,
+                         'message': 'Every other device has been signed out.'})
+
+
+@login_required
+@require_POST
+def account_device_forget(request, pk):
+    device = TrustedDevice.objects.filter(pk=pk, user=request.user).first()
+    if device is None:
+        return _json_error("That device is no longer remembered.", 404)
+    label = devices.device_label(device.user_agent)
+    device.delete()
+    devices.record(request.user, AccountEvent.DEVICE_FORGOTTEN, request, detail=label)
+    return JsonResponse({'ok': True, 'message': '{0} will ask for an emailed code again.'.format(label)})
+
+
+@login_required
+@require_POST
+def passkey_rename(request, pk):
+    passkey = Passkey.objects.filter(pk=pk, user=request.user).first()
+    if passkey is None:
+        return _json_error("That passkey was not found.", 404)
+    form = PasskeyNameForm(request.POST)
+    if not form.is_valid():
+        return _json_form_errors(form)
+    passkey.name = form.cleaned_data['name']
+    passkey.save(update_fields=['name'])
+    return JsonResponse({'ok': True, 'name': passkey.name,
+                         'message': 'Passkey renamed to "{0}".'.format(passkey.name)})
+
+
+#----------------------------------------------------------------------------------------
+# Password reset.  Django's views, pointed at ELSA's templates and mail, and
+# rate limited.
+#----------------------------------------------------------------------------------------
+
+class ElsaPasswordResetForm(PasswordResetForm):
+    """Sends the reset link in the same branded mail as every other account email."""
+
+    def send_mail(self, subject_template_name, email_template_name, context,
+                  from_email, to_email, html_email_template_name=None):
+        # One line, as Django's own send_mail insists: a newline in a subject
+        # is a header injection.
+        subject = ''.join(render_to_string(subject_template_name, context).splitlines())
+        protocol = context['protocol'] if settings.DEBUG else 'https'
+        context = dict(context, protocol=protocol, reset_url='{0}://{1}{2}'.format(
+            protocol, context['domain'],
+            reverse('friends:password_reset_confirm',
+                    kwargs={'uidb64': context['uid'], 'token': context['token']})))
+        message = build_branded([to_email], subject,
+                                'friends/registration/password_reset_email', context)
+        try:
+            message.send()
+        except Exception:
+            logger.exception('password reset email failed')
+
+
+class ElsaPasswordResetView(auth_views.PasswordResetView):
+    form_class = ElsaPasswordResetForm
+    template_name = 'friends/registration/password_reset_form.html'
+    subject_template_name = 'friends/registration/password_reset_subject.txt'
+    success_url = reverse_lazy('friends:password_reset_done')
+
+    def form_valid(self, form):
+        address = form.cleaned_data['email'].lower()
+        over_ip = throttle.hit('reset-ip-{0}'.format(_client_ip(self.request)), 3600) > RESET_PER_HOUR_PER_IP
+        over_address = throttle.hit('reset-addr-{0}'.format(address), 3600) > RESET_PER_HOUR_PER_ADDRESS
+        if over_ip or over_address:
+            # The same page as a sent email, so the limit does not reveal
+            # whether the address has an account.
+            return HttpResponseRedirect(self.get_success_url())
+        return super(ElsaPasswordResetView, self).form_valid(form)
+
+
+class ElsaPasswordResetConfirmView(auth_views.PasswordResetConfirmView):
+    template_name = 'friends/registration/password_reset_confirm.html'
+    success_url = reverse_lazy('friends:password_reset_complete')
+
+    def form_valid(self, form):
+        response = super(ElsaPasswordResetConfirmView, self).form_valid(form)
+        user = form.user
+        UserProfile.objects.filter(user=user).update(password_changed_at=timezone.now())
+        UserSession.objects.filter(user=user).delete()
+        devices.forget_all_devices(user)
+        devices.record(user, AccountEvent.PASSWORD_RESET, self.request)
+        # Owning the inbox is proof enough to lift a guessing lockout.
+        _clear_password_failures(user.username)
+        _send_security_notice(
+            self.request, user, [user.email],
+            "ELSA: your password was reset",
+            "Your password was reset",
+            "The password for your ELSA account ({0}) was just reset using a link "
+            "sent to this address.".format(user.username))
+        return response
+
+
+#----------------------------------------------------------------------------------------
+# Bundle Hub.
+#----------------------------------------------------------------------------------------
 
 @login_required
 def bundle_hub(request):
-    bundles = Bundle.objects.filter(user=request.user)
+    bundles = list(Bundle.objects.filter(user=request.user))
+    for bundle in bundles:
+        # Shown as a badge, never acted on: a folder that is missing for a
+        # moment (NFS, a restore in progress) must not cost the user a bundle.
+        bundle.files_missing = not os.path.isdir(bundle.directory())
     return render(request, 'friends/bundle_hub.html', {
         'bundles': bundles,
-        'total_count': bundles.count(),
-        'archive_count': bundles.filter(bundle_type='Archive').count(),
-        'external_count': bundles.filter(bundle_type='External').count(),
+        'total_count': len(bundles),
+        'archive_count': sum(1 for b in bundles if b.bundle_type == 'Archive'),
+        'external_count': sum(1 for b in bundles if b.bundle_type == 'External'),
     })
 
+
 @login_required
+@require_POST
 def delete_bundles(request):
-    if request.method == "POST":
-        bundle_ids = request.POST.getlist('bundle_ids')
-        if not bundle_ids:
-            messages.warning(request, "No bundles were selected.")
-            return redirect('friends:bundle_hub')  # redirect back to hub
-
-        bundles = Bundle.objects.filter(id__in=bundle_ids, user=request.user)
-        if not bundles.exists():
-            messages.error(request, "You cannot delete bundles that do not belong to you.")
-            return redirect('friends:bundle_hub')
-
-        # call remove_bundle() for each before deleting
-        for bundle in bundles:
-            bundle.remove_bundle()
-        count = bundles.count()
-        bundles.delete()
-
-        messages.success(request, f"{count} bundle(s) deleted successfully.")
+    bundle_ids = [i for i in request.POST.getlist('bundle_ids') if i.isdigit()]
+    if not bundle_ids:
+        messages.warning(request, "No bundles were selected.")
         return redirect('friends:bundle_hub')
 
+    bundles = list(Bundle.objects.filter(id__in=bundle_ids, user=request.user))
+    if not bundles:
+        messages.error(request, "You cannot delete bundles that do not belong to you.")
+        return redirect('friends:bundle_hub')
+
+    deleted, failed = 0, []
+    for bundle in bundles:
+        try:
+            # remove_bundle refuses to touch a folder outside the owner's
+            # archive, then deletes the record.
+            bundle.remove_bundle()
+            Bundle.objects.filter(pk=bundle.pk).delete()
+            deleted += 1
+        except Exception:
+            logger.exception('deleting bundle %s for %s failed', bundle.pk, request.user.username)
+            failed.append(bundle.name)
+
+    if deleted:
+        messages.success(request, "{0} bundle{1} deleted.".format(deleted, '' if deleted == 1 else 's'))
+    if failed:
+        messages.error(request, "Could not delete: {0}. Please contact ELSA support.".format(
+            ', '.join(failed)))
     return redirect('friends:bundle_hub')

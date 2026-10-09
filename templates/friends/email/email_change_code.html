@@ -1,0 +1,15 @@
+{% extends 'friends/email/_layout.html' %}
+{% block headline %}Confirm your new email address{% endblock %}
+{% block lead %}Hello{% if first_name %} {{ first_name }}{% endif %}, someone signed in to the ELSA account <strong>{{ username }}</strong> asked to use this address for it. Enter this code in ELSA to confirm.{% endblock %}
+{% block content %}
+<tr>
+  <td style="padding:24px 32px 8px;" align="center">
+    <p style="margin:0 0 10px;font-size:11px;color:#888888;text-transform:uppercase;letter-spacing:0.5px;">Confirmation code</p>
+    <div style="background-color:#f8f8f8;border:1px solid #e4e4e4;border-radius:6px;padding:18px 24px;display:inline-block;">
+      <span style="font-family:Roboto,'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:34px;font-weight:bold;letter-spacing:10px;color:#1f8a7f;">{{ code }}</span>
+    </div>
+    <p style="margin:12px 0 0;font-size:13px;color:#888888;">This code expires in {{ ttl_minutes }} minutes.</p>
+  </td>
+</tr>
+{% include 'friends/email/_callout.html' with text='Until you confirm, sign-in codes and password resets keep going to the old address. ELSA staff will never ask you for this code. If you did not ask for this, you can ignore this message.' %}
+{% endblock %}

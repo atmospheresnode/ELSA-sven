@@ -198,9 +198,17 @@ Nothing here starts work on page load. Running a check is an explicit action.
          </p>
          {% endif %}
 
+         {% comment %}
+            Names the tool and the release that produced these findings, taken from
+            the run's own report, so the result says who judged it. Runs with no
+            report, and runs from before this was recorded, keep the plain line.
+         {% endcomment %}
          {% if validation_run and validation_run.finished_at %}
-         <div class="text-muted" style="font-size:0.72rem;">
-            Last checked {{ validation_run.finished_at|timesince }} ago.
+         <div class="text-muted" style="font-size:0.72rem;" id="preflight_checked_by">
+            Last checked {{ validation_run.finished_at|timesince }} ago{% if validation_run.tool_version %}
+            by <a href="https://nasa-pds.github.io/validate/" target="_blank" rel="noopener"
+                  class="text-muted">NASA PDS Validate {{ validation_run.tool_version }}</a>,
+            the official PDS4 validation tool{% endif %}.
          </div>
          {% endif %}
       </div>

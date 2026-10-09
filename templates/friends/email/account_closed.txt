@@ -1,0 +1,19 @@
+{% autoescape off %}ELSA -- Educational Labeling System @Atmospheres
+
+Hello{% if first_name %} {{ first_name }}{% endif %}, your ELSA account "{{ username }}" has been closed,
+as you asked.  Thank you for using ELSA.
+
+Your name and email address have been removed from your account, and you
+can no longer sign in.{% if bundle_count %}  Your {{ bundle_count }} bundle{{ bundle_count|pluralize }} {{ bundle_count|pluralize:"is,are" }} kept by the ELSA
+team at the PDS Atmospheres Node and {{ bundle_count|pluralize:"is,are" }} not visible to anyone else
+in ELSA.{% endif %}
+
+If you did not close your account, or need anything from it, please
+contact the ELSA team:
+
+    {{ contact_url }}
+
+--
+Sent automatically by ELSA, Planetary Data System Atmospheres Node,
+New Mexico State University.
+{% endautoescape %}

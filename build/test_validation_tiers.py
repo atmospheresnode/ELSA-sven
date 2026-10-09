@@ -38,7 +38,9 @@ class TierSelectionTests(TestCase):
 
     def command_for(self, tier):
         run = ValidationRun.objects.create(bundle=self.bundle, tier=tier)
-        with override_settings(VALIDATE_HOME=self.home, VALIDATE_WORK_DIR=self.workdir):
+        # An explicit Java: this fake has no jar for 'auto' to read.
+        with override_settings(VALIDATE_HOME=self.home, VALIDATE_WORK_DIR=self.workdir,
+                               VALIDATE_JAVA_HOME=''):
             return validate_runner.build_command(run, os.path.join(self.workdir, 'r.json'))
 
     def test_the_working_tier_no_longer_skips_reading_data_files(self):

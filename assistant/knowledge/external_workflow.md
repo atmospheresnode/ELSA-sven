@@ -15,14 +15,14 @@ Model Archive (AMA): the data itself is hosted externally, and ELSA produces the
 PDS4 metadata bundle describing it.
 
 To make an External bundle ready to submit, these are REQUIRED:
-1. Modification History, at least one dated version entry.
+1. Modification History, at least one dated version entry. ELSA writes the first
+   one ("1.0", "Bundle creation") when the bundle is created.
 2. Citation Information, with publication year, description and at least one
    author (a person or an organization). Two ATM node editors (Lynn Neakrase,
    Lyle Huber) are included automatically, and users may add extra editors of
-   their own if they wish. The number of authors is chosen when the citation is
-   created and cannot be changed afterwards (Edit only fills in the names), so
-   the form refuses a citation with no author. A citation that already has none
-   has to be deleted and created again with at least one author.
+   their own if they wish. A citation with no author is refused. Authors are a
+   list in the Citation Information window, with Add and remove buttons, and can
+   be changed at any time.
 3. Targets, at least one target selected from the context list (External bundles
    offer laboratory analog targets, e.g. Mars Laboratory Analog).
 4. At least one NetCDF file that ELSA has processed, uploaded into a collection

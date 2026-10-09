@@ -1,0 +1,79 @@
+<section class="setup-panel" id="step-data" data-step="data" aria-labelledby="step-data-title">
+   <header class="setup-panel-head">
+      <span class="setup-kicker">Step {{ step.number }} of {{ setup.steps|length }} &middot; Required</span>
+      <h2 id="step-data-title" tabindex="-1">Data</h2>
+      <p class="setup-why">Your model output. {% if collections %}Upload your NetCDF files{% else %}Name a collection for it, then upload your NetCDF files{% endif %}. ELSA writes a label for each one.</p>
+      <details class="setup-more">
+         <summary>More about this</summary>
+         <p>Collections group related products. In a Modeling Annex bundle every data product is NetCDF model output. If you have several runs, you can give each its own collection, here or later from the bundle page. A file counts once ELSA has processed it.</p>
+      </details>
+   </header>
+
+   {% if collections %}
+   <div class="setup-collections">
+      {% for entry in collections %}
+      <div class="setup-collection">
+         <div class="setup-collection-head"><i class="bi bi-folder2 me-2" aria-hidden="true"></i><strong>{{ entry.collection.collection_name }}</strong>
+            <span class="text-muted small ms-2">{{ entry.files|length }} file{{ entry.files|length|pluralize }}</span></div>
+         {% if entry.files %}
+         <ul class="setup-files">
+            {% for file in entry.files %}
+            <li><span class="setup-mono">{{ file.title }}</span>
+               {% if file.processed %}<span class="setup-file-ok"><i class="bi bi-check2 me-1" aria-hidden="true"></i>Processed</span>{% else %}<span class="setup-file-bad"><i class="bi bi-exclamation-circle me-1" aria-hidden="true"></i>Not processed</span>{% endif %}</li>
+            {% endfor %}
+         </ul>
+         {% endif %}
+      </div>
+      {% endfor %}
+   </div>
+
+   <form id="setup-form-upload" class="setup-form setup-upload" method="post" action="{% url 'build:bundle' bundle.pk %}" enctype="multipart/form-data"
+         data-setup-upload data-storage-url="{% url 'build:netcdf_storage_check' pk_bundle=bundle.pk %}">
+      {% csrf_token %}
+      {% if collections|length > 1 %}
+      <div>
+         <label class="form-label" for="setup_upload_collection">Upload into</label>
+         <select name="collection" id="setup_upload_collection" class="form-select">
+            {% for entry in collections %}<option value="{{ entry.collection.collection_name }}">{{ entry.collection.collection_name }}</option>{% endfor %}
+         </select>
+      </div>
+      {% else %}
+      <input type="hidden" name="collection" value="{{ collections.0.collection.collection_name }}">
+      {% endif %}
+      <label class="setup-drop" for="setup_netcdf_files">
+         <i class="bi bi-cloud-arrow-up" aria-hidden="true"></i>
+         <strong>Choose NetCDF files (.nc)</strong>
+         <span>You can choose several at once. Each one is processed as it arrives.</span>
+         <input type="file" name="netcdf_files" id="setup_netcdf_files" accept=".nc" multiple>
+         <span class="setup-picked" data-picked></span>
+      </label>
+      <div class="setup-progress" data-progress hidden>
+         <div class="setup-progress-row"><span data-progress-text>Uploading...</span><span data-progress-pct>0%</span></div>
+         <div class="setup-bar"><i data-progress-bar></i></div>
+      </div>
+      <div class="setup-upload-actions">
+         <button type="submit" class="btn setup-btn-ghost" data-upload-button>Upload</button>
+         <button type="button" class="btn btn-link setup-cancel" data-upload-cancel hidden>Cancel upload</button>
+      </div>
+   </form>
+
+   <details class="setup-add">
+      <summary>Add another collection</summary>
+   {% endif %}
+      <form id="setup-form-collection" class="setup-form setup-inline" method="post" action="{% url 'build:bundle' bundle.pk %}" data-setup-form="collection" data-then="stay">
+         {% csrf_token %}
+         <input type="hidden" name="source" value="bundle">
+         <input type="hidden" name="collection_type" value="External">
+         <div class="setup-inline-field">
+            <label class="form-label" for="{{ form_collection.collection_name.id_for_label }}">Collection name</label>
+            {{ form_collection.collection_name }}
+            <div class="form-text">Something that describes the run, for example Model Output or Simulation 01. No slashes or colons.</div>
+         </div>
+         <button type="submit" class="btn setup-btn-ghost">Create collection</button>
+      </form>
+   {% if collections %}
+   </details>
+   {% endif %}
+
+   {% include 'build/setup/_actions.html' with step=step primary='continue' blocked='Upload at least one NetCDF file first. ELSA cannot send the bundle for review without one. You can also skip this step for now.' %}
+</section>

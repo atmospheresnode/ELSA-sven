@@ -1,0 +1,15 @@
+{% extends 'friends/email/_layout.html' %}
+{% block headline %}Goodbye from ELSA{% endblock %}
+{% block lead %}Hello{% if first_name %} {{ first_name }}{% endif %}, your ELSA account <strong>{{ username }}</strong> has been closed, as you asked. Thank you for using ELSA.{% endblock %}
+{% block content %}
+<tr>
+  <td style="padding:20px 32px 32px;">
+    <div style="background-color:#f8f8f8;border-left:4px solid #2bbbad;border-radius:4px;padding:16px 20px;font-size:14px;color:#333333;line-height:1.6;">
+      Your name and email address have been removed from your account, and you can no longer sign in.
+      {% if bundle_count %}Your {{ bundle_count }} bundle{{ bundle_count|pluralize }} {{ bundle_count|pluralize:"is,are" }} kept by the ELSA team at the PDS Atmospheres Node and {{ bundle_count|pluralize:"is,are" }} not visible to anyone else in ELSA.{% endif %}
+      If you did not close your account, or need anything from it, please
+      <a href="{{ contact_url }}" style="color:#1f8a7f;">contact the ELSA team</a>.
+    </div>
+  </td>
+</tr>
+{% endblock %}

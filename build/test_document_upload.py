@@ -652,6 +652,9 @@ class RuleTests(TestCase):
 
 # -- validate's temporary files --------------------------------------------------
 
+# An explicit Java, whatever the host uses: with 'auto', choosing one can run
+# `java -version`, which the Popen patch below would intercept.
+@override_settings(VALIDATE_JAVA_HOME='')
 class JavaTmpdirTests(TestCase):
 
     def test_the_environment_points_java_at_the_run_directory(self):

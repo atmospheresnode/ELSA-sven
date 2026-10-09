@@ -10,12 +10,13 @@ from itertools import chain
 # from context.models import *
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ObjectDoesNotExist
+from django.db import transaction
 from django.db.models import Q
 from django.http import FileResponse, Http404, HttpResponse, HttpRequest, JsonResponse
 from django.views.decorators.clickjacking import xframe_options_sameorigin
 
 from build import document_files, netcdf_header, preflight, validate_report, validate_rules, validate_runner
-from build import walkthrough
+from build import bundle_setup, walkthrough
 from build.label_repair import AMA_LID
 from django.shortcuts import render, redirect, get_object_or_404
 from django.template import RequestContext
@@ -29,6 +30,8 @@ import datetime
 import functools
 import shutil
 import lxml.etree as ET # for XML parsing- Added by Rupak
+# By name: ET is rebound to the standard library's ElementTree further down this file.
+from lxml.etree import XMLSyntaxError as LxmlSyntaxError
 # from lxml import etree # debug product obs only
 
 # Libraries for handilng netCDF files
@@ -258,6 +261,7 @@ def bundle_label_targets(bundle):
         AdditionalCollections.objects.filter(bundle=bundle)))
 
 
+@walkthrough.moved_to_setup('alias')
 def alias(request, pk_bundle):  # DEPRECATED: to be replaced by edit alias, **not deprecated**
     print(' \n\n \n\n-------------------------------------------------------------------------')
     print('\n\n---------------------- Add an Alias with ELSA ---------------------------')
@@ -586,192 +590,118 @@ def build(request):
         # Check Uniqueness  --- GOTTA BE A BETTER WAY (k)
         bundle_name = form_bundle.cleaned_data['name']
         bundle_user = request.user
-        bundle_count = Bundle.objects.filter(name=bundle_name, user=bundle_user).count()
+        # Names are unique across all of ELSA, not per user: the database says so, and the
+        # name becomes the bundle's identifier. Checked here so a taken name is a message
+        # on the form rather than a 500 (another user's name) or a silent reload (your own).
+        # Case-insensitive, as the database's collation is.
+        bundle_count = Bundle.objects.filter(name__iexact=bundle_name).count()
 
         if bundle_count == 0:  # If user and bundle name are unique, then...
             print('At the start')
-            # Create Bundle model.
-            bundle = form_bundle.save(commit=False)
-            #bundle.uniqueifier = bundle.name + "_" + smart_str(request.user.id)
-            bundle.user = request.user
-            # b for build.  New Bundles are always in build stage first.
-            bundle.status = 'b'
+            # One transaction for everything the bundle is made of in the database. A request
+            # cut off partway (a server restart, a crash) used to leave a Bundle with no
+            # Product_Bundle, which the hub lists but the bundle page sends straight back
+            # to the hub. Now the half-made rows go with it. Files already written stay, and
+            # are harmless: creating the same name again writes over them.
+            with transaction.atomic():
+                # Create Bundle model.
+                bundle = form_bundle.save(commit=False)
+                #bundle.uniqueifier = bundle.name + "_" + smart_str(request.user.id)
+                bundle.user = request.user
+                # b for build.  New Bundles are always in build stage first.
+                bundle.status = 'b'
             
             
-            #bundle.save()
+                #bundle.save()
 
-            #TESTING OPTIONAL BUNDLE ID
+                #TESTING OPTIONAL BUNDLE ID
 
-            user_bundleID = form_bundle.cleaned_data.get('bundleID', '').strip()
-            if user_bundleID:
-                bundle.bundleID = user_bundleID
-            else:
-                bundle.bundleID = bundle.name.lower().replace(' ', '_')
+                user_bundleID = form_bundle.cleaned_data.get('bundleID', '').strip()
+                if user_bundleID:
+                    bundle.bundleID = user_bundleID
+                else:
+                    bundle.bundleID = bundle.name.lower().replace(' ', '_')
 
-            bundle.save()
+                bundle.save()
 
 
-            print('Bundle model object: {}'.format(bundle))
+                print('Bundle model object: {}'.format(bundle))
 
-            # Build PDS4 Compliant Bundle directory in User Directory.
-            # If the filesystem refuses (disk full, missing user directory,
-            # permissions), remove the just-saved Bundle record: leaving it
-            # behind produces a bundle that 500s on every page load.
-            try:
-                bundle.build_directory()
-            except OSError as e:
-                print('Bundle directory creation failed: {}'.format(e))
-                bundle.delete()
-                form_bundle.add_error(None,
-                    'ELSA could not create the bundle because of a server storage problem. '
-                    'Please try again later or contact the ELSA team via the Contact page.')
-                return render(request, 'build/build.html', context_dict)
-            print('Bundle directory: {}'.format(bundle.directory()))
+                # Build PDS4 Compliant Bundle directory in User Directory.
+                # If the filesystem refuses (disk full, missing user directory,
+                # permissions), remove the just-saved Bundle record: leaving it
+                # behind produces a bundle that 500s on every page load.
+                try:
+                    bundle.build_directory()
+                except OSError as e:
+                    print('Bundle directory creation failed: {}'.format(e))
+                    bundle.delete()
+                    form_bundle.add_error(None,
+                        'ELSA could not create the bundle because of a server storage problem. '
+                        'Please try again later or contact the ELSA team via the Contact page.')
+                    return render(request, 'build/build.html', context_dict)
+                print('Bundle directory: {}'.format(bundle.directory()))
 
-            # Create Product_Bundle model.
-            product_bundle = ProductBundleForm().save(commit=False)
-            product_bundle.bundle = bundle
-            product_bundle.save()
-            print('product_bundle model object: {}'.format(product_bundle))
+                # Create Product_Bundle model.
+                product_bundle = ProductBundleForm().save(commit=False)
+                product_bundle.bundle = bundle
+                product_bundle.save()
+                print('product_bundle model object: {}'.format(product_bundle))
 
-            # Build Product_Bundle label using the base case template found in
-            # templates/pds4/basecase
-            print('\n---------------Start Build Product_Bundle Base Case------------------------')
-            product_bundle.build_base_case()  # simply copies basecase to user bundle directory
-            # Open label - returns a list where index 0 is the label object and 1 is the tree
-            print(' ... Opening Label ... ')
-            # list = [label_object, label_root]
-            label_list = open_label_with_tree(product_bundle.label())
-            label_root = label_list[1]
-            # Fill label - fills
-            print(' ... Filling Label ... ')
-            #label_root = bundle.version.fill_xml_schema(label_root)
-            label_root = product_bundle.fill_base_case(
-                label_root)  # Fix for new data collections
-            # Close label
-            print(' ... Closing Label ... ')
-            close_label(product_bundle.label(), label_root, label_list[2])
-
-            print('---------------- End Build Product_Bundle Base Case -------------------------')
-
-            if bundle.bundle_type == 'External':
-                # Looked up by LID, not name: the crawler and PDS title this row
-                # differently, and on prod migration 0075 kept the row named
-                # "Atmospheric Modeling Annex Individual Investigation", so a name
-                # lookup found nothing and every External bundle creation 500ed.
-                ama_investigation = Investigation.objects.filter(lid=AMA_LID).order_by('pk').first()
-                print(ama_investigation)
-                write_into_label(ama_investigation, product_bundle, [])
-
-                print('before initial save')
-                collections = form_collections.save(commit=False)
-                print('after initial save and before setting bundle')
-
-                collections.has_context = False
-                collections.has_xml_schema = False
-                collections.has_document = True
-
-                collections.bundle = bundle
-                print('after setting bundle and before final save')
-                collections.save()
-                print('here')
-                print('\nCollections model object:    {}'.format(collections))
-                print('now here')
-
-                # Create PDS4 compliant directories for each collection within the bundle.
-                print('before build collections directories')
-                collections.build_directories()
-                print('after build collections directories')
-
-                product_collection = form_product_collection_document.save(commit=False)
-                product_collection.bundle = bundle
-                product_collection.collection = 'Document'
-                product_collection.save()
-
+                # Build Product_Bundle label using the base case template found in
+                # templates/pds4/basecase
+                print('\n---------------Start Build Product_Bundle Base Case------------------------')
+                product_bundle.build_base_case()  # simply copies basecase to user bundle directory
+                # Open label - returns a list where index 0 is the label object and 1 is the tree
+                print(' ... Opening Label ... ')
+                # list = [label_object, label_root]
                 label_list = open_label_with_tree(product_bundle.label())
                 label_root = label_list[1]
-                print(' ... Adding Bundle Member Entries ... ')
-                label_root = product_bundle.build_bundle_member_entry(
-                    label_root, product_collection)
-                close_label(product_bundle.label(), label_root, label_list[2])
-                print(' ... Bundle Member Entry Added: {} ...'.format(product_collection.lid))
-
-
-                product_collection.build_base_case()
-
-                # Open Product_Collection label
-                print(' ... Opening Label ... ')
-                label_list = open_label_with_tree(
-                    product_collection.label())
-                label_root = label_list[1]
-
-                # Fill label
+                # Fill label - fills
                 print(' ... Filling Label ... ')
                 #label_root = bundle.version.fill_xml_schema(label_root)
-                label_root = product_collection.fill_base_case(label_root)
-
-                # The AMA investigation is written into the bundle label above, but the
-                # collection carries its own Investigation_Area and was shipping it empty:
-                # a blank name, type and lid_reference are each a validation error, and the
-                # collection genuinely does belong to the same investigation. fill_label
-                # already picks 'collection_to_investigation' from the root tag, so the same
-                # call serves both labels. Done on the tree that is already open rather than
-                # reopening it.
-                if ama_investigation:
-                    print(' ... Adding Investigation Area ... ')
-                    label_root = ama_investigation.fill_label(label_root)
-
+                label_root = product_bundle.fill_base_case(
+                    label_root)  # Fix for new data collections
                 # Close label
                 print(' ... Closing Label ... ')
-                close_label(product_collection.label(), label_root, label_list[2])
+                close_label(product_bundle.label(), label_root, label_list[2])
 
-                # Write the inventory table the label promises. A brand new collection has
-                # no members yet, so this writes an empty table; it is rewritten each time a
-                # document is added or removed.
-                product_collection.build_inventory()
-                print('-------------End Build Product_Collection Base Case-----------------')
-            else:
-                print('before initial save')
-                collections = form_collections.save(commit=False)
-                print('after initial save and before setting bundle')
+                print('---------------- End Build Product_Bundle Base Case -------------------------')
 
-                collections.has_context = True
-                collections.has_xml_schema = True
-                collections.has_document = True
+                if bundle.bundle_type == 'External':
+                    # Looked up by LID, not name: the crawler and PDS title this row
+                    # differently, and on prod migration 0075 kept the row named
+                    # "Atmospheric Modeling Annex Individual Investigation", so a name
+                    # lookup found nothing and every External bundle creation 500ed.
+                    ama_investigation = Investigation.objects.filter(lid=AMA_LID).order_by('pk').first()
+                    print(ama_investigation)
+                    write_into_label(ama_investigation, product_bundle, [])
 
-                collections.bundle = bundle
-                print('after setting bundle and before final save')
-                collections.save()
-                print('here')
-                print('\nCollections model object:    {}'.format(collections))
-                print('now here')
+                    print('before initial save')
+                    collections = form_collections.save(commit=False)
+                    print('after initial save and before setting bundle')
 
-                # Create PDS4 compliant directories for each collection within the bundle.
-                print('before build collections directories')
-                collections.build_directories()
-                print('after build collections directories')
+                    collections.has_context = False
+                    collections.has_xml_schema = False
+                    collections.has_document = True
 
-                for collection in collections.list():
-                    print(collection)
+                    collections.bundle = bundle
+                    print('after setting bundle and before final save')
+                    collections.save()
+                    print('here')
+                    print('\nCollections model object:    {}'.format(collections))
+                    print('now here')
 
-                    # Create Product_Collection model for each collection
-                    
-                    if collection == 'document':
-                        product_collection = form_product_collection_document.save(commit=False)
-                        product_collection.bundle = bundle
-                        product_collection.collection = 'Document'
-                    elif collection == 'context':
-                        product_collection = form_product_collection_context.save(commit=False)
-                        product_collection.bundle = bundle
-                        product_collection.collection = 'Context'
-                    elif collection == 'xml_schema':
-                        product_collection = form_product_collection_schema.save(commit=False)
-                        product_collection.bundle = bundle
-                        product_collection.collection = 'XML_Schema'
+                    # Create PDS4 compliant directories for each collection within the bundle.
+                    print('before build collections directories')
+                    collections.build_directories()
+                    print('after build collections directories')
+
+                    product_collection = form_product_collection_document.save(commit=False)
+                    product_collection.bundle = bundle
+                    product_collection.collection = 'Document'
                     product_collection.save()
 
-                    # Fill Product_Bundle with Collection Bundle Member Entries
-                    # list = [label_object, label_root]
                     label_list = open_label_with_tree(product_bundle.label())
                     label_root = label_list[1]
                     print(' ... Adding Bundle Member Entries ... ')
@@ -780,123 +710,258 @@ def build(request):
                     close_label(product_bundle.label(), label_root, label_list[2])
                     print(' ... Bundle Member Entry Added: {} ...'.format(product_collection.lid))
 
-                    # Build Product_Collection label for all labels other than those found in the data collection.
-                    print('-------------Start Build Product_Collection Base Case-----------------')
-                    if collection != 'data':
-                        product_collection.build_base_case()
 
-                        # Open Product_Collection label
-                        print(' ... Opening Label ... ')
-                        label_list = open_label_with_tree(
-                            product_collection.label())
+                    product_collection.build_base_case()
+
+                    # Open Product_Collection label
+                    print(' ... Opening Label ... ')
+                    label_list = open_label_with_tree(
+                        product_collection.label())
+                    label_root = label_list[1]
+
+                    # Fill label
+                    print(' ... Filling Label ... ')
+                    #label_root = bundle.version.fill_xml_schema(label_root)
+                    label_root = product_collection.fill_base_case(label_root)
+
+                    # The AMA investigation is written into the bundle label above, but the
+                    # collection carries its own Investigation_Area and was shipping it empty:
+                    # a blank name, type and lid_reference are each a validation error, and the
+                    # collection genuinely does belong to the same investigation. fill_label
+                    # already picks 'collection_to_investigation' from the root tag, so the same
+                    # call serves both labels. Done on the tree that is already open rather than
+                    # reopening it.
+                    if ama_investigation:
+                        print(' ... Adding Investigation Area ... ')
+                        label_root = ama_investigation.fill_label(label_root)
+
+                    # Close label
+                    print(' ... Closing Label ... ')
+                    close_label(product_collection.label(), label_root, label_list[2])
+
+                    # Write the inventory table the label promises. A brand new collection has
+                    # no members yet, so this writes an empty table; it is rewritten each time a
+                    # document is added or removed.
+                    product_collection.build_inventory()
+                    print('-------------End Build Product_Collection Base Case-----------------')
+                else:
+                    print('before initial save')
+                    collections = form_collections.save(commit=False)
+                    print('after initial save and before setting bundle')
+
+                    collections.has_context = True
+                    collections.has_xml_schema = True
+                    collections.has_document = True
+
+                    collections.bundle = bundle
+                    print('after setting bundle and before final save')
+                    collections.save()
+                    print('here')
+                    print('\nCollections model object:    {}'.format(collections))
+                    print('now here')
+
+                    # Create PDS4 compliant directories for each collection within the bundle.
+                    print('before build collections directories')
+                    collections.build_directories()
+                    print('after build collections directories')
+
+                    for collection in collections.list():
+                        print(collection)
+
+                        # Create Product_Collection model for each collection
+                    
+                        if collection == 'document':
+                            product_collection = form_product_collection_document.save(commit=False)
+                            product_collection.bundle = bundle
+                            product_collection.collection = 'Document'
+                        elif collection == 'context':
+                            product_collection = form_product_collection_context.save(commit=False)
+                            product_collection.bundle = bundle
+                            product_collection.collection = 'Context'
+                        elif collection == 'xml_schema':
+                            product_collection = form_product_collection_schema.save(commit=False)
+                            product_collection.bundle = bundle
+                            product_collection.collection = 'XML_Schema'
+                        product_collection.save()
+
+                        # Fill Product_Bundle with Collection Bundle Member Entries
+                        # list = [label_object, label_root]
+                        label_list = open_label_with_tree(product_bundle.label())
                         label_root = label_list[1]
+                        print(' ... Adding Bundle Member Entries ... ')
+                        label_root = product_bundle.build_bundle_member_entry(
+                            label_root, product_collection)
+                        close_label(product_bundle.label(), label_root, label_list[2])
+                        print(' ... Bundle Member Entry Added: {} ...'.format(product_collection.lid))
 
-                        # Fill label
-                        print(' ... Filling Label ... ')
-                        #label_root = bundle.version.fill_xml_schema(label_root)
-                        label_root = product_collection.fill_base_case(label_root)
+                        # Build Product_Collection label for all labels other than those found in the data collection.
+                        print('-------------Start Build Product_Collection Base Case-----------------')
+                        if collection != 'data':
+                            product_collection.build_base_case()
 
-                        # Close label
-                        print(' ... Closing Label ... ')
-                        close_label(product_collection.label(), label_root, label_list[2])
+                            # Open Product_Collection label
+                            print(' ... Opening Label ... ')
+                            label_list = open_label_with_tree(
+                                product_collection.label())
+                            label_root = label_list[1]
 
-                        # Write the inventory table the label promises. Archive bundles
-                        # need this exactly as much as External ones do: every PDS4
-                        # collection is required to carry one.
-                        product_collection.build_inventory()
-                        print('-------------End Build Product_Collection Base Case-----------------')
+                            # Fill label
+                            print(' ... Filling Label ... ')
+                            #label_root = bundle.version.fill_xml_schema(label_root)
+                            label_root = product_collection.fill_base_case(label_root)
 
-            # Further develop context_dict entries for templates
-            context_dict['Bundle'] = bundle
-            context_dict['Product_Bundle'] = Product_Bundle.objects.get(
-                bundle=bundle)
-            context_dict['Product_Collection_Set'] = Product_Collection.objects.filter(
-                bundle=bundle)
+                            # Close label
+                            print(' ... Closing Label ... ')
+                            close_label(product_collection.label(), label_root, label_list[2])
 
-            # url = smart_str(bundle.id) + '/' + 'alias' 
+                            # Write the inventory table the label promises. Archive bundles
+                            # need this exactly as much as External ones do: every PDS4
+                            # collection is required to carry one.
+                            product_collection.build_inventory()
+                            print('-------------End Build Product_Collection Base Case-----------------')
 
-            # print('trying to trigger server reset')
-            # return redirect(url, request, context_dict)
+                # Further develop context_dict entries for templates
+                context_dict['Bundle'] = bundle
+                context_dict['Product_Bundle'] = Product_Bundle.objects.get(
+                    bundle=bundle)
+                context_dict['Product_Collection_Set'] = Product_Collection.objects.filter(
+                    bundle=bundle)
+
+                # Last, once every collection label exists, so the entry reaches them all.
+                _create_initial_modification_history(bundle)
+
+                # url = smart_str(bundle.id) + '/' + 'alias' 
+
+                # print('trying to trigger server reset')
+                # return redirect(url, request, context_dict)
 
             # Determine where to redirect based on walkthrough checkbox
             enable_walkthrough = request.POST.get('enable_walkthrough') == 'on'
 
             if enable_walkthrough:
                 request.session['walkthrough_bundle_type'] = bundle.bundle_type #Rupak
-                print('Walkthrough enabled — redirecting to walkthrough page.')
-                return redirect('build:yes_intro_page', bundle_id=bundle.id)
+                print('Walkthrough enabled: redirecting to the setup page.')
+                return redirect(walkthrough.setup_url(bundle))
             else:
-                print('Walkthrough not enabled — redirecting to main bundle page.')
-                return redirect('build:no_intro_page', bundle_id=bundle.id)
+                # Declining the walkthrough needs no page of its own: the bundle page
+                # does everything the setup does.
+                print('Walkthrough not enabled: redirecting to the bundle page.')
+                return redirect(walkthrough.bundle_url(bundle))
         else:
             print('failed uniqueness')
+            form_bundle.add_error('name', 'A bundle named "{}" already exists in ELSA. Bundle names have to be unique, because the name becomes the bundle\'s identifier. Please choose another.'.format(bundle_name))
 
 
     return render(request, 'build/build.html', context_dict)
 
 
+def _create_initial_modification_history(bundle):
+    """Give a new bundle the first entry of its Modification History.
+
+    PDS4's Modification History lists the versions of a bundle that have been
+    delivered: version, date, and what changed. A bundle being created has exactly
+    one, and its entry is always the same ("1.0", today, "Bundle creation"), so ELSA
+    writes it rather than asking. Later entries are added from the bundle page when
+    a corrected or extended version is delivered.
+    """
+    if Modification_History.objects.filter(bundle=bundle).exists():
+        return
+    mod_history = Modification_History(
+        bundle=bundle,
+        description='Bundle creation',
+        modification_date=datetime.date.today().strftime('%Y-%m-%d'),
+        version_id='1.0',
+    )
+    mod_history.save()
+    product_bundle = Product_Bundle.objects.get(bundle=bundle)
+    write_into_label(mod_history, product_bundle, bundle_label_targets(bundle))
+
+
+# The walkthrough's two intro pages, kept as addresses so old links still land
+# somewhere sensible. The setup page says on its first line what the intro page did.
 @login_required
 def yes_intro_page(request, bundle_id):
-    print(' \n\n \n\n-------------------------------------------------------------------------')
-    print('\n\n---------------- Welcome to Build A Bundle with ELSA --------------------')
-    print('------------------------------ DEBUGGER ---------------------------------')
-
-    # Get Bundle
-    bundle = Bundle.objects.get(pk=bundle_id)
-
-    # Secure ELSA by seeing if the user logged in is the same user associated with the Bundle
-    if request.user == bundle.user:
-        print('authorized user: {}'.format(request.user))
-        # ELSA's current user is the bundle user so begin view logic
-
-        # For External bundles, auto-create an initial Modification History so the
-        # user doesn't have to fill it in during the walkthrough.
-        if bundle.bundle_type == 'External' and not Modification_History.objects.filter(bundle=bundle).exists():
-            mod_history = Modification_History(
-                bundle=bundle,
-                description='Initial version',
-                modification_date=datetime.date.today().strftime('%Y-%m-%d'),
-                version_id='1.0',
-            )
-            mod_history.save()
-            product_bundle = Product_Bundle.objects.get(bundle=bundle)
-            product_collections_list = bundle_label_targets(bundle)
-            write_into_label(mod_history, product_bundle, product_collections_list)
-
-        # Declare context_dict for template
-        context_dict = {
-            'bundle': bundle,
-        }
-
-        return render(request, 'build/walkthrough/yes_intro.html', context_dict)
-    else:
-        print('unauthorized user attempting to access a restricted area.')
+    bundle = get_object_or_404(Bundle, pk=bundle_id)
+    if request.user != bundle.user:
         return redirect('main:restricted_access')
+    return redirect(walkthrough.setup_url(bundle))
 
 
 @login_required
 def no_intro_page(request, bundle_id):
-    print(' \n\n \n\n-------------------------------------------------------------------------')
-    print('\n\n---------------- Welcome to Build A Bundle with ELSA --------------------')
-    print('------------------------------ DEBUGGER ---------------------------------')
-
-    # Get Bundle
-    bundle = Bundle.objects.get(pk=bundle_id)
-
-    # Secure ELSA by seeing if the user logged in is the same user associated with the Bundle
-    if request.user == bundle.user:
-        print('authorized user: {}'.format(request.user))
-        # ELSA's current user is the bundle user so begin view logic
-
-        # Declare context_dict for template
-        context_dict = {
-            'bundle': bundle,
-        }
-
-        return render(request, 'build/walkthrough/no_intro.html', context_dict)
-    else:
-        print('unauthorized user attempting to access a restricted area.')
+    bundle = get_object_or_404(Bundle, pk=bundle_id)
+    if request.user != bundle.user:
         return redirect('main:restricted_access')
+    return redirect(walkthrough.bundle_url(bundle))
+
+
+@login_required
+def setup(request, pk_bundle):
+    """The guided setup: every step of the walkthrough on one page.
+
+    GET only. Each step saves through the view the bundle page uses for the same
+    thing (see build/bundle_setup.py), except the citation, which has setup_citation.
+    The page fetches itself again after a save to bring its steps up to date.
+    """
+    bundle = get_object_or_404(Bundle, pk=pk_bundle)
+    if request.user != bundle.user:
+        return redirect('main:restricted_access')
+    try:
+        Product_Bundle.objects.get(bundle=bundle)
+    except Product_Bundle.DoesNotExist:
+        # Creation crashed partway; the bundle page sends these back to the hub too.
+        return HttpResponseRedirect(reverse('friends:bundle_hub'))
+    return render(request, 'build/setup/setup.html', bundle_setup.context(bundle))
+
+
+@login_required
+def setup_citation(request, pk_bundle):
+    """Save the citation from the setup page's list of people.
+
+    Answers in JSON when the page posts it itself, as every other step's view does
+    for the bundle page's windows. A plain post (no JavaScript) goes back to the
+    setup page, on the next step when it saved and on this one when it did not.
+    """
+    bundle = get_object_or_404(Bundle, pk=pk_bundle)
+    if request.user != bundle.user:
+        return redirect('main:restricted_access')
+    if request.method != 'POST':
+        return redirect(walkthrough.setup_url(bundle, 'citation'))
+
+    form = bundle_setup.CitationListForm(request.POST, bundle=bundle)
+    in_place = _is_panel_request(request)
+    # The bundle page's Citation Information window posts here too (source=bundle),
+    # and goes back to the bundle page rather than on through the setup steps.
+    from_bundle = walkthrough.returning_to_bundle(request)
+    if not form.is_valid():
+        if in_place:
+            return _inplace_refused(form)
+        for message in form.non_field_errors() or ['The citation was not saved. Please check it and try again.']:
+            messages.error(request, message)
+        return redirect(walkthrough.bundle_url(bundle) if from_bundle
+                        else walkthrough.setup_url(bundle, 'citation'))
+
+    try:
+        # All or nothing: a citation in the database that never reached the labels
+        # would say the bundle has one while every label says it does not.
+        with transaction.atomic():
+            bundle_setup.save_citation(bundle, form)
+    except (OSError, LxmlSyntaxError, Product_Bundle.DoesNotExist) as error:
+        print('setup_citation: could not write the labels of bundle {}: {}'.format(bundle.pk, error))
+        message = ('The citation could not be saved because ELSA could not update this '
+                   'bundle\'s labels. Nothing was changed. Please try again, or contact the '
+                   'ELSA team via the Contact page if it keeps happening.')
+        if in_place:
+            return _inplace_refused(None, message)
+        messages.error(request, message)
+        return redirect(walkthrough.bundle_url(bundle) if from_bundle
+                        else walkthrough.setup_url(bundle, 'citation'))
+    messages.success(request, 'Citation saved.')
+    following = (walkthrough.bundle_url(bundle) if from_bundle
+                 else walkthrough.next_url(bundle, 'citation'))
+    if in_place:
+        return JsonResponse({'ok': True, 'redirect': following})
+    return redirect(following)
 
 
 @login_required
@@ -1856,9 +1921,14 @@ def bundle(request, pk_bundle):
                 'alias': form_alias,
                 'modification_history': form_modification_history,
                 'investigation': form_investigation,
+                # The setup page's data step creates its collection here.
+                'collection': form_additional_collections,
             }.get(inplace))
 
         context_dict['messages'] = messages.get_messages(request)
+        # The Citation Information window is the setup page's list of people too.
+        context_dict['citation'] = bundle_setup.citation_rows(bundle)
+        context_dict['fixed_editors'] = bundle_setup.fixed_editor_names()
         return render(request, 'build/bundle/bundle.html', context_dict)
     else:
             print('unauthorized user attempting to access a restricted area.')
@@ -3223,6 +3293,7 @@ def bundle_title(xml_content: str) -> str:
         print(f"[XML ERROR] Could not parse XML: {e}")
         return None
     
+@walkthrough.moved_to_setup('citation_information')
 def citation_information(request, pk_bundle):
     print('\n\n')
     print('-------------------------------------------------------------------------')
@@ -3312,6 +3383,7 @@ def citation_information(request, pk_bundle):
         print('unauthorized user attempting to access a restricted area.')
         return redirect('main:restricted_access')
 
+@walkthrough.moved_to_setup('citation_information')
 def edit_citation_information(request, pk_bundle, pk_citation_information):
     print('\n\n')
     print('-------------------------------------------------------------------------')
@@ -3390,6 +3462,7 @@ def edit_citation_information(request, pk_bundle, pk_citation_information):
         return redirect('main:restricted_access')
 
 
+@walkthrough.moved_to_setup('modification_history')
 def modification_history(request, pk_bundle):
     print('\n\n')
     print('-------------------------------------------------------------------------')
@@ -3443,6 +3516,7 @@ def modification_history(request, pk_bundle):
         return redirect('main:restricted_access')
 
 
+@walkthrough.moved_to_setup('context_search')
 def context_search(request, pk_bundle):
     print('\n\n')
     print('-------------------------------------------------------------------------')
@@ -4099,6 +4173,7 @@ def context_search_target_and_instrument(request, pk_bundle, pk_investigation, p
 #     #return render(request, template, {"pk_bundle": pk_bundle, "bundle": bundle, "form_additional_collections": form_additional_collections, "form_document": form_document})
 @login_required
 @inplace_redirects
+@walkthrough.moved_to_setup('annex_collection_document')
 def annex_collection_document(request, pk_bundle):
     bundle = Bundle.objects.get(pk=pk_bundle)
     if request.user != bundle.user:
@@ -4203,6 +4278,7 @@ def collection_document(request, pk_bundle):
     return render(request, 'build/collections/collection_document.html', {"pk_bundle": pk_bundle, "bundle": bundle, "form_document": form_document})
 
 @login_required
+@walkthrough.moved_to_setup('collection_additional')
 def collection_additional(request, pk_bundle):
     bundle = Bundle.objects.get(pk=pk_bundle)
     if request.user != bundle.user:

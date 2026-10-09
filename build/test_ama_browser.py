@@ -657,30 +657,31 @@ class AMABrowserTestCase(StaticLiveServerTestCase):
     @override_settings(VALIDATE_AUTO_CHECK=False)
     def test_a_citation_with_no_author_is_refused_and_the_reason_is_shown(self):
         """Refused where an author can still be added, and said on screen: the window
-        reopens with the reason instead of the page quietly reloading without it."""
+        stays open with the reason, and adding a person then saves it."""
         from build.models import Citation_Information
+        # The citation is written into the bundle label, so this one needs a real one.
+        Product_Bundle.objects.get(bundle=self.bundle).build_base_case()
         self.open_bundle()
         self.page.evaluate(
             "bootstrap.Modal.getOrCreateInstance(document.getElementById('citation_information_modal')).show()")
-        form = self.page.locator('#citation_information_modal form#form_citation_information')
+        modal = self.page.locator('#citation_information_modal')
+        form = modal.locator('form#form_citation_information')
         form.wait_for(state='visible')
-        form.locator('[name="number_of_authors_people"]').fill('0')
-        form.locator('[name="number_of_authors_organization"]').fill('0')
+        # The window starts with no one in it; saving like that leaves no author at all.
         form.locator('[name="description"]').fill('Model output from a test')
-        with self.page.expect_navigation():
-            form.locator('button[type="submit"]').click()
+        modal.get_by_role('button', name='Create citation').click()
 
-        self.page.locator('#citation_information_modal').wait_for(state='visible', timeout=10000)
-        self.assertIn('Add at least one author',
-                      self.page.locator('#citation_information_modal').inner_text())
+        form.locator('.alert-danger').wait_for(state='visible', timeout=10000)
+        self.assertIn('Add at least one author', form.inner_text())
+        self.assertTrue(modal.is_visible())
         self.assertFalse(Citation_Information.objects.filter(bundle=self.bundle).exists())
 
         # One author, and it goes through.
-        form = self.page.locator('#citation_information_modal form#form_citation_information')
-        form.locator('[name="number_of_authors_people"]').fill('1')
-        form.locator('[name="description"]').fill('Model output from a test')
+        form.locator('[data-add-row="author_person"]').click()
+        form.locator('[name="author_person_0_given_name"]').fill('Ada')
+        form.locator('[name="author_person_0_family_name"]').fill('Lovelace')
         with self.page.expect_navigation():
-            form.locator('button[type="submit"]').click()
+            modal.get_by_role('button', name='Create citation').click()
         self.page.wait_for_load_state('domcontentloaded')
         self.assertTrue(Citation_Information.objects.filter(
             bundle=self.bundle, number_of_authors_people=1).exists())

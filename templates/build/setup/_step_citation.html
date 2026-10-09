@@ -1,0 +1,18 @@
+<section class="setup-panel" id="step-citation" data-step="citation" aria-labelledby="step-citation-title">
+   <header class="setup-panel-head">
+      <span class="setup-kicker">Step {{ step.number }} of {{ setup.steps|length }} &middot; Required</span>
+      <h2 id="step-citation-title" tabindex="-1">Citation</h2>
+      <p class="setup-why">Who made this data and what it is. This is how the bundle will be cited and found.</p>
+      <details class="setup-more">
+         <summary>More about this</summary>
+         <p>Authors are the data providers and their collaborators. Add an organization only when a group, such as a science team, is itself an author. Editors are your PDS Atmospheres contacts; Lynn Neakrase and Lyle Huber are always included. The publication year is the year you expect the bundle to be released. You can add or remove people here at any time.</p>
+      </details>
+   </header>
+
+   <form id="setup-form-citation" class="setup-form" method="post" action="{% url 'build:setup_citation' bundle.pk %}" data-setup-form="citation" data-then="next" novalidate>
+      {% csrf_token %}
+      {% include 'build/setup/_citation_fields.html' %}
+   </form>
+
+   {% include 'build/setup/_actions.html' with step=step primary='save' form_id='setup-form-citation' %}
+</section>

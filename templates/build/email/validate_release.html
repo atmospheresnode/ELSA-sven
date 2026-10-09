@@ -1,0 +1,116 @@
+{% extends 'friends/email/_layout.html' %}
+{% comment %}
+The monthly validate release check, in the account email shell. One template for
+every outcome: `kind` is ready, review, needs_java, install_failed or does_not_start.
+Only ready and review carry a comparison. Built by
+build/management/commands/validate_release.py, which also attaches the full report.
+{% endcomment %}
+{% block headline %}{{ headline }}{% endblock %}
+{% block lead %}{{ lead }}{% endblock %}
+{% block content %}
+{% if trial %}
+<tr>
+  <td style="padding:16px 32px 0;">
+    <div style="background-color:#fff8e1;border:1px solid #f0d58c;border-radius:4px;padding:10px 14px;font-size:13px;color:#7a5d00;line-height:1.5;">
+      <strong>Trial.</strong> Sent so you can see what this email looks like. Every number is real
+      (validate {{ version }} was just compared with {{ current }}), but nothing new has been
+      released and nothing needs doing.
+    </div>
+  </td>
+</tr>
+{% endif %}
+
+<tr>
+  <td style="padding:20px 32px 0;">
+    <div style="background-color:{{ verdict_bg }};border-left:4px solid {{ verdict_color }};border-radius:4px;padding:14px 18px;">
+      <p style="margin:0;font-size:15px;font-weight:bold;color:{{ verdict_color }};">{{ verdict_title }}</p>
+      <p style="margin:6px 0 0;font-size:14px;color:#333333;line-height:1.6;">{{ verdict_text }}</p>
+    </div>
+  </td>
+</tr>
+
+{% if tiles %}
+<tr>
+  <td style="padding:20px 32px 0;">
+    <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border:1px solid #e3e3e3;border-radius:6px;border-collapse:separate;">
+      <tr>
+        {% for tile in tiles %}
+        <td align="center" valign="top" width="25%" style="padding:14px 6px;{% if not forloop.last %}border-right:1px solid #e3e3e3;{% endif %}">
+          <div style="font-size:24px;font-weight:bold;line-height:1;color:{{ tile.color }};">{{ tile.value }}</div>
+          <div style="margin-top:6px;font-size:11px;color:#777777;line-height:1.3;">{{ tile.label }}</div>
+        </td>
+        {% endfor %}
+      </tr>
+    </table>
+  </td>
+</tr>
+{% endif %}
+
+{% if changed %}
+<tr>
+  <td style="padding:24px 32px 0;">
+    <p style="margin:0 0 8px;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#888888;font-weight:bold;">What would change</p>
+    {% for bundle in changed %}
+    <div style="border:1px solid #eeeeee;border-radius:4px;padding:10px 14px;margin-bottom:8px;">
+      <p style="margin:0;font-size:13px;font-weight:bold;color:#333333;">{{ bundle.name }}{% if bundle.gate %} <span style="color:#c0392b;">(gate flips)</span>{% endif %}</p>
+      <p style="margin:2px 0 6px;font-size:11px;color:#999999;word-break:break-all;">{{ bundle.dir }}</p>
+      {% for line in bundle.changes %}
+      <p style="margin:0;font-size:12px;color:#555555;font-family:Menlo,Consolas,monospace;line-height:1.5;word-break:break-word;">{{ line }}</p>
+      {% endfor %}
+    </div>
+    {% endfor %}
+    {% if changed_more %}<p style="margin:4px 0 0;font-size:12px;color:#888888;">And {{ changed_more }} more in the attached report.</p>{% endif %}
+  </td>
+</tr>
+{% endif %}
+
+{% if problem %}
+<tr>
+  <td style="padding:20px 32px 0;">
+    <p style="margin:0 0 8px;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#888888;font-weight:bold;">What happened</p>
+    <div style="background-color:#f8f8f8;border-radius:4px;padding:12px 14px;font-size:12px;color:#333333;font-family:Menlo,Consolas,monospace;line-height:1.5;white-space:pre-wrap;word-break:break-word;">{{ problem }}</div>
+  </td>
+</tr>
+{% endif %}
+
+{% if steps %}
+<tr>
+  <td style="padding:24px 32px 0;">
+    <p style="margin:0 0 8px;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#888888;font-weight:bold;">{{ steps_title }}</p>
+    {% for step in steps %}
+    <p style="margin:10px 0 4px;font-size:13px;color:#333333;">{{ step.label }}</p>
+    <div style="background-color:#f4f7f7;border:1px solid #dfe9e8;border-radius:4px;padding:10px 12px;font-size:12px;color:#1d3f3c;font-family:Menlo,Consolas,monospace;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere;">{{ step.command }}</div>
+    {% endfor %}
+    {% if steps_note %}<p style="margin:10px 0 0;font-size:12px;color:#888888;line-height:1.5;">{{ steps_note }}</p>{% endif %}
+  </td>
+</tr>
+{% endif %}
+
+<tr>
+  <td style="padding:24px 32px 0;">
+    <p style="margin:0 0 8px;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#888888;font-weight:bold;">Details</p>
+    <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="font-size:13px;color:#333333;">
+      {% for label, value in details %}
+      <tr>
+        <td valign="top" width="38%" style="padding:5px 0;color:#777777;border-bottom:1px solid #f0f0f0;">{{ label }}</td>
+        <td valign="top" style="padding:5px 0;border-bottom:1px solid #f0f0f0;word-break:break-word;">{{ value }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+  </td>
+</tr>
+
+{% if notes_url %}
+<tr>
+  <td style="padding:24px 32px 8px;" align="center">
+    <a href="{{ notes_url }}" style="display:inline-block;background-color:#008080;color:#ffffff;text-decoration:none;font-weight:bold;font-size:14px;padding:11px 24px;border-radius:6px;">Read the release notes</a>
+  </td>
+</tr>
+{% endif %}
+
+<tr>
+  <td style="padding:16px 32px 28px;">
+    <p style="margin:0;font-size:12px;color:#888888;line-height:1.5;">{{ footer }}</p>
+  </td>
+</tr>
+{% endblock %}

@@ -1,5 +1,5 @@
 {% extends 'base-derk.html' %}
-{% load static %}
+{% load static account_tags %}
 
 {% block title_block %}
 {{ userprofile }} - Account
@@ -10,145 +10,602 @@ User Account
 {% endblock %}
 
 {% block body_block %}
-<br> <br> <br>
-<div class="container my-5">
-    <div class="row g-4">
-        <!-- Left Column -->
-        <div class="col-md-4 d-flex flex-column">
-            <div class="d-flex flex-column align-items-center h-100">
-                <!-- Profile Picture Card -->
-                <div class="card shadow-sm border-0 p-4 mb-4 w-100 text-center">
-                    <div class="mb-3">
-                        <img src="{% static 'images/avatar.jpg' %}" alt="Profile Picture" class="img-fluid rounded-circle border" style="width: 180px; height: 180px; object-fit: cover;">
-                    </div>
-                    <h4 class="fw-bold">{{ user.first_name }} {{ user.last_name }}</h4>
-                    <a href="{% url 'friends:settings' user.pk %}" class="btn btn-outline-primary mt-3">Edit Profile</a>
+<div class="account-page" id="account-page" data-open-modal="{{ open_modal }}">
+
+    <header class="account-header">
+        <h1 class="account-title">Account</h1>
+        <p class="account-subtitle">Your profile, how you sign in, and your account's security.</p>
+    </header>
+
+    {% comment %} Adding and removing passkeys reports through the messages framework,
+       so this page has to render them, or they surface on the next page instead. {% endcomment %}
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags|default:'info' }}{% endif %} border-0 py-2 px-3 mb-0"
+                 style="font-size: 0.9375rem;" role="alert">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="account-layout">
+        <aside class="account-card account-summary" aria-label="Account summary">
+            <div class="account-avatar account-initials" aria-hidden="true" data-account="initials">{{ initials }}</div>
+            <h2 class="account-summary-name" data-account="full_name">{{ user.get_full_name|default:user.username }}</h2>
+            <p class="account-summary-handle">@<span data-account="username">{{ user.username }}</span></p>
+            <p class="account-since"><i class="bi bi-stars" aria-hidden="true"></i> ELSA user since {{ user.date_joined|date:"Y" }}</p>
+
+            <a href="{% url 'friends:bundle_hub' %}" class="account-bundles-link"
+               title="{{ archive_count }} Archive, {{ external_count }} External">
+                <i class="bi bi-box-seam" aria-hidden="true"></i>
+                <span class="flex-grow-1">My bundles</span>
+                <span class="account-count">{{ bundle_count }}</span>
+                <i class="bi bi-chevron-right account-bundles-arrow" aria-hidden="true"></i>
+            </a>
+
+            <nav class="account-toc" aria-label="On this page">
+                <a href="#profile"><i class="bi bi-person" aria-hidden="true"></i> Profile</a>
+                <a href="#security"><i class="bi bi-shield-lock" aria-hidden="true"></i> Security</a>
+                <a href="#activity"><i class="bi bi-clock-history" aria-hidden="true"></i> Recent activity</a>
+            </nav>
+        </aside>
+
+        <div class="account-sections">
+            <section class="account-card" id="profile" aria-labelledby="profile-heading">
+                <div class="account-section-head">
+                    <h2 id="profile-heading">Profile</h2>
+                    <p>How you appear in ELSA and where we reach you.</p>
                 </div>
 
-                <!-- Bundle Count Card -->
-                <div class="card shadow-sm border-0 p-4 w-100 text-center rounded-4">
-                    <h5 class="fw-bold text-primary mb-2" style="font-size: 1.25rem;">Bundle Count</h5>
-                    <p class="display-5 fw-bold text-muted" style="font-size: 2.5rem; margin-bottom: 0;">{{ bundle_count }}</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Right Column -->
-        <div class="col-md-8 d-flex flex-column justify-content-center">
-            <div class="card shadow-sm border-0 p-4">
-                <h3 class="card-title text-muted mb-4">User Information</h3>
-                <div class="row mb-3">
-                    <div class="col-sm-6">
-                        <h6 class="fw-bold">First Name</h6>
-                        <p class="text-muted">{{ user.first_name }}</p>
-                    </div>
-                    <div class="col-sm-6">
-                        <h6 class="fw-bold">Last Name</h6>
-                        <p class="text-muted">{{ user.last_name }}</p>
+                <div class="account-row">
+                    <div class="account-row-label">Name</div>
+                    <div class="account-row-value"><span data-account="full_name">{{ user.get_full_name|default:"Not set" }}</span></div>
+                    <div class="account-row-action">
+                        <button type="button" class="btn btn-sm account-btn-outline" data-bs-toggle="modal"
+                                data-bs-target="#nameModal" aria-label="Edit name">Edit</button>
                     </div>
                 </div>
 
-                <div class="row mb-3">
-                    <div class="col-sm-6">
-                        <h6 class="fw-bold">Username</h6>
-                        <p class="text-muted">{{ user.username }}</p>
+                <div class="account-row">
+                    <div class="account-row-label">Email</div>
+                    <div class="account-row-value">
+                        <span data-account="email">{{ user.email }}</span>
+                        <div class="account-hint">Sign-in codes and password resets go here.</div>
+                        <div class="account-pending {% if not email_pending %}d-none{% endif %}" id="email-pending" role="status">
+                            <i class="bi bi-hourglass-split me-1" aria-hidden="true"></i>
+                            Waiting for you to confirm <strong data-account="pending_email">{{ userprofile.pending_email|default:"" }}</strong>.
+                            <button type="button" class="btn btn-link btn-sm p-0 align-baseline account-link"
+                                    data-bs-toggle="modal" data-bs-target="#emailModal">Enter code</button>
+                            <span class="text-muted mx-1" aria-hidden="true">&middot;</span>
+                            <button type="button" class="btn btn-link btn-sm p-0 align-baseline text-muted" id="email-pending-cancel">Cancel change</button>
+                        </div>
                     </div>
-                    <div class="col-sm-6">
-                        <h6 class="fw-bold">Email</h6>
-                        <p class="text-muted">{{ user.email }}</p>
+                    <div class="account-row-action">
+                        <button type="button" class="btn btn-sm account-btn-outline" data-bs-toggle="modal"
+                                data-bs-target="#emailModal" aria-label="Change email address">Edit</button>
                     </div>
                 </div>
-            </div>
-        </div>
-    </div>
 
-    {% comment %} Own row, not the column above: .col-md-8 is a centring flex container,
-       so a second child would sit beside the first rather than below it. {% endcomment %}
-    <div class="row g-4 mt-1">
-        <div class="col-12">
-            <div class="card shadow-sm border-0 p-4">
-                <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
-                    <div>
-                        <h3 class="card-title text-muted mb-1">Security</h3>
-                        <p class="text-muted mb-0" style="font-size: 0.9375rem;">
-                            A passkey signs you in with your fingerprint, face, or device PIN
-                            instead of a code from your email. It is tied to this site, so it
-                            cannot be used on a page pretending to be ELSA.
-                        </p>
+                <div class="account-row">
+                    <div class="account-row-label">Username</div>
+                    <div class="account-row-value">
+                        <span data-account="username">{{ user.username }}</span>
+                        <div class="account-hint">What you sign in with. Also the name of your archive folder.</div>
                     </div>
-                    <button type="button" class="btn text-white" id="add-passkey-btn"
-                            style="background-color: #26a498; white-space: nowrap;">
-                        <i class="bi bi-plus-lg me-1"></i> Add a passkey
-                    </button>
+                    <div class="account-row-action">
+                        <button type="button" class="btn btn-sm account-btn-outline" data-bs-toggle="modal"
+                                data-bs-target="#usernameModal" aria-label="Change username">Edit</button>
+                    </div>
                 </div>
 
-                {% comment %} Adding and removing passkeys reports through the messages
-                   framework, so this page has to render them.  Without a block
-                   here nothing consumes them, and they surface on whatever page
-                   the user visits next. {% endcomment %}
-                {% if messages %}
-                    {% for message in messages %}
-                        <div class="alert alert-{{ message.tags|default:'info' }} border-0 py-2 px-3 mb-3"
-                             style="font-size: 0.875rem;" role="alert">{{ message }}</div>
-                    {% endfor %}
-                {% endif %}
+                <div class="account-row">
+                    <div class="account-row-label">Agency</div>
+                    <div class="account-row-value">
+                        {{ agency_label }} <span class="text-muted">({{ userprofile.agency }})</span>
+                        <div class="account-hint">Part of every bundle's identifier, so the ELSA team changes it for you.</div>
+                    </div>
+                    <div class="account-row-action">
+                        <button type="button" class="btn btn-sm account-btn-outline" data-bs-toggle="modal"
+                                data-bs-target="#agencyModal" aria-label="Request an agency change">Request</button>
+                    </div>
+                </div>
 
-                <div id="passkey-alert" class="alert d-none py-2 px-3 mb-3"
-                     style="font-size: 0.875rem;" role="alert"></div>
+                <div class="account-row" data-row="research">
+                    <div class="account-row-label">Author details</div>
+                    <div class="account-row-value">
+                        <dl class="account-author">
+                            <dt>ORCID iD</dt>
+                            <dd data-account="orcid">{% if userprofile.orcid %}<a class="account-link" href="https://orcid.org/{{ userprofile.orcid }}" target="_blank" rel="noopener">{{ userprofile.orcid }}</a>{% else %}<span class="text-muted">Not added</span>{% endif %}</dd>
+                            <dt>Affiliation</dt>
+                            <dd data-account="affiliation">{% if userprofile.affiliation %}{{ userprofile.affiliation }}{% else %}<span class="text-muted">Not added</span>{% endif %}</dd>
+                        </dl>
+                        <div class="account-hint">Used by "Add me as an author" in Citation Information.</div>
+                    </div>
+                    <div class="account-row-action">
+                        <button type="button" class="btn btn-sm account-btn-outline" data-bs-toggle="modal"
+                                data-bs-target="#researchModal" aria-label="Edit author details"
+                                data-account="research_button">{% if userprofile.orcid or userprofile.affiliation %}Edit{% else %}Add{% endif %}</button>
+                    </div>
+                </div>
+            </section>
+
+            <section class="account-card" id="security" aria-labelledby="security-heading">
+                <div class="account-section-head">
+                    <h2 id="security-heading">Security</h2>
+                    <p>How you prove it is you when you sign in.</p>
+                </div>
+
+                <div class="account-row">
+                    <div class="account-row-label">Password</div>
+                    <div class="account-row-value">
+                        <span aria-hidden="true">&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;</span>
+                        <div class="account-hint" data-account="password_changed">
+                            {% if userprofile.password_changed_at %}Last changed {{ userprofile.password_changed_at|ago }}{% else %}Last change not recorded{% endif %}
+                        </div>
+                    </div>
+                    <div class="account-row-action">
+                        <button type="button" class="btn btn-sm account-btn-outline" data-bs-toggle="modal"
+                                data-bs-target="#passwordModal">Change</button>
+                    </div>
+                </div>
+
+                <div class="account-row">
+                    <div class="account-row-label">Passkeys</div>
+                    <div class="account-row-value">
+                        {% if passkeys %}{{ passkeys|length }} passkey{{ passkeys|length|pluralize }}{% else %}None yet{% endif %}
+                        <div class="account-hint">Sign in with your fingerprint, face, or device PIN instead of an emailed code.</div>
+                    </div>
+                    <div class="account-row-action">
+                        <button type="button" class="btn btn-sm account-btn-outline" id="add-passkey-btn"
+                                data-bs-toggle="modal" data-bs-target="#passkeyNameModal" data-mode="add">Add</button>
+                    </div>
+                </div>
+
+                <div id="passkey-alert" class="alert d-none py-2 px-3 mb-0 small" role="alert"></div>
 
                 {% if passkeys %}
-                <div class="table-responsive">
-                    <table class="table align-middle mb-0">
-                        <thead>
-                            <tr class="text-muted" style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px;">
-                                <th scope="col">Name</th>
-                                <th scope="col">Added</th>
-                                <th scope="col">Last used</th>
-                                <th scope="col"><span class="visually-hidden">Actions</span></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for passkey in passkeys %}
-                            <tr>
-                                <td>
-                                    <i class="bi bi-shield-lock me-2" style="color: #26a498;"></i>
-                                    {{ passkey.name }}
-                                    {% if passkey.backed_up %}
-                                    <span class="badge ms-2"
-                                          style="background-color: #e9f6f5; color: #1f8a7f; font-weight: 600;">Synced</span>
-                                    {% endif %}
-                                </td>
-                                <td class="text-muted">{{ passkey.created_at|date:"M j, Y" }}</td>
-                                <td class="text-muted">
-                                    {% if passkey.last_used_at %}{{ passkey.last_used_at|date:"M j, Y" }}{% else %}Never{% endif %}
-                                </td>
-                                <td class="text-end">
-                                    <button type="button" class="btn btn-sm btn-outline-danger btn-keep-bg delete-passkey-btn"
-                                            data-bs-toggle="modal" data-bs-target="#deletePasskeyModal"
-                                            data-passkey-name="{{ passkey.name }}"
-                                            data-passkey-url="{% url 'friends:passkey_delete' passkey.pk %}">
-                                        Remove
-                                    </button>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-                {% else %}
-                <p class="text-muted mb-0" style="font-size: 0.9375rem;">
-                    <i class="bi bi-info-circle me-1"></i>
-                    You have no passkeys yet. Until you add one, ELSA will keep emailing
-                    you a code each time you sign in.
-                </p>
+                <ul class="list-unstyled account-passkeys mb-0">
+                    {% for passkey in passkeys %}
+                    <li class="account-passkey" id="passkey-{{ passkey.pk }}">
+                        <i class="bi bi-key account-passkey-icon" aria-hidden="true"></i>
+                        <div class="account-passkey-text">
+                            <div class="fw-semibold">
+                                <span data-passkey-name>{{ passkey.name }}</span>
+                                {% if passkey.backed_up %}<span class="badge account-badge ms-1">Synced</span>{% endif %}
+                            </div>
+                            <div class="account-hint mt-0">
+                                Added {{ passkey.created_at|date:"M j, Y" }} &middot;
+                                {% if passkey.last_used_at %}last used {{ passkey.last_used_at|date:"M j, Y" }}{% else %}never used{% endif %}
+                            </div>
+                        </div>
+                        <div class="account-passkey-actions">
+                            <button type="button" class="btn btn-sm account-btn-ghost" data-bs-toggle="modal"
+                                    data-bs-target="#passkeyNameModal" data-mode="rename"
+                                    data-passkey-id="{{ passkey.pk }}" data-passkey-name="{{ passkey.name }}"
+                                    data-url="{% url 'friends:passkey_rename' passkey.pk %}">Rename</button>
+                            <button type="button" class="btn btn-sm btn-outline-danger btn-keep-bg" data-bs-toggle="modal"
+                                    data-bs-target="#deletePasskeyModal" data-passkey-name="{{ passkey.name }}"
+                                    data-passkey-url="{% url 'friends:passkey_delete' passkey.pk %}">Remove</button>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
                 {% endif %}
-            </div>
+
+                <div class="account-row account-row-stacked">
+                    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+                        <div>
+                            <div class="account-row-label">Where you're signed in</div>
+                            <div class="account-hint">Sign out a device you don't recognise, or every device but this one.</div>
+                        </div>
+                        {% if sessions|length > 1 %}
+                        <button type="button" class="btn btn-sm btn-outline-danger btn-keep-bg" id="end-other-sessions"
+                                data-endpoint="{% url 'friends:account_sessions_end_others' %}">Sign out everywhere else</button>
+                        {% endif %}
+                    </div>
+                    <ul class="list-unstyled account-devices mb-0">
+                        {% for session in sessions %}
+                        <li class="account-device" id="session-{{ session.pk }}">
+                            <i class="bi {% if 'iPhone' in session.label or 'Android' in session.label %}bi-phone{% else %}bi-laptop{% endif %} account-device-icon" aria-hidden="true"></i>
+                            <div class="flex-grow-1">
+                                <div class="fw-semibold">{{ session.label }}
+                                    {% if session.is_current %}<span class="badge account-badge ms-1">This device</span>{% endif %}
+                                </div>
+                                <div class="account-hint mt-0">
+                                    {% if session.is_current %}Active now{% else %}Last active {{ session.last_seen_at|ago }}{% endif %}{% if session.ip %} &middot; {{ session.ip }}{% endif %}
+                                </div>
+                            </div>
+                            {% if not session.is_current %}
+                            <button type="button" class="btn btn-sm account-btn-ghost" data-end-session
+                                    data-endpoint="{% url 'friends:account_session_end' session.pk %}">Sign out</button>
+                            {% endif %}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% if remembered %}
+                    <div class="account-row-label mt-3">Remembered devices</div>
+                    <div class="account-hint">These skip the emailed code after your password, until the date shown.</div>
+                    <ul class="list-unstyled account-devices mb-0">
+                        {% for device in remembered %}
+                        <li class="account-device" id="remembered-{{ device.pk }}">
+                            <i class="bi bi-check2-circle account-device-icon" aria-hidden="true"></i>
+                            <div class="flex-grow-1">
+                                <div class="fw-semibold">{{ device.label }}
+                                    {% if device.is_current %}<span class="badge account-badge ms-1">This device</span>{% endif %}
+                                </div>
+                                <div class="account-hint mt-0">Remembered until {{ device.expires_at|date:"M j, Y" }}</div>
+                            </div>
+                            <button type="button" class="btn btn-sm account-btn-ghost" data-forget-device
+                                    data-endpoint="{% url 'friends:account_device_forget' device.pk %}">Forget</button>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                </div>
+            </section>
+
+            <section class="account-card" id="activity" aria-labelledby="activity-heading">
+                <div class="account-section-head">
+                    <h2 id="activity-heading">Recent activity</h2>
+                    <p>Sign-ins and changes to your account. If something here wasn't you, change your password.</p>
+                    <p class="account-zone-note">Times are in <span data-account="timezone">{{ zone_name }}</span>{% if zone_from_browser %}, from your browser{% endif %}.</p>
+                </div>
+                {% if events %}
+                <ol class="list-unstyled account-events mb-0">
+                    {% for event in events %}
+                    <li class="account-event{% if forloop.counter > 6 %} account-event-more d-none{% endif %}">
+                        <span class="account-event-what">{{ event.get_kind_display }}{% if event.detail %} <span class="text-muted">&middot; {{ event.detail }}</span>{% endif %}</span>
+                        <span class="account-event-when" title="{{ event.created_at|date:'M j, Y, g:i A T' }}">{{ event.created_at|ago }}</span>
+                        {% if event.label or event.ip %}<span class="account-hint mt-0 account-event-where">{{ event.label }}{% if event.label and event.ip %} &middot; {% endif %}{{ event.ip|default:"" }}</span>{% endif %}
+                    </li>
+                    {% endfor %}
+                </ol>
+                {% if events|length > 6 %}
+                <button type="button" class="btn btn-link btn-sm p-0 mt-2 account-link" id="events-more">Show all {{ events|length }}</button>
+                {% endif %}
+                {% else %}
+                <p class="account-hint mb-0">Nothing yet. Your next sign-in will appear here.</p>
+                {% endif %}
+            </section>
+
+            <section class="account-card account-danger" id="close" aria-labelledby="close-heading">
+                <div class="account-row account-row-flush">
+                    <div class="account-row-wide">
+                        <h2 id="close-heading" class="account-danger-title">Close account</h2>
+                        <div class="account-hint mt-1">Removes your name and email address and signs you out for good.
+                            Your bundles are kept for the ELSA team.</div>
+                    </div>
+                    <div class="account-row-action">
+                        <button type="button" class="btn btn-sm btn-outline-danger btn-keep-bg w-100" data-bs-toggle="modal"
+                                data-bs-target="#closeAccountModal">Close</button>
+                    </div>
+                </div>
+            </section>
         </div>
     </div>
 </div>
 
-{% comment %} Outside the card and column structure: modals inside collapsible or flex
-   parents cause whitespace issues. {% endcomment %}
+{% comment %} Modals sit outside the card and column structure: inside collapsible or
+   flex parents they cause whitespace issues. {% endcomment %}
+
+<div class="modal fade" id="nameModal" tabindex="-1" aria-labelledby="nameModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form class="modal-content account-form" data-endpoint="{% url 'friends:account_name' %}" novalidate>
+            <div class="modal-header">
+                <h5 class="modal-title" id="nameModalLabel">Edit name</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger d-none small py-2" data-error-for="__all__" role="alert"></div>
+                <div class="row g-3">
+                    <div class="col-sm-6">
+                        <label class="form-label fw-semibold" for="name-first">First name</label>
+                        <input class="form-control" id="name-first" name="first_name" maxlength="150" required
+                               autocomplete="given-name" value="{{ user.first_name }}" aria-describedby="name-first-error">
+                        <div class="invalid-feedback" id="name-first-error" data-error-for="first_name"></div>
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label fw-semibold" for="name-last">Last name</label>
+                        <input class="form-control" id="name-last" name="last_name" maxlength="150" required
+                               autocomplete="family-name" value="{{ user.last_name }}" aria-describedby="name-last-error">
+                        <div class="invalid-feedback" id="name-last-error" data-error-for="last_name"></div>
+                    </div>
+                </div>
+                <p class="form-text mb-0 mt-3">Shown on your account and in the emails ELSA sends you.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-keep-bg text-white account-btn-primary" data-submit>
+                    <span class="spinner-border spinner-border-sm me-1 d-none" aria-hidden="true"></span>Save
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal fade" id="emailModal" tabindex="-1" aria-labelledby="emailModalLabel" aria-hidden="true"
+     data-pending="{% if email_pending %}{{ userprofile.pending_email }}{% endif %}"
+     data-resend-wait="{{ email_resend_wait }}">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="emailModalLabel">Change email address</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <form class="account-form" data-step="address" data-endpoint="{% url 'friends:account_email_start' %}" novalidate>
+                <div class="modal-body">
+                    {% include 'friends/_steps.html' with first='New address' second='Confirm code' at=1 %}
+                    <p class="small text-muted">Currently <strong data-account="email">{{ user.email }}</strong>.</p>
+                    <div class="alert alert-danger d-none small py-2" data-error-for="__all__" role="alert"></div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" for="email-new">New email address</label>
+                        <input class="form-control" type="email" id="email-new" name="new_email" required
+                               autocomplete="email" autocapitalize="none" spellcheck="false" aria-describedby="email-new-error">
+                        <div class="invalid-feedback" id="email-new-error" data-error-for="new_email"></div>
+                    </div>
+                    <div class="mb-1">
+                        <label class="form-label fw-semibold" for="email-password">Current password</label>
+                        <input class="form-control" type="password" id="email-password" name="current_password" required
+                               autocomplete="current-password" aria-describedby="email-password-error">
+                        <div class="invalid-feedback" id="email-password-error" data-error-for="current_password"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-keep-bg text-white account-btn-primary" data-submit>
+                        <span class="spinner-border spinner-border-sm me-1 d-none" aria-hidden="true"></span>Send code
+                    </button>
+                </div>
+            </form>
+
+            <form class="account-form d-none" data-step="code" data-endpoint="{% url 'friends:account_email_verify' %}" novalidate>
+                <div class="modal-body">
+                    {% include 'friends/_steps.html' with first='New address' second='Confirm code' at=2 %}
+                    <p>We sent a 6-digit code to <strong data-account="pending_email">{{ userprofile.pending_email|default:"" }}</strong>.
+                       It expires in {{ code_ttl_minutes }} minutes.</p>
+                    <div class="alert alert-danger d-none small py-2" data-error-for="__all__" role="alert"></div>
+                    <label class="form-label fw-semibold" for="email-code">Confirmation code</label>
+                    <input class="form-control account-code-input" id="email-code" name="code" required
+                           inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code"
+                           aria-describedby="email-code-error">
+                    <div class="invalid-feedback" id="email-code-error" data-error-for="code"></div>
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3 small">
+                        <button type="button" class="btn btn-link btn-sm p-0 account-link" id="email-resend"
+                                data-endpoint="{% url 'friends:account_email_resend' %}">Send a new code</button>
+                        <button type="button" class="btn btn-link btn-sm p-0 text-muted" id="email-restart"
+                                data-endpoint="{% url 'friends:account_email_cancel' %}">Use a different address</button>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Finish later</button>
+                    <button type="submit" class="btn btn-keep-bg text-white account-btn-primary" data-submit>
+                        <span class="spinner-border spinner-border-sm me-1 d-none" aria-hidden="true"></span>Confirm
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="usernameModal" tabindex="-1" aria-labelledby="usernameModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form class="modal-content account-form" data-endpoint="{% url 'friends:account_username' %}" novalidate>
+            <div class="modal-header">
+                <h5 class="modal-title" id="usernameModalLabel">Change username</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger d-none small py-2" data-error-for="__all__" role="alert"></div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold" for="username-new">New username</label>
+                    <div class="input-group has-validation">
+                        <span class="input-group-text">@</span>
+                        <input class="form-control" id="username-new" name="new_username" required maxlength="150"
+                               autocomplete="off" autocapitalize="none" spellcheck="false"
+                               pattern="[A-Za-z0-9._@+\-]+" value="{{ user.username }}"
+                               aria-describedby="username-new-help username-new-error">
+                        <div class="invalid-feedback" id="username-new-error" data-error-for="new_username"></div>
+                    </div>
+                    <div class="form-text" id="username-new-help">Letters, digits and . @ + - _ only.</div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold" for="username-password">Current password</label>
+                    <input class="form-control" type="password" id="username-password" name="current_password" required
+                           autocomplete="current-password" aria-describedby="username-password-error">
+                    <div class="invalid-feedback" id="username-password-error" data-error-for="current_password"></div>
+                </div>
+                <ul class="small text-muted mb-0 ps-3">
+                    <li>You will sign in with the new username from now on.</li>
+                    <li>Your bundles and files move with it; nothing else changes.</li>
+                    <li>Passkeys keep working, though a device may still show the old name.</li>
+                    <li>Your old username becomes free for someone else.</li>
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-keep-bg text-white account-btn-primary" data-submit>
+                    <span class="spinner-border spinner-border-sm me-1 d-none" aria-hidden="true"></span>Change username
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal fade" id="agencyModal" tabindex="-1" aria-labelledby="agencyModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="agencyModalLabel">Request an agency change</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <form class="account-form" data-step="ask" data-endpoint="{% url 'friends:account_agency_draft' %}" novalidate>
+                <div class="modal-body">
+                    {% include 'friends/_steps.html' with first='Your request' second='Review and send' at=1 %}
+                    <p class="small text-muted">
+                        Your account uses <strong>{{ agency_label }}</strong>. The agency is part of every bundle's
+                        identifier, so the ELSA team makes this change by hand. Tell us what you need and ELSA
+                        will draft the email for you to review.
+                    </p>
+                    <div class="alert alert-danger d-none small py-2" data-error-for="__all__" role="alert"></div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" for="agency-choice">Agency you need</label>
+                        <select class="form-select" id="agency-choice" name="agency" required aria-describedby="agency-choice-error">
+                            {% for value, label in agency_choices %}
+                                <option value="{{ value }}">{{ label }} ({{ value }})</option>
+                            {% endfor %}
+                        </select>
+                        <div class="invalid-feedback" id="agency-choice-error" data-error-for="agency"></div>
+                    </div>
+                    <div class="mb-1">
+                        <label class="form-label fw-semibold" for="agency-note">Anything the team should know? <span class="text-muted fw-normal">(optional)</span></label>
+                        <textarea class="form-control" id="agency-note" name="note" rows="3" maxlength="500"
+                                  placeholder="For example: my project moved to ESA's archive." aria-describedby="agency-note-error"></textarea>
+                        <div class="invalid-feedback" id="agency-note-error" data-error-for="note"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-keep-bg text-white account-btn-primary" data-submit>
+                        <span class="spinner-border spinner-border-sm me-1 d-none" aria-hidden="true"></span><i class="bi bi-stars me-1" aria-hidden="true"></i>Draft my email
+                    </button>
+                </div>
+            </form>
+
+            <form class="account-form d-none" data-step="review" data-endpoint="{% url 'friends:account_agency_send' %}" novalidate>
+                <input type="hidden" name="agency">
+                <input type="hidden" name="note">
+                <div class="modal-body">
+                    {% include 'friends/_steps.html' with first='Your request' second='Review and send' at=2 %}
+                    <div class="account-draft-note" id="agency-draft-note" role="status"></div>
+                    <div class="alert alert-danger d-none small py-2" data-error-for="__all__" role="alert"></div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" for="agency-subject">Subject</label>
+                        <input class="form-control" id="agency-subject" name="subject" maxlength="150" required
+                               aria-describedby="agency-subject-error">
+                        <div class="invalid-feedback" id="agency-subject-error" data-error-for="subject"></div>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label fw-semibold" for="agency-body">Message</label>
+                        <textarea class="form-control" id="agency-body" name="body" rows="10" maxlength="4000" required
+                                  aria-describedby="agency-body-error"></textarea>
+                        <div class="invalid-feedback" id="agency-body-error" data-error-for="body"></div>
+                    </div>
+                    <p class="small text-muted mb-0">
+                        Sent to the ELSA team from ELSA, with your username and current agency attached.
+                        They will reply to <strong data-account="email">{{ user.email }}</strong>, and you get a copy.
+                    </p>
+                </div>
+                <div class="modal-footer justify-content-between">
+                    <div>
+                        <button type="button" class="btn btn-link btn-sm account-link px-0" id="agency-back">
+                            <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Back
+                        </button>
+                        <button type="button" class="btn btn-link btn-sm account-link ms-2" id="agency-redraft">
+                            <i class="bi bi-arrow-repeat me-1" aria-hidden="true"></i>Draft again
+                        </button>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-keep-bg text-white account-btn-primary" data-submit>
+                            <span class="spinner-border spinner-border-sm me-1 d-none" aria-hidden="true"></span>Send to the team
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="passwordModal" tabindex="-1" aria-labelledby="passwordModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form class="modal-content account-form" data-endpoint="{% url 'friends:account_password' %}" novalidate>
+            <div class="modal-header">
+                <h5 class="modal-title" id="passwordModalLabel">Change password</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input type="text" name="username" value="{{ user.username }}" autocomplete="username"
+                       class="visually-hidden" tabindex="-1" aria-hidden="true" readonly>
+                <div class="alert alert-danger d-none small py-2" data-error-for="__all__" role="alert"></div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold" for="pw-old">Current password</label>
+                    <div class="input-group has-validation">
+                        <input class="form-control" type="password" id="pw-old" name="old_password" required
+                               autocomplete="current-password" aria-describedby="pw-old-error">
+                        <button type="button" class="btn btn-outline-secondary account-reveal" data-reveal="pw-old"
+                                aria-label="Show password" aria-pressed="false"><i class="bi bi-eye" aria-hidden="true"></i></button>
+                        <div class="invalid-feedback" id="pw-old-error" data-error-for="old_password"></div>
+                    </div>
+                </div>
+
+                <div class="mb-2">
+                    <label class="form-label fw-semibold" for="pw-new">New password</label>
+                    <div class="input-group has-validation">
+                        <input class="form-control" type="password" id="pw-new" name="new_password1" required
+                               autocomplete="new-password" aria-describedby="pw-rules pw-new-error">
+                        <button type="button" class="btn btn-outline-secondary account-reveal" data-reveal="pw-new"
+                                aria-label="Show password" aria-pressed="false"><i class="bi bi-eye" aria-hidden="true"></i></button>
+                        <div class="invalid-feedback" id="pw-new-error" data-error-for="new_password1"></div>
+                    </div>
+                </div>
+                <ul class="account-rules list-unstyled small mb-3" id="pw-rules" data-min-length="{{ password_min_length }}">
+                    <li data-rule="length"><i class="bi bi-circle" aria-hidden="true"></i> At least {{ password_min_length }} characters</li>
+                    <li data-rule="numeric"><i class="bi bi-circle" aria-hidden="true"></i> Not only numbers</li>
+                    <li data-rule="server"><i class="bi bi-dot" aria-hidden="true"></i> Not too similar to your name, username, or email</li>
+                    <li data-rule="server"><i class="bi bi-dot" aria-hidden="true"></i> Not a commonly used password</li>
+                </ul>
+
+                <div class="mb-1">
+                    <label class="form-label fw-semibold" for="pw-confirm">Confirm new password</label>
+                    <input class="form-control" type="password" id="pw-confirm" name="new_password2" required
+                           autocomplete="new-password" aria-describedby="pw-confirm-hint pw-confirm-error">
+                    <div class="form-text" id="pw-confirm-hint" aria-live="polite"></div>
+                    <div class="invalid-feedback" id="pw-confirm-error" data-error-for="new_password2"></div>
+                </div>
+                <p class="form-text mb-0 mt-3">You stay signed in here. Every other device is signed out.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-keep-bg text-white account-btn-primary" data-submit>
+                    <span class="spinner-border spinner-border-sm me-1 d-none" aria-hidden="true"></span>Change password
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal fade" id="passkeyNameModal" tabindex="-1" aria-labelledby="passkeyNameModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form class="modal-content account-form" novalidate
+              data-register-options="{% url 'friends:passkey_register_options' %}"
+              data-register-verify="{% url 'friends:passkey_register_verify' %}">
+            <div class="modal-header">
+                <h5 class="modal-title" id="passkeyNameModalLabel">Add a passkey</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger d-none small py-2" data-error-for="__all__" role="alert"></div>
+                <label class="form-label fw-semibold" for="passkey-name">Name</label>
+                <input class="form-control" id="passkey-name" name="name" maxlength="100" required
+                       autocomplete="off" aria-describedby="passkey-name-help passkey-name-error">
+                <div class="invalid-feedback" id="passkey-name-error" data-error-for="name"></div>
+                <div class="form-text" id="passkey-name-help">So you can tell your passkeys apart, for example "Work laptop".</div>
+                <p class="small text-muted mt-3 mb-0" data-add-only>
+                    Next, your browser or device will ask you to confirm with your fingerprint, face, or PIN.
+                    A passkey only works on this site, so a page pretending to be ELSA cannot use it.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-keep-bg text-white account-btn-primary" data-submit>
+                    <span class="spinner-border spinner-border-sm me-1 d-none" aria-hidden="true"></span><span data-submit-label>Continue</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <div class="modal fade" id="deletePasskeyModal" tabindex="-1" aria-labelledby="deletePasskeyLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -158,13 +615,13 @@ User Account
             </div>
             <div class="modal-body">
                 <p class="mb-2">Remove <strong id="delete-passkey-name"></strong>?</p>
-                <p class="text-muted mb-0" style="font-size: 0.875rem;">
+                <p class="text-muted mb-0 small">
                     You will not be able to sign in with it again. If it is your only passkey,
                     ELSA will go back to emailing you a code.
                 </p>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
                 <form method="post" id="delete-passkey-form">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-danger btn-keep-bg text-white">Remove passkey</button>
@@ -174,84 +631,223 @@ User Account
     </div>
 </div>
 
-<script src="{% static 'js/passkeys.js' %}"></script>
-<script>
-(function () {
-    var csrf = '{{ csrf_token }}';
-    var addBtn = document.getElementById('add-passkey-btn');
-    var alertBox = document.getElementById('passkey-alert');
+<div class="modal fade" id="researchModal" tabindex="-1" aria-labelledby="researchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form class="modal-content account-form" data-endpoint="{% url 'friends:account_research' %}" novalidate>
+            <div class="modal-header">
+                <h5 class="modal-title" id="researchModalLabel">Author details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger d-none small py-2" data-error-for="__all__" role="alert"></div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold" for="research-orcid">ORCID iD
+                        <a href="https://orcid.org/orcid-search/search" target="_blank" rel="noopener" class="account-link fw-normal small ms-1">Look up</a></label>
+                    <input class="form-control font-monospace" id="research-orcid" name="orcid" maxlength="60"
+                           value="{{ userprofile.orcid }}" placeholder="0000-0000-0000-0000" autocomplete="off"
+                           spellcheck="false" aria-describedby="research-orcid-help research-orcid-error">
+                    <div class="invalid-feedback" id="research-orcid-error" data-error-for="orcid"></div>
+                    <div class="form-text" id="research-orcid-help">The full link from your ORCID page works too.</div>
+                </div>
+                <div class="mb-1">
+                    <label class="form-label fw-semibold" for="research-affiliation">Affiliation</label>
+                    <input class="form-control" id="research-affiliation" name="affiliation" maxlength="255"
+                           value="{{ userprofile.affiliation }}" placeholder="e.g. New Mexico State University"
+                           autocomplete="organization" aria-describedby="research-affiliation-error">
+                    <div class="invalid-feedback" id="research-affiliation-error" data-error-for="affiliation"></div>
+                </div>
+                <p class="form-text mb-0 mt-3">In Citation Information, "Add me as an author" fills in your name with these.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-keep-bg text-white account-btn-primary" data-submit>
+                    <span class="spinner-border spinner-border-sm me-1 d-none" aria-hidden="true"></span>Save
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
 
-    function show(kind, text) {
-        alertBox.className = 'alert alert-' + kind + ' py-2 px-3 mb-3';
-        alertBox.textContent = text;
-    }
 
-    if (!window.ElsaPasskeys || !window.ElsaPasskeys.supported()) {
-        addBtn.disabled = true;
-        show('warning', 'This browser does not support passkeys. Try a current version of ' +
-                        'Chrome, Safari, Edge, or Firefox.');
-    }
+<div class="modal fade" id="closeAccountModal" tabindex="-1" aria-labelledby="closeAccountModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form class="modal-content account-form" data-endpoint="{% url 'friends:account_close' %}" novalidate>
+            <div class="modal-header">
+                <h5 class="modal-title" id="closeAccountModalLabel">Close your account?</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger d-none small py-2" data-error-for="__all__" role="alert"></div>
+                <ul class="small mb-3 ps-3">
+                    <li>You will be signed out and cannot sign in again.</li>
+                    <li>Your name and email address are removed, and your passkeys are deleted.</li>
+                    <li>Your {{ bundle_count }} bundle{{ bundle_count|pluralize }} {{ bundle_count|pluralize:"is,are" }} kept by the ELSA team and hidden from everyone else.</li>
+                    <li>Your username cannot be used again.</li>
+                </ul>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold" for="close-password">Current password</label>
+                    <input class="form-control" type="password" id="close-password" name="current_password" required
+                           autocomplete="current-password" aria-describedby="close-password-error">
+                    <div class="invalid-feedback" id="close-password-error" data-error-for="current_password"></div>
+                </div>
+                <div class="mb-1">
+                    <label class="form-label fw-semibold" for="close-confirm">Type your username, <code data-account="username">{{ user.username }}</code>, to confirm</label>
+                    <input class="form-control" id="close-confirm" name="confirm" required autocomplete="off"
+                           autocapitalize="none" spellcheck="false" data-expected="{{ user.username }}"
+                           aria-describedby="close-confirm-error">
+                    <div class="invalid-feedback" id="close-confirm-error" data-error-for="confirm"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Keep my account</button>
+                <button type="submit" class="btn btn-danger btn-keep-bg text-white" data-submit disabled>
+                    <span class="spinner-border spinner-border-sm me-1 d-none" aria-hidden="true"></span>Close account
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
 
-    addBtn.addEventListener('click', function () {
-        var label = window.prompt(
-            'Name this passkey so you can recognise it later:',
-            'My ' + (navigator.platform || 'device'));
-        if (label === null) {
-            return;
-        }
+<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1090;" id="account-toasts" aria-live="polite" aria-atomic="true"></div>
 
-        addBtn.disabled = true;
-        show('info', 'Follow your browser or device prompt to finish adding the passkey.');
-
-        window.ElsaPasskeys.register({
-            options: "{% url 'friends:passkey_register_options' %}",
-            verify: "{% url 'friends:passkey_register_verify' %}"
-        }, csrf, label.trim() || 'Passkey').then(function () {
-            // Reload so the new key appears with its real dates.
-            window.location.reload();
-        }).catch(function (error) {
-            addBtn.disabled = false;
-            show('danger', window.ElsaPasskeys.describe(error));
-        });
-    });
-
-    // One modal reused for every row.
-    var deleteModal = document.getElementById('deletePasskeyModal');
-    if (deleteModal) {
-        deleteModal.addEventListener('show.bs.modal', function (event) {
-            var button = event.relatedTarget;
-            if (!button) { return; }
-            document.getElementById('delete-passkey-name').textContent =
-                button.getAttribute('data-passkey-name');
-            document.getElementById('delete-passkey-form').action =
-                button.getAttribute('data-passkey-url');
-        });
-    }
-})();
-</script>
+<form class="d-none" aria-hidden="true">{% csrf_token %}</form>
 
 <style>
-    body {
-        background-color: #f8f9fc;
-        color: #444;
+    body { background-color: #f6f8fa; color: #3d4349; }
+
+    /* One spacing scale for the whole page: 0.5 / 1 / 1.5 rem. */
+    .account-page { max-width: 1080px; margin: 0 auto; padding: 0 0 4rem; display: grid; gap: 1.5rem; }
+    .account-title { font-size: 1.75rem; font-weight: 700; color: #1f2328; margin: 0; }
+    .account-subtitle { color: #6a737d; margin: 0.25rem 0 0; }
+
+    .account-layout { display: grid; gap: 1.5rem; align-items: start; }
+    @media (min-width: 992px) { .account-layout { grid-template-columns: 17rem minmax(0, 1fr); } }
+    .account-sections { display: grid; gap: 1.5rem; min-width: 0; }
+
+    .account-card { background: #fff; border: 1px solid #e4e8ec; border-radius: 12px; padding: 1.5rem; }
+
+    .account-summary { text-align: center; display: grid; gap: 0.5rem; justify-items: center; }
+    @media (min-width: 992px) { .account-summary { position: sticky; top: 1.5rem; } }
+    .account-avatar { width: 88px; height: 88px; border-radius: 50%; object-fit: cover; border: 1px solid #e4e8ec; }
+    .account-summary-name { font-size: 1.15rem; font-weight: 700; color: #1f2328; margin: 0.5rem 0 0; overflow-wrap: anywhere; }
+    .account-summary-handle { color: #6a737d; margin: 0; overflow-wrap: anywhere; }
+    .account-since { background: #e9f6f5; color: #1f8a7f; font-weight: 600; font-size: 0.8125rem;
+                     border-radius: 999px; padding: 0.25rem 0.75rem; margin: 0; }
+    .account-stat { width: 100%; display: flex; justify-content: space-between; align-items: center;
+                    margin-top: 0.5rem; padding: 1rem 0 0; border-top: 1px solid #eef0f3; color: inherit; text-decoration: none; }
+    .account-stat-number { font-size: 1.5rem; font-weight: 700; color: #1f8a7f; margin-right: 0.25rem; }
+    .account-stat-label { color: #6a737d; }
+    .account-toc { width: 100%; display: grid; gap: 0.125rem; text-align: left; padding-top: 1rem; border-top: 1px solid #eef0f3; margin-top: 0.5rem; }
+    .account-toc a { color: #3d4349; text-decoration: none; padding: 0.375rem 0.5rem; border-radius: 6px; font-size: 0.9375rem; }
+    .account-toc a:hover, .account-toc a:focus-visible { background: #f1f5f4; color: #1f8a7f; }
+    .account-toc i { width: 1.25rem; display: inline-block; color: #8a9199; }
+    @media (max-width: 991.98px) { .account-toc { display: none; } }
+
+    .account-link { color: #1f8a7f; }
+    .account-link:hover { color: #176b62; }
+
+    .account-section-head { padding-bottom: 1rem; border-bottom: 1px solid #eef0f3; }
+    .account-section-head h2 { font-size: 1.125rem; font-weight: 700; color: #1f2328; margin: 0; }
+    .account-section-head p { color: #6a737d; font-size: 0.875rem; margin: 0.25rem 0 0; }
+    .account-sections section { scroll-margin-top: 1.5rem; }
+
+    .account-row { display: grid; grid-template-columns: 9rem minmax(0, 1fr) 6.5rem; gap: 0.5rem 1rem;
+                   align-items: center; padding: 1rem 0; border-bottom: 1px solid #eef0f3; }
+    .account-row:last-child { border-bottom: 0; padding-bottom: 0; }
+    .account-row-flush { padding: 0; border: 0; grid-template-columns: minmax(0, 1fr) 6.5rem; }
+    .account-row-label { font-weight: 600; color: #1f2328; align-self: start; padding-top: 0.125rem; }
+    .account-row-value { min-width: 0; overflow-wrap: anywhere; }
+    .account-row-action { justify-self: stretch; }
+    .account-row-action .btn { width: 100%; }
+    .account-hint { color: #6a737d; font-size: 0.8125rem; margin-top: 0.125rem; }
+    @media (max-width: 575.98px) {
+        .account-row { grid-template-columns: minmax(0, 1fr) 5.5rem; }
+        .account-row-label { grid-column: 1 / -1; padding-top: 0; }
+        .account-row-flush { grid-template-columns: minmax(0, 1fr) 5.5rem; }
     }
-    .card {
-        border-radius: 16px;
-    }
-    .btn-outline-primary {
-        border-color: #0056b3;
-        color: #0056b3;
-        padding: 6px 16px;
-        font-size: 0.875rem;
-        border-width: 1px;
-    }
-    .btn-outline-primary:hover {
-        background-color: #0056b3;
-        color: #fff;
-    }
-    .col-md-8 {
-        display: flex;
-        justify-content: center;
-    }
+
+    .account-pending { margin-top: 0.5rem; padding: 0.5rem 0.75rem; border-radius: 8px; background: #fff8e6;
+                       color: #6b5200; font-size: 0.8125rem; }
+
+    .account-btn-primary { background-color: #26a498; border-color: #26a498; }
+    .account-btn-primary:hover, .account-btn-primary:focus { background-color: #1f8a7f; border-color: #1f8a7f; }
+    .account-btn-primary:disabled { background-color: #8fcfc9; border-color: #8fcfc9; }
+    .account-btn-outline { color: #1f8a7f; border: 1px solid #b9e2de; background: #fff; }
+    .account-btn-outline:hover, .account-btn-outline:focus { color: #fff; background: #26a498; border-color: #26a498; }
+    .account-btn-ghost { color: #3d4349; border: 1px solid #e4e8ec; background: #fff; }
+    .account-btn-ghost:hover { background: #f1f3f5; }
+
+    .account-passkeys { display: grid; gap: 0.5rem; padding-top: 0.5rem; }
+    .account-passkey { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; border: 1px solid #eef0f3;
+                       border-radius: 8px; background: #fafbfc; flex-wrap: wrap; }
+    .account-passkey-icon { color: #26a498; font-size: 1.125rem; }
+    .account-passkey-text { flex: 1 1 12rem; min-width: 0; }
+    .account-passkey-actions { display: flex; gap: 0.5rem; }
+    .account-badge { background-color: #e9f6f5; color: #1f8a7f; font-weight: 600; }
+
+    .account-danger { border-color: #f1c6cb; }
+    .account-danger-title { font-size: 1.125rem; font-weight: 700; color: #b02a37; margin: 0; }
+
+    .account-steps { display: flex; align-items: center; gap: 0.5rem; padding: 0; margin: 0 0 1rem; list-style: none;
+                     font-size: 0.8125rem; color: #8a9199; }
+    .account-steps .step { display: inline-flex; align-items: center; gap: 0.375rem; }
+    .account-steps .step-mark { display: inline-grid; place-items: center; width: 1.375rem; height: 1.375rem; border-radius: 50%;
+                                border: 1px solid #c8cdd2; font-size: 0.75rem; }
+    .account-steps .active { color: #1f8a7f; font-weight: 600; }
+    .account-steps .active .step-mark { background: #26a498; border-color: #26a498; color: #fff; }
+    .account-steps .done .step-mark { background: #e9f6f5; border-color: #26a498; color: #1f8a7f; }
+    .account-steps .step-sep { color: #c8cdd2; font-size: 0.75rem; }
+
+    .account-code-input { font-size: 1.5rem; letter-spacing: 0.5em; text-align: center; font-variant-numeric: tabular-nums; }
+
+    .account-rules li { display: flex; align-items: center; gap: 0.375rem; color: #6c757d; margin-bottom: 0.125rem; }
+    .account-rules li.met { color: #1f8a7f; }
+    .account-rules li.unmet { color: #b02a37; }
+    .account-rules li[data-rule="server"] { color: #8a9199; }
+
+    .account-draft-note { font-size: 0.8125rem; color: #1f8a7f; background: #e9f6f5; border-radius: 8px;
+                          padding: 0.5rem 0.75rem; margin-bottom: 1rem; }
+    .account-draft-note:empty { display: none; }
+
+    .account-form .input-group > .form-control.is-invalid { z-index: 3; }
+    .account-reveal { border-color: #ced4da; }
+    .account-initials { display: grid; place-items: center; background: #26a498; color: #fff; font-weight: 700;
+                        font-size: 1.75rem; letter-spacing: 0.02em; user-select: none; }
+
+    .account-row.account-row-stacked { display: block; }
+    .account-bundles-link { width: 100%; display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem;
+                            padding: 0.625rem 0.5rem; border-top: 1px solid #eef0f3; color: #1f2328; font-weight: 600;
+                            text-decoration: none; }
+    .account-bundles-link:hover, .account-bundles-link:focus-visible { color: #1f8a7f; background: #f6fbfa; border-radius: 6px; }
+    .account-bundles-link > .bi-box-seam { color: #1f8a7f; }
+    .account-count { min-width: 1.75rem; padding: 0.0625rem 0.5rem; border-radius: 999px; background: #eef1f4;
+                     color: #3d4349; font-size: 0.8125rem; text-align: center; font-variant-numeric: tabular-nums; }
+    .account-bundles-arrow { color: #8a9199; font-size: 0.8125rem; }
+
+    .account-author { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0.125rem 0.75rem; margin: 0; }
+    .account-author dt { font-weight: 400; color: #6a737d; font-size: 0.875rem; }
+    .account-author dd { margin: 0; overflow-wrap: anywhere; }
+    .account-zone-note { font-size: 0.75rem !important; margin-top: 0.375rem !important; }
+
+    .account-devices { display: grid; gap: 0.5rem; padding-top: 0.75rem; }
+    .account-device > .flex-grow-1 { min-width: 0; overflow-wrap: anywhere; }
+    .account-device { display: flex; align-items: center; gap: 0.75rem; padding: 0.625rem 0.75rem; border: 1px solid #eef0f3; border-radius: 10px; }
+    .account-device-icon { color: #8a9199; font-size: 1.125rem; }
+
+    .account-events { display: grid; padding-top: 0.5rem; }
+    .account-event { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0 1rem; padding: 0.625rem 0; border-bottom: 1px solid #eef0f3; }
+    .account-event:last-child { border-bottom: 0; }
+    .account-event-what { font-weight: 500; color: #1f2328; overflow-wrap: anywhere; }
+    .account-event-when { color: #6a737d; font-size: 0.8125rem; white-space: nowrap; }
+    .account-event-where { grid-column: 1 / -1; }
+
+    .account-row.account-saved { animation: account-saved 2.4s ease; }
+    @keyframes account-saved { 0%, 60% { background: #e9f6f5; } 100% { background: transparent; } }
+    .account-saved-tick { color: #1f8a7f; font-size: 0.8125rem; font-weight: 600; margin-left: 0.5rem; }
+    .account-discard { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap;
+                       width: 100%; padding: 0.5rem 0.75rem; border-radius: 8px; background: #fff8e6; color: #6b5200; font-size: 0.875rem; }
 </style>
+
+<script src="{% static 'js/passkeys.js' %}"></script>
+<script src="{% static 'js/account.js' %}"></script>
 {% endblock %}

@@ -81,6 +81,15 @@
     <form method="post" action="{% url 'friends:otp_verify' %}" autocomplete="off" id="otp-form">
         {% csrf_token %}
 
+        {% if purpose == 'login' %}
+        {% comment %} Above the boxes: the form submits itself on the sixth digit. {% endcomment %}
+        <div class="form-check mb-3 small">
+            <input class="form-check-input" type="checkbox" name="remember_device" value="1" id="remember-device">
+            <label class="form-check-label" for="remember-device">
+                Remember this device for 30 days. Only tick this on your own computer.
+            </label>
+        </div>
+        {% endif %}
         <label for="otp-box-0" class="visually-hidden">Verification code</label>
         <div class="otp-boxes mb-3 {% if messages %}is-invalid{% endif %}" id="otp-boxes">
             {% for i in "012345" %}

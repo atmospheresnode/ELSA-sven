@@ -47,6 +47,10 @@ def _line_index(label_path):
     label is written compactly, and the first one is the outermost, which is the
     one a line-numbered finding is talking about.
     """
+    # Some findings are about a directory (a collection with no label, say). Handing
+    # one to libxml2 fails the same way, but prints "I/O error : Is a directory" first.
+    if not os.path.isfile(label_path):
+        return {}
     try:
         tree = etree.parse(label_path)
     except (OSError, etree.XMLSyntaxError):
@@ -114,8 +118,16 @@ def parse_report(report_path):
                 seen.add(fingerprint)
                 findings.append(finding)
 
+    # Which release wrote this, as validate states it in the report's own header.
+    # Absent from hand-made reports, so read defensively and left blank then.
+    configuration = report.get('configuration')
+    if not isinstance(configuration, dict):
+        configuration = {}
+    tool_version = str(configuration.get('version') or '').strip()
+
     return {
         'summary': {
+            'tool_version': tool_version,
             'errors': summary.get('totalErrors', 0),
             'warnings': summary.get('totalWarnings', 0),
             'products': summary.get('totalProducts', 0),

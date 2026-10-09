@@ -159,13 +159,31 @@ def validate_executable():
     return executable
 
 
-def _environment(java_tmpdir=None):
+def configured_java_home(home=None):
+    """The Java to run validate with, as this host is configured.
+
+    VALIDATE_JAVA_HOME is a path, or 'auto' to pick the installed Java the release
+    itself asks for (see validate_release.java_home_for), which is what lets a host
+    move to a release needing a newer Java without a second setting changing in step.
+    Raises validate_release.ReleaseError when 'auto' finds nothing new enough.
+    """
+    java_home = getattr(settings, 'VALIDATE_JAVA_HOME', '')
+    if java_home != 'auto':
+        return java_home
+    from build import validate_release
+    return validate_release.java_home_for(home or getattr(settings, 'VALIDATE_HOME', ''))
+
+
+def _environment(java_tmpdir=None, java_home=None):
     """A copy of the environment with JAVA_HOME pointed at the configured runtime.
 
     Also carries the settings module across. The child is a fresh `manage.py`
     invocation, so without this it loads whatever manage.py defaults to rather than
     the settings the parent is running under, and would look for its ValidationRun
     row in a different database than the one holding it.
+
+    `java_home` overrides the configured one, for running a release other than the
+    host's own (qualifying a new release against the current one).
     """
     environment = os.environ.copy()
 
@@ -173,7 +191,15 @@ def _environment(java_tmpdir=None):
     if settings_module:
         environment['DJANGO_SETTINGS_MODULE'] = settings_module
 
-    java_home = getattr(settings, 'VALIDATE_JAVA_HOME', '')
+    if java_home is None:
+        # Never raises here: this also builds the environment for the detached child,
+        # and a Java problem must surface as that run's failure reason (build_command
+        # says it), not as an exception in the request that started it.
+        from build.validate_release import ReleaseError
+        try:
+            java_home = configured_java_home()
+        except ReleaseError:
+            java_home = ''
     if java_home:
         environment['JAVA_HOME'] = java_home
         environment['PATH'] = os.path.join(java_home, 'bin') + os.pathsep + environment.get('PATH', '')
@@ -273,10 +299,24 @@ def prune_reports(bundle):
     return removed
 
 
-def build_command(run, report_path):
-    """The validate invocation for this run's tier."""
+def build_command(run, report_path, executable=None):
+    """The validate invocation for this run's tier.
+
+    `executable` runs a release other than the configured one; qualifying a new
+    release uses it so both sides are invoked exactly as a real check is.
+    """
+    if executable is None:
+        executable = validate_executable()
+        # Checked here so a missing Java is the run's failure reason in words, rather
+        # than UnsupportedClassVersionError quoted from the tool's last lines.
+        from build.validate_release import ReleaseError
+        try:
+            configured_java_home()
+        except ReleaseError as error:
+            raise ValidateUnavailable(str(error))
+
     command = [
-        validate_executable(),
+        executable,
         '-R', 'pds4.bundle',
         '-t', run.bundle.directory(),
         '-r', report_path,
@@ -432,6 +472,7 @@ def _execute(validation_run):
     validation_run.findings = parsed['findings']
     validation_run.error_count = parsed['summary']['errors']
     validation_run.warning_count = parsed['summary']['warnings']
+    validation_run.tool_version = parsed['summary']['tool_version'][:32]
     validation_run.phase = ValidationRun.PHASE_DONE
     validation_run.products_done = validation_run.products_total
     validation_run.status = ValidationRun.STATUS_DONE

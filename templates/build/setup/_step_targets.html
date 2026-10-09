@@ -1,0 +1,37 @@
+<section class="setup-panel" id="step-targets" data-step="targets" aria-labelledby="step-targets-title">
+   <header class="setup-panel-head">
+      <span class="setup-kicker">Step {{ step.number }} of {{ setup.steps|length }} &middot; Required</span>
+      <h2 id="step-targets-title" tabindex="-1">Targets</h2>
+      <p class="setup-why">What the data is about: the planet, moon or body observed or modelled.</p>
+   </header>
+
+   {% if bundle.bundle_type == 'External' %}
+   <p class="setup-info"><i class="bi bi-info-circle-fill me-2" aria-hidden="true"></i><span><strong>Working with model or simulation data?</strong> Choose the Laboratory Analog for the body you modelled, for example Mars Laboratory Analog for a Mars atmosphere simulation.</span></p>
+   {% elif form_target.related_investigation_names %}
+   <p class="setup-hint">Targets listed for {{ form_target.related_investigation_names|join:", " }} are shown first.</p>
+   {% else %}
+   <p class="setup-hint">Showing every target. <a href="#investigation">Choosing an investigation</a> puts its targets first.</p>
+   {% endif %}
+
+   {% if targets %}
+   <ul class="setup-tags" aria-label="Targets in this bundle">
+      {% for target in targets %}
+      <li class="setup-tag">{{ target.name }}<a href="{% url 'build:delete_target' bundle.pk target.pk %}?next=bundle" class="setup-tag-remove" data-setup-remove aria-label="Remove {{ target.name }}" title="Remove"><i class="bi bi-x" aria-hidden="true"></i></a></li>
+      {% endfor %}
+   </ul>
+   {% endif %}
+
+   <form id="setup-form-targets" class="setup-form setup-inline" method="post" action="{% url 'build:context_search_target' bundle.pk %}?next=bundle" data-setup-form="target" data-then="stay">
+      {% csrf_token %}
+      <input type="hidden" name="source" value="bundle">
+      <div class="setup-inline-field">
+         <label class="form-label" for="{{ form_target.target.id_for_label }}">{% if targets %}Add another target{% else %}Add a target{% endif %}</label>
+         <input type="search" class="form-control form-control-sm setup-filter" data-filter-for="setup_target" placeholder="Type to search the list" aria-label="Search targets" aria-controls="setup_target" autocomplete="off">
+         {{ form_target.target }}
+         <div class="setup-filter-count" data-filter-count aria-live="polite"></div>
+      </div>
+      <button type="submit" class="btn setup-btn-ghost">Add</button>
+   </form>
+
+   {% include 'build/setup/_actions.html' with step=step primary='continue' blocked='Add at least one target first. ELSA cannot send the bundle for review without one. You can also skip this step for now.' %}
+</section>

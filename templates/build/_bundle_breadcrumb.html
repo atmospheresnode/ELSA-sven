@@ -4,25 +4,27 @@ The way back to the bundle from any build page that is about one.
 Included by base-derk.html, so every such page has it whether or not its own template
 remembered a back button: a page that is reached by a redirect nobody planned for (a
 failed save, a delete that lands somewhere else) still leaves the user one click from
-their bundle. Not on the bundle page itself, and not on walkthrough pages, whose
-stepper has its own exit.
+their bundle. Not on the bundle page itself, not on walkthrough pages, whose
+stepper has its own exit, and not on the setup page, which has its own "Exit to
+bundle page". The two old intro pages only redirect now, but stay listed here.
+
+A plain back link rather than a Hub / bundle trail: a trail with no current page and
+an arrow on its last item read as neither a breadcrumb nor a back button.
 {% endcomment %}
-{% if bundle.pk and bundle.user == request.user and not walkthrough and request.resolver_match.app_name == 'build' and request.resolver_match.url_name != 'bundle' %}
+{% if bundle.pk and bundle.user == request.user and not walkthrough and request.resolver_match.app_name == 'build' and request.resolver_match.url_name != 'bundle' and request.resolver_match.url_name != 'yes_intro_page' and request.resolver_match.url_name != 'no_intro_page' and request.resolver_match.url_name != 'setup' %}
 <div class="row justify-content-center">
    <div class="col-12 col-lg-9 col-xl-10">
-      <nav aria-label="breadcrumb" class="elsa-bundle-crumb">
-         <ol class="breadcrumb mb-3">
-            <li class="breadcrumb-item"><a href="{{ request.user.userprofile.get_absolute_url }}">Bundle Hub</a></li>
-            <li class="breadcrumb-item">
-               <a href="{% url 'build:bundle' bundle.pk %}" data-crumb="bundle"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>{{ bundle.name }}</a>
-            </li>
-         </ol>
+      <nav aria-label="Back to bundle" class="elsa-bundle-crumb">
+         <a href="{% url 'build:bundle' bundle.pk %}" data-crumb="bundle">
+            <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Back to <span class="elsa-bundle-crumb-name">{{ bundle.name }}</span>
+         </a>
       </nav>
    </div>
 </div>
 <style>
-   .elsa-bundle-crumb .breadcrumb { font-size: 0.9rem; }
-   .elsa-bundle-crumb a { color: #006d6d; text-decoration: none; font-weight: 600; }
-   .elsa-bundle-crumb a:hover { text-decoration: underline; }
+   .elsa-bundle-crumb { margin-bottom: 1rem; }
+   .elsa-bundle-crumb a { display: inline-flex; align-items: center; font-size: 0.9rem; color: #006d6d; text-decoration: none; font-weight: 600; }
+   .elsa-bundle-crumb a:hover { text-decoration: underline; color: #004f4f; }
+   .elsa-bundle-crumb-name { margin-left: 0.25em; }
 </style>
 {% endif %}

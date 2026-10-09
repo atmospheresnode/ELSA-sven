@@ -1,0 +1,503 @@
+{% comment %}
+The citation as a list of people: the inside of the citation form on the setup page
+and in the bundle page's Citation Information window, so the two cannot drift. Each
+caller writes its own <form> around it (where it posts, and how it saves in place);
+both post to build:setup_citation.
+
+Needs `citation` (build.bundle_setup.citation_rows) and `fixed_editors` in context.
+The add and remove buttons work by delegation on the document, bound once however
+many times this is included or swapped in. Adding or removing a row fires a bubbling
+"change" on the form, so a page that tracks unsaved edits sees it.
+{% endcomment %}
+<div class="elsa-citation">
+   <fieldset class="setup-fieldset">
+      <legend>Authors{% if bundle.bundle_type == 'External' %}<span class="setup-req" title="At least one is required">*</span>{% endif %}<span class="cite-count" data-count-for="author"></span></legend>
+      <p class="cite-empty" data-empty-for="author"{% if citation.author_people or citation.author_orgs %} hidden{% endif %}>No authors yet.</p>
+      <div class="setup-rows" data-rows="author">
+         {% for row in citation.author_orgs %}
+         {% include 'build/setup/_citation_rows.html' with kind='org' prefix='author_org' i=forloop.counter0 row=row who='Author' %}
+         {% endfor %}
+         {% for row in citation.author_people %}
+         {% include 'build/setup/_citation_rows.html' with kind='person' prefix='author_person' i=forloop.counter0 row=row who='Author' %}
+         {% endfor %}
+      </div>
+      <div class="setup-add-row">
+         {% if request.user.first_name or request.user.last_name %}
+         <button type="button" class="setup-btn-dashed" data-add-me
+                 data-given="{{ request.user.first_name }}" data-family="{{ request.user.last_name }}"
+                 data-orcid="{{ request.user.userprofile.orcid }}" data-affiliation="{{ request.user.userprofile.affiliation }}"><i class="bi bi-person-check me-1" aria-hidden="true"></i>Add me as an author</button>
+         {% endif %}
+         <button type="button" class="setup-btn-dashed" data-add-row="author_person"><i class="bi bi-person-plus me-1" aria-hidden="true"></i>Add a person</button>
+         <button type="button" class="setup-btn-dashed" data-add-row="author_org"><i class="bi bi-building-add me-1" aria-hidden="true"></i>Add an organization</button>
+      </div>
+      <p class="small text-muted mb-0 mt-2" data-add-me-note role="status" aria-live="polite"></p>
+   </fieldset>
+
+   <fieldset class="setup-fieldset">
+      <legend>Editors<span class="cite-count" data-count-for="editor"></span></legend>
+      <div class="setup-fixed" aria-label="Always included">
+         {% for name in fixed_editors %}<span><i class="bi bi-lock me-1" aria-hidden="true"></i>{{ name }}</span>{% endfor %}
+      </div>
+      <div class="setup-rows" data-rows="editor">
+         {% for row in citation.editor_orgs %}
+         {% include 'build/setup/_citation_rows.html' with kind='org' prefix='editor_org' i=forloop.counter0 row=row who='Editor' %}
+         {% endfor %}
+         {% for row in citation.editor_people %}
+         {% include 'build/setup/_citation_rows.html' with kind='person' prefix='editor_person' i=forloop.counter0 row=row who='Editor' %}
+         {% endfor %}
+      </div>
+      <div class="setup-add-row">
+         <button type="button" class="setup-btn-dashed" data-add-row="editor_person"><i class="bi bi-person-plus me-1" aria-hidden="true"></i>Add an editor</button>
+      </div>
+   </fieldset>
+
+   <fieldset class="setup-fieldset">
+      <legend>Details</legend>
+   <div class="setup-grid-2">
+      <div>
+         <label class="form-label" for="citation_publication_year">Publication year<span class="setup-req" title="Required">*</span></label>
+         <input type="text" inputmode="numeric" class="form-control" id="citation_publication_year" name="publication_year" value="{{ citation.publication_year }}" maxlength="4">
+      </div>
+      <div>
+         <label class="form-label" for="citation_keyword">Keywords <span class="text-muted fw-normal">(separate with semicolons)</span></label>
+         <input type="text" class="form-control" id="citation_keyword" name="keyword" value="{{ citation.keyword }}" maxlength="255" placeholder="dust storms; general circulation model">
+      </div>
+   </div>
+   <div>
+      <label class="form-label" for="citation_description">Description<span class="setup-req" title="Required">*</span></label>
+      <div class="form-text mt-0 mb-1">A sentence or two about the data. Reviewers read this first.</div>
+      <textarea class="form-control" id="citation_description" name="description" rows="3" maxlength="1000">{{ citation.description }}</textarea>
+   </div>
+   </fieldset>
+
+   {% comment %}Blank rows the add buttons copy; __i__ becomes the next free number.{% endcomment %}
+   <template data-row-template="author_person">{% include 'build/setup/_citation_rows.html' with kind='person' prefix='author_person' i='__i__' row=None who='Author' %}</template>
+   <template data-row-template="author_org">{% include 'build/setup/_citation_rows.html' with kind='org' prefix='author_org' i='__i__' row=None who='Author' %}</template>
+   <template data-row-template="editor_person">{% include 'build/setup/_citation_rows.html' with kind='person' prefix='editor_person' i='__i__' row=None who='Editor' %}</template>
+</div>
+
+<style>
+   .elsa-citation { display: grid; gap: 14px; --cite-teal: #008B8B; --cite-teal-ink: #006d6d; --cite-tint: #e6f3f3; --cite-line: #dee2e6; --cite-muted: #5f6b6b; }
+   .elsa-citation .form-label { font-size: 0.85rem; font-weight: 600; margin-bottom: 4px; }
+   .elsa-citation .setup-req { color: #dc3545; margin-left: 2px; }
+   .elsa-citation .setup-grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+   /* Sections are light grey boxes and what is in them is white, so a person, a field
+      or an Add button stands out from its surroundings. It used to be white on white
+      on white, and things were hard to find. */
+   .elsa-citation .setup-fieldset { background: #f5f7f7; border: 1px solid #e1e7e7; border-radius: 10px; padding: 12px 14px 14px; margin: 0; display: grid; gap: 10px; min-width: 0; }
+   .elsa-citation .setup-fieldset legend { float: left; width: 100%; margin: 0 0 2px; padding: 0; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #5f6b6b; }
+   .elsa-citation .setup-fieldset legend + * { clear: left; }
+   .elsa-citation .cite-count:not(:empty)::before { content: " \00b7  "; }
+   .elsa-citation .setup-fieldset .form-control { background-color: #fff; }
+   .elsa-citation [data-add-me-note]:empty { display: none; }
+   .elsa-citation .cite-empty { margin: 0; font-size: 0.88rem; color: #5f6b6b; }
+   .elsa-citation .cite-empty[hidden] { display: none; }
+   .elsa-citation .setup-rows { display: grid; gap: 8px; }
+   .elsa-citation .setup-rows:empty { display: none; }
+   .elsa-citation .setup-add-row { display: flex; flex-wrap: wrap; gap: 8px; }
+   .elsa-citation .setup-btn-dashed { border: 1px dashed var(--cite-teal); background: #fff; color: var(--cite-teal-ink); border-radius: 6px; padding: 5px 12px; font-weight: 600; font-size: 0.85rem; }
+   .elsa-citation .setup-btn-dashed:hover { background: var(--cite-tint); }
+   .elsa-citation .setup-fixed { display: flex; flex-wrap: wrap; gap: 6px; }
+   .elsa-citation .setup-fixed span { background: #fff; border: 1px solid #d3e3e3; color: #004f4f; border-radius: 999px; padding: 3px 10px; font-size: 0.8rem; font-weight: 600; }
+   .elsa-citation .setup-lookup { font-weight: 400; font-size: 0.75rem; margin-left: 4px; color: var(--cite-teal-ink); }
+
+   /* An entry: a person or organization the user has added. Shown as who it is, with
+      Edit and Remove, until it is being edited; then its fields open in place. */
+   .elsa-citation .cite-entry { border: 1px solid var(--cite-line); border-radius: 10px; background: #fff; transition: border-color 0.15s, box-shadow 0.15s; }
+   .elsa-citation .cite-entry[data-state="edit"] { border-color: var(--cite-teal); box-shadow: 0 0 0 3px rgba(0, 139, 139, 0.12); }
+   .elsa-citation .cite-view { display: flex; align-items: center; gap: 12px; padding: 10px 12px; }
+   .elsa-citation .cite-entry[data-state="edit"] .cite-view { display: none; }
+   .elsa-citation .cite-entry[data-state="view"] .cite-edit { display: none; }
+   .elsa-citation .cite-avatar { flex-shrink: 0; width: 38px; height: 38px; border-radius: 50%; background: var(--cite-tint); color: var(--cite-teal-ink); display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem; letter-spacing: 0.02em; }
+   .elsa-citation .cite-text { flex: 1; min-width: 0; display: grid; gap: 1px; }
+   .elsa-citation .cite-name { font-weight: 600; overflow-wrap: anywhere; }
+   .elsa-citation .cite-role { font-weight: 400; font-size: 0.78rem; color: var(--cite-muted); margin-left: 6px; }
+   .elsa-citation .cite-meta { font-size: 0.82rem; color: var(--cite-muted); display: flex; flex-wrap: wrap; gap: 2px 12px; overflow-wrap: anywhere; }
+   .elsa-citation .cite-meta a { color: var(--cite-teal-ink); }
+   .elsa-citation .cite-meta > span { white-space: nowrap; }
+   .elsa-citation .cite-meta a { white-space: nowrap; }
+   .elsa-citation .cite-meta .bi { margin-right: 3px; }
+   .elsa-citation .cite-add-orcid { border: 0; background: none; padding: 0; color: var(--cite-teal-ink); font-size: 0.82rem; font-weight: 600; }
+   .elsa-citation .cite-add-orcid:hover { text-decoration: underline; }
+   .elsa-citation .cite-add-orcid .bi { margin-right: 1px; }
+   .elsa-citation .cite-actions { display: inline-flex; gap: 2px; flex-shrink: 0; }
+   .elsa-citation .cite-icon { border: 0; background: none; width: 34px; height: 34px; border-radius: 8px; color: var(--cite-muted); display: inline-flex; align-items: center; justify-content: center; }
+   .elsa-citation .cite-icon:hover, .elsa-citation .cite-icon:focus-visible { background: var(--cite-tint); color: var(--cite-teal-ink); }
+   .elsa-citation .cite-icon.is-remove:hover, .elsa-citation .cite-icon.is-remove:focus-visible { background: #fdecee; color: #b02a37; }
+   .elsa-citation .cite-edit { padding: 12px; display: grid; gap: 10px; }
+   .elsa-citation .cite-edit-title { font-weight: 700; font-size: 0.85rem; color: var(--cite-teal-ink); }
+   .elsa-citation .cite-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 12px; }
+   .elsa-citation .cite-edit-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+   .elsa-citation .cite-done { background: var(--cite-teal); border: 1px solid var(--cite-teal); color: #fff; font-weight: 600; font-size: 0.85rem; padding: 4px 14px; border-radius: 6px; }
+   .elsa-citation .cite-done:hover { background: var(--cite-teal-ink); color: #fff; }
+   .elsa-citation .cite-cancel { border: 0; background: none; color: var(--cite-muted); font-size: 0.85rem; text-decoration: underline; padding: 4px 6px; }
+   .elsa-citation .cite-remove-text { margin-left: auto; border: 0; background: none; color: #b02a37; font-size: 0.85rem; padding: 4px 6px; }
+   .elsa-citation .cite-remove-text:hover { text-decoration: underline; }
+   .elsa-citation .cite-problem { font-size: 0.82rem; color: #b02a37; }
+   .elsa-citation .cite-problem:empty { display: none; }
+   /* A field the server refused is never hidden inside a closed entry. */
+   .elsa-citation .cite-entry[data-state="view"]:has(.is-invalid) .cite-view { display: none; }
+   .elsa-citation .cite-entry[data-state="view"]:has(.is-invalid) .cite-edit { display: grid; }
+   @keyframes cite-flash { from { background: #fff7d6; } to { background: #fff; } }
+   .elsa-citation .cite-entry.is-flash { animation: cite-flash 1.2s ease-out; }
+   @media (max-width: 560px) {
+      .elsa-citation .cite-fields { grid-template-columns: minmax(0, 1fr); }
+      .elsa-citation .cite-view { align-items: flex-start; gap: 10px; padding: 10px; }
+      .elsa-citation .cite-avatar { width: 32px; height: 32px; font-size: 0.75rem; }
+      .elsa-citation .cite-meta > span { white-space: normal; }
+      .elsa-citation .cite-icon { width: 30px; height: 30px; }
+   }
+   @media (prefers-reduced-motion: reduce) {
+      .elsa-citation .cite-entry { transition: none; }
+      .elsa-citation .cite-entry.is-flash { animation: none; }
+   }
+</style>
+
+<script>
+(function () {
+   'use strict';
+   if (window.elsaCitationRows) return;
+   window.elsaCitationRows = true;
+
+   function changed(form) {
+      if (form) form.dispatchEvent(new Event('change', { bubbles: true }));
+   }
+
+   function field(row, suffix) {
+      return row.querySelector('input[name$="_' + suffix + '"]');
+   }
+
+   // "Add me as an author": the signed-in user's name, ORCID iD and affiliation
+   // from their account, into the first empty person row or a new one.
+   function addMe(button) {
+      var scope = button.closest('.elsa-citation');
+      var note = scope.querySelector('[data-add-me-note]');
+      var me = button.dataset;
+      var people = Array.prototype.filter.call(
+         scope.querySelectorAll('[data-rows="author"] [data-row]'),
+         function (row) { return field(row, 'given_name'); });
+      var same = function (a, b) { return (a || '').trim().toLowerCase() === (b || '').trim().toLowerCase(); };
+
+      var listed = people.filter(function (row) {
+         var orcid = field(row, 'orcid').value.trim();
+         return (me.orcid && orcid && same(orcid, me.orcid)) ||
+                (same(field(row, 'given_name').value, me.given) && same(field(row, 'family_name').value, me.family));
+      })[0];
+      if (listed) {
+         field(listed, 'given_name').focus();
+         if (note) note.textContent = 'You are already listed as an author.';
+         return;
+      }
+
+      var target = people.filter(function (row) {
+         return !field(row, 'given_name').value.trim() && !field(row, 'family_name').value.trim() && !field(row, 'orcid').value.trim();
+      })[0];
+      if (!target) {
+         scope.querySelector('[data-add-row="author_person"]').click();
+         target = document.activeElement && document.activeElement.closest('[data-row]');
+      }
+      if (!target) return;
+
+      field(target, 'given_name').value = me.given || '';
+      field(target, 'family_name').value = me.family || '';
+      if (me.orcid) field(target, 'orcid').value = me.orcid;
+      if (me.affiliation && !field(target, 'affiliation').value.trim()) field(target, 'affiliation').value = me.affiliation;
+      field(target, 'given_name').focus();
+      if (note) {
+         note.textContent = (me.orcid ? 'Added you as an author.' :
+            'Added you as an author. Add your ORCID iD on your Account page to fill that in too.');
+      }
+      changed(button.closest('form'));
+   }
+
+   // -- entries -----------------------------------------------------------------------
+   function isOrg(row) { return !!row.querySelector('input[name$="_name"]:not([name$="_given_name"]):not([name$="_family_name"])'); }
+   function value(row, suffix) { var f = field(row, suffix); return f ? f.value.trim() : ''; }
+   function complete(row) {
+      return isOrg(row) ? !!value(row, 'name') : !!(value(row, 'given_name') && value(row, 'family_name'));
+   }
+   function snapshot(row) {
+      var values = {};
+      row.querySelectorAll('input[name]').forEach(function (input) { values[input.name] = input.value; });
+      return values;
+   }
+   function initials(row) {
+      if (isOrg(row)) return '';
+      return (value(row, 'given_name').charAt(0) + value(row, 'family_name').charAt(0)).toUpperCase();
+   }
+   // The closed entry is drawn from the fields, so it is always what will be saved.
+   function render(row) {
+      var view = row.querySelector('.cite-view');
+      if (!view) return;
+      var avatar = view.querySelector('.cite-avatar');
+      if (isOrg(row)) {
+         avatar.innerHTML = '<i class="bi bi-building" aria-hidden="true"></i>';
+         view.querySelector('[data-cite-name]').textContent = value(row, 'name');
+      } else {
+         avatar.textContent = initials(row);
+         view.querySelector('[data-cite-name]').textContent = value(row, 'given_name') + ' ' + value(row, 'family_name');
+      }
+      var meta = view.querySelector('.cite-meta');
+      meta.innerHTML = '';
+      function add(icon, text, href) {
+         var span = document.createElement('span');
+         span.innerHTML = '<i class="bi ' + icon + '" aria-hidden="true"></i>';
+         if (href) {
+            var a = document.createElement('a');
+            a.href = href; a.target = '_blank'; a.rel = 'noopener'; a.textContent = text;
+            span.appendChild(a);
+         } else {
+            span.appendChild(document.createTextNode(text));
+         }
+         meta.appendChild(span);
+      }
+      if (isOrg(row)) {
+         if (value(row, 'rorid')) add('bi-link-45deg', 'ROR ' + value(row, 'rorid'), /^https?:/.test(value(row, 'rorid')) ? value(row, 'rorid') : 'https://ror.org/' + value(row, 'rorid'));
+      } else {
+         if (value(row, 'affiliation')) add('bi-bank', value(row, 'affiliation'));
+         if (value(row, 'orcid')) {
+            add('bi-person-badge', value(row, 'orcid'), 'https://orcid.org/' + value(row, 'orcid'));
+         } else {
+            // The iD is what lets a citation credit the right person, so its absence
+            // is a shortcut to adding it rather than a note.
+            var shortcut = document.createElement('button');
+            shortcut.type = 'button';
+            shortcut.className = 'cite-add-orcid';
+            shortcut.setAttribute('data-cite-edit', 'orcid');
+            shortcut.innerHTML = '<i class="bi bi-plus" aria-hidden="true"></i>Add ORCID iD';
+            meta.appendChild(shortcut);
+         }
+      }
+      var name = view.querySelector('[data-cite-name]').textContent;
+      view.querySelectorAll('.cite-icon[data-cite-edit]').forEach(function (b) { b.setAttribute('aria-label', 'Edit ' + name); });
+      view.querySelectorAll('[data-remove-row]').forEach(function (b) { b.setAttribute('aria-label', 'Remove ' + name); });
+   }
+   function open(row, focusOn) {
+      row._before = snapshot(row);
+      row.setAttribute('data-state', 'edit');
+      var first = (focusOn && field(row, focusOn)) || row.querySelector('.cite-edit input:not([type="hidden"])');
+      if (first) first.focus();
+   }
+   // The same rule the server applies (bundle_setup.clean_orcid), so Done does not
+   // close an entry the save would only refuse.
+   // Written the standard way (0000-0002-1825-0097) however it was typed: the link,
+   // the sixteen digits without dashes, spaces, a lower-case x. bundle_setup.tidy_orcid
+   // does the same on the server.
+   function tidyOrcid(raw) {
+      var value = (raw || '').trim().replace(/^(https?:\/\/)?(www\.)?orcid\.org\//i, '').replace(/^orcid:?\s*/i, '').replace(/\/$/, '');
+      var characters = value.replace(/[^0-9Xx]/g, '').toUpperCase();
+      return characters.length === 16 ? characters.match(/.{4}/g).join('-') : characters;
+   }
+   // The same rule the server applies (bundle_setup.clean_orcid), so Done does not
+   // close an entry the save would only refuse.
+   function orcidProblem(raw) {
+      if (!(raw || '').trim()) return '';
+      var digits = tidyOrcid(raw).replace(/-/g, '');
+      if (digits.length !== 16 || !/^\d{15}[\dX]$/.test(digits)) {
+         return 'An ORCID iD has 16 digits (the last one can be an X), and this has ' + (digits.length || 'none') +
+            '. You can type it with or without the dashes, or paste the link from orcid.org.';
+      }
+      var total = 0;
+      for (var i = 0; i < 15; i++) total = (total + parseInt(digits.charAt(i), 10)) * 2;
+      var check = (12 - total % 11) % 11;
+      if (digits.charAt(15) !== (check === 10 ? 'X' : String(check))) {
+         return 'This ORCID iD has a typo somewhere: its last digit does not match the rest. Please check it against orcid.org.';
+      }
+      return '';
+   }
+   // What the server said about a field, once the field has been changed, is out of
+   // date. Left in place it also held a closed entry open (its fields stay visible
+   // while one is marked invalid), so Done looked as if it did nothing.
+   function clearMark(input) {
+      input.classList.remove('is-invalid');
+      input.removeAttribute('aria-invalid');
+      input.removeAttribute('data-inplace-invalid');
+      var next = input.nextElementSibling;
+      while (next && (next.hasAttribute('data-setup-error') || next.hasAttribute('data-inplace-error'))) {
+         var gone = next;
+         next = next.nextElementSibling;
+         gone.remove();
+      }
+   }
+   function close(row) {
+      var problem = row.querySelector('.cite-problem');
+      if (!complete(row)) {
+         if (problem) problem.textContent = isOrg(row) ? 'Enter the organization\'s name, or remove it.' : 'Enter a given and a family name, or remove this person.';
+         var missing = Array.prototype.filter.call(row.querySelectorAll('.cite-edit input:not([type="hidden"])'), function (i) { return !i.value.trim(); })[0];
+         if (missing) missing.focus();
+         return false;
+      }
+      var orcid = field(row, 'orcid');
+      if (orcid && orcid.value.trim()) orcid.value = tidyOrcid(orcid.value);
+      var wrong = orcid ? orcidProblem(orcid.value) : '';
+      if (wrong) {
+         if (problem) problem.textContent = wrong;
+         if (row.getAttribute('data-state') !== 'edit') row.setAttribute('data-state', 'edit');
+         orcid.focus();
+         return false;
+      }
+      if (problem) problem.textContent = '';
+      row.querySelectorAll('.is-invalid').forEach(clearMark);
+      render(row);
+      row.setAttribute('data-state', 'view');
+      var edit = row.querySelector('.cite-icon[data-cite-edit]');
+      if (edit) edit.focus();
+      return true;
+   }
+   function flash(row) {
+      row.classList.remove('is-flash');
+      void row.offsetWidth;
+      row.classList.add('is-flash');
+   }
+   // "Add me as an author" is only offered while the signed-in user is not already an
+   // author: offering it and then saying "You are already listed" was a dead end.
+   // Matched as the button itself matches: the same ORCID iD, or the same name.
+   function refreshAddMe(scope) {
+      var button = scope.querySelector('[data-add-me]');
+      if (!button) return;
+      var me = button.dataset;
+      var same = function (a, b) { return (a || '').trim().toLowerCase() === (b || '').trim().toLowerCase(); };
+      var listed = Array.prototype.some.call(scope.querySelectorAll('[data-rows="author"] [data-row]'), function (row) {
+         if (isOrg(row)) return false;
+         var orcid = value(row, 'orcid');
+         return (me.orcid && orcid && same(tidyOrcid(orcid), tidyOrcid(me.orcid))) ||
+                (same(value(row, 'given_name'), me.given) && same(value(row, 'family_name'), me.family));
+      });
+      button.hidden = listed;
+      // The note is about the user being on the list ("Added you as an author", "You
+      // are already listed"); once they are not, it is no longer true and goes.
+      if (!listed) {
+         var note = scope.querySelector('[data-add-me-note]');
+         if (note) note.textContent = '';
+      }
+   }
+   // "Authors - 3": how many are listed, kept up to date as the list changes.
+   function refreshCounts(scope) {
+      scope.querySelectorAll('[data-count-for]').forEach(function (count) {
+         var n = scope.querySelectorAll('[data-rows="' + count.getAttribute('data-count-for') + '"] [data-row]').length;
+         count.textContent = n ? String(n) : '';
+      });
+      scope.querySelectorAll('[data-empty-for]').forEach(function (empty) {
+         empty.hidden = !!scope.querySelector('[data-rows="' + empty.getAttribute('data-empty-for') + '"] [data-row]');
+      });
+   }
+   function setUp() {
+      document.querySelectorAll('.elsa-citation [data-row]').forEach(function (row) {
+         if (row.getAttribute('data-state') === 'view') render(row);
+      });
+      document.querySelectorAll('.elsa-citation').forEach(function (scope) { refreshAddMe(scope); refreshCounts(scope); });
+   }
+   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', setUp);
+   else setUp();
+   // The walkthrough swaps in fresh panels after a save, without running their scripts.
+   document.addEventListener('elsa:setup-refreshed', setUp);
+
+   // -- ORCID iD -----------------------------------------------------------------------------
+   // Leaving the box writes the iD the standard way, so the person sees what will be
+   // saved; the server tidies it the same way and checks the check digit.
+   document.addEventListener('change', function (e) {
+      var input = e.target;
+      if (!input.matches || !input.matches('.elsa-citation input[name$="_orcid"]')) return;
+      if (input.value.trim()) input.value = tidyOrcid(input.value);
+   });
+
+   ['input', 'change', 'click'].forEach(function (type) {
+      document.addEventListener(type, function (e) {
+         var scope = e.target.closest && e.target.closest('.elsa-citation');
+         // After the click handlers below have run, so it sees the list they leave.
+         if (scope) setTimeout(function () { refreshAddMe(scope); refreshCounts(scope); }, 0);
+      });
+   });
+
+   document.addEventListener('input', function (e) {
+      var input = e.target;
+      if (input.classList && input.classList.contains('is-invalid') && input.closest('.elsa-citation [data-row]')) clearMark(input);
+   });
+
+   // Enter inside an open entry finishes it rather than saving the whole form.
+   document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter') return;
+      var row = e.target.closest && e.target.closest('.elsa-citation .cite-entry[data-state="edit"]');
+      if (!row || e.target.tagName !== 'INPUT') return;
+      e.preventDefault();
+      close(row);
+   });
+
+   document.addEventListener('click', function (e) {
+      var me = e.target.closest && e.target.closest('.elsa-citation [data-add-me]');
+      if (me) {
+         addMe(me);
+         var mine = document.activeElement && document.activeElement.closest('.elsa-citation [data-row]');
+         if (mine && complete(mine)) { close(mine); flash(mine); }
+         return;
+      }
+      var add = e.target.closest && e.target.closest('.elsa-citation [data-add-row]');
+      if (add) {
+         var scope = add.closest('.elsa-citation');
+         var kind = add.getAttribute('data-add-row');
+         var template = scope.querySelector('template[data-row-template="' + kind + '"]');
+         var box = scope.querySelector('[data-rows="' + kind.split('_')[0] + '"]');
+         // Only one entry open at a time: a finished one closes, an empty one goes.
+         scope.querySelectorAll('.cite-entry[data-state="edit"]').forEach(function (other) {
+            if (complete(other)) close(other);
+         });
+         var used = Array.prototype.map.call(scope.querySelectorAll('[name^="' + kind + '_"]'), function (input) {
+            var m = input.name.match(/_(\d+)_/);
+            return m ? parseInt(m[1], 10) : -1;
+         });
+         var n = used.length ? Math.max.apply(null, used) + 1 : 0;
+         var holder = document.createElement('div');
+         holder.innerHTML = template.innerHTML.replace(/__i__/g, String(n));
+         var row = holder.firstElementChild;
+         row.setAttribute('data-new', '');
+         // Organizations above people, the order the label lists them in.
+         var firstPerson = kind.indexOf('_org') > 0 ? box.querySelector('[name*="_person_"]') : null;
+         box.insertBefore(row, firstPerson ? firstPerson.closest('[data-row]') : null);
+         open(row);
+         changed(add.closest('form'));
+         return;
+      }
+      var editing = e.target.closest && e.target.closest('.elsa-citation [data-cite-edit]');
+      if (editing) { open(editing.closest('[data-row]'), editing.getAttribute('data-cite-edit')); return; }
+      var done = e.target.closest && e.target.closest('.elsa-citation [data-cite-done]');
+      if (done) {
+         var finished = done.closest('[data-row]');
+         if (close(finished)) { finished.removeAttribute('data-new'); changed(finished.closest('form')); }
+         return;
+      }
+      var cancel = e.target.closest && e.target.closest('.elsa-citation [data-cite-cancel]');
+      if (cancel) {
+         var row2 = cancel.closest('[data-row]');
+         if (row2.hasAttribute('data-new')) {
+            var scope2 = row2.closest('.elsa-citation');
+            var kind2 = row2.closest('[data-rows]').getAttribute('data-rows');
+            row2.remove();
+            var again = scope2.querySelector('[data-add-row^="' + kind2 + '_"]');
+            if (again) again.focus();
+         } else {
+            var before = row2._before || {};
+            row2.querySelectorAll('input[name]').forEach(function (input) {
+               if (input.name in before) input.value = before[input.name];
+            });
+            row2.querySelector('.cite-problem').textContent = '';
+            row2.querySelectorAll('.is-invalid').forEach(clearMark);
+            render(row2);
+            row2.setAttribute('data-state', 'view');
+            var edit2 = row2.querySelector('.cite-icon[data-cite-edit]');
+            if (edit2) edit2.focus();
+         }
+         return;
+      }
+      var remove = e.target.closest && e.target.closest('.elsa-citation [data-remove-row]');
+      if (remove) {
+         var scopeR = remove.closest('.elsa-citation');
+         var form = remove.closest('form');
+         var kindR = remove.closest('[data-rows]').getAttribute('data-rows');
+         remove.closest('[data-row]').remove();
+         var next = scopeR.querySelector('[data-add-row^="' + kindR + '_"]');
+         if (next) next.focus();
+         changed(form);
+      }
+   });
+})();
+</script>
