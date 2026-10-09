@@ -629,12 +629,12 @@ class DataForm(forms.ModelForm):
 
     class Meta(object):
         model = Data
-        # exclude = ('bundle',)
-        # fields = ['name', 'processing_level', 'data_type', 'header', 'collection']
+        exclude = ('bundle',)
+        fields = ['name', 'processing_level', 'data_type', 'header', 'collection']
         # widgets = {
         #     'collection': forms.HiddenInput(),  # This makes the field hidden
         # }
-        exclude = ('bundle','collection')
+        # exclude = ('bundle','collection')
         #exclude = ('bundle','data_enum',)
 
     def __init__(self, *args, **kwargs):
