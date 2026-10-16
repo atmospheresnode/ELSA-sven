@@ -242,6 +242,15 @@ class MediaObject(object):
 PDS_NS = "{http://pds.nasa.gov/pds4/pds/v1}"
 
 
+def inventory_path_for(label_path):
+    """Where a collection's inventory table lives: beside its label, same name + '_inventory'.
+
+    collection_mgcm-tp-avg_document.xml -> collection_mgcm-tp-avg_document_inventory.csv,
+    the naming the ATM node asked for.
+    """
+    return os.path.splitext(label_path)[0] + '_inventory.csv'
+
+
 def write_collection_inventory(label_path, member_lidvids):
     """Write a collection's inventory table and point its label at it.
 
@@ -266,7 +275,7 @@ def write_collection_inventory(label_path, member_lidvids):
         print('write_collection_inventory: no label at {} yet, skipping.'.format(label_path))
         return None
 
-    inventory_path = os.path.splitext(label_path)[0] + '.csv'
+    inventory_path = inventory_path_for(label_path)
 
     # PDS DSV 1, exactly as the label declares it: comma between fields, CRLF between
     # records, and 'P' for a product being archived here for the first time.
@@ -301,6 +310,14 @@ def write_collection_inventory(label_path, member_lidvids):
             _set_text(Record_Delimited, 'maximum_record_length', str(longest))
 
     close_label(label_path, label_root, tree)
+
+    # Inventories used to be written as collection_<...>.csv. Once the label names the
+    # new file, the old one is a file no label describes, so take it out. Only after
+    # the label is saved: if anything above failed, the label still names the old file.
+    legacy_path = os.path.splitext(label_path)[0] + '.csv'
+    if legacy_path != inventory_path and os.path.exists(legacy_path):
+        os.remove(legacy_path)
+
     return inventory_path
 
 

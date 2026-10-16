@@ -325,7 +325,8 @@ class UserAddedCollectionInventoryTests(CollectionTypeE2ETests):
         self.assertTrue(fields['file_name'],
                         'the label promises an inventory it does not name; validate '
                         'abandons the whole product for want of a file name')
-        self.assertTrue(fields['file_name'].endswith('.csv'), fields['file_name'])
+        self.assertEqual(fields['file_name'], os.path.basename(
+            os.path.splitext(collection.label())[0] + '_inventory.csv'))
 
     def test_the_inventory_file_is_actually_written(self):
         bundle = self.build_bundle('inv file exists', 'External')

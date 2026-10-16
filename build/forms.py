@@ -2057,11 +2057,34 @@ class DictionaryForm(forms.Form):
 #         fields = ['title', 'file']
 
 
+# Several files in one input.  Django 4.2.1+ refuses 'multiple' on a plain
+# ClearableFileInput (CVE-2023-31047: only the last file was validated), so
+# this is Django's documented pattern: every file goes through FileField.clean.
+class MultipleFileInput(forms.ClearableFileInput):
+    allow_multiple_selected = True
+
+
+class MultipleFileField(forms.FileField):
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault('widget', MultipleFileInput())
+        super(MultipleFileField, self).__init__(*args, **kwargs)
+
+    def clean(self, data, initial=None):
+        single = super(MultipleFileField, self).clean
+        if isinstance(data, (list, tuple)):
+            if not data:
+                return single(None, initial)
+            return [single(item, initial) for item in data]
+        return single(data, initial)
+
+
 # To handle multiple NetCDF files
 class MultipleNetCDFUploadForm(forms.Form):
     collection = forms.CharField(widget=forms.HiddenInput)
-    netcdf_files = forms.FileField(
-        widget=forms.ClearableFileInput(attrs={
+    netcdf_files = MultipleFileField(
+        widget=MultipleFileInput(attrs={
+            # Explicit too, so the picker allows several files on Django 4.2.0,
+            # which predates allow_multiple_selected; clean_netcdf_files reads them all.
             'multiple': True,
             'class': 'form-control'
         }),

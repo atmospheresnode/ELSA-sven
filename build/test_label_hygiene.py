@@ -278,7 +278,7 @@ class InventoryTests(SimpleTestCase):
 
     def test_rows_end_with_crlf_as_the_label_declares(self):
         write_collection_inventory(self.label, ['urn:nasa:pds:a:b:c::1.0'])
-        with open(os.path.join(self.workdir, 'collection_demo_document.csv'), 'rb') as table:
+        with open(os.path.join(self.workdir, 'collection_demo_document_inventory.csv'), 'rb') as table:
             self.assertTrue(table.read().endswith(b'\r\n'))
 
     def test_label_points_at_the_file_actually_written(self):
@@ -327,8 +327,27 @@ class InventoryTests(SimpleTestCase):
         write_collection_inventory(self.label, ['urn:nasa:pds:a:b:two::1.0'])
         _, inventory = self.inventory_fields()
         self.assertEqual(inventory.find('pds:records', NS).text, '1')
-        with open(os.path.join(self.workdir, 'collection_demo_document.csv')) as table:
+        with open(os.path.join(self.workdir, 'collection_demo_document_inventory.csv')) as table:
             self.assertIn('two', table.read())
+
+    def test_inventory_is_named_after_the_collection_with_inventory_appended(self):
+        """The ATM node's naming: collection_<x>.xml -> collection_<x>_inventory.csv."""
+        path = write_collection_inventory(self.label, ['urn:nasa:pds:a:b:c::1.0'])
+        self.assertEqual(os.path.basename(path), 'collection_demo_document_inventory.csv')
+        file_element, _ = self.inventory_fields()
+        self.assertEqual(file_element.find('pds:file_name', NS).text,
+                         'collection_demo_document_inventory.csv')
+
+    def test_the_old_style_inventory_is_replaced_not_left_beside_it(self):
+        """A bundle built before the rename has collection_<x>.csv. Left in place it is
+        a file no label describes."""
+        legacy = os.path.join(self.workdir, 'collection_demo_document.csv')
+        with open(legacy, 'w') as table:
+            table.write('P,urn:nasa:pds:a:b:old::1.0\r\n')
+        write_collection_inventory(self.label, ['urn:nasa:pds:a:b:c::1.0'])
+        self.assertFalse(os.path.exists(legacy))
+        self.assertTrue(os.path.exists(
+            os.path.join(self.workdir, 'collection_demo_document_inventory.csv')))
 
     def test_empty_collection_reports_zero_rather_than_inventing_a_count(self):
         """A zero-record inventory does not validate, and that is the honest answer.
