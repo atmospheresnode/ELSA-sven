@@ -119,9 +119,43 @@ renders per request, so the script below owns the wiring for both.
       border-color: var(--eft-accent);
       color: #fff;
    }
+
+   /* Collection labels open with two tabs in the viewer: the label, and the inventory table it
+      names (a PDS4 collection product is the two together). The same underline tabs as the
+      Collections card, in the bundle's accent. Outside .elsa-file-tree, so the accent is repeated. */
+   .eiv-tabs {
+      --bs-nav-link-color: #6c757d;
+      --bs-nav-link-hover-color: #008080;
+      --bs-nav-underline-link-active-color: #008080;
+      --bs-nav-underline-gap: 1.25rem;
+   }
+   .external-theme .eiv-tabs {
+      --bs-nav-link-hover-color: #0E76BD;
+      --bs-nav-underline-link-active-color: #0E76BD;
+   }
+   .eiv-tabs .nav-link { font-size: .875rem; padding-top: 0; }
+   .eiv-tabs .eiv-count { font-weight: 400; color: #6c757d; }
+
+   /* The Inventory tab's two columns. Same monospace and size as the XML in the Label tab, so
+      the two tabs read as one file viewer. */
+   .eiv-table-wrap { max-height: 800px; overflow: auto; }
+   .eiv-table th {
+      font-size: .75rem;
+      font-weight: 600;
+      color: #6c757d;
+      white-space: nowrap;
+      position: sticky;
+      top: 0;
+      background: #fff;
+   }
+   .eiv-table td { font-family: var(--bs-font-monospace); font-size: .875em; }
+   .eiv-table .eiv-status { width: 5rem; }
+   .eiv-table [title] { cursor: help; }
+   .eiv-table .eiv-lidvid { overflow-wrap: anywhere; }
 </style>
 
 <div class="elsa-file-tree" data-label-url="{% url 'build:label_content' bundle.pk %}"
+   data-inventory-url="{% url 'build:inventory_content' bundle.pk %}"
    data-bundle-name="{{ bundle.name_directory_case }}">
 
    {% comment %}A collection whose directory exists but holds no labels yet still belongs in the
@@ -189,7 +223,8 @@ renders per request, so the script below owns the wiring for both.
                   {% for label in folder.labels %}
                   <button type="button" class="list-group-item list-group-item-action py-2 eft-item file-button"
                      data-path="{{ label.path }}" data-filename="{{ label.name }}" data-folder="{{ folder.name }}"
-                     data-kind="{{ label.kind }}"{% if label.netcdf_id %} data-netcdf-id="{{ label.netcdf_id }}"
+                     data-kind="{{ label.kind }}"{% if label.inventory %} data-inventory-path="{{ label.inventory.path }}"
+                     data-inventory-name="{{ label.inventory.name }}" data-inventory-count="{{ label.inventory.count }}"{% endif %}{% if label.netcdf_id %} data-netcdf-id="{{ label.netcdf_id }}"
                      data-ama-url="{% url 'build:netcdf_ama' pk_bundle=bundle.id pk_netcdf=label.netcdf_id %}"{% endif %}>
                      {% comment %}Colour is spent on structure only (the labels that hold other
                      things) and on the status dot. Everything else stays muted.{% endcomment %}
@@ -207,6 +242,10 @@ renders per request, so the script below owns the wiring for both.
                         <span class="small text-muted">
                            describes <span class="eft-name">{{ label.describes }}</span>
                         </span>
+                        {% elif label.inventory %}
+                        {% comment %}The only hint in the tree that the label has an Inventory tab
+                        behind it, so it costs no row of its own.{% endcomment %}
+                        <span class="small text-muted">{{ label.kind_label }} &middot; inventory of {{ label.inventory.count }}</span>
                         {% else %}
                         <span class="small text-muted">{{ label.kind_label }}</span>
                         {% endif %}
@@ -276,6 +315,7 @@ renders per request, so the script below owns the wiring for both.
                         title="{% if label.ama_filled %}{{ label.ama_filled }} of {{ label.ama_total }} AMA fields are filled in.{% else %}No AMA metadata yet.{% endif %} They are all optional, so this label is valid PDS4 as it stands and nothing is broken. Open it to describe more of the model run behind the data."></i>
                      {% endif %}
                   </button>
+
                   {% endfor %}
                </div>
                {% else %}
@@ -313,7 +353,7 @@ renders per request, so the script below owns the wiring for both.
    // HTML source and made the view parse every label on every page load.
    //
    // Deferred to DOMContentLoaded: this script is parsed inside the Files card, which sits above
-   // the XML Viewer card in both page variants, so #fileName and #fileContent do not exist yet at
+   // the File Viewer card in both page variants, so #fileName and #fileContent do not exist yet at
    // parse time.
    (function () {
       function initFileTree() {
@@ -335,6 +375,117 @@ renders per request, so the script below owns the wiring for both.
       var cache = {};
       var currentPath = null;
 
+      // The tab strip, the note under the content and the Download button are made here rather
+      // than in bundle.html, which carries two copies of the viewer (Archive and External).
+      var inventoryUrl = tree.getAttribute('data-inventory-url');
+      var invCache = {};
+      var preEl = contentEl.closest('pre') || contentEl;
+      var openButton = null;   // the tree row whose label is in the viewer
+      var activeTab = 'label';
+      // The tab last chosen, kept while moving between collection labels so comparing their
+      // inventories does not take a second click on each. Labels without tabs leave it alone.
+      var preferredTab = 'label';
+
+      function el(tag, className, text) {
+         var node = document.createElement(tag);
+         if (className) node.className = className;
+         if (text !== undefined) node.textContent = text;
+         return node;
+      }
+
+      var tabs = el('ul', 'nav nav-underline eiv-tabs mb-2 d-none');
+      tabs.setAttribute('role', 'tablist');
+      function makeTab(key, text) {
+         var item = el('li', 'nav-item');
+         item.setAttribute('role', 'presentation');
+         var tab = el('button', 'nav-link', text);
+         tab.type = 'button';
+         tab.setAttribute('role', 'tab');
+         tab.setAttribute('data-tab', key);
+         item.appendChild(tab);
+         tabs.appendChild(item);
+         return tab;
+      }
+      var labelTab = makeTab('label', 'Label');
+      var inventoryTab = makeTab('inventory', 'Inventory');
+      var inventoryCount = el('span', 'eiv-count ms-1');
+      inventoryTab.appendChild(inventoryCount);
+      preEl.parentNode.insertBefore(tabs, preEl);
+
+      // The Inventory tab shows the CSV as its two columns. Copy and Download still give the
+      // file itself.
+      var tableWrap = el('div', 'table-responsive eiv-table-wrap d-none');
+      preEl.parentNode.insertBefore(tableWrap, preEl.nextSibling);
+
+      var note = el('p', 'small text-muted mb-0 mt-2 d-none');
+      preEl.parentNode.insertBefore(note, tableWrap.nextSibling);
+
+      // PDS4 member status, as the collection label's own field description puts it.
+      var STATUS_HELP = {
+         P: 'P = primary: archived here for the first time.',
+         S: 'S = secondary: archived elsewhere in PDS and only referenced here.'
+      };
+
+      function inventoryTable(content) {
+         var table = el('table', 'table table-sm align-middle mb-0 eiv-table');
+         var head = el('thead');
+         var headRow = el('tr');
+         [['Status', 'eiv-status'], ['Product (LID::VID)', '']].forEach(function (column) {
+            var th = el('th', column[1], column[0]);
+            th.scope = 'col';
+            headRow.appendChild(th);
+         });
+         headRow.firstChild.title = STATUS_HELP.P + ' ' + STATUS_HELP.S;
+         head.appendChild(headRow);
+         table.appendChild(head);
+         var body = el('tbody');
+         content.split(/\r?\n/).forEach(function (line) {
+            if (!line.trim()) return;
+            var comma = line.indexOf(',');
+            var row = el('tr');
+            var status = comma === -1 ? '' : line.slice(0, comma).trim();
+            var statusCell = el('td', 'eiv-status', status);
+            if (STATUS_HELP[status]) statusCell.title = STATUS_HELP[status];
+            row.appendChild(statusCell);
+            row.appendChild(el('td', 'eiv-lidvid', comma === -1 ? line : line.slice(comma + 1)));
+            body.appendChild(row);
+         });
+         table.appendChild(body);
+         return table;
+      }
+
+      var downloadBtn = null;
+      if (copyBtn) {
+         downloadBtn = el('a', 'btn btn-sm btn-outline-secondary flex-shrink-0 ms-auto d-none');
+         // Icon only on a phone, where the word would squeeze the file name out of the row. The
+         // ms-auto keeps it beside Copy in the Archive toolbar, which spaces its items apart.
+         downloadBtn.innerHTML = '<i class="bi bi-download"></i><span class="ms-1 d-none d-sm-inline">Download</span>';
+         downloadBtn.setAttribute('aria-label', 'Download');
+         copyBtn.parentNode.insertBefore(downloadBtn, copyBtn);
+      }
+
+      // What Copy and Download act on: the file in the open tab, or nothing while it loads.
+      function setActions(kind, href) {
+         if (copyBtn) {
+            copyBtn.innerHTML = '<i class="bi bi-clipboard me-1"></i>' + (kind === 'csv' ? 'Copy CSV' : 'Copy XML');
+            copyBtn.disabled = !kind;
+         }
+         if (downloadBtn) {
+            downloadBtn.classList.toggle('d-none', !kind);
+            if (href) downloadBtn.href = href;
+            downloadBtn.title = kind === 'csv' ? 'Download this inventory' : 'Download this label';
+         }
+      }
+
+      function selectTab(key) {
+         activeTab = key;
+         [labelTab, inventoryTab].forEach(function (tab) {
+            var on = tab.getAttribute('data-tab') === key;
+            tab.classList.toggle('active', on);
+            tab.setAttribute('aria-selected', on ? 'true' : 'false');
+         });
+      }
+
       function setBreadcrumb(folder, filename) {
          if (!crumbEl) return;
          var parts = [bundleName];
@@ -344,6 +495,8 @@ renders per request, so the script below owns the wiring for both.
       }
 
       function showFileContent(filename, content) {
+         preEl.classList.remove('d-none');
+         tableWrap.classList.add('d-none');
          nameEl.textContent = filename;
          contentEl.textContent = content;
       }
@@ -385,15 +538,28 @@ renders per request, so the script below owns the wiring for both.
             }
          }
 
+         // Collection labels get the Inventory tab; every other label shows no tabs at all.
+         openButton = button;
+         selectTab('label');
+         note.classList.add('d-none');
+         var inventoryPath = button.getAttribute('data-inventory-path');
+         tabs.classList.toggle('d-none', !inventoryPath);
+         if (inventoryPath) inventoryCount.textContent = button.getAttribute('data-inventory-count');
+         if (inventoryPath && preferredTab === 'inventory') {
+            showInventory();
+            return;
+         }
+         var labelDownload = labelUrl + '?path=' + encodeURIComponent(path) + '&download=1';
+
          if (cache[path] !== undefined) {
             currentPath = path;
             showFileContent(filename, cache[path]);
-            if (copyBtn) copyBtn.disabled = false;
+            setActions('xml', labelDownload);
             return;
          }
 
          showFileContent(filename, 'Loading...');
-         if (copyBtn) copyBtn.disabled = true;
+         setActions(null);
 
          fetch(labelUrl + '?path=' + encodeURIComponent(path), {
             headers: { 'X-Requested-With': 'XMLHttpRequest' },
@@ -405,7 +571,10 @@ renders per request, so the script below owns the wiring for both.
                });
             })
             .then(function (result) {
+               // Something else was opened, or the Inventory tab chosen, while this loaded.
+               var stillWanted = openButton === button && activeTab === 'label';
                if (!result.ok || !result.data || result.data.error) {
+                  if (!stillWanted) return;
                   var message = (result.data && result.data.error)
                      ? result.data.error
                      : 'This label could not be loaded.';
@@ -415,14 +584,93 @@ renders per request, so the script below owns the wiring for both.
                // Only successful reads are cached, so a transient failure can be retried by
                // clicking the same label again.
                cache[path] = result.data.content;
+               if (!stillWanted) return;
                currentPath = path;
                showFileContent(filename, result.data.content);
-               if (copyBtn) copyBtn.disabled = false;
+               setActions('xml', labelDownload);
             })
             .catch(function () {
+               if (openButton !== button || activeTab !== 'label') return;
                showFileContent(filename, 'This label could not be loaded. Check your connection and try again.');
             });
       }
+
+      // The Inventory tab: the CSV exactly as it is on disk, in the same block as the XML.
+      function showInventory() {
+         var button = openButton;
+         var path = button && button.getAttribute('data-inventory-path');
+         if (!path) return;
+         selectTab('inventory');
+         currentPath = null;
+         setActions(null);
+         // The heading names the file on screen, which is the one Copy and Download act on.
+         var inventoryName = button.getAttribute('data-inventory-name');
+         nameEl.textContent = inventoryName;
+         setBreadcrumb(button.getAttribute('data-folder') || '', inventoryName);
+
+         function render(data) {
+            if (openButton !== button || activeTab !== 'inventory') return;
+            preEl.classList.add('d-none');
+            contentEl.textContent = '';
+            tableWrap.textContent = '';
+            if (data.count) {
+               tableWrap.appendChild(inventoryTable(data.content));
+               tableWrap.classList.remove('d-none');
+               note.textContent = 'Updated by ELSA whenever products are added to or removed from this collection.';
+            } else {
+               tableWrap.classList.add('d-none');
+               note.textContent = 'No products yet. PDS needs at least one before this collection will validate.';
+            }
+            note.classList.remove('d-none');
+            inventoryCount.textContent = data.count;
+            cache[path] = data.content;
+            currentPath = path;
+            setActions('csv', data.download_url);
+         }
+
+         if (invCache[path] !== undefined) {
+            render(invCache[path]);
+            return;
+         }
+
+         preEl.classList.remove('d-none');
+         tableWrap.classList.add('d-none');
+         contentEl.textContent = 'Loading...';
+         note.classList.add('d-none');
+
+         fetch(inventoryUrl + '?path=' + encodeURIComponent(path), {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            credentials: 'same-origin'
+         })
+            .then(function (response) {
+               return response.json().then(function (data) {
+                  return { ok: response.ok, data: data };
+               });
+            })
+            .then(function (result) {
+               if (!result.ok || !result.data || result.data.error) {
+                  if (openButton !== button || activeTab !== 'inventory') return;
+                  contentEl.textContent = (result.data && result.data.error)
+                     ? result.data.error : 'This inventory could not be loaded.';
+                  return;
+               }
+               invCache[path] = result.data;
+               render(result.data);
+            })
+            .catch(function () {
+               if (openButton !== button || activeTab !== 'inventory') return;
+               contentEl.textContent = 'This inventory could not be loaded. Check your connection and try again.';
+            });
+      }
+
+      labelTab.addEventListener('click', function () {
+         preferredTab = 'label';
+         if (activeTab !== 'label' && openButton) load(openButton);
+      });
+      inventoryTab.addEventListener('click', function () {
+         preferredTab = 'inventory';
+         if (activeTab !== 'inventory') showInventory();
+      });
 
       tree.querySelectorAll('.eft-item').forEach(function (button) {
          button.addEventListener('click', function () { load(this); });

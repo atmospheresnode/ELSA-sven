@@ -36,6 +36,7 @@ from lxml.etree import XMLSyntaxError as LxmlSyntaxError
 
 # Libraries for handilng netCDF files
 import io
+from urllib.parse import quote
 from django.core.mail import EmailMessage
 from django.core.cache import cache
 from django.utils import timezone
@@ -2299,6 +2300,42 @@ def _label_kind(filename, folder_name):
     return 'data'
 
 
+_PDS = '{http://pds.nasa.gov/pds4/pds/v1}'
+
+
+def _collection_inventory(label_path):
+    """The inventory table a collection label names, read for the Files tree and its viewer.
+
+    Found through the label's own <File_Area_Inventory>/<File>/<file_name> rather than by
+    guessing the file name, so a bundle written before the _inventory.csv naming still shows the
+    table its label actually points at. None when the label cannot be read or names no file that
+    is there.
+    """
+    try:
+        root = etree.parse(label_path).getroot()
+    except (OSError, etree.XMLSyntaxError):
+        return None
+    area = root.find('{0}File_Area_Inventory'.format(_PDS))
+    if area is None:
+        return None
+    file_name = (area.findtext('{0}File/{0}file_name'.format(_PDS)) or '').strip()
+    # A bare name in the label's own directory is the only thing ELSA writes there; anything with
+    # a separator in it is not ours and is not followed.
+    if not file_name or os.path.basename(file_name) != file_name:
+        return None
+    path = os.path.join(os.path.dirname(label_path), file_name)
+    if not os.path.isfile(path):
+        return None
+
+    try:
+        with open(path, 'rb') as handle:
+            raw = handle.read()
+    except OSError:
+        return None
+    count = sum(1 for line in raw.decode('utf-8', errors='replace').splitlines() if line.strip())
+    return {'name': file_name, 'abs_path': path, 'raw': raw, 'count': count}
+
+
 def _bundle_file_tree(bundle):
     """The bundle's generated labels, grouped by the directory that gives each one its meaning.
 
@@ -2381,7 +2418,21 @@ def _bundle_file_tree(bundle):
             'netcdf_id': None,
             'ama_filled': None,
             'ama_total': None,
+            # Collection labels only: the inventory table the label names. A PDS4 collection
+            # product is the label and this table together, so the viewer offers it as a second
+            # tab on the label rather than as a row of its own.
+            'inventory': None,
         }
+
+        if kind == 'collection':
+            inventory = _collection_inventory(os.path.join(dir_path, filename))
+            if inventory is not None:
+                entry['inventory'] = {
+                    'name': inventory['name'],
+                    'path': ('{}/{}'.format(folder_name, inventory['name'])
+                             if folder_name else inventory['name']),
+                    'count': inventory['count'],
+                }
 
         if kind != 'data':
             return entry
@@ -2515,7 +2566,19 @@ def label_content(request, pk_bundle):
     relative_path = request.GET.get('path', '')
     label_path = _resolve_label_path(bundle, relative_path)
     if label_path is None:
+        if request.GET.get('download'):
+            raise Http404('That label is not part of this bundle.')
         return JsonResponse({'error': 'That label is not part of this bundle.'}, status=404)
+
+    # The viewer's Download button: the file exactly as it sits on disk, not the pretty-printed
+    # copy shown on screen, which drops the XML declaration.
+    if request.GET.get('download'):
+        response = FileResponse(open(label_path, 'rb'), as_attachment=True,
+                                filename=os.path.basename(label_path),
+                                content_type='application/xml')
+        response['X-Content-Type-Options'] = 'nosniff'
+        response['Cache-Control'] = 'private, no-cache'
+        return response
 
     # A corrupt label (interrupted write, full disk) must report itself in the viewer rather than
     # break the page, matching how the old inline reader handled it.
@@ -2533,6 +2596,67 @@ def label_content(request, pk_bundle):
         'name': os.path.basename(label_path),
         'path': relative_path,
         'content': content,
+    })
+
+
+def _resolve_inventory(bundle, relative_path):
+    """A collection inventory in this bundle: (collection label path, inventory dict), or None.
+
+    Only a .csv that a collection label in the same directory names is served, so this cannot be
+    used to read arbitrary files out of the bundle, let alone outside it.
+    """
+    if not relative_path or not relative_path.lower().endswith('.csv'):
+        return None
+    root_dir = _eventual_path(bundle.directory())
+    candidate = _eventual_path(os.path.join(root_dir, relative_path))
+    if os.path.commonpath([root_dir, candidate]) != root_dir or not os.path.isfile(candidate):
+        return None
+
+    directory = os.path.dirname(candidate)
+    for name in sorted(os.listdir(directory)):
+        if _label_kind(name, os.path.basename(directory)) != 'collection':
+            continue
+        if not name.lower().endswith('.xml'):
+            continue
+        inventory = _collection_inventory(os.path.join(directory, name))
+        if inventory is not None and _eventual_path(inventory['abs_path']) == candidate:
+            return os.path.join(directory, name), inventory
+    return None
+
+
+@login_required
+def inventory_content(request, pk_bundle):
+    """One collection inventory, for the viewer's Inventory tab, or the file itself with ?download=1.
+
+    Read-only on purpose. ELSA rewrites the table whenever a product joins or leaves the
+    collection, so anything typed into it would be lost at the next change.
+    """
+    bundle = get_object_or_404(Bundle, pk=pk_bundle)
+    if request.user != bundle.user:
+        return redirect('main:restricted_access')
+
+    relative_path = request.GET.get('path', '')
+    found = _resolve_inventory(bundle, relative_path)
+    if found is None:
+        if request.GET.get('download'):
+            raise Http404('That inventory is not part of this bundle.')
+        return JsonResponse({'error': 'That inventory is not part of this bundle.'}, status=404)
+    _label_path, inventory = found
+
+    if request.GET.get('download'):
+        response = FileResponse(open(inventory['abs_path'], 'rb'), as_attachment=True,
+                                filename=inventory['name'], content_type='text/csv')
+        response['X-Content-Type-Options'] = 'nosniff'
+        response['Cache-Control'] = 'private, no-cache'
+        return response
+
+    return JsonResponse({
+        'name': inventory['name'],
+        'path': relative_path,
+        'count': inventory['count'],
+        'content': inventory['raw'].decode('utf-8', errors='replace'),
+        'download_url': '{}?path={}&download=1'.format(
+            reverse('build:inventory_content', args=[bundle.pk]), quote(relative_path)),
     })
 
 

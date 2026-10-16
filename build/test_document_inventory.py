@@ -24,6 +24,7 @@ from django.contrib.auth.models import User
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
+from build.chocolate import inventory_path_for
 from build.corpus.builder import document_upload
 from build.models import Bundle, Investigation, Product_Collection, Product_Document
 
@@ -68,7 +69,7 @@ class DocumentInventoryTests(TestCase):
 
     def inventory_rows(self):
         collection = self.document_collection()
-        path = os.path.splitext(collection.label())[0] + '.csv'
+        path = inventory_path_for(collection.label())
         if not os.path.exists(path):
             return None
         with open(path, encoding='utf-8') as handle:

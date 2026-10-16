@@ -15,6 +15,7 @@ import os
 
 from django.core.management.base import BaseCommand
 
+from build.chocolate import inventory_path_for
 from build.label_repair import (repair_bundle_members, repair_label,
                                 stale_bundle_members)
 from build.models import Bundle
@@ -92,6 +93,13 @@ class Command(BaseCommand):
                     # may never have been written at all.
                     inventories = len(bundle_label_targets(bundle))
                     rebuild_collection_inventories(bundle)
+                else:
+                    # Report the ones that would change: no table yet, or one still
+                    # under the old collection_<x>.csv name.
+                    inventories = sum(
+                        1 for collection in bundle_label_targets(bundle)
+                        if os.path.exists(collection.label())
+                        and not os.path.exists(inventory_path_for(collection.label())))
             except Exception as error:                   # noqa: BLE001 - see comment
                 skipped.append((bundle, error))
 
@@ -111,8 +119,9 @@ class Command(BaseCommand):
                         'bundle label', lid, reason))
                 if inventories:
                     self.stdout.write(
-                        '    {:44} {} inventory table(s) rewritten'.format(
-                            '', inventories))
+                        '    {:44} {} inventory table(s) {}'.format(
+                            '', inventories,
+                            'rewritten' if apply_changes else 'missing or under the old name'))
 
         self.stdout.write('')
         for label_path, error in skipped_labels:

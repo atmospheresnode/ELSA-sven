@@ -134,6 +134,8 @@ urlpatterns = [
 
     # One generated label's XML, fetched on demand by the Files tree
     re_path(r'^(?P<pk_bundle>\d+)/label_content/$', views.label_content, name='label_content'),
+    # A collection's inventory table, shown in the same viewer (read-only; ?download=1 for the file)
+    re_path(r'^(?P<pk_bundle>\d+)/inventory_content/$', views.inventory_content, name='inventory_content'),
 
     # AMA discipline metadata (the parts of the AMA area the NetCDF harvest cannot supply)
     re_path(r'^(?P<pk_bundle>\d+)/ama/collection/(?P<pk_collection>\d+)/$', views.ama_collection_defaults, name='ama_collection_defaults'),
