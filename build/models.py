@@ -3795,11 +3795,17 @@ class Table_Delimited(models.Model):
         groups = rd.find('{}groups'.format(NAMESPACE))
         groups.text = '0'
 
-        field_delimited = rd.find('{}Field_Delimited'.format(NAMESPACE))
+        # field_delimited = rd.find('{}Field_Delimited'.format(NAMESPACE))
+        existing = rd.findall('{}Field_Delimited'.format(NAMESPACE))
+        field_delimited = existing[0]
+        insert_at = list(rd).index(field_delimited)
+        for extra in existing[1:]:
+            rd.remove(extra)
 
         for i in range(int(self.fields) - 1):
             cloned_file = copy.deepcopy(field_delimited)
-            rd.append(cloned_file)
+            # rd.append(cloned_file)
+            rd.insert(insert_at + i + 1, cloned_file)
         
         return root
 
@@ -3810,13 +3816,15 @@ class Table_Delimited(models.Model):
 
         fields = rd.findall('{}Field_Delimited'.format(NAMESPACE))
 
-        field_count = 0
+        # field_count = 0
 
-        for field in fields:
+        # for field in fields:
+        for field_count, field in enumerate(fields):
             name = field.find('{}name'.format(NAMESPACE)) 
             name.text = cleaned_form.get(f'name_{field_count}')
             field_number = field.find('{}field_number'.format(NAMESPACE))
-            field_number.text = str(cleaned_form.get(f'field_number_{field_count}'))
+            # field_number.text = str(cleaned_form.get(f'field_number_{field_count}'))
+            field_number.text = str(field_count + 1)
             data_type = field.find('{}data_type'.format(NAMESPACE)) 
             data_type.text = cleaned_form.get(f'data_type_{field_count}')
             description = field.find('{}description'.format(NAMESPACE)) 
@@ -3951,11 +3959,17 @@ class Table_Binary(models.Model):
         groups = rb.find('{}groups'.format(NAMESPACE))
         groups.text = '0'
 
-        field_binary = rb.find('{}Field_Binary'.format(NAMESPACE))
+        # field_binary = rb.find('{}Field_Binary'.format(NAMESPACE))
+        existing = rb.findall('{}Field_Binary'.format(NAMESPACE))
+        field_binary = existing[0]
+        insert_at = list(rb).index(field_binary)
+        for extra in existing[1:]:
+            rb.remove(extra)
 
         for i in range(int(self.fields) - 1):
             cloned_file = copy.deepcopy(field_binary)
-            rb.append(cloned_file)
+            # rb.append(cloned_file)
+            rb.insert(insert_at + i + 1, cloned_file)
         
         return root
 
@@ -3968,9 +3982,10 @@ class Table_Binary(models.Model):
 
         fields = rb.findall('{}Field_Binary'.format(NAMESPACE))
 
-        field_count = 0
+        # field_count = 0
 
-        for field in fields:
+        # for field in fields:
+        for field_count, field in enumerate(fields):
             name = field.find('{}name'.format(NAMESPACE)) 
             name.text = cleaned_form.get(f'name_{field_count}')
             field_location = field.find('{}field_location'.format(NAMESPACE)) 
@@ -3981,6 +3996,8 @@ class Table_Binary(models.Model):
             field_length.text = str(cleaned_form.get(f'max_field_length_{field_count}'))
             description = field.find('{}description'.format(NAMESPACE)) 
             description.text = str(cleaned_form.get(f'description_{field_count}'))
+            field_number = field.find('{}field_number'.format(NAMESPACE))
+            field_number.text = str(field_count + 1)
 
         return label_root
 
@@ -4128,11 +4145,17 @@ class Table_Fixed_Width(models.Model):
         groups = rc.find('{}groups'.format(NAMESPACE))
         groups.text = '0'
 
-        field_character = rc.find('{}Field_Character'.format(NAMESPACE))
+        # field_character = rc.find('{}Field_Character'.format(NAMESPACE))
+        existing = rc.findall('{}Field_Character'.format(NAMESPACE))
+        field_character = existing[0]
+        insert_at = list(rc).index(field_character)
+        for extra in existing[1:]:
+            rc.remove(extra)
 
         for i in range(int(self.fields) - 1):
             cloned_file = copy.deepcopy(field_character)
-            rc.append(cloned_file)
+            # rc.append(cloned_file)
+            rc.insert(insert_at + i + 1, cloned_file)
         
         return root
     
@@ -4145,9 +4168,10 @@ class Table_Fixed_Width(models.Model):
 
         fields = rc.findall('{}Field_Character'.format(NAMESPACE))
 
-        field_count = 0
+        # field_count = 0
 
-        for field in fields:
+        # for field in fields:
+        for field_count, field in enumerate(fields):
             name = field.find('{}name'.format(NAMESPACE)) 
             name.text = cleaned_form.get(f'name_{field_count}')
             field_location = field.find('{}field_location'.format(NAMESPACE)) 
@@ -4155,7 +4179,8 @@ class Table_Fixed_Width(models.Model):
             data_type = field.find('{}data_type'.format(NAMESPACE)) 
             data_type.text = str(cleaned_form.get(f'data_type_{field_count}'))
             field_number = field.find('{}field_number'.format(NAMESPACE))
-            field_number.text = str(cleaned_form.get(f'field_number_{field_count}'))
+            # field_number.text = str(cleaned_form.get(f'field_number_{field_count}'))
+            field_number.text = str(field_count + 1)
             description = field.find('{}description'.format(NAMESPACE)) 
             description.text = str(cleaned_form.get(f'description_{field_count}'))
 

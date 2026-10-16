@@ -643,7 +643,12 @@ class DataForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         self.pk_bun = kwargs.pop('pk_bun')
         super(DataForm, self).__init__(*args, **kwargs)
-        self.fields['collection'] = forms.ModelChoiceField(queryset=AdditionalCollections.objects.filter(bundle=self.pk_bun), required = True)
+        self.fields['collection'] = forms.ModelChoiceField(
+            queryset=AdditionalCollections.objects.filter(bundle=self.pk_bun),
+            required=True,
+            widget=forms.HiddenInput,
+        )
+        # self.fields['collection'] = forms.ModelChoiceField(queryset=AdditionalCollections.objects.filter(bundle=self.pk_bun), required = True)
 
 """
     Facility
@@ -1415,7 +1420,8 @@ class Table_Delimited_Form(forms.ModelForm):
 
     class Meta(object):
         model = Table_Delimited
-        exclude = ('bundle',)
+        # exclude = ('bundle',)
+        exclude = ('bundle', 'collection')
 
     def __init__(self, *args, **kwargs):
         self.pk_data = kwargs.pop('pk_data')
@@ -1444,7 +1450,7 @@ class Table_Delimited_Form(forms.ModelForm):
         self.fields['offset'] = forms.IntegerField(min_value=0, required=False)
         
         self.fields['data'] = forms.ModelChoiceField(queryset=Data.objects.filter(name=self.pk_ins), required = True)
-        self.fields['collection'] = forms.ModelChoiceField(queryset=AdditionalCollections.objects.filter(bundle=self.pk_bun), required = True)
+        # self.fields['collection'] = forms.ModelChoiceField(queryset=AdditionalCollections.objects.filter(bundle=self.pk_bun), required = True)
 
     # name = models.CharField(max_length=256, blank=True)
     # offset = models.IntegerField(default=0)
@@ -1492,16 +1498,17 @@ class Table_Delimited_Form(forms.ModelForm):
             'class': 'form-control form-outline'
         })
 
-        self.fields['collection'].widget.attrs.update({
-            'class': 'form-control form-outline'
-        })   
+        # self.fields['collection'].widget.attrs.update({
+        #     'class': 'form-control form-outline'
+        # })   
 class Table_Binary_Form(forms.ModelForm):
 
     # data = forms.ModelChoiceField(queryset=Data.objects.all(), required=False)
 
     class Meta(object):
         model = Table_Binary
-        exclude = ('bundle',)
+        # exclude = ('bundle',)
+        exclude = ('bundle', 'collection')
     
     def __init__(self, *args, **kwargs):
         self.pk_data = kwargs.pop('pk_data')
@@ -1539,7 +1546,7 @@ class Table_Binary_Form(forms.ModelForm):
         self.fields['offset'] = forms.IntegerField(min_value=0, required=False)
 
         self.fields['data'] = forms.ModelChoiceField(queryset=Data.objects.filter(name=self.pk_ins), required = True)
-        self.fields['collection'] = forms.ModelChoiceField(queryset=AdditionalCollections.objects.filter(bundle=self.pk_bun), required = True)
+        # self.fields['collection'] = forms.ModelChoiceField(queryset=AdditionalCollections.objects.filter(bundle=self.pk_bun), required = True)
 
         self.fields['name'].widget.attrs.update({
             'class': 'form-control form-outline'
@@ -1565,9 +1572,9 @@ class Table_Binary_Form(forms.ModelForm):
             'class': 'form-control form-outline'
         })
 
-        self.fields['collection'].widget.attrs.update({
-            'class': 'form-control form-outline'
-        })       
+        # self.fields['collection'].widget.attrs.update({
+        #     'class': 'form-control form-outline'
+        # })       
 
 class Table_Fixed_Width_Form(forms.ModelForm):
 
@@ -1575,7 +1582,8 @@ class Table_Fixed_Width_Form(forms.ModelForm):
 
     class Meta(object):
         model = Table_Fixed_Width
-        exclude = ('bundle',)
+        # exclude = ('bundle',)
+        exclude = ('bundle', 'collection')
     
     def __init__(self, *args, **kwargs):
         self.pk_data = kwargs.pop('pk_data')
@@ -1604,7 +1612,7 @@ class Table_Fixed_Width_Form(forms.ModelForm):
         self.fields['offset'] = forms.IntegerField(min_value=0, required=False)
 
         self.fields['data'] = forms.ModelChoiceField(queryset=Data.objects.filter(name=self.pk_ins), required = True)
-        self.fields['collection'] = forms.ModelChoiceField(queryset=AdditionalCollections.objects.filter(bundle=self.pk_bun), required = True)
+        # self.fields['collection'] = forms.ModelChoiceField(queryset=AdditionalCollections.objects.filter(bundle=self.pk_bun), required = True)
 
         self.fields['name'].widget.attrs.update({
             'class': 'form-control form-outline'
@@ -1638,9 +1646,9 @@ class Table_Fixed_Width_Form(forms.ModelForm):
             'class': 'form-control form-outline'
         })
 
-        self.fields['collection'].widget.attrs.update({
-            'class': 'form-control form-outline'
-        })   
+        # self.fields['collection'].widget.attrs.update({
+        #     'class': 'form-control form-outline'
+        # })   
 
 class EditTableFieldsForm(forms.Form):
 
@@ -1664,6 +1672,9 @@ class EditTableFieldsForm(forms.Form):
 
     def _add_fields(self, count):
         """Helper method to add fields for a Table."""
+        text = {'class': 'form-control form-outline'}
+        table_type = self.data_instance.data_type
+        
         for i in range(count):
             print('in adding firls loop')
             # Creating labels so that the words are capitalized

@@ -1860,7 +1860,8 @@ def bundle(request, pk_bundle):
             data = form_data.save(commit=False)
             data.bundle = bundle
             print(form_data.cleaned_data['collection'])
-            data.collection = AdditionalCollections.objects.get(id=form_data.data['collection'])
+            # data.collection = AdditionalCollections.objects.get(id=form_data.data['collection'])
+            data.collection = form_data.cleaned_data['collection']
             data.save()
 
             all_labels = []
@@ -5092,6 +5093,7 @@ def Table_Creation(request, pk_bundle, pk_data):
             form = data_form.save(commit=False)
             form.bundle = bundle
             form.data = data
+            form.collection = data.collection
             form.save()
             cleaned_form = data_form.cleaned_data
 
