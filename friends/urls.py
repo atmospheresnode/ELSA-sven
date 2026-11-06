@@ -48,9 +48,7 @@ urlpatterns = [
     path('account/close/', views.account_close, name='account_close'),
     path('passkey/<int:pk>/rename/', views.passkey_rename, name='passkey_rename'),
 
-    # Password reset.  Path converters rather than a hand-written token regex:
-    # Django 4.2 tokens carry a 32-character hash, which the old {1,20}
-    # pattern refused, so every branded reset link was a 404.
+    # Password reset. Django 4.2 tokens have a 32-character hash, so use path converters.
     path('password_reset/', views.ElsaPasswordResetView.as_view(), name='password_reset'),
     path('password_reset/done/',
          auth_views.PasswordResetDoneView.as_view(

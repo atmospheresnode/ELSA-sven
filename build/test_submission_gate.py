@@ -96,8 +96,23 @@ class SubmissionGateTests(TestCase):
         self.submit()
         self.assertFalse(self.submitted())
 
-    def test_elsa_findings_do_not_block_the_user(self):
-        """Blocking someone over a defect they cannot reach would be indefensible."""
+    def test_elsa_findings_block_an_external_bundle_and_say_who_can_fix_them(self):
+        """Lynn's review: 107 validator errors went to review as though nothing was wrong.
+
+        ELSA now repairs what it can before each check, so what survives is something
+        the team has to look at. Staff are not blocked, which is the way past it.
+        """
+        self.checked_with([ELSA_FINDING])
+        self.submit()
+        self.assertFalse(self.submitted())
+        blocked = validate_runner.submission_block(self.bundle)
+        self.assertEqual(blocked[0], validate_runner.BLOCK_UNRESOLVED)
+        self.assertIn('ELSA team', blocked[1])
+
+    def test_elsa_findings_do_not_block_an_archive_bundle(self):
+        """An Archive bundle cannot pass validation yet, so this would stop every one."""
+        self.bundle.bundle_type = 'Archive'
+        self.bundle.save()
         self.checked_with([ELSA_FINDING])
         self.submit()
         self.assertTrue(self.submitted())

@@ -1,15 +1,10 @@
-"""Repair bundle labels written before the generator was fixed.
+"""Repair bundle labels written before the generator fixes.
 
     python3 manage.py repair_labels                  # report only, writes nothing
     python3 manage.py repair_labels --apply
     python3 manage.py repair_labels --apply --bundle 836
 
-A bundle built today validates clean; one built months ago does not, because its
-labels are files on disk and no fix reaches back into them. This brings the old ones
-up to what the current code writes.
-
-Reports by default and writes nothing. These are archived files, some belonging to
-bundles already submitted for review, so the write needs asking for.
+Only writes with --apply.
 """
 import os
 
@@ -20,6 +15,8 @@ from build.label_repair import (repair_bundle_members, repair_label,
                                 stale_bundle_members)
 from build.models import Bundle
 from build.views import bundle_label_targets, rebuild_collection_inventories
+from build.label_repair import stray_root_files
+from build.models import mirror_citation_into_data_products
 
 
 def labels_of(bundle):
@@ -78,19 +75,19 @@ class Command(BaseCommand):
                 if removed:
                     removed_here.append((os.path.basename(label_path), removed))
 
-            # One bundle's bad data must not stop the rest. Production has bundles no
-            # label path can be built for (no bundleID); a run over every bundle used
-            # to crash on the first of them, part way through an --apply.
+            # Keep going if one bundle fails. Some prod bundles have no bundleID.
             members, inventories = [], 0
             try:
-                # Before the inventories are rebuilt, so they are rebuilt from the
-                # bundle label as it will stay.
+                # Before the inventories get rebuilt.
                 members = (repair_bundle_members(bundle) if apply_changes
                            else stale_bundle_members(bundle))
 
                 if apply_changes:
-                    # Membership has not changed, but the table and the record count
-                    # may never have been written at all.
+                    # Data labels have their own copy of the citation, so copy it over again.
+                    if bundle.bundle_type == 'External':
+                        mirror_citation_into_data_products(bundle)
+
+                    # The table and record count may never have been written.
                     inventories = len(bundle_label_targets(bundle))
                     rebuild_collection_inventories(bundle)
                 else:
@@ -102,6 +99,11 @@ class Command(BaseCommand):
                         and not os.path.exists(inventory_path_for(collection.label())))
             except Exception as error:                   # noqa: BLE001 - see comment
                 skipped.append((bundle, error))
+
+            # Reported either way and never removed: these may be someone's data.
+            for name in stray_root_files(bundle):
+                self.stdout.write('{} (#{}): file outside any collection, not touched: {}'.format(
+                    bundle.name, bundle.pk, name))
 
             if removed_here or inventories or members:
                 touched_bundles += 1
@@ -150,9 +152,9 @@ class Command(BaseCommand):
     def _would_remove(self, label_path):
         """What --apply would remove, without touching the file."""
         from lxml import etree
-        from build.label_repair import fix_ama_investigation, prune_blank_containers
+        from build.label_repair import repair_root
         try:
             root = etree.parse(label_path).getroot()
         except (etree.XMLSyntaxError, OSError):
             return []
-        return prune_blank_containers(root) + fix_ama_investigation(root)
+        return repair_root(root)

@@ -1,0 +1,72 @@
+{% extends 'base-derk.html' %}
+{% load static tz account_tags %}
+
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/staff.css' %}">{% endblock %}
+
+{% block body_block %}
+<div class="staff-page" style="max-width: 56rem;">
+    <p class="mb-2"><a href="{% url 'staff_public:requests' %}" class="staff-muted"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>My requests</a></p>
+    <h1 class="staff-title">{{ case.title }}</h1>
+    <p class="staff-subtitle">
+        <span class="badge rounded-pill {{ case.user_status_badge }}">{{ case.user_status_label }}</span>
+        {% if case.stage %}<span class="badge rounded-pill bg-light text-dark border">{{ case.get_stage_display }}</span>{% endif %}
+        &middot; sent {{ case.created_at|ago }}
+        {% if case.bundle %}&middot; <a href="{% url 'build:bundle' case.bundle.pk %}">{{ case.bundle.name }}</a>{% endif %}
+    </p>
+    {% for message in messages %}<div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags|default:'info' }}{% endif %} py-2 px-3" role="alert">{{ message }}</div>{% endfor %}
+
+    {% if liens %}
+    <section class="staff-card">
+        <div class="staff-card-head"><h2>To fix before your bundle is accepted</h2><p>Tick each one when it is done. The team checks and confirms.</p></div>
+        {% for lien in liens %}
+        <form method="post" action="{% url 'staff_public:lien_fixed' lien.pk %}" class="d-flex align-items-start gap-2 py-2 border-bottom">
+            {% csrf_token %}
+            <input type="hidden" name="fixed" value="{% if lien.owner_fixed_at %}0{% else %}1{% endif %}">
+            <div class="flex-grow-1"><div class="staff-note-body">{{ lien.description }}</div>{% if lien.file_path %}<div class="staff-mono staff-muted">{{ lien.file_path }}{% if lien.line %}, line {{ lien.line }}{% endif %}</div>{% endif %}</div>
+            {% if can_write %}<button type="submit" class="btn btn-sm {% if lien.owner_fixed_at %}staff-btn-ghost{% else %}staff-btn{% endif %}">{% if lien.owner_fixed_at %}Not fixed yet{% else %}I fixed this{% endif %}</button>{% endif %}
+        </form>
+        {% endfor %}
+    </section>
+    {% endif %}
+
+    <section class="staff-card" aria-labelledby="conv-heading">
+        <div class="staff-card-head"><h2 id="conv-heading">Conversation</h2></div>
+        <ul class="staff-timeline">
+            <li class="staff-note-message">
+                <div class="staff-note-meta">You &middot; {{ case.created_at|ago }}</div>
+                <div class="staff-note-body">{% if case.body %}{{ case.body }}{% else %}{{ case.title }}{% endif %}</div>
+            </li>
+            {% for note in notes %}
+            <li class="staff-note-{{ note.kind }}">
+                <div class="staff-note-meta">{% if note.kind == 'reply' %}<i class="bi bi-envelope me-1" aria-hidden="true"></i>ELSA team{% if note.author %} ({{ note.author.get_full_name|default:note.author.username }}){% endif %}{% else %}You{% endif %} &middot; <span title="{{ note.created_at|localtime|date:'M j, Y g:i A T' }}">{{ note.created_at|ago }}</span></div>
+                <div class="staff-note-body">{{ note.body }}</div>
+            </li>
+            {% endfor %}
+        </ul>
+    </section>
+
+    {% if can_write %}
+    <section class="staff-card" aria-labelledby="reply-heading">
+        <div class="staff-card-head"><h2 id="reply-heading">Reply to the team</h2></div>
+        <form method="post" data-once>
+            {% csrf_token %}
+            <textarea name="body" class="form-control" rows="5" maxlength="10000" required aria-labelledby="reply-heading">{{ draft }}</textarea>
+            <div class="d-flex align-items-center mt-2">
+                <span class="staff-muted">{% if email_replies %}You can also reply to any email from the team about this request.{% else %}The ELSA team sees this right away and answers here.{% endif %}</span>
+                <button type="submit" class="btn btn-sm staff-btn-primary ms-auto">Send</button>
+            </div>
+        </form>
+    </section>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script nonce="{{ request.csp_nonce }}">
+document.querySelectorAll('form[data-once]').forEach(function (form) {
+    form.addEventListener('submit', function () {
+        setTimeout(function () { form.querySelectorAll('[type="submit"]').forEach(function (b) { b.disabled = true; }); }, 0);
+    });
+});
+</script>
+{% endblock %}

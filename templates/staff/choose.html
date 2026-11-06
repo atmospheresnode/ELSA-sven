@@ -1,0 +1,30 @@
+{% extends 'staff/_gate.html' %}
+
+{% block gate %}
+<h1 class="staff-title">Welcome back, {{ user.first_name|default:user.username }}</h1>
+<p class="staff-subtitle">Your account can use ELSA as a user and as {{ role|lower }} in the Admin Console. Where would you like to go?</p>
+
+<div class="staff-choice">
+    <div class="staff-card">
+        <h2 class="h5 mb-0"><i class="bi bi-box-seam me-1" aria-hidden="true"></i> My bundles</h2>
+        <p>Build and submit your own bundles, as any ELSA user does.</p>
+        <a class="btn staff-btn" href="{% url 'friends:bundle_hub' %}">Continue to ELSA</a>
+    </div>
+
+    <div class="staff-card">
+        <h2 class="h5 mb-0"><i class="bi bi-shield-lock me-1" aria-hidden="true"></i> Admin Console</h2>
+        <p>Requests from users, bundle reviews, accounts and the audit log. Admin mode ends after 30 quiet minutes.</p>
+        {% if has_passkey %}
+        <form method="post" action="{% url 'staff:enter' %}">
+            {% csrf_token %}
+            <button type="submit" class="btn staff-btn-primary w-100">
+                Open the Admin Console{% if not passkey_fresh %} with your passkey{% endif %}
+            </button>
+        </form>
+        {% else %}
+        {% include 'staff/_no_passkey.html' %}
+        {% endif %}
+    </div>
+</div>
+<p class="staff-muted mt-3">You can switch at any time from the menu under your username.</p>
+{% endblock %}

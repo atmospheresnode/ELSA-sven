@@ -1,11 +1,8 @@
 # -*- coding: utf-8 -*-
-"""
-System checks for the sign-in surface.
+"""System checks for sign-in.
 
-elsa/urls.py is gitignored and every server keeps its own copy, so a fix to it
-cannot ship with the code.  This check ships instead: it fails `manage.py
-check`, `migrate` and `runserver` on any server whose URLconf still routes to
-one of Django's stock credential views.
+elsa/urls.py is per server, so this fails `manage.py check`, `migrate` and `runserver`
+if a server still routes to Django's stock credential views.
 """
 from __future__ import unicode_literals
 
@@ -14,8 +11,7 @@ from django.core import checks
 from django.urls import URLPattern, URLResolver, get_resolver
 
 
-# Each signs in, or sets a password, on the strength of a password or an
-# emailed link alone, with none of ELSA's second factor or throttles.
+# These sign in or set a password without ELSA's second factor or throttles.
 STOCK_CREDENTIAL_VIEWS = (
     auth_views.LoginView,
     auth_views.PasswordChangeView,
@@ -40,8 +36,7 @@ def check_stock_auth_routes(app_configs, **kwargs):
         view_class = getattr(callback, 'view_class', None)
         if view_class is None or not issubclass(view_class, STOCK_CREDENTIAL_VIEWS):
             continue
-        # The friends app's own reset views are subclasses wired to its
-        # throttles and mail; everything else is the stock behaviour.
+        # Our reset views are subclasses with our throttles and mail. Anything else is stock.
         if namespace == 'friends':
             continue
         errors.append(checks.Error(
@@ -60,11 +55,7 @@ MIDDLEWARE_PATH = 'friends.middleware.AccountSessionMiddleware'
 
 @checks.register(checks.Tags.security)
 def check_account_middleware(app_configs, **kwargs):
-    """
-    Without the middleware, "sign out everywhere else" would report success
-    and sign nobody out.  settings.py is per-server, so this is what tells a
-    server it is missing.
-    """
+    """Without the middleware, "sign out everywhere else" wouldn't sign anyone out."""
     from django.conf import settings
     stack = list(getattr(settings, 'MIDDLEWARE', []))
     auth = 'django.contrib.auth.middleware.AuthenticationMiddleware'

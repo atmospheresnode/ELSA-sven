@@ -1,0 +1,47 @@
+{% extends 'staff/base.html' %}
+{% load account_tags %}
+
+{% block console %}
+<h1 class="staff-title">Knowledge notes</h1>
+<p class="staff-subtitle">What the team knows: how we handle a mission, a format, a question that keeps coming back. Team only.</p>
+<div class="staff-detail">
+    <section class="staff-card">
+        <form method="get" class="staff-filters" data-live-filter="knowledge-results">
+            <input type="search" name="q" value="{{ query }}" class="form-control form-control-sm" placeholder="Search notes" aria-label="Search notes" autocomplete="off">
+            <button class="btn btn-sm staff-btn" data-live-hide>Search</button>
+        </form>
+        <div id="knowledge-results">
+        {% for note in notes %}
+        <div class="py-2 border-bottom">
+            <div class="d-flex gap-2 align-items-center">
+                {% if note.pinned %}<i class="bi bi-pin-angle-fill text-warning" aria-label="Pinned"></i>{% endif %}
+                <a class="fw-semibold flex-grow-1" href="{% url 'staff:knowledge_note' note.pk %}">{{ note.title }}</a>
+                {% if note.topic %}<span class="badge rounded-pill bg-light text-dark border">{{ note.topic }}</span>{% endif %}
+                {% if can.work %}<a class="btn btn-sm staff-btn-ghost" href="?edit={{ note.pk }}">Edit</a>{% endif %}
+            </div>
+            <div class="staff-muted small">{{ note.body|truncatechars:200 }}</div>
+            <div class="staff-muted small">Updated {{ note.updated_at|ago }}{% if note.updated_by %} by {{ note.updated_by.username }}{% endif %}</div>
+        </div>
+        {% empty %}<p class="staff-empty">{% if query %}Nothing matches.{% else %}No notes yet.{% endif %}</p>{% endfor %}
+        </div>
+    </section>
+    {% if can.work %}
+    <section class="staff-card">
+        <div class="staff-card-head"><h2>{% if editing %}Edit "{{ editing.title }}"{% else %}New note{% endif %}</h2></div>
+        <form method="post" data-once>
+            {% csrf_token %}{% if editing %}<input type="hidden" name="id" value="{{ editing.pk }}">{% endif %}
+            <label class="form-label fw-semibold" for="k-title">Title</label>
+            <input class="form-control" id="k-title" name="title" maxlength="200" required value="{{ editing.title|default:'' }}">
+            <label class="form-label fw-semibold mt-2" for="k-topic">Topic or mission</label>
+            <input class="form-control" id="k-topic" name="topic" maxlength="100" list="k-topics" value="{{ editing.topic|default:'' }}">
+            <datalist id="k-topics">{% for topic in topics %}<option value="{{ topic }}">{% endfor %}</datalist>
+            <label class="form-label fw-semibold mt-2" for="k-body">Note</label>
+            <textarea class="form-control" id="k-body" name="body" rows="10" maxlength="20000" required data-draft="knowledge{{ editing.pk|default:'new' }}">{{ editing.body|default:'' }}</textarea>
+            <div class="form-check mt-2"><input class="form-check-input" type="checkbox" name="pinned" value="1" id="k-pin" {% if editing.pinned %}checked{% endif %}><label class="form-check-label" for="k-pin">Pin to the top</label></div>
+            <div class="d-flex gap-2 mt-2">{% if editing %}<a class="btn btn-sm staff-btn-ghost" href="{% url 'staff:knowledge' %}">Cancel</a>{% endif %}<button class="btn btn-sm staff-btn-primary ms-auto">Save</button></div>
+        </form>
+        {% if editing %}<form method="post" class="mt-3 pt-3 border-top" data-once>{% csrf_token %}<input type="hidden" name="id" value="{{ editing.pk }}"><input type="hidden" name="action" value="delete"><button class="btn btn-sm btn-link text-danger px-0">Delete this note</button></form>{% endif %}
+    </section>
+    {% endif %}
+</div>
+{% endblock %}

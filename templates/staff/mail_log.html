@@ -1,0 +1,36 @@
+{% extends 'staff/base.html' %}
+{% load tz %}
+
+{% block console %}
+<h1 class="staff-title">Email log</h1>
+<p class="staff-subtitle">Every email ELSA handed to the mail server in the last 180 days. Answers "did they get it?"</p>
+{% if not logging_on %}<p class="staff-warning">Logging is off on this server, so new emails are not recorded. It is switched on in settings.py (see the deploy notes).</p>{% endif %}
+
+<div class="staff-card">
+    <form method="get" class="staff-filters" role="search" data-live-filter="mail-results">
+        <input type="search" name="q" value="{{ query }}" class="form-control form-control-sm" placeholder="Address or subject" aria-label="Search the email log" autocomplete="off">
+        <div class="form-check ms-1"><input class="form-check-input" type="checkbox" name="failed" value="1" id="only-failed" {% if failed %}checked{% endif %}><label class="form-check-label" for="only-failed">Failed only</label></div>
+        <button type="submit" class="btn btn-sm staff-btn" data-live-hide>Filter</button>
+    </form>
+    <div id="mail-results">
+    {% if page.object_list %}
+    <div class="table-responsive">
+        <table class="staff-table">
+            <thead><tr><th>When</th><th>To</th><th>Subject</th><th>Result</th></tr></thead>
+            <tbody>
+            {% for row in page %}
+            <tr>
+                <td class="text-nowrap">{{ row.created_at|localtime|date:"M j, g:i A" }}</td>
+                <td class="staff-mono">{{ row.to|truncatechars:80 }}</td>
+                <td>{{ row.subject }}</td>
+                <td>{% if row.sent %}<span class="badge rounded-pill bg-success">Sent</span>{% else %}<span class="badge rounded-pill bg-danger" title="{{ row.error }}">Failed</span><div class="staff-muted small">{{ row.error|truncatechars:120 }}</div>{% endif %}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% include 'staff/_pagination.html' %}
+    {% else %}<p class="staff-empty">No emails match.</p>{% endif %}
+    </div>
+</div>
+{% endblock %}

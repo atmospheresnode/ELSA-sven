@@ -1,0 +1,108 @@
+{% extends 'staff/base.html' %}
+{% load account_tags %}
+
+{% block console %}
+<p class="mb-2"><a href="{% url 'staff:projects' %}" class="staff-muted"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Projects</a></p>
+<h1 class="staff-title">{{ project.name }}</h1>
+<p class="staff-subtitle">{% if project.mission %}{{ project.mission }} &middot; {% endif %}<span class="badge rounded-pill bg-light text-dark border">{{ project.get_status_display }}</span>{% if project.staff.all %} &middot; with {% for person in project.staff.all %}{{ person.get_full_name|default:person.username }}{% if not forloop.last %}, {% endif %}{% endfor %}{% endif %}</p>
+
+<div class="staff-detail">
+    <div>
+        <section class="staff-card" aria-labelledby="ms-heading">
+            <div class="staff-card-head"><h2 id="ms-heading">Milestones</h2><p>Reminders go to the team at 14 and 3 days, on the day, then weekly while overdue{% if project.remind_providers %}, and to the providers too{% endif %}.</p></div>
+            {% for m in milestones %}
+            <div class="d-flex align-items-center gap-2 py-2 border-bottom">
+                <span class="flex-grow-1">{% if m.done_at %}<s>{{ m.title }}</s>{% else %}{{ m.title }}{% endif %}
+                    <span class="staff-muted">{{ m.due_date|date:"M j, Y" }}</span>
+                    {% if not m.done_at and m.due_date < today %}<span class="badge rounded-pill bg-danger">Overdue</span>{% endif %}
+                    {% if m.done_at %}<span class="badge rounded-pill bg-success">Done</span>{% endif %}
+                </span>
+                {% if can.review %}
+                <form method="post" class="d-flex gap-1" data-once>{% csrf_token %}<input type="hidden" name="milestone" value="{{ m.pk }}">
+                    {% if m.done_at %}<button class="btn btn-sm staff-btn-ghost" name="action" value="milestone_open">Not done</button>{% else %}<button class="btn btn-sm staff-btn" name="action" value="milestone_done">Done</button>{% endif %}
+                    <button class="btn btn-sm staff-btn-ghost" name="action" value="milestone_delete" aria-label="Remove {{ m.title }}">Remove</button>
+                </form>
+                {% endif %}
+            </div>
+            {% empty %}<p class="staff-muted">No milestones yet.</p>{% endfor %}
+            {% if can.review %}
+            <form method="post" class="d-flex flex-wrap gap-2 mt-3" data-once>
+                {% csrf_token %}<input type="hidden" name="action" value="add_milestone">
+                <input class="form-control form-control-sm" name="title" maxlength="200" required placeholder="e.g. First delivery to ATM" style="max-width: 20rem;">
+                <input type="date" class="form-control form-control-sm" name="due_date" required style="max-width: 11rem;">
+                <button class="btn btn-sm staff-btn">Add milestone</button>
+            </form>
+            {% endif %}
+        </section>
+
+        <section class="staff-card" aria-labelledby="b-heading">
+            <div class="staff-card-head"><h2 id="b-heading">Bundles</h2></div>
+            {% if bundles %}
+            <table class="staff-table">
+                <thead><tr><th>Bundle</th><th>Owner</th><th>Review</th><th></th></tr></thead>
+                <tbody>
+                {% for bundle, case in bundles %}
+                <tr>
+                    <td><a href="{% url 'staff:bundle' bundle.pk %}">{{ bundle.name }}</a></td>
+                    <td>{{ bundle.user.username }}</td>
+                    <td>{% if case %}<a href="{% url 'staff:case' case.pk %}">{{ case.get_stage_display }}</a>{% else %}<span class="staff-muted">Not submitted</span>{% endif %}</td>
+                    <td>{% if can.review %}<form method="post" data-once>{% csrf_token %}<input type="hidden" name="action" value="remove_bundle"><input type="hidden" name="bundle" value="{{ bundle.pk }}"><button class="btn btn-sm staff-btn-ghost">Remove</button></form>{% endif %}</td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            {% else %}<p class="staff-muted">No bundles yet.</p>{% endif %}
+            {% if can.review %}
+            <form method="post" class="d-flex gap-2 mt-3" data-once>
+                {% csrf_token %}<input type="hidden" name="action" value="add_bundle">
+                <input class="form-control form-control-sm" name="bundle" maxlength="200" required placeholder="Exact bundle name" style="max-width: 20rem;">
+                <button class="btn btn-sm staff-btn">Add bundle</button>
+            </form>
+            {% endif %}
+        </section>
+    </div>
+    <div>
+        <section class="staff-card" aria-labelledby="pv-heading">
+            <div class="staff-card-head"><h2 id="pv-heading">Providers</h2></div>
+            {% for person in providers %}
+            <div class="d-flex align-items-center gap-2 py-1">
+                <a class="flex-grow-1" href="{% url 'staff:user' person.pk %}">{{ person.get_full_name|default:person.username }}</a>
+                {% if can.review %}<form method="post" data-once>{% csrf_token %}<input type="hidden" name="action" value="remove_provider"><input type="hidden" name="user" value="{{ person.pk }}"><button class="btn btn-sm staff-btn-ghost">Remove</button></form>{% endif %}
+            </div>
+            {% empty %}<p class="staff-muted">None yet. Adding a bundle adds its owner.</p>{% endfor %}
+            {% if can.review %}
+            <form method="post" class="d-flex gap-2 mt-2" data-once>
+                {% csrf_token %}<input type="hidden" name="action" value="add_provider">
+                <input class="form-control form-control-sm" name="username" maxlength="150" required placeholder="ELSA username">
+                <button class="btn btn-sm staff-btn">Add</button>
+            </form>
+            {% endif %}
+            {% if project.external_contacts %}<div class="fw-semibold mt-3">Other contacts</div><div class="staff-note-body">{{ project.external_contacts }}</div>{% endif %}
+        </section>
+        {% if can.review %}
+        <section class="staff-card" aria-labelledby="ed-heading">
+            <div class="staff-card-head"><h2 id="ed-heading">Details</h2></div>
+            <form method="post" data-once>
+                {% csrf_token %}<input type="hidden" name="action" value="save">
+                <label class="form-label" for="e-name">Name</label>
+                <input class="form-control form-control-sm" id="e-name" name="name" maxlength="150" required value="{{ project.name }}">
+                <label class="form-label mt-2" for="e-mission">Mission or source</label>
+                <input class="form-control form-control-sm" id="e-mission" name="mission" maxlength="150" value="{{ project.mission }}">
+                <label class="form-label mt-2" for="e-status">Status</label>
+                <select class="form-select form-select-sm" id="e-status" name="status">{% for key, label in statuses %}<option value="{{ key }}" {% if project.status == key %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+                <div class="form-label mt-2">Team members</div>
+                <div id="e-staff">{% for person in workers %}<div class="form-check"><input class="form-check-input" type="checkbox" name="staff" value="{{ person.pk }}" id="e-staff-{{ person.pk }}" {% if person in project.staff.all %}checked{% endif %}><label class="form-check-label" for="e-staff-{{ person.pk }}">{{ person.get_full_name|default:person.username }}</label></div>{% endfor %}</div>
+                <label class="form-label mt-2" for="e-contacts">Other contacts (not ELSA users)</label>
+                <textarea class="form-control form-control-sm" id="e-contacts" name="external_contacts" rows="2" maxlength="2000">{{ project.external_contacts }}</textarea>
+                <label class="form-label mt-2" for="e-desc">Notes</label>
+                <textarea class="form-control form-control-sm" id="e-desc" name="description" rows="3" maxlength="10000">{{ project.description }}</textarea>
+                <div class="form-check mt-2"><input class="form-check-input" type="checkbox" name="remind_providers" value="1" id="e-remind" {% if project.remind_providers %}checked{% endif %}><label class="form-check-label small" for="e-remind">Also remind providers about milestones (by notification and email)</label></div>
+                <button class="btn btn-sm staff-btn-primary mt-3">Save</button>
+            </form>
+        </section>
+        {% elif project.description %}
+        <section class="staff-card"><div class="staff-card-head"><h2>Notes</h2></div><div class="staff-note-body">{{ project.description }}</div></section>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

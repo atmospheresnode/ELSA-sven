@@ -346,15 +346,8 @@ renders per request, so the script below owns the wiring for both.
 </div>
 
 <script>
-   // Files tree wiring: filtering, selection, and on-demand label loading.
-   //
-   // Content is fetched per label rather than embedded in the page. The old card inlined every
-   // label's full XML into a data-content attribute, which put the entire archive's XML into the
-   // HTML source and made the view parse every label on every page load.
-   //
-   // Deferred to DOMContentLoaded: this script is parsed inside the Files card, which sits above
-   // the File Viewer card in both page variants, so #fileName and #fileContent do not exist yet at
-   // parse time.
+   // Files tree: filtering, selection and loading labels on demand.
+   // Runs on DOMContentLoaded since #fileName and #fileContent are further down the page.
    (function () {
       function initFileTree() {
       var tree = document.querySelector('.elsa-file-tree');
@@ -370,8 +363,7 @@ renders per request, so the script below owns the wiring for both.
       var metaBtn  = document.getElementById('editMetadataBtn');
       if (!nameEl || !contentEl) return;
 
-      // Labels are immutable for the life of the page, so a label re-opened after being viewed
-      // once is served from here rather than refetched.
+      // Labels don't change while the page is open, so reuse a label once it's loaded.
       var cache = {};
       var currentPath = null;
 
@@ -500,7 +492,7 @@ renders per request, so the script below owns the wiring for both.
          nameEl.textContent = filename;
          contentEl.textContent = content;
       }
-      // Kept global: the older inline handlers on the bundle page call it by name.
+      // Global since older inline handlers on the bundle page call it by name.
       window.showFileContent = showFileContent;
 
       function markActive(button) {
@@ -520,11 +512,8 @@ renders per request, so the script below owns the wiring for both.
          markActive(button);
          setBreadcrumb(folder, filename);
 
-         // Only a data label in an External bundle has AMA metadata to edit. Collection, bundle
-         // and document labels hide the button entirely, as does a data file with no collection:
-         // there is nothing there to edit, so a dead control would only raise a question it
-         // cannot answer. Independent of whether the label content loads - the metadata lives in
-         // the database, so it stays editable even if reading the label off disk fails.
+         // Only External data labels with a collection have AMA metadata to edit, so hide the button otherwise.
+         // This doesn't depend on the label loading, the metadata is in the database.
          if (metaBtn) {
             var amaUrl = button.getAttribute('data-ama-url');
             metaBtn.classList.toggle('d-none', !amaUrl);
@@ -581,8 +570,7 @@ renders per request, so the script below owns the wiring for both.
                   showFileContent(filename, message);
                   return;
                }
-               // Only successful reads are cached, so a transient failure can be retried by
-               // clicking the same label again.
+               // Only cache successful reads so a failure can be retried.
                cache[path] = result.data.content;
                if (!stillWanted) return;
                currentPath = path;
@@ -676,8 +664,7 @@ renders per request, so the script below owns the wiring for both.
          button.addEventListener('click', function () { load(this); });
       });
 
-      // navigator.clipboard is undefined outside a secure context, which includes a plain-http
-      // dev server, so the button is hidden rather than left to throw on click.
+      // navigator.clipboard is undefined on plain http, so hide the button.
       if (copyBtn && !(navigator.clipboard && navigator.clipboard.writeText)) {
          copyBtn.classList.add('d-none');
          copyBtn = null;
@@ -694,9 +681,7 @@ renders per request, so the script below owns the wiring for both.
          });
       }
 
-      // Filter. Text and type chip are combined with AND: the chip narrows which kinds can match,
-      // the text narrows by name. A match on a folder name keeps everything in that folder, so a
-      // user can type a collection name and see its contents, but the chip still applies.
+      // Filter: text AND type chip. A folder name match keeps everything in that folder, but the chip still applies.
       var filterInput = tree.querySelector('.eft-filter');
       var chips = tree.querySelectorAll('.eft-chip');
       var noMatch = tree.querySelector('.eft-no-match');
@@ -712,8 +697,7 @@ renders per request, so the script below owns the wiring for both.
             return item.getAttribute('data-filename').toLowerCase().indexOf(term) !== -1;
          }
 
-         // Root labels carry an empty data-folder; they live in their own list-group wrapper,
-         // which is hidden too once nothing in it matches.
+         // Root labels have an empty data-folder. Hide their wrapper when nothing matches.
          var rootShown = 0;
          tree.querySelectorAll('.eft-item[data-folder=""]').forEach(function (item) {
             var hit = keeps(item, false);
@@ -734,8 +718,7 @@ renders per request, so the script below owns the wiring for both.
                if (hit) shown++;
             });
 
-            // A folder whose name matches but whose contents are all filtered out by the chip is
-            // not a result, so it is only kept when something inside it survived.
+            // Only keep a matching folder if something inside it is still showing.
             group.classList.toggle('d-none', shown === 0);
             if (shown > 0) anyVisible = true;
 

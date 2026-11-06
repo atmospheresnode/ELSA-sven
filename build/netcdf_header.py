@@ -1,14 +1,7 @@
-"""What is inside an uploaded NetCDF file, for the bundle page's inspector.
+"""What's in an uploaded NetCDF file, for the bundle page's inspector.
 
-The header only: dimensions, coordinates, variables and their attributes, drawn the way
-xarray draws a dataset in a notebook, which is the view most of ELSA's users already read
-every day. Opened with decode_cf=False so the panel shows the file as stored (raw dtypes,
-_FillValue, scale_factor, time units) rather than xarray's interpretation of it, since the
-stored form is what the PDS4 label describes.
-
-No data values are read beyond the dimension coordinates xarray indexes on open, so a file
-of any size opens in roughly the time it takes to read its header. xarray escapes every
-name and attribute it writes into the HTML, so the result is safe to insert into the page.
+Header only, drawn the way xarray shows a dataset. Opened with decode_cf=False so it shows
+the file as stored. xarray escapes names and attributes, so the HTML is safe to insert.
 """
 import hashlib
 import os
@@ -16,8 +9,7 @@ import os
 import xarray as xr
 from django.core.cache import cache
 
-# Keyed on path, size and modification time, so a replaced file is never shown stale and an
-# unchanged one is read once a day at most.
+# Keyed on path, size and modified time, so a replaced file is never stale.
 CACHE_SECONDS = 24 * 60 * 60
 
 

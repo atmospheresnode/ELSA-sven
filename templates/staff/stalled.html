@@ -1,0 +1,49 @@
+{% extends 'staff/base.html' %}
+{% load tz account_tags %}
+
+{% block console %}
+<h1 class="staff-title">Stalled bundles</h1>
+<p class="staff-subtitle">Bundles that may need a word from the team. A nudge starts a conversation the owner can answer; nobody is nudged twice within {{ quiet_days }} days.</p>
+{% include 'staff/_snapshot_age.html' with key='stalled' %}
+
+<form method="post" data-once id="nudge-form">
+{% csrf_token %}
+{% with lists.ready as rows %}
+<section class="staff-card">
+    <div class="staff-card-head"><h2>Ready, but never submitted</h2><p>Every ELSA check passes; the owner has not pressed Submit.</p></div>
+    {% include 'staff/_stalled_rows.html' %}
+</section>
+{% endwith %}
+{% with lists.waiting as rows %}
+<section class="staff-card">
+    <div class="staff-card-head"><h2>Changes requested, then quiet</h2><p>No answer for {{ lists.days }} days or more.</p></div>
+    {% include 'staff/_stalled_rows.html' %}
+</section>
+{% endwith %}
+{% with lists.quiet as rows %}
+<section class="staff-card">
+    <div class="staff-card-head"><h2>Not touched in {{ lists.days }} days</h2><p>Started, not finished, and no file changed since.</p></div>
+    {% include 'staff/_stalled_rows.html' %}
+</section>
+{% endwith %}
+
+{% if can.work and lists.ready or can.work and lists.waiting or can.work and lists.quiet %}
+<section class="staff-card">
+    <div class="staff-card-head"><h2>Nudge the ticked owners</h2><p><span class="staff-mono">{name}</span> and <span class="staff-mono">{bundle}</span> are filled in for each person.</p></div>
+    {% if saved_replies %}
+    <select class="form-select form-select-sm mb-2 w-auto" aria-label="Start from a saved reply" data-insert-into="#nudge-body">
+        <option value="">Start from a saved reply</option>
+        {% for reply in saved_replies %}<option value="1" data-body="{{ reply.body }}">{{ reply.title }}</option>{% endfor %}
+    </select>
+    {% endif %}
+    <label class="form-label fw-semibold" for="nudge-subject">Subject</label>
+    <input class="form-control" id="nudge-subject" name="subject" maxlength="150" required value="How is {bundle} going?">
+    <label class="form-label fw-semibold mt-2" for="nudge-body">Message</label>
+    <textarea class="form-control" id="nudge-body" name="body" rows="5" maxlength="10000" required>Hi {name},
+
+We noticed your bundle "{bundle}" has not moved in a while. Is there anything we can help with? Just reply here.</textarea>
+    <button class="btn btn-sm staff-btn-primary mt-2">Send to the ticked owners</button>
+</section>
+{% endif %}
+</form>
+{% endblock %}

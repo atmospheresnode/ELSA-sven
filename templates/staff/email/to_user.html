@@ -1,0 +1,20 @@
+{% extends 'friends/email/_layout.html' %}
+{% block headline %}{{ headline }}{% endblock %}
+{% block lead %}{{ lead }}{% endblock %}
+{% block content %}
+{% if text %}
+<tr>
+  <td style="padding:20px 32px 8px;">
+    <div style="background-color:#f8f8f8;border-left:4px solid #2bbbad;border-radius:4px;padding:16px 20px;font-size:14px;color:#333333;line-height:1.6;white-space:pre-wrap;">{{ text }}</div>
+    {% if signature %}<p style="margin:12px 0 0;font-size:14px;color:#333333;white-space:pre-wrap;">{{ signature }}</p>{% endif %}
+  </td>
+</tr>
+{% endif %}
+{% if link %}{% include 'friends/email/_button.html' with href=link label=button note=email_reply_note %}{% endif %}
+<tr>
+  <td style="padding:8px 32px 24px;" align="center">
+    <p style="margin:0;font-size:11px;color:#aaaaaa;">{{ reference }}</p>
+    {% if unsubscribe_url %}<p style="margin:8px 0 0;font-size:11px;color:#888888;">You get ELSA's news and updates because you have an ELSA account. <a href="{{ unsubscribe_url }}" style="color:#888888;">Unsubscribe</a></p>{% endif %}
+  </td>
+</tr>
+{% endblock %}

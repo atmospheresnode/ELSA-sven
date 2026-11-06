@@ -1,0 +1,35 @@
+{% extends 'base-derk.html' %}
+{% load static account_tags %}
+
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/staff.css' %}">{% endblock %}
+
+{% block body_block %}
+<div class="staff-page" style="max-width: 56rem;">
+    <div class="d-flex flex-wrap align-items-start gap-2">
+        <div class="flex-grow-1">
+            <h1 class="staff-title">My requests</h1>
+            <p class="staff-subtitle">Everything you have asked the ELSA team, and their answers. Open one to read the conversation or reply.</p>
+        </div>
+        <a class="btn btn-sm staff-btn-primary" href="{% url 'staff_public:new_request' %}">Message the ELSA team</a>
+    </div>
+    {% for message in messages %}<div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags|default:'info' }}{% endif %} py-2 px-3" role="alert">{{ message }}</div>{% endfor %}
+    <section class="staff-card">
+        {% if cases %}
+        <table class="staff-table">
+            <thead><tr><th>Request</th><th>Status</th><th>Last activity</th></tr></thead>
+            <tbody>
+            {% for case in cases %}
+            <tr>
+                <td>{% if case.unread %}<span class="staff-unread" title="New reply from the ELSA team"></span><span class="visually-hidden">New reply. </span>{% endif %}<a href="{% url 'staff_public:request' case.pk %}">{{ case.title }}</a><div class="staff-muted">{{ case.get_kind_display }}{% if case.stage %} &middot; {{ case.get_stage_display }}{% endif %}</div></td>
+                <td><span class="badge rounded-pill {{ case.user_status_badge }}">{% if case.stage %}{{ case.get_stage_display }}{% else %}{{ case.user_status_label }}{% endif %}</span></td>
+                <td class="text-nowrap">{{ case.updated_at|ago }}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="staff-empty">You have not sent the team anything yet. Agency changes, bundle submissions and messages from the Contact page all appear here.</p>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}

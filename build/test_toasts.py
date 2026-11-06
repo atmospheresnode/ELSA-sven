@@ -138,6 +138,9 @@ class AmaSaveShowsAToastTests(TestCase):
             'version': '1O00', 'bundleID': ''})
         self.assertIn(response.status_code, (200, 302))
         self.bundle = Bundle.objects.get(name='toast bundle')
+        # Arriving on the new bundle's page shows "created" once (build/creation.py); done here,
+        # so the tests below start from a page with nothing new to say.
+        self.client.get(reverse('build:bundle', args=[self.bundle.pk]))
 
         self.collection = AdditionalCollections.objects.create(
             bundle=self.bundle, collection_name='alpha', collection_type='External')

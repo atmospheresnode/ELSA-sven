@@ -65,14 +65,16 @@ def parse(path):
 class EmptyContainerTests(SimpleTestCase):
     """No bundle or collection template may ship a container it never fills."""
 
-    def test_no_time_coordinates_in_bundle_or_collection_templates(self):
+    def test_time_coordinates_are_only_ever_nil_in_collection_templates(self):
+        """Archive templates and the External bundle leave them out; External collections are nil."""
+        xsi_nil = '{http://www.w3.org/2001/XMLSchema-instance}nil'
         for path in CONTAINER_TEMPLATES:
             with self.subTest(template=os.path.basename(path)):
-                root = parse(path)
-                self.assertIsNone(
-                    root.find('.//pds:Time_Coordinates', NS),
-                    'Time_Coordinates is optional here and ELSA never fills it, so it '
-                    'must not be in the template.')
+                times = parse(path).find('.//pds:Time_Coordinates', NS)
+                if os.path.basename(path) == 'product_external_collection.xml':
+                    self.assertEqual([child.get(xsi_nil) for child in times], ['true', 'true'])
+                elif os.path.basename(path) != 'product_external_bundle.xml':
+                    self.assertIsNone(times)
 
     def test_observational_templates_keep_time_coordinates(self):
         """The counterpart guard: removing it from these would break them."""

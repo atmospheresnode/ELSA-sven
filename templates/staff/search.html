@@ -1,0 +1,28 @@
+{% extends 'staff/base.html' %}
+{% load account_tags %}
+
+{% block console %}
+<h1 class="staff-title">Search</h1>
+<p class="staff-subtitle">{% if query %}{{ total }} result{{ total|pluralize }} for "{{ query }}".{% else %}Search users, bundles and requests from the box at the top.{% endif %}</p>
+
+{% if query %}
+<section class="staff-card" aria-labelledby="s-cases">
+    <div class="staff-card-head"><h2 id="s-cases">Requests</h2><p>{{ found.cases|length }}</p></div>
+    {% for case in found.cases %}
+    <div class="py-1"><a href="{% url 'staff:case' case.pk %}">#{{ case.pk }} {{ case.title }}</a> <span class="badge rounded-pill {{ case.status_badge }}">{{ case.get_status_display }}</span> <span class="staff-muted">{{ case.requester_label }}, {{ case.updated_at|ago }}</span></div>
+    {% empty %}<p class="staff-muted mb-0">None.</p>{% endfor %}
+</section>
+<section class="staff-card" aria-labelledby="s-users">
+    <div class="staff-card-head"><h2 id="s-users">Users</h2><p>{{ found.users|length }}</p></div>
+    {% for person in found.users %}
+    <div class="py-1"><a href="{% url 'staff:user' person.pk %}">{{ person.username }}</a> <span class="staff-muted">{{ person.get_full_name }} {{ person.email }}</span>{% if not person.is_active %} <span class="badge rounded-pill bg-secondary">Disabled</span>{% endif %}</div>
+    {% empty %}<p class="staff-muted mb-0">None.</p>{% endfor %}
+</section>
+<section class="staff-card" aria-labelledby="s-bundles">
+    <div class="staff-card-head"><h2 id="s-bundles">Bundles</h2><p>{{ found.bundles|length }}</p></div>
+    {% for bundle in found.bundles %}
+    <div class="py-1"><a href="{% url 'staff:bundle' bundle.pk %}">{{ bundle.name }}</a> <span class="staff-muted">{{ bundle.bundle_type }} by {{ bundle.user.username }}, updated {{ bundle.updated_at|ago }}</span></div>
+    {% empty %}<p class="staff-muted mb-0">None.</p>{% endfor %}
+</section>
+{% endif %}
+{% endblock %}

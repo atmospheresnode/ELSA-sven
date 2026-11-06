@@ -39,8 +39,7 @@ class UserProfileAdmin(admin.ModelAdmin):
 
 @admin.register(Passkey)
 class PasskeyAdmin(admin.ModelAdmin):
-    # Read-only apart from deletion: revoking a lost authenticator is the one
-    # thing an admin needs to do here.
+    # Read-only except delete, for revoking a lost authenticator.
     list_display = ('name', 'user', 'backed_up', 'created_at', 'last_used_at')
     search_fields = ('user__username', 'name')
     readonly_fields = ('user', 'credential_id', 'public_key', 'sign_count', 'transports',

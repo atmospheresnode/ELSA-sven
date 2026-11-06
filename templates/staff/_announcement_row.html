@@ -1,0 +1,12 @@
+{% load tz %}
+<div class="d-flex align-items-start gap-2 py-2 border-bottom">
+    <span class="badge rounded-pill {% if item.level == 'warning' %}bg-warning text-dark{% else %}bg-info text-dark{% endif %}">{{ item.get_level_display }}</span>
+    <div class="flex-grow-1">
+        <strong>{{ item.title }}</strong>
+        {% if item.body %}<div class="staff-note-body small">{{ item.body }}</div>{% endif %}
+        <div class="staff-muted small">{{ item.starts_at|localtime|date:"M j, g:i A" }} to {{ item.ends_at|localtime|date:"M j, g:i A T" }}{% if item.created_by %}, by {{ item.created_by.username }}{% endif %}</div>
+    </div>
+    {% if can_end and can.accounts %}
+    <form method="post" data-once>{% csrf_token %}<input type="hidden" name="action" value="end"><input type="hidden" name="id" value="{{ item.pk }}"><button type="submit" class="btn btn-sm staff-btn-ghost">End now</button></form>
+    {% endif %}
+</div>

@@ -1,25 +1,13 @@
-"""Which validate release a host runs, and moving it to a newer one safely.
+"""Which validate release a host runs, and moving to a newer one.
 
-Three jobs, kept out of validate_runner because none of them happens per check:
+* Java: `java_home_for()` reads the class version from the release's jar and picks an
+  installed Java that can run it, so `VALIDATE_JAVA_HOME = 'auto'` keeps working.
+* Releases: `latest_release()` asks GitHub for the newest stable one, and `install()` downloads
+  it, checks the SHA-256 and unpacks it next to the others.
+* The switch: hosts follow the `VALIDATE_CURRENT_LINK` symlink. `switch()` checks the target
+  starts, then replaces the link in one rename. `rollback()` reads the switch record.
 
-* Java. Each validate release is compiled for a minimum Java, and the only symptom
-  of getting it wrong is UnsupportedClassVersionError. 5.0.0 moved from Java 17 to 25.
-  `java_home_for()` reads the class file version out of the release's own jar and
-  picks an installed Java that can run it, so `VALIDATE_JAVA_HOME = 'auto'` keeps
-  working across releases instead of needing a second setting changed in step.
-
-* Releases. `latest_release()` asks GitHub for the newest stable release, and
-  `install()` downloads it, checks it against the SHA-256 GitHub publishes, and
-  unpacks it next to the others. Nothing is ever unpacked over a release in use.
-
-* The switch. A host follows a symlink, `VALIDATE_CURRENT_LINK`, rather than a
-  versioned directory. `switch()` proves the target starts under the Java it will
-  get, then replaces the link in one rename, so a check starting at that moment sees
-  either the old release or the new one, never neither. Every switch is recorded,
-  which is what `rollback()` reads.
-
-Deciding *whether* to switch is deliberately not here. That is validate_qualify, and
-a person.
+Deciding whether to switch is up to validate_qualify and a person.
 """
 import datetime
 import functools
@@ -77,10 +65,9 @@ def release_version(home):
 # -- Java --------------------------------------------------------------------------
 
 def required_java(home):
-    """The lowest Java major version that can run this release.
+    """Lowest Java major version that can run this release.
 
-    Read from the launcher's class file header: bytes 6-7 are the class file major
-    version, which is the Java version plus 44 (61 is Java 17, 69 is Java 25).
+    Bytes 6-7 of the launcher's class file are the Java version plus 44 (61 is Java 17, 69 is Java 25).
     """
     jar = release_jar(home)
     if jar is None:
@@ -98,10 +85,7 @@ def required_java(home):
 
 @functools.lru_cache(maxsize=64)
 def _asked_java_version(java_home):
-    """`java -version`'s version string, for an installation with no `release` file.
-
-    RHEL's Java 8 package ships none. Cached because it starts a JVM.
-    """
+    """`java -version` string, for an install with no `release` file. Cached since it starts a JVM."""
     try:
         said = subprocess.run([os.path.join(java_home, 'bin', 'java'), '-version'],
                               capture_output=True, text=True, errors='replace', timeout=30)
@@ -133,11 +117,9 @@ def _java_major(java_home):
 
 
 def installed_javas(search_dirs=None):
-    """{major version: java home} for every runnable Java under the search dirs.
+    """{major version: java home} for every Java we can run.
 
-    Distributions install the same runtime under several names (java-17,
-    java-17-openjdk, jre-17...), so entries are resolved and de-duplicated, and a
-    JDK is preferred to a JRE when both are present for one version.
+    The same runtime can have several names, so resolve and de-dupe them. Prefer a JDK to a JRE.
     """
     search_dirs = search_dirs or getattr(settings, 'VALIDATE_JAVA_SEARCH_DIRS', JAVA_SEARCH_DIRS)
     found = {}
@@ -157,11 +139,7 @@ def installed_javas(search_dirs=None):
 
 
 def java_home_for(home, search_dirs=None):
-    """The installed Java to run this release with: the oldest one new enough.
-
-    The oldest rather than the newest because it is the closest to what the release
-    was built and tested against; a newer one is used only when nothing older will do.
-    """
+    """The Java to use for this release: the oldest one new enough."""
     needed = required_java(home)
     javas = installed_javas(search_dirs)
     usable = sorted(major for major in javas if major >= needed)
@@ -236,8 +214,7 @@ def _describe(release):
         'published_at': release.get('published_at') or '',
         'url': asset['browser_download_url'],
         'size': asset.get('size') or 0,
-        # GitHub states each asset's SHA-256. A release without one is refused rather
-        # than installed unchecked: this is code the server will execute.
+        # GitHub gives each asset's SHA-256. Refuse a release without one.
         'sha256': digest.split(':', 1)[1] if digest.startswith('sha256:') else '',
         'notes_url': release.get('html_url') or '',
         'notes': release.get('body') or '',
@@ -288,10 +265,7 @@ def _sha256(path):
 
 
 def _make_readable(root):
-    """World-readable, directories traversable, launchers executable.
-
-    The web server runs checks as apache, not as whoever installed the release.
-    """
+    """World-readable, directories traversable, launchers executable, since checks run as apache."""
     for directory, dirnames, filenames in os.walk(root):
         os.chmod(directory, os.stat(directory).st_mode | 0o755)
         for name in filenames:
@@ -305,12 +279,8 @@ def _make_readable(root):
 def install(info, fetch=None):
     """Download, verify and unpack a release. Returns its directory.
 
-    Already installed is not an error: the existing directory is returned untouched.
-    Unpacking happens in a scratch directory beside the final one and is renamed into
-    place, so a half-written release is never at a path anything would use.
-
-    `fetch(url, destination)` is the downloader, replaceable for tests. Whatever it
-    fetched is checked against the SHA-256 GitHub states before anything is unpacked.
+    Fine if it's already installed. Unpacked in a scratch directory and renamed into place.
+    `fetch(url, destination)` is the downloader, replaceable for tests.
     """
     if not info.get('sha256'):
         raise ReleaseError('GitHub states no SHA-256 for validate {}, so it cannot be '
@@ -335,8 +305,7 @@ def install(info, fetch=None):
                                '{}. Nothing was installed.'.format(info['url'], info['sha256'], actual))
         unpacked = os.path.join(scratch, 'unpacked')
         with tarfile.open(tarball) as archive:
-            # The 'data' filter refuses absolute paths, '..', device files and links
-            # that point outside the destination.
+            # The 'data' filter refuses absolute paths, '..', device files and links outside the destination.
             archive.extractall(unpacked, filter='data')
         tops = os.listdir(unpacked)
         if len(tops) != 1:
@@ -362,11 +331,9 @@ def install(info, fetch=None):
 # -- proving a release runs --------------------------------------------------------
 
 def smoke_test(home, java_home):
-    """Start the release under this Java and have it validate an empty directory.
+    """Start the release under this Java and run it on an empty directory.
 
-    `--version` proves the JVM starts and loads the jar; the empty run proves it can
-    get as far as writing a report, which is the only thing ELSA reads. Returns the
-    version the tool reports. Raises ReleaseError saying what it printed otherwise.
+    Returns the version it reports, or raises ReleaseError with what it printed.
     """
     from build.validate_runner import _environment
 
@@ -411,9 +378,7 @@ def _ancestors(path):
 def writable_by_others(home, link):
     """Why another user could change what the web server runs, or ''.
 
-    The web server executes whatever the link points at. If any directory on the way
-    to the link or to the release is writable by every user (and not sticky, as /tmp
-    is), anyone on this shared server could repoint it at a program of their own.
+    Checks for world-writable, non-sticky directories on the way to the link or release.
     """
     paths = list(_ancestors(os.path.dirname(link))) + list(_ancestors(os.path.realpath(home)))
     for directory in paths:
@@ -426,11 +391,9 @@ def writable_by_others(home, link):
 
 
 def unreachable_by_others(home, link):
-    """Why the web server could not run this release through this link, or ''.
+    """Why the web server couldn't run this release through this link, or ''.
 
-    Checks run as apache, not as whoever switches. Every directory on the way to the
-    release and to the link has to be traversable by others, and the release itself
-    readable, or every check fails as "could not run" from the moment of the switch.
+    Checks run as apache, so every directory has to be traversable and the release readable.
     """
     for directory in list(_ancestors(os.path.realpath(home))) + list(_ancestors(os.path.dirname(link))):
         if os.path.isdir(directory) and not os.stat(directory).st_mode & 0o001:
@@ -467,11 +430,9 @@ def linked_release():
 
 
 def switch(version, who='', private=False):
-    """Point the link at an installed release, after proving it runs. Returns a record.
+    """Point the link at an installed release after checking it runs. Returns a record.
 
-    The link is replaced with one rename, which is atomic on the same filesystem. The
-    release it pointed at stays on disk, so a check already running keeps its files
-    and rollback has something to go back to.
+    One atomic rename. The old release stays on disk for running checks and rollback.
     """
     releases = installed_releases()
     if version not in releases:
@@ -527,8 +488,7 @@ def host_follows_link():
 
 # -- cleaning up -------------------------------------------------------------------
 
-# Interrupted installs leave a scratch directory behind. One younger than this may be
-# an install still running in another process, so it is left alone.
+# Interrupted installs leave a scratch directory. A younger one might still be running.
 STALE_INSTALL_SECONDS = 24 * 3600
 
 
@@ -539,13 +499,10 @@ def in_use_release():
 
 
 def releases_to_keep():
-    """{version: why} for every installed release that must stay. None if unknowable.
+    """{version: why} for every release that has to stay, or None if we can't tell.
 
-    Kept: the release in use, the ones before it that rollback can reach
-    (VALIDATE_RELEASES_KEEP_PREVIOUS, default 1), and any newer release installed but
-    not switched to yet, since that is the one a person has been asked to decide on.
-    When nothing says which release is in use, there is no safe answer, and the
-    caller removes nothing.
+    Keeps the one in use, the previous ones for rollback (VALIDATE_RELEASES_KEEP_PREVIOUS,
+    default 1), and any newer one not switched to yet.
     """
     current = in_use_release()
     if not current:
@@ -568,12 +525,9 @@ def releases_to_keep():
 
 
 def prune(dry_run=False):
-    """Remove installed releases nothing needs any more. Returns [(path, why removed)].
+    """Remove releases nothing needs. Returns [(path, why removed)].
 
-    Only directories install() created (they carry its receipt) are ever touched, so
-    a release someone unpacked by hand under the same directory is left alone. Each is
-    renamed out of the way before it is deleted, so it never exists half-removed at a
-    path anything would use.
+    Only touches directories install() created. Renamed out of the way before deleting.
     """
     keep = releases_to_keep()
     removed = []

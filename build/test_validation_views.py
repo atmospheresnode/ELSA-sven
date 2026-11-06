@@ -50,7 +50,8 @@ class ValidationViewTests(TestCase):
                         'description are required.',
              'label': 'a.xml', 'label_path': '/a.xml', 'line': 1,
              'element_path': 'Product_Bundle/Identification_Area'},
-            # An ELSA defect: counted as an error by PDS, never shown to the user.
+            # An ELSA defect: counted by PDS, and on an External bundle shown as one item
+            # that asks the user to contact the team.
             {'severity': 'ERROR', 'type': 'error.label.schema',
              'message': "cvc-minLength-valid: Value '' with length = '0' is not facet-valid.",
              'label': 'a.xml', 'label_path': '/a.xml', 'line': 9,
@@ -63,7 +64,7 @@ class ValidationViewTests(TestCase):
         payload = json.loads(self.client.get(
             reverse('build:validation_status', args=[self.bundle.pk])).content)
         self.assertEqual(payload['errors'], 2)
-        self.assertEqual(payload['blocking'], 1)
+        self.assertEqual(payload['blocking'], 2)
 
     def test_status_reports_no_blocking_work_on_a_clean_run(self):
         self.run.findings = []

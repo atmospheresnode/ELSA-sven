@@ -1,0 +1,22 @@
+<html><head><meta charset="utf-8">
+<style>
+ body { font-family: Helvetica, Arial, sans-serif; font-size: 10pt; color: #222; }
+ h1 { font-size: 16pt; margin: 0 0 4pt; } h2 { font-size: 12pt; margin: 14pt 0 4pt; border-bottom: 1px solid #ccc; padding-bottom: 2pt; }
+ .muted { color: #666; } .body { white-space: pre-wrap; margin: 2pt 0 8pt; }
+ table { width: 100%; border-collapse: collapse; } td, th { border: 1px solid #ccc; padding: 3pt; text-align: left; vertical-align: top; }
+ .note { background: #fffbe6; }
+</style></head><body>
+<h1>Request #{{ case.pk }}: {{ case.title }}</h1>
+<p class="muted">Admin Console record, PDS Atmospheres Node &middot; generated {{ generated|date:"F j, Y H:i" }} &middot; contains internal team notes</p>
+<p><strong>Type:</strong> {{ case.get_kind_display }} &middot; <strong>Status:</strong> {{ case.get_status_display }}{% if case.stage %} &middot; <strong>Review stage:</strong> {{ case.get_stage_display }}{% endif %}<br>
+<strong>From:</strong> {{ case.requester_label }}{% if case.requester_email %} &lt;{{ case.requester_email }}&gt;{% endif %}<br>
+<strong>Opened:</strong> {{ case.created_at|date:"F j, Y H:i" }}{% if case.closed_at %} &middot; <strong>Closed:</strong> {{ case.closed_at|date:"F j, Y H:i" }}{% endif %}{% if case.assignee %} &middot; <strong>Handled by:</strong> {{ case.assignee.username }}{% endif %}{% if case.bundle %}<br><strong>Bundle:</strong> {{ case.bundle.name }}{% endif %}</p>
+{% if case.body %}<h2>Request</h2><div class="body">{{ case.body }}</div>{% endif %}
+<h2>Conversation and notes</h2>
+{% for note in notes %}<p class="{% if note.kind == 'note' %}note{% endif %}"><strong>{{ note.get_kind_display }}</strong>{% if note.author %} by {{ note.author.username }}{% endif %}, {{ note.created_at|date:"M j, Y H:i" }}</p><div class="body">{{ note.body }}</div>{% empty %}<p class="muted">None.</p>{% endfor %}
+{% if liens %}<h2>Liens</h2><table><tr><th>Lien</th><th>File</th><th>Status</th></tr>{% for lien in liens %}<tr><td>{{ lien.description }}</td><td>{{ lien.file_path }}{% if lien.line %}, line {{ lien.line }}{% endif %}</td><td>{{ lien.get_status_display }}</td></tr>{% endfor %}</table>{% endif %}
+{% if checklist %}<h2>Review checklist</h2><table>{% for key, done in checklist.items %}<tr><td>{{ key }}</td><td>{% if done %}Done{% else %}Not done{% endif %}</td></tr>{% endfor %}</table>{% endif %}
+{% if releases %}<h2>Releases</h2><table><tr><th>Release</th><th>DOI</th><th>Delivered</th><th>Released</th></tr>{% for r in releases %}<tr><td>{{ r.label }}</td><td>{{ r.doi }}</td><td>{{ r.delivered_at|date:"M j, Y" }}</td><td>{{ r.released_at|date:"M j, Y" }}</td></tr>{% endfor %}</table>{% endif %}
+<h2>Audit trail</h2>
+<table><tr><th>When</th><th>Who</th><th>What</th><th>Details</th></tr>{% for entry, details in entries %}<tr><td>{{ entry.created_at|date:"M j, Y H:i" }}</td><td>{{ entry.actor_username }}</td><td>{{ entry.action }}</td><td>{{ entry.reason }} {{ details }}</td></tr>{% empty %}<tr><td colspan="4" class="muted">None.</td></tr>{% endfor %}</table>
+</body></html>

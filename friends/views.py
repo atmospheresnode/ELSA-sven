@@ -28,9 +28,11 @@ from django.utils.dateparse import parse_datetime
 from django.views.decorators.http import require_POST
 from datetime import timedelta
 
+from build import walkthrough
 from build.models import Bundle
+from staff import hooks as staff_hooks
 from . import passkeys, throttle
-from . import devices, drafting
+from . import devices, drafting, next_page
 from .closure import close_account
 from .forms import (AgencyRequestForm, AgencySendForm, CloseAccountForm,
                     ElsaPasswordChangeForm, EmailChangeForm, EmailCodeForm, NameForm,
@@ -47,10 +49,7 @@ from .models import OTP_TTL, AccountEvent, Passkey, TrustedDevice, UserProfile, 
 logger = logging.getLogger(__name__)
 
 
-#----------------------------------------------------------------------------------------
-# The archive directory.  A username becomes a directory under ARCHIVE_DIR, so
-# every path built from one is checked to stay there.
-#----------------------------------------------------------------------------------------
+# --- The archive directory. Paths built from a username have to stay under ARCHIVE_DIR. ---
 
 def is_inside(path, root):
     """Whether ``path`` resolves to somewhere strictly below ``root``."""
@@ -75,35 +74,22 @@ def profile_for(user):
 
 
 def absolute_url(request, path):
-    """
-    A link for an email.  https outside DEBUG, for the reason in
-    passkeys.expected_origin: behind TLS terminated upstream request.scheme
-    says http, and a reset or confirmation link should never travel that way.
-    """
+    """Link for an email. https outside DEBUG, see passkeys.expected_origin."""
     scheme = request.scheme if settings.DEBUG else 'https'
     return '{0}://{1}{2}'.format(scheme, request.get_host(), path)
 
 
 def create_archive_dir(username):
-    """
-    Creates the user's archive folder and returns its path.  Real failures
-    (permissions, a full disk) propagate, so registration rolls back instead of
-    leaving an account with nowhere to put its bundles.
-    """
+    """Create the user's archive folder and return its path. Failures roll back registration."""
     path = archive_dir_for(username)
     if os.path.isdir(path):
-        # Usernames are unique, so this is a folder left behind by a deleted
-        # account.  Worth a look by an admin, but not worth refusing sign-up.
+        # Folder left behind by a deleted account. Don't refuse the sign-up over it.
         logger.warning('archive folder for new user %s already exists', username)
     os.makedirs(path, exist_ok=True)
     return path
 
 
-# The old Bundle Hub address, /accounts/<profile id>/.  Kept so bookmarks still
-# work.  It used to render the hub itself and, on every visit, delete the
-# record of any bundle whose folder it could not see: a disk or NFS hiccup
-# became permanent data loss, and it ran before the ownership check, so anyone
-# signed in could trigger it on someone else's bundles.
+# Old Bundle Hub address, /accounts/<profile id>/, kept for bookmarks.
 @login_required
 def profile(request, pk_user):
     if not UserProfile.objects.filter(pk=pk_user, user=request.user).exists():
@@ -113,30 +99,23 @@ def profile(request, pk_user):
 
 
 def admin_login(request, extra_context=None):
-    """
-    Stands in for AdminSite.login, which never renders its password form.
-    Staff arrive already signed in through ELSA, second factor included.
-    """
+    """Stands in for AdminSite.login. Staff are already signed in through ELSA."""
     if not request.user.is_authenticated:
         messages.info(request, "Sign in to ELSA first, then open the admin again.")
         return HttpResponseRedirect(reverse('main:index'))
-    if request.user.is_active and request.user.is_staff:
+    if request.user.is_active and request.user.is_superuser:
         return redirect('admin:index')
     return redirect('main:restricted_access')
 
 
-# Keys holding the half-finished login while the user reads their email.  The
-# session only names the pending user; it grants nothing on its own.
+# Session keys for a half-finished login. They only name the user and grant nothing.
 OTP_SESSION_KEY = 'pre_otp_user_id'
 OTP_PURPOSE_KEY = 'pre_otp_purpose'
 OTP_STARTED_KEY = 'pre_otp_started_at'
 OTP_SESSION_TTL = timedelta(minutes=15)
 
 
-# ---------------------------------------------------------------------------
-# Throttles.  Counted in the database by friends/throttle.py, one UPDATE per
-# hit, so parallel requests cannot slip past a limit together.
-# ---------------------------------------------------------------------------
+# --- Throttles, counted by friends/throttle.py ---
 
 SIGNUP_PER_HOUR = 5
 SIGNUP_PER_DAY = 20
@@ -145,21 +124,16 @@ PASSWORD_WINDOW = 15 * 60
 PASSWORD_FAILURES_PER_ACCOUNT = 10
 PASSWORD_FAILURES_PER_IP = 30
 
-# Each of these sends an email, so they cap how hard one client can make ELSA
-# mail somebody.
+# These send email, so limit how much one client can trigger.
 RESET_PER_HOUR_PER_IP = 10
 RESET_PER_HOUR_PER_ADDRESS = 3
 EMAIL_CHANGE_PER_HOUR = 5
 
 
 def _client_ip(request):
-    """
-    Best-effort client address.
+    """Best-effort client address.
 
-    X-Forwarded-For is only read when settings say a proxy sets it, because
-    otherwise any client can forge the header and sidestep every throttle here.
-    Behind Apache without that setting every request looks like the proxy, and
-    these limits become global rather than per-client.
+    Only read X-Forwarded-For if settings say a proxy sets it, since a client could forge it.
     """
     if getattr(settings, 'TRUST_X_FORWARDED_FOR', False):
         forwarded = request.META.get('HTTP_X_FORWARDED_FOR', '')
@@ -169,10 +143,7 @@ def _client_ip(request):
 
 
 def _signup_throttled(request):
-    """
-    Caps sign-up attempts per address.  Unique emails already stop one inbox
-    being bombed repeatedly; this stops a script working through many.
-    """
+    """Limit sign-up attempts per address."""
     ip = _client_ip(request)
     if throttle.hit('signup-hour-{0}'.format(ip), 3600) > SIGNUP_PER_HOUR:
         return True
@@ -188,11 +159,7 @@ def _password_ip_key(request):
 
 
 def _password_throttled(request, username):
-    """
-    Password guessing had no ceiling at all: the OTP had an attempt cap but the
-    password in front of it did not.  Counted per account and per address, and
-    only failures count, so signing in normally never uses up the allowance.
-    """
+    """Limit failed passwords per account and per address. Only failures count."""
     if throttle.count(_password_key(username)) >= PASSWORD_FAILURES_PER_ACCOUNT:
         return True
     return throttle.count(_password_ip_key(request)) >= PASSWORD_FAILURES_PER_IP
@@ -208,16 +175,12 @@ def _clear_password_failures(username):
 
 
 def _mask_email(address):
-    """
-    Turns 'vhartwick@nmsu.edu' into 'vh*****k@nmsu.edu' so the page can confirm
-    where the code went without printing the address in full.
-    """
+    """Mask an email, e.g. 'vh*****k@nmsu.edu'."""
     if not address or '@' not in address:
         return ''
 
     name, domain = address.rsplit('@', 1)
-    # Short local parts get a fixed mask, otherwise a three-character name
-    # would come through entirely unmasked.
+    # Fixed mask for short names so they don't show in full.
     if len(name) <= 4:
         return '{0}{1}@{2}'.format(name[:1], '*' * max(2, len(name) - 1), domain)
     return '{0}{1}{2}@{3}'.format(name[:2], '*' * (len(name) - 3), name[-1], domain)
@@ -242,11 +205,7 @@ def _user_zone(user):
 
 
 def _send_security_notice(request, user, to, subject, headline, lead, detail=''):
-    """
-    Tells someone that a sensitive change was made to their account, with
-    the way out if it was not them.  Sent after the change is saved; a failure
-    is logged and does not undo it.
-    """
+    """Tell someone a sensitive change was made. A failure is logged and doesn't undo it."""
     return send_branded(to, subject, 'friends/email/account_notice', {
         'headline': headline,
         'first_name': user.first_name,
@@ -259,21 +218,14 @@ def _send_security_notice(request, user, to, subject, headline, lead, detail='')
 
 
 def _stage_pending_user(request, user, purpose):
-    """
-    Parks a user who has cleared the password check but is not logged in yet.
-    Holds for both second factors: the session entry names the account and
-    grants nothing on its own.
-    """
+    """Save a user who passed the password check but isn't logged in. Grants nothing on its own."""
     request.session[OTP_SESSION_KEY] = user.id
     request.session[OTP_PURPOSE_KEY] = purpose
     request.session[OTP_STARTED_KEY] = timezone.now().isoformat()
 
 
 def _stage_otp_challenge(request, user, profile, purpose):
-    """
-    Issues a code (honouring the resend cooldown), parks the pending user in
-    the session, and sends them to the verify page.
-    """
+    """Issue a code (with the resend cooldown), save the pending user, go to the verify page."""
     if profile.seconds_until_resend():
         messages.info(request, "A code has already been sent to your email.  "
                                "Check your inbox, or request another one below.")
@@ -291,10 +243,7 @@ def _clear_otp_session(request):
 
 
 def _pending_otp_user(request):
-    """
-    Resolves the user mid-verification, or None if there is no live challenge.
-    Also enforces an outer time limit on the staged session entry.
-    """
+    """The user mid-verification, or None. Also enforces a time limit on the session entry."""
     user_id = request.session.get(OTP_SESSION_KEY)
     if not user_id:
         return None
@@ -321,16 +270,9 @@ def _otp_lock_message(request, seconds):
                                 minutes, '' if minutes == 1 else 's'))
 
 
-#----------------------------------------------------------------------------------------
-# Sign-in.
-#
-# Identifier first, following the FIDO Alliance design guidelines: ask who you
-# are, then show one method on its own screen.  Their research ranks the ways
-# of offering a passkey as autofill, then identifier-first, then a dedicated
-# button, and warns against putting a passkey button and a password form on the
-# same screen.  So the landing page asks only for a username, with autofill
-# armed on it, and the method screens live behind that.
-#----------------------------------------------------------------------------------------
+# --- Sign-in ---
+# Identifier first, per the FIDO Alliance design guidelines. The landing page asks for a username
+# with autofill on it, and each method gets its own screen behind that.
 
 LOGIN_IDENTIFIER_KEY = 'login_identifier'
 LOGIN_PASSWORD_CHOSEN_KEY = 'login_password_chosen'
@@ -342,12 +284,7 @@ def _clear_login_session(request):
 
 
 def _identified_user(request):
-    """
-    The account named on the first screen, or None.
-
-    Naming an account proves nothing on its own, so this is only ever used to
-    decide which method screen to show and to bind a passkey to the claim.
-    """
+    """The account named on the first screen, or None. Only used to pick the next screen."""
     username = request.session.get(LOGIN_IDENTIFIER_KEY)
     if not username:
         return None
@@ -355,13 +292,10 @@ def _identified_user(request):
 
 
 def login_identify(request):
-    """
-    Step one: who is signing in.
+    """Step one: who's signing in.
 
-    Someone with a passkey goes to the passkey screen, everyone else to the
-    password screen.  An unrecognised username also goes to the password
-    screen, so a wrong guess cannot be told apart from an account that simply
-    uses a password.
+    Passkey users go to the passkey screen, everyone else to the password screen, including
+    unknown usernames so a wrong guess looks the same.
     """
     if request.method != 'POST':
         return HttpResponseRedirect(reverse('main:index'))
@@ -376,9 +310,7 @@ def login_identify(request):
 
     user = User.objects.filter(username=username).first()
 
-    # Only send them to the passkey screen if a passkey has actually worked in
-    # this browser.  Owning one on another machine is no help here, and landing
-    # on a prompt this device cannot answer is the confusing part.
+    # Only use the passkey screen if one has worked in this browser.
     if (user and user.is_active and user.passkeys.exists()
             and _device_knows_passkey(request, user)):
         return redirect('friends:login_passkey')
@@ -387,11 +319,7 @@ def login_identify(request):
 
 
 def login_passkey(request):
-    """
-    Step two, passkey route.  The ceremony runs over the JSON endpoints and
-    signs the user straight in: a passkey with user verification proves both
-    possession of the authenticator and a biometric or PIN.
-    """
+    """Step two, passkey. A passkey with user verification counts as both factors."""
     username = request.session.get(LOGIN_IDENTIFIER_KEY)
     if not username:
         return HttpResponseRedirect(reverse('main:index'))
@@ -420,10 +348,8 @@ def login_password(request):
 
 
 def login_use_password_instead(request):
-    """
-    Leaving the passkey screen for the password screen, for somebody without
-    their authenticator to hand.  The choice is remembered so the second factor
-    afterwards is an emailed code rather than the passkey they just declined.
+    """Passkey screen to password screen, for someone without their authenticator.
+    Remembered so the second factor is an emailed code.
     """
     if request.method != 'POST':
         return redirect('friends:login_password')
@@ -433,20 +359,14 @@ def login_use_password_instead(request):
 
 
 def _continue_with_password(request, username, password):
-    """
-    Checks a password and hands off to whichever second factor applies.
-    Shared by the password screen and the legacy single-post login view.
-    """
+    """Check a password and go to the right second factor. Used by the password screen and the old login view."""
     if _password_throttled(request, username):
         messages.error(request, "Too many sign-in attempts. Please wait a few "
                                 "minutes and try again.")
         return redirect('friends:login_password')
 
-    # Inactive accounts are visible here on purpose.  authenticate() would turn
-    # them away with "Invalid username or password", which stranded everyone
-    # who signed up but did not enter their code in time: told their correct
-    # password was wrong, refused a reset, and holding their username and
-    # address forever.  One hash either way, so timing stays the same.
+    # Inactive accounts are allowed here on purpose, so someone who didn't enter their code in
+    # time can resume. authenticate() would just say the password is wrong.
     user = AllowAllUsersModelBackend().authenticate(request, username=username,
                                                     password=password)
 
@@ -470,19 +390,14 @@ def _continue_with_password(request, username, password):
             return _stage_otp_challenge(request, user, profile, 'register')
         return render(request, 'friends/inactive.html', {'user': user})
 
-    # A browser the user asked ELSA to remember has already passed the second
-    # factor once; with the right password it signs straight in.  The OTP lock
-    # guards code guessing, which does not happen on this path.
+    # A remembered browser with the right password signs straight in.
     if devices.trusted_device_for(request, user):
         request.elsa_sign_in_method = 'password on a remembered device'
         login(request, user, backend='django.contrib.auth.backends.ModelBackend')
         _clear_login_session(request)
         return HttpResponseRedirect(reverse('main:index'))
 
-    # A registered passkey is the stronger second factor, but only ask for one
-    # this browser has actually used.  Owning a passkey on another machine is
-    # no help here, and the same unanswerable prompt one step later is exactly
-    # what the device check upstream exists to avoid.
+    # Only ask for a passkey this browser has used.
     declined = request.session.get(LOGIN_PASSWORD_CHOSEN_KEY)
     if user.passkeys.exists() and not declined and _device_knows_passkey(request, user):
         _stage_pending_user(request, user, 'login')
@@ -497,26 +412,19 @@ def _continue_with_password(request, username, password):
 
 
 def _never_verified(user, profile):
-    """
-    An account that registered and never confirmed its address, as opposed to
-    one an administrator switched off.  Only the first may reactivate itself.
-    Both tests, so an account from before email_verified_at existed that has
-    ever signed in counts as verified.
+    """An account that never confirmed its address, not one an admin switched off.
+    Only the first can reactivate itself.
     """
     return profile.email_verified_at is None and user.last_login is None
 
 
 # let's elsa's friends login
 def friend_login(request):
-    """
-    Single-post sign-in: username and password together.
-
-    The landing page now identifies first and posts the password separately,
-    but this endpoint stays because other templates link to it and it is a
-    valid way in.
-    """
+    """Single-post sign-in with username and password. Other templates still link to it."""
     if request.method != 'POST':
-        # On GET, send the user to the landing page, which has the login form
+        # On GET, go to the landing page, which has the login form. Keep the page they wanted.
+        if next_page.remember(request, request.GET.get('next')) and not request.user.is_authenticated:
+            messages.info(request, 'Sign in to continue to that page.')
         return HttpResponseRedirect(reverse('main:index'))
 
     username = (request.POST.get('username') or '').strip()
@@ -543,8 +451,7 @@ def otp_verify(request):
         ok, reason = profile.verify_otp(request.POST.get('otp'))
 
         if ok:
-            # Only the registration flow may flip a user live.  A login must
-            # never resurrect an account an admin has deactivated.
+            # Only registration can activate a user, so a login can't revive a deactivated account.
             if purpose == 'register' and _never_verified(user, profile):
                 user.is_active = True
                 user.save(update_fields=['is_active'])
@@ -563,10 +470,7 @@ def otp_verify(request):
             _clear_otp_session(request)
             _clear_login_session(request)
 
-            # Now that they are properly signed in, this is the moment to ask.
-            # Enrolling can only ever happen after authentication: a passkey
-            # created by anyone who merely typed a username would be a
-            # permanent way in to that account.
+            # Fully signed in now, so offer a passkey. Adding one always has to come after sign-in.
             if purpose == 'register':
                 # A brand-new account: one optional setup step, then the hub.
                 request.session[ONBOARDING_KEY] = True
@@ -633,10 +537,7 @@ def otp_resend(request):
 
 
 
-#----------------------------------------------------------------------------------------
-# Passkeys (WebAuthn).  The ceremony logic lives in friends/passkeys.py; these
-# views only move data between the browser and it.
-#----------------------------------------------------------------------------------------
+# --- Passkeys (WebAuthn). The logic is in friends/passkeys.py. ---
 
 
 def _json_body(request):
@@ -701,20 +602,10 @@ def _device_knows_passkey(request, user):
 
 
 def _should_offer_passkey(request, user):
-    """
-    Whether to invite this user to set up a passkey on this device.
-
-    Only after they are fully signed in, and only on a device that has not
-    used one for this account.  Having a passkey on another machine is exactly
-    the case worth asking about, so account-wide credentials are not a reason
-    to stay quiet.
-    """
+    """Whether to offer a passkey on this device. Only once signed in and if this device hasn't used one."""
     hint = _read_passkey_hint(request)
 
-    # The cookie can outlive the credential: removing a passkey from ELSA
-    # cannot reach into a browser and rewrite what it remembers.  If the
-    # account holds no passkeys at all, this browser certainly has no usable
-    # one, whatever the cookie still claims.
+    # The cookie can outlive the credential. With no passkeys on the account, ignore it.
     if user.pk in hint['known'] and user.passkeys.exists():
         return False
 
@@ -774,8 +665,7 @@ def passkey_delete(request, pk):
 
     response = redirect('friends:useraccount')
 
-    # With none left, this browser no longer knows a passkey for them, so stop
-    # the hint claiming otherwise and let the setup offer come back.
+    # None left, so clear the hint and let the setup offer come back.
     if not request.user.passkeys.exists():
         hint = _read_passkey_hint(request)
         if request.user.pk in hint['known']:
@@ -786,11 +676,7 @@ def passkey_delete(request, pk):
 
 
 def _passkey_target_user(request):
-    """
-    The account a passkey response has to match, or None if the sign-in is
-    fully anonymous (autofill from the landing page, where nobody has named an
-    account and any registered passkey is a legitimate answer).
-    """
+    """The account a passkey response has to match, or None for an anonymous autofill sign-in."""
     return _pending_otp_user(request) or _identified_user(request)
 
 
@@ -812,10 +698,12 @@ def passkey_auth_verify(request):
 
     passkey, error = passkeys.verify_authentication(request, body['credential'], user=target)
     if error:
+        owner = target
+        if owner is None and isinstance(raw_id, str) and len(raw_id) < 2048:
+            owner = User.objects.filter(passkeys__credential_id=raw_id).first()
+        staff_hooks.passkey_sign_in_failed(request, owner)
         payload = {'error': error}
-        # Deleting a passkey here cannot remove it from the authenticator that
-        # holds it, so browsers keep offering credentials ELSA has forgotten.
-        # Flagging it lets the page ask the browser to drop it.
+        # The authenticator keeps the passkey, so flag it and the page asks the browser to drop it.
         if raw_id and not Passkey.objects.filter(credential_id=raw_id).exists():
             payload['reason'] = 'unknown_credential'
             payload['credential_id'] = raw_id
@@ -832,15 +720,16 @@ def passkey_auth_verify(request):
     _clear_otp_session(request)
     _clear_login_session(request)
 
-    response = JsonResponse({'ok': True, 'redirect': reverse('main:index')})
+    # Staff using a passkey choose between their bundles and the Admin Console.
+    # This tap opens the console without asking again.
+    staff_hooks.note_passkey_sign_in(request, user)
+    response = JsonResponse({'ok': True,
+                             'redirect': next_page.take(request) or staff_hooks.after_sign_in(user, reverse('main:index'))})
     return _remember_passkey_device(request, response, user)
 
 
 def passkey_verify(request):
-    """
-    The second-factor page shown after a password, for users who have a
-    passkey.  The ceremony itself runs over the JSON endpoints above.
-    """
+    """Second factor page after a password, for users with a passkey."""
     user = _pending_otp_user(request)
 
     if not user:
@@ -857,14 +746,7 @@ def passkey_verify(request):
 
 @login_required
 def passkey_offer(request):
-    """
-    The invitation to set up a passkey, shown once someone has fully signed in
-    on a device that has never used one for their account.
-
-    This is the only correct moment for it.  Enrolling adds a credential that
-    can sign in as this account indefinitely, so it has to sit behind a
-    completed authentication, not stand in for one.
-    """
+    """Offer to set up a passkey, after a full sign-in on a device that hasn't used one."""
     # The last onboarding step, if this is one: the flag ends here.
     onboarding = bool(request.session.pop(ONBOARDING_KEY, False))
     done = reverse('friends:bundle_hub') if onboarding else reverse('main:index')
@@ -882,10 +764,7 @@ def passkey_offer(request):
 @login_required
 @require_POST
 def passkey_offer_dismiss(request):
-    """
-    Records a "not now" so the offer stays quiet for a while.  A prompt that
-    returns every single sign-in is how a helpful feature turns into a nuisance.
-    """
+    """Save a "not now" so the offer stays quiet for a while."""
     hint = _read_passkey_hint(request)
     hint['declined'][request.user.pk] = timezone.now().isoformat()
 
@@ -896,10 +775,7 @@ def passkey_offer_dismiss(request):
 
 @require_POST
 def passkey_use_email_instead(request):
-    """
-    Escape hatch from the passkey page: sends a code to the staged user so
-    somebody without their authenticator to hand can still get in.
-    """
+    """Send a code to the pending user, for someone without their authenticator."""
     user = _pending_otp_user(request)
 
     if not user:
@@ -922,10 +798,7 @@ def passkey_use_email_instead(request):
 # let's elsa's friends logout
 @login_required
 def friend_logout(request):
-    # Messages default to cookie storage, which survives the session flush that
-    # logout performs.  Anything still unread would then be shown to whoever
-    # loads the public landing page next, on a shared machine possibly not the
-    # person it was written for.  Draining marks them used so the cookie goes.
+    # Messages are in a cookie, which survives logout. Clear them so the next person doesn't see them.
     list(messages.get_messages(request))
 
     logout(request)
@@ -945,8 +818,7 @@ def register(request):
 
     if user_form.is_valid() and profile_form.is_valid():
 
-        # One transaction, and the folder is made inside it: if that fails the
-        # user row rolls back rather than being left with nowhere to work.
+        # One transaction, with the folder made inside it, so a failure rolls back the user.
         with transaction.atomic():
             user = user_form.save(commit=False)
             user.set_password(user.password)
@@ -966,11 +838,7 @@ def register(request):
                   {'user_form': user_form, 'profile_form': profile_form})
 
 
-#----------------------------------------------------------------------------------------
-# Onboarding.  A new account gets one optional step (author details), then the
-# passkey offer if this device can use one, then the Bundle Hub.  Nothing in it
-# is required: sign-up already collected everything ELSA needs.
-#----------------------------------------------------------------------------------------
+# --- Onboarding: optional author details, passkey offer if the device can use one, then the Bundle Hub. ---
 
 ONBOARDING_KEY = 'elsa_onboarding'
 
@@ -1006,14 +874,9 @@ def welcome(request):
     })
 
 
-#----------------------------------------------------------------------------------------
-# The account page.
-#
-# One page for everything about the account: each setting is a row with its
-# current value, and each Edit opens a small modal for that one thing.  The
-# modals post to the JSON endpoints below and the page updates in place, so
-# nothing reloads and nobody is sent elsewhere to change one field.
-#----------------------------------------------------------------------------------------
+# --- The account page ---
+# Each setting is a row, and Edit opens a small modal. The modals post to the JSON endpoints
+# below and the page updates in place.
 
 STAFF_RECIPIENTS = ['lneakras@nmsu.edu', 'rupakdey@nmsu.edu']
 
@@ -1042,6 +905,8 @@ def friend_useraccount(request):
         'userprofile': profile,
         'agency_label': profile.get_agency_display(),
         'agency_choices': [c for c in UserProfile.AGENCY_CHOICES if c[0] != profile.agency],
+        'agency_request': staff_hooks.open_agency_request(request.user),
+        'requests_box': staff_hooks.recent_requests(request.user),
         'bundle_count': Bundle.objects.filter(user=request.user).count(),
         'passkeys': request.user.passkeys.all(),
         'email_pending': profile.email_change_pending(),
@@ -1054,7 +919,7 @@ def friend_useraccount(request):
 
 
 def _initials(user):
-    """'VH' for Victoria Hartwick; the username's first two letters otherwise."""
+    """Initials from the name, otherwise the username's first two letters."""
     parts = [p for p in (user.first_name.strip(), user.last_name.strip()) if p]
     if parts:
         return ''.join(p[0] for p in parts[:2]).upper()
@@ -1072,7 +937,7 @@ def _password_min_length():
 # profile_settings NOTE:  It is important to NOT rename this as simply settings.  Since we import django.conf import settings, when our user goes to register, settings.ARCHIVE_DIR does not pull from our settings.py file.  Rather, Django comes to this function (if named settings) and notices there is no ARCHIVE_DIR declared here.  Big boo boo that cost me (k) a couple days to figure out.
 @login_required
 def friend_settings(request, pk_user):
-    """The old Profile Settings address.  Settings now live on the account page."""
+    """Old Profile Settings address. Settings are on the account page."""
     if request.user.pk != int(pk_user):
         return redirect('main:restricted_access')
     return HttpResponseRedirect(reverse('friends:useraccount') + '?edit=name')
@@ -1190,8 +1055,7 @@ def account_email_verify(request):
 
     devices.record(user, AccountEvent.EMAIL_CHANGED, request, detail='{0} to {1}'.format(old_email, new_email))
 
-    # To the old address: if this was not them, that inbox is the one they
-    # still have.
+    # To the old address, in case this wasn't them.
     _send_security_notice(
         request, user, [old_email],
         "ELSA: your email address was changed",
@@ -1215,8 +1079,7 @@ def account_email_resend(request):
     if wait:
         return _json_error("Please wait {0} more second{1}.".format(wait, '' if wait == 1 else 's'), 429)
 
-    # A resend is another email to an address that is not verified yet, so it
-    # counts against the same hourly allowance as starting a change.
+    # A resend counts against the same hourly limit.
     if throttle.hit('email-change-{0}'.format(request.user.pk), 3600) > EMAIL_CHANGE_PER_HOUR:
         return _json_error("Too many codes requested. Please try again later.", 429)
 
@@ -1250,8 +1113,7 @@ def account_password(request):
         return _json_form_errors(form)
 
     form.save()
-    # Changing the password invalidates every session, including this one.
-    # Keep this one: the user just proved who they are.
+    # Changing the password ends every session. Keep this one.
     update_session_auth_hash(request, form.user)
     _clear_password_failures(user.username)
     UserProfile.objects.filter(user=user).update(password_changed_at=timezone.now())
@@ -1281,8 +1143,7 @@ def account_close(request):
 
     user = request.user
     if user.is_superuser:
-        # Closing one's own admin account could leave nobody able to administer
-        # ELSA; another admin deactivates it instead.
+        # An admin can't close their own account. Another admin deactivates it.
         return _json_error("Administrator accounts cannot be closed here. Ask another "
                            "ELSA administrator to deactivate it.", 403)
 
@@ -1303,6 +1164,14 @@ def account_close(request):
                      'contact_url': absolute_url(request, reverse('main:contact')),
                  })
     _notify_staff_of_closure(record)
+    staff_hooks.forget_requester(user)
+    # Username only. Closing an account removes the name and email, so don't keep a copy.
+    staff_hooks.open_case(
+        'closure', 'Account closed: {0}'.format(record['username']),
+        requester_name=record['username'],
+        body='Bundles kept:\n' + ('\n'.join('  - {0}'.format(n) for n in record['bundles']) or '  (none)'),
+        data={'username': record['username'], 'bundles_kept': len(record['bundles']),
+              'archive_folder': record['archive_path'] or '(none on disk)'})
 
     list(messages.get_messages(request))
     logout(request)
@@ -1423,13 +1292,24 @@ def account_agency_send(request):
     if not form.is_valid():
         return _json_form_errors(form)
 
+    if staff_hooks.open_agency_request(user) is not None:
+        return _json_error("You already have an agency request with the team. They will "
+                           "reply by email; please wait for their answer.", 409)
+
     if throttle.hit('agency-send-{0}'.format(user.pk), 86400) > AGENCY_REQUESTS_PER_DAY:
         return _json_error("You have sent several requests today. The team will reply "
                            "by email; please wait for their answer.", 429)
 
     facts = _agency_facts(user, profile, form.cleaned_data['agency'])
-    # Written by ELSA, not by the user or the model, so the team can trust it
-    # whatever the message below says.
+
+    # Goes in the Admin Console as well as the email, so a lost email doesn't lose it.
+    case = staff_hooks.open_case(
+        'agency', 'Agency change to {0}'.format(facts['requested_label']), requester=user,
+        body=form.cleaned_data['body'],
+        data={'current': facts['current'], 'requested': facts['requested'],
+              'subject': form.cleaned_data['subject']})
+    console = staff_hooks.case_url(request, case)
+    # Written by ELSA, not the user or the model, so the team can trust it.
     verified = '\n'.join([
         'Agency change request, sent from the ELSA account page.',
         '',
@@ -1438,12 +1318,12 @@ def account_agency_send(request):
         'Current agency:   {current_label} ({current})',
         'Requested agency: {requested_label} ({requested})',
         'Bundles:          {bundle_count} ({archive_count} Archive, {external_count} External)',
-        'Admin:            {admin}',
+        'Approve in ELSA:  {admin}',
         '',
         '---- Message from the user (they may have edited it) ----',
         '',
     ]).format(email=user.email,
-              admin=absolute_url(request, reverse('admin:friends_userprofile_change', args=[profile.pk])),
+              admin=console or 'The Admin Console is not set up on this server; change it in the Django admin.',
               **facts)
 
     try:
@@ -1452,7 +1332,9 @@ def account_agency_send(request):
                      to=STAFF_RECIPIENTS, reply_to=[user.email]).send()
     except Exception:
         logger.exception('agency request from %s failed', user.username)
-        return _json_error("Your request could not be sent. Please try again in a few minutes.", 503)
+        # Recorded in the Admin Console, so the team still has it.
+        if case is None:
+            return _json_error("Your request could not be sent. Please try again in a few minutes.", 503)
 
     # Their own copy, so they have a record of what was asked.
     try:
@@ -1498,8 +1380,7 @@ def account_session_end(request, pk):
 @require_POST
 def account_sessions_end_others(request):
     count = devices.end_other_sessions(request)
-    # Being remembered only helps someone who also knows the password, but a
-    # lost laptop is exactly when to stop trusting it.
+    # Forget remembered browsers too, in case of a lost laptop.
     current = devices.current_trusted_device(request)
     others = TrustedDevice.objects.filter(user=request.user)
     if current is not None:
@@ -1537,18 +1418,14 @@ def passkey_rename(request, pk):
                          'message': 'Passkey renamed to "{0}".'.format(passkey.name)})
 
 
-#----------------------------------------------------------------------------------------
-# Password reset.  Django's views, pointed at ELSA's templates and mail, and
-# rate limited.
-#----------------------------------------------------------------------------------------
+# --- Password reset. Django's views with ELSA's templates and mail, rate limited. ---
 
 class ElsaPasswordResetForm(PasswordResetForm):
     """Sends the reset link in the same branded mail as every other account email."""
 
     def send_mail(self, subject_template_name, email_template_name, context,
                   from_email, to_email, html_email_template_name=None):
-        # One line, as Django's own send_mail insists: a newline in a subject
-        # is a header injection.
+        # One line, since a newline in a subject is header injection.
         subject = ''.join(render_to_string(subject_template_name, context).splitlines())
         protocol = context['protocol'] if settings.DEBUG else 'https'
         context = dict(context, protocol=protocol, reset_url='{0}://{1}{2}'.format(
@@ -1574,8 +1451,7 @@ class ElsaPasswordResetView(auth_views.PasswordResetView):
         over_ip = throttle.hit('reset-ip-{0}'.format(_client_ip(self.request)), 3600) > RESET_PER_HOUR_PER_IP
         over_address = throttle.hit('reset-addr-{0}'.format(address), 3600) > RESET_PER_HOUR_PER_ADDRESS
         if over_ip or over_address:
-            # The same page as a sent email, so the limit does not reveal
-            # whether the address has an account.
+            # Same page as a sent email, so the limit doesn't show if the address has an account.
             return HttpResponseRedirect(self.get_success_url())
         return super(ElsaPasswordResetView, self).form_valid(form)
 
@@ -1602,17 +1478,19 @@ class ElsaPasswordResetConfirmView(auth_views.PasswordResetConfirmView):
         return response
 
 
-#----------------------------------------------------------------------------------------
-# Bundle Hub.
-#----------------------------------------------------------------------------------------
+# --- Bundle Hub ---
 
 @login_required
 def bundle_hub(request):
     bundles = list(Bundle.objects.filter(user=request.user))
     for bundle in bundles:
-        # Shown as a badge, never acted on: a folder that is missing for a
-        # moment (NFS, a restore in progress) must not cost the user a bundle.
+        # Only a badge. A folder missing for a moment shouldn't cost someone a bundle.
         bundle.files_missing = not os.path.isdir(bundle.directory())
+        if bundle.submitted_at:
+            bundle.review = staff_hooks.review_state(bundle)
+        elif not bundle.files_missing:
+            # Required setup steps still to do, for the card's "Continue setup" link.
+            bundle.setup_left = walkthrough.required_left(bundle)
     return render(request, 'friends/bundle_hub.html', {
         'bundles': bundles,
         'total_count': len(bundles),
@@ -1637,8 +1515,7 @@ def delete_bundles(request):
     deleted, failed = 0, []
     for bundle in bundles:
         try:
-            # remove_bundle refuses to touch a folder outside the owner's
-            # archive, then deletes the record.
+            # remove_bundle refuses a folder outside the owner's archive, then deletes the record.
             bundle.remove_bundle()
             Bundle.objects.filter(pk=bundle.pk).delete()
             deleted += 1

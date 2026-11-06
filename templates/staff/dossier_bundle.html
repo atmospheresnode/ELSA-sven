@@ -1,0 +1,19 @@
+<html><head><meta charset="utf-8">
+<style>
+ body { font-family: Helvetica, Arial, sans-serif; font-size: 10pt; color: #222; }
+ h1 { font-size: 16pt; margin: 0 0 4pt; } h2 { font-size: 12pt; margin: 14pt 0 4pt; border-bottom: 1px solid #ccc; padding-bottom: 2pt; }
+ .muted { color: #666; } table { width: 100%; border-collapse: collapse; } td, th { border: 1px solid #ccc; padding: 3pt; text-align: left; vertical-align: top; }
+</style></head><body>
+<h1>Bundle record: {{ bundle.name }}</h1>
+<p class="muted">Admin Console record, PDS Atmospheres Node &middot; generated {{ generated|date:"F j, Y H:i" }}</p>
+<p><strong>Owner:</strong> {{ bundle.user.username }} &middot; <strong>Type:</strong> {{ bundle.bundle_type }} &middot; <strong>Bundle ID:</strong> {{ bundle.bundleID }}<br>
+<strong>Created:</strong> {{ bundle.created_at|date:"F j, Y" }}{% if bundle.submitted_at %} &middot; <strong>Last submitted:</strong> {{ bundle.submitted_at|date:"F j, Y" }}{% endif %}{% if projects %}<br><strong>Projects:</strong> {% for p in projects %}{{ p.name }}{% if not forloop.last %}, {% endif %}{% endfor %}{% endif %}</p>
+<h2>Requests</h2>
+<table><tr><th>#</th><th>Request</th><th>Status</th><th>Stage</th><th>Opened</th></tr>{% for c in cases %}<tr><td>{{ c.pk }}</td><td>{{ c.title }}</td><td>{{ c.get_status_display }}</td><td>{{ c.get_stage_display }}</td><td>{{ c.created_at|date:"M j, Y" }}</td></tr>{% empty %}<tr><td colspan="5" class="muted">None.</td></tr>{% endfor %}</table>
+<h2>Liens</h2>
+<table><tr><th>Lien</th><th>File</th><th>Status</th><th>Raised</th></tr>{% for l in liens %}<tr><td>{{ l.description }}</td><td>{{ l.file_path }}{% if l.line %}, line {{ l.line }}{% endif %}</td><td>{{ l.get_status_display }}</td><td>{{ l.created_at|date:"M j, Y" }}</td></tr>{% empty %}<tr><td colspan="4" class="muted">None.</td></tr>{% endfor %}</table>
+<h2>PDS validate (latest 10)</h2>
+<table><tr><th>Run</th><th>Check</th><th>Result</th><th>When</th></tr>{% for r in runs %}<tr><td>{{ r.pk }}</td><td>{{ r.get_tier_display }}</td><td>{{ r.get_status_display }}, {{ r.error_count }} errors, {{ r.warning_count }} warnings</td><td>{{ r.requested_at|date:"M j, Y" }}</td></tr>{% empty %}<tr><td colspan="4" class="muted">None.</td></tr>{% endfor %}</table>
+<h2>Releases</h2>
+<table><tr><th>Release</th><th>DOI</th><th>Package SHA-256</th><th>Delivered</th><th>Released</th></tr>{% for r in releases %}<tr><td>{{ r.label }}</td><td>{{ r.doi }} {{ r.get_doi_status_display }}</td><td>{{ r.package_sha256 }}</td><td>{{ r.delivered_at|date:"M j, Y" }}</td><td>{{ r.released_at|date:"M j, Y" }}</td></tr>{% empty %}<tr><td colspan="5" class="muted">None.</td></tr>{% endfor %}</table>
+</body></html>

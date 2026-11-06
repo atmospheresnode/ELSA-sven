@@ -1,16 +1,9 @@
 # -*- coding: utf-8 -*-
-"""
-Renaming an account.
+"""Renaming an account.
 
-The username is also the archive folder, ARCHIVE_DIR/<username>/, and every
-bundle path is derived from it at request time.  Nothing in the database
-stores the folder except UserProfile.directory (NetCDF files are found by
-basename, validate reports live elsewhere, and labels never contain the
-username), so a rename is: move the folder, change the two columns.
-
-The move is a single os.rename inside ARCHIVE_DIR, which is atomic on one
-filesystem.  It happens inside the database transaction, and is undone if the
-transaction fails, so the folder and the username always agree.
+The username is also the archive folder, and bundle paths come from it. A rename moves the
+folder and changes the two columns. The os.rename is inside the transaction and gets undone
+if the transaction fails.
 """
 from __future__ import unicode_literals
 
@@ -46,8 +39,7 @@ def rename_user(user, new_username):
         raise RenameRefused('A validation run is in progress on one of your bundles. '
                             'Try again when it has finished.')
 
-    # A folder left behind by a deleted account must never be adopted.  On a
-    # case-insensitive filesystem a case-only rename sees its own folder here.
+    # Never adopt a deleted account's folder. A case-only rename can see its own folder here.
     if os.path.lexists(new_dir) and not case_only:
         logger.warning('rename %s -> %s refused: %s already exists', old_username, new_username, new_dir)
         raise RenameRefused('That username is not available.')

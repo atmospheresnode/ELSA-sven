@@ -1,0 +1,53 @@
+{% extends 'staff/base.html' %}
+{% load account_tags %}
+
+{% block console %}
+<div class="d-flex align-items-start gap-3">
+    <div class="flex-grow-1">
+        <h1 class="staff-title">Updates</h1>
+        <p class="staff-subtitle">New versions of the outside things ELSA depends on. ELSA checks every morning; something new opens a request in the queue, with a checklist for rolling it out.</p>
+    </div>
+    {% if can.work %}
+    <form method="post" data-once>{% csrf_token %}<button type="submit" class="btn btn-sm staff-btn text-nowrap">Check now</button></form>
+    {% endif %}
+</div>
+
+<section class="staff-card">
+    <div class="table-responsive">
+    <table class="staff-table">
+        <thead><tr><th>What</th><th>ELSA uses</th><th>Newest</th><th>Last checked</th><th>Status</th></tr></thead>
+        <tbody>
+        {% for item in rows %}
+        <tr>
+            <td>
+                <div class="fw-semibold">{{ item.source.label }}</div>
+                <div class="staff-muted small">{{ item.source.summary }}</div>
+            </td>
+            <td class="staff-mono small">{{ item.row.current|default:"" }}</td>
+            <td class="staff-mono small">{% if item.row.latest %}{% if item.row.latest_url %}<a href="{{ item.row.latest_url }}" target="_blank" rel="noopener">{{ item.row.latest }}</a>{% else %}{{ item.row.latest }}{% endif %}{% endif %}</td>
+            <td class="text-nowrap">{% if item.row.checked_at %}{{ item.row.checked_at|ago }}{% else %}<span class="staff-muted">Not yet</span>{% endif %}</td>
+            <td>
+                {% if item.state == 'unsupported' %}<span class="badge rounded-pill bg-danger">No longer supported</span>
+                {% elif item.state == 'new' %}<span class="badge rounded-pill bg-warning text-dark">Something new</span>
+                {% elif item.state == 'failing' %}<span class="badge rounded-pill bg-danger">Could not check</span>
+                {% elif item.state == 'never' %}<span class="badge rounded-pill bg-light text-dark border">Not checked yet</span>
+                {% else %}<span class="badge rounded-pill bg-success">Up to date</span>{% endif %}
+            </td>
+        </tr>
+        {% if item.row.error or item.row.note or item.open or item.recent %}
+        <tr class="staff-subrow">
+            <td colspan="5" class="pt-0">
+                {% if item.row.error %}<div class="staff-error">{{ item.row.error }}{% if item.row.failures > 1 %} ({{ item.row.failures }} days in a row){% endif %}</div>{% endif %}
+                {% if item.row.note %}<div class="staff-warning mt-1">{{ item.row.note }}</div>{% endif %}
+                {% for case in item.open %}<div class="mt-1 small"><a class="fw-normal" href="{% url 'staff:case' case.pk %}">#{{ case.pk }} {{ case.title }}</a> <span class="badge rounded-pill {{ case.status_badge }}">{{ case.get_status_display }}</span></div>{% endfor %}
+                {% for case in item.recent %}<div class="mt-1 staff-muted small"><a href="{% url 'staff:case' case.pk %}">#{{ case.pk }} {{ case.title }}</a> ({{ case.get_status_display|lower }})</div>{% endfor %}
+            </td>
+        </tr>
+        {% endif %}
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</section>
+<p class="staff-muted small">The daily check is <span class="staff-mono">manage.py staff_watch</span>. Installing and comparing a new PDS validate stays with <span class="staff-mono">manage.py validate_release</span>; nothing here installs or switches anything.</p>
+{% endblock %}

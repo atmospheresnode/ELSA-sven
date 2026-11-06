@@ -93,11 +93,7 @@ def parse_fingerprints(text):
 
 
 def parse_reviewed(text):
-    """The date a human last recorded reviewing this chunk, or None.
-
-    Informational only. It used to decide staleness, which is what made the
-    check trip on every merge; staleness now comes from content alone.
-    """
+    """The date someone last reviewed this chunk, or None. Informational only."""
     match = REVIEWED_RE.search(text)
     return match.group(1) if match else None
 
@@ -111,27 +107,18 @@ def split_spec(spec):
 
 
 def normalize(text):
-    """Content reduced to what a reader would call a change.
-
-    Trailing whitespace and blank lines are dropped so that reindentation and
-    spacing edits do not present as behavior changes. Everything else, comments
-    included, counts: a comment can carry the behavior a chunk documents.
-    """
+    """Content with trailing whitespace and blank lines dropped. Comments still count."""
     lines = [line.rstrip() for line in text.replace('\r\n', '\n').split('\n')]
     return '\n'.join(line for line in lines if line.strip())
 
 
 def extract_anchor(source, anchor, spec):
-    """The text of every `class anchor` or `def anchor` block in a Python source file.
+    """The text of every `class anchor` or `def anchor` block in a Python file.
 
-    Every one, not the first: build/models.py and build/views.py both define some
-    names twice (an older definition left above the live one). Hashing only the
-    first would leave the definition that actually runs unwatched, so all blocks
-    with the name are concatenated in file order.
+    All of them, since models.py and views.py define some names twice.
     """
     if anchor.endswith('*'):
-        # A prefix anchor covers a family of related definitions, e.g. context_search*
-        # matches context_search and every context_search_<thing> beside it.
+        # A prefix anchor covers related names, e.g. context_search* matches context_search_<thing>.
         name = re.escape(anchor[:-1]) + r'\w*'
     else:
         name = re.escape(anchor) + r'\b'
@@ -197,12 +184,7 @@ def files_in(directory):
 
 
 def fingerprint(spec):
-    """The hash of the content a watch spec resolves to.
-
-    Raises WatchError when the spec resolves to nothing, so a watch that has
-    quietly stopped protecting anything (a renamed file, a deleted directory)
-    is reported rather than passing.
-    """
+    """Hash of the content a watch spec points at. Raises WatchError if it finds nothing."""
     relative, anchor = split_spec(spec)
     target = REPO_ROOT / relative
 
@@ -243,10 +225,9 @@ def parse_baseline(text):
 
 
 def git(*args):
-    """Run a git command, or return None when git or the object is unavailable.
+    """Run a git command, or return None if git or the object isn't available.
 
-    Only the diff display needs git. The check itself is pure content hashing, so a
-    shallow clone or a missing baseline degrades to "content changed" rather than failing.
+    Only the diff display needs git. The check itself just hashes content.
     """
     try:
         result = subprocess.run(['git'] + list(args), capture_output=True, text=True,
@@ -295,11 +276,7 @@ def region_now(spec):
 
 
 def region_diff(baseline, spec, context=2):
-    """A unified diff of the watched region since the chunk was baselined.
-
-    This is what turns a flagged chunk from a hash comparison into a decision you can
-    make in seconds: you see the change the chunk may need to describe.
-    """
+    """Unified diff of the watched region since the chunk was baselined."""
     if not baseline:
         return []
     before = region_at(baseline, spec)
@@ -407,8 +384,7 @@ def run_check(out=print, update=False, today=None, show_diff=True):
         if problems:
             broken.append((rel_chunk, problems))
 
-        # --update also fills in a chunk that is in sync but predates the baseline marker,
-        # so recording the diff anchor does not require an artificial edit first.
+        # --update also fills in a chunk that's in sync but has no baseline marker.
         if update and not problems and (drifted or not baseline):
             write_fingerprints(chunk_path, text, current, today)
             updated.append(rel_chunk)

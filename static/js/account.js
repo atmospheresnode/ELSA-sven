@@ -669,9 +669,8 @@
         }
     })();
 
-    // ---- unsaved changes ------------------------------------------------------------------------
-    // Closing a modal with edits in it asks first, inside the modal (never a
-    // browser confirm()): a stray Esc or backdrop click should not eat a draft.
+    // ---- unsaved changes ----
+    // Closing a modal with edits asks first, inside the modal, not with confirm().
 
     (function () {
         function isDirty(modalEl) {

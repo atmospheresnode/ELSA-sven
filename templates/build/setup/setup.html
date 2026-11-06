@@ -24,6 +24,15 @@ base-derk.html); Outfit appears once, on the bundle name, as on the bundle page.
          <span class="setup-kicker">Guided walkthrough &middot; {{ bundle.bundle_type }} bundle</span>
          <h1>{{ bundle.name }}</h1>
          <p class="setup-intro">Take the steps in any order. Each one saves when you press its button, and anything you skip can be added later from the bundle page.</p>
+         {# Refreshed after each save, so this goes away once the bundle has content. #}
+         <div id="setupStatus" class="setup-status">
+            {% if just_created %}
+            <p class="setup-created" role="status"><i class="bi bi-check-circle-fill me-1" aria-hidden="true"></i>{% if just_created.again %}You already created this bundle, so here it is.{% else %}Bundle created and saved to your <a href="{% url 'friends:bundle_hub' %}">Bundle Hub</a>.{% endif %} You can leave at any time and finish later.</p>
+            {% endif %}
+            {% if can_discard %}
+            <button type="button" class="setup-discard" data-bs-toggle="modal" data-bs-target="#discardBundleModal">Created this by mistake? Discard it</button>
+            {% endif %}
+         </div>
       </div>
       <a class="setup-exit" href="{% url 'build:bundle' bundle.pk %}" data-exit>Go to bundle page<i class="bi bi-arrow-right ms-1" aria-hidden="true"></i></a>
    </header>
@@ -41,6 +50,27 @@ base-derk.html); Outfit appears once, on the bundle name, as on the bundle page.
    </div>
 </div>
 
+{% if can_discard %}
+<div class="modal fade" id="discardBundleModal" tabindex="-1" aria-labelledby="discardBundleLabel" aria-hidden="true">
+   <div class="modal-dialog modal-dialog-centered">
+      <form class="modal-content" method="post" action="{% url 'build:setup_discard' bundle.pk %}">
+         {% csrf_token %}
+         <div class="modal-header">
+            <h5 class="modal-title" id="discardBundleLabel">Discard "{{ bundle.name }}"?</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+         </div>
+         <div class="modal-body">
+            <p class="mb-0">Nothing has been added to this bundle yet. Discarding deletes it and frees the name, so you can create it again later. This cannot be undone.</p>
+         </div>
+         <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Keep it</button>
+            <button type="submit" class="btn btn-danger btn-keep-bg">Discard bundle</button>
+         </div>
+      </form>
+   </div>
+</div>
+{% endif %}
+{% include 'build/_just_created.html' %}
 {% include "includes/_toasts.html" %}
 
 <style>
@@ -56,6 +86,12 @@ base-derk.html); Outfit appears once, on the bundle name, as on the bundle page.
    .elsa-setup .setup-title h1 { font-family: 'Outfit', sans-serif; font-weight: 600; font-size: 1.9rem; margin: 0; overflow-wrap: anywhere; }
    .elsa-setup .setup-intro { margin: 2px 0 0; color: var(--setup-muted); max-width: 68ch; }
    .elsa-setup .setup-exit { font-weight: 600; color: var(--setup-teal-ink); white-space: nowrap; padding-bottom: 2px; }
+   .elsa-setup .setup-status { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; margin-top: 6px; }
+   .elsa-setup .setup-status:empty { display: none; }
+   .elsa-setup .setup-created { margin: 0; color: var(--setup-added); font-weight: 500; }
+   .elsa-setup .setup-created a { color: inherit; }
+   .elsa-setup .setup-discard { background: none; border: 0; padding: 0; color: var(--setup-muted); text-decoration: underline; font-size: 0.875rem; }
+   .elsa-setup .setup-discard:hover { color: var(--setup-missing); }
    .elsa-setup .setup-exit:hover { text-decoration: underline; color: var(--setup-teal-deep); }
 
    .elsa-setup .setup-body { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 16px; align-items: start; }
@@ -269,7 +305,7 @@ base-derk.html); Outfit appears once, on the bundle name, as on the bundle page.
          .then(function (r) { return r.text(); })
          .then(function (html) {
             var doc = new DOMParser().parseFromString(html, 'text/html');
-            ['setupRail'].forEach(function (id) {
+            ['setupRail', 'setupStatus'].forEach(function (id) {
                var fresh = doc.getElementById(id), old = document.getElementById(id);
                if (fresh && old) old.replaceWith(document.importNode(fresh, true));
             });
@@ -378,11 +414,9 @@ base-derk.html); Outfit appears once, on the bundle name, as on the bundle page.
       save(form, button, then);
    });
 
-   // -- searching a long list ------------------------------------------------------------
-   // The Archive target list has about 1500 entries and the investigations about 150;
-   // a plain dropdown of that length cannot be read. Typing narrows the list in place,
-   // keeping its groups ("Listed for ..."), and shows the matches as an open list. The
-   // full list is kept per select, so a panel swapped in after a save starts afresh.
+   // -- searching a long list --
+   // The target list has about 1500 entries, so typing narrows it in place and keeps the groups.
+   // The full list is kept per select.
    var fullLists = new WeakMap();
    function matches(option, q) { return option.textContent.toLowerCase().indexOf(q) >= 0; }
    root.addEventListener('input', function (e) {
@@ -492,9 +526,7 @@ base-derk.html); Outfit appears once, on the bundle name, as on the bundle page.
 
       button.disabled = true;
       button.textContent = 'Checking space...';
-      // Asked before a byte is sent, as the bundle page does: refusing afterwards is too
-      // late on a nearly full disk. If the check cannot be made, the upload goes ahead and
-      // the view repeats it.
+      // Check before sending, same as the bundle page. If the check fails, upload anyway and the view checks again.
       fetch(form.getAttribute('data-storage-url'), {
          method: 'POST',
          credentials: 'same-origin',
@@ -525,8 +557,7 @@ base-derk.html); Outfit appears once, on the bundle name, as on the bundle page.
             bar.style.width = p + '%';
             pct.textContent = p + '%';
             if (p >= 100) {
-               // Every byte is sent and the server is reading the files; cancelling now would
-               // not stop that, so the offer is withdrawn.
+               // All sent and the server is reading the files, so remove the cancel option.
                text.textContent = 'Processing NetCDF...';
                button.textContent = 'Processing...';
                cancel.hidden = true;

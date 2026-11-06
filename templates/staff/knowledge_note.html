@@ -1,0 +1,9 @@
+{% extends 'staff/base.html' %}
+{% load account_tags %}
+
+{% block console %}
+<p class="mb-2"><a href="{% url 'staff:knowledge' %}" class="staff-muted"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Knowledge notes</a></p>
+<h1 class="staff-title">{{ note.title }}</h1>
+<p class="staff-subtitle">{% if note.topic %}{{ note.topic }} &middot; {% endif %}updated {{ note.updated_at|ago }}{% if note.updated_by %} by {{ note.updated_by.username }}{% endif %}{% if can.work %} &middot; <a href="{% url 'staff:knowledge' %}?edit={{ note.pk }}">Edit</a>{% endif %}</p>
+<section class="staff-card"><div class="staff-note-body">{{ note.body|urlize }}</div></section>
+{% endblock %}

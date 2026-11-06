@@ -138,7 +138,16 @@ class PreflightPanelTests(TestCase):
         self.assertNotIn('Time_Coordinates', pane)
         self.assertNotIn('An empty container that ELSA wrote', pane)
 
-    def test_an_elsa_defect_does_not_count_against_the_user(self):
+    def test_an_elsa_defect_blocks_an_external_bundle_as_one_item(self):
+        self.run_with([ELSA_DEFECT])
+        page = self.page()
+        self.assertEqual(page.context['validation_summary']['blocking'], 1)
+        self.assertFalse(page.context['validation_summary']['can_submit'])
+        self.assertContains(page, 'ELSA could not repair')
+
+    def test_an_elsa_defect_does_not_count_against_an_archive_user(self):
+        self.bundle.bundle_type = 'Archive'
+        self.bundle.save()
         self.run_with([ELSA_DEFECT])
         page = self.page()
         self.assertEqual(page.context['validation_summary']['blocking'], 0)
@@ -257,7 +266,8 @@ class PreflightPanelTests(TestCase):
         self.run_with([CITATION, ELSA_DEFECT, ADVISORY])
         page = self.page()
         self.assertEqual(page.context['validation_raw_total'], 3)
-        self.assertEqual(page.context['validation_summary']['blocking'], 1)
+        # The citation, plus the ELSA defect as the one item an External bundle gets.
+        self.assertEqual(page.context['validation_summary']['blocking'], 2)
 
     def test_the_raw_tab_groups_by_the_label_the_finding_came_from(self):
         self.run_with([finding('first problem', label='collection_b.xml'),
@@ -309,7 +319,8 @@ class PreflightPanelTests(TestCase):
         body = self.page().content.decode()
         badge = body.split('id="preflight_row_badge"')[0].rsplit('<span', 1)[-1] \
             + body.split('id="preflight_row_badge"')[1].split('</span>')[0]
-        self.assertIn('2 to fix', badge)
+        # Two the user can fix, plus the ELSA defect as the one item an External bundle gets.
+        self.assertIn('3 to fix', badge)
         self.assertIn('bg-danger', badge)
 
     def test_the_row_badge_says_passed_when_nothing_blocks(self):

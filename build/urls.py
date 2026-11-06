@@ -35,6 +35,7 @@ urlpatterns = [
     # The guided setup: every walkthrough step on one page, and its citation save.
     re_path(r'^(?P<pk_bundle>\d+)/setup/$', views.setup, name='setup'),
     re_path(r'^(?P<pk_bundle>\d+)/setup/citation/$', views.setup_citation, name='setup_citation'),
+    re_path(r'^(?P<pk_bundle>\d+)/setup/discard/$', views.setup_discard, name='setup_discard'),
     # No Intro Page (walkthrough not enabled)
     re_path(r'^(?P<bundle_id>\d+)/walkthrough/no_intro/$', views.no_intro_page, name='no_intro_page'),
 
@@ -149,9 +150,7 @@ urlpatterns = [
     # Submit Bundle for Review
     re_path(r'^(?P<pk_bundle>\d+)/submit/$', views.submit_bundle_internal, name='submit_bundle_internal'),
 
-    # PDS validation. The two bundle-scoped routes are hit by the page itself; the
-    # two report routes are staff-only and exist so we can see what findings occur
-    # in the wild before anything is shown to data providers.
+    # PDS validation. The bundle routes are used by the page, the report routes are staff-only.
     re_path(r'^(?P<pk_bundle>\d+)/validate/start/$', views.start_validation, name='start_validation'),
     re_path(r'^(?P<pk_bundle>\d+)/validate/status/$', views.validation_status, name='validation_status'),
     re_path(r'^(?P<pk_bundle>\d+)/validate/panel/$', views.validation_panel, name='validation_panel'),

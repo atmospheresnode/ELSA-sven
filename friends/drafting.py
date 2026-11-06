@@ -1,16 +1,10 @@
 # -*- coding: utf-8 -*-
-"""
-Drafting the "please change my agency" email.
+"""Drafts the "please change my agency" email.
 
-The draft is only a starting point: it lands in editable fields and the user
-reviews it before anything is sent.  The facts the team relies on (username,
-current and requested agency, bundle counts) are not taken from the draft at
-all; the view writes them into the sent message itself.
+The user reviews and edits it before sending. The facts (username, agencies, bundle counts)
+are added by the view, not the draft.
 
-The AI path borrows the assistant app's Gemini client, kill switch and daily
-cap, so turning the assistant off turns this off too.  Whenever it is off,
-missing or failing, the plain template below is used instead, so the button
-always produces something.
+Uses the assistant's Gemini client, kill switch and daily cap. Falls back to the template below.
 """
 from __future__ import unicode_literals
 

@@ -1,22 +1,12 @@
-"""Would moving to a new validate release change anything a user sees?
+"""Would a new validate release change anything a user sees?
 
-Answered the way it was answered by hand for 4.2.0 -> 5.0.0: run the release in use
-and the candidate over the same real bundles and compare, at three levels.
+Runs the current release and the candidate over the same bundles and compares:
 
-1. Raw findings, keyed on (label, type, severity, line, message). Anything here is a
-   real change in what PDS says.
-2. The translation: which plain-language items, which ELSA-caused ones, which are
-   unmapped. A new message type lands here as "unmapped", the thing the rule table
-   exists to prevent.
-3. The gate. A bundle that could be submitted and now cannot, or the reverse, is the
-   difference that matters most and is reported first.
+1. Raw findings, keyed on (label, type, severity, line, message).
+2. The translation: plain-language items, ELSA-caused ones and unmapped ones.
+3. The gate: bundles that could be submitted and now can't, or the reverse. Reported first.
 
-The exit code is recorded but never counted as a difference, because ELSA does not
-read it (5.0.0 changed it for empty runs and nothing else).
-
-Both sides are invoked through validate_runner.build_command and _environment, the
-same code a real check uses, so the comparison cannot quietly test something the
-application never runs. Bundles are only read; reports go to a scratch directory.
+Exit code is recorded but not compared. Bundles are only read, reports go to a scratch directory.
 """
 import collections
 import concurrent.futures
@@ -35,9 +25,7 @@ from django.conf import settings
 from build import validate_release, validate_rules, validate_runner
 from build.validate_report import parse_report
 
-# The suites that exercise validation, run against both releases when the host has
-# the test suite (developer checkouts; it is not deployed). Browser tests are left
-# out: they are slow and test the page, which a validate release cannot change.
+# Suites to run on both releases, if the host has tests. Browser tests are left out.
 TEST_MODULE_PATTERNS = ('test_valid*.py', 'test_corpus_e2e.py', 'test_document_upload.py',
                         'test_preflight*.py', 'test_review_and_submit.py')
 
@@ -161,10 +149,7 @@ def _raw_line(encoded):
 
 def qualify(candidate_home, baseline_home=None, roots=None, limit=None, workers=None,
             progress=None):
-    """Compare the candidate release with the host's own over every bundle.
-
-    Returns a dict; `render()` turns it into the report people read.
-    """
+    """Compare the candidate with the host's release over every bundle. Returns a dict for `render()`."""
     baseline_home = os.path.realpath(baseline_home or settings.VALIDATE_HOME)
     candidate_home = os.path.realpath(candidate_home)
     sides = {
@@ -236,7 +221,7 @@ def test_modules():
 
 
 def run_tests(home, java_home):
-    """Run the validation suites with this release. None when this host has no suite.
+    """Run the validation suites with this release. None if there's no suite here.
 
     Returns {'ran', 'ok', 'failed': [test ids], 'summary'}.
     """

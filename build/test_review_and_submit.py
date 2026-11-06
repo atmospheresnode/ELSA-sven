@@ -128,7 +128,10 @@ class ReviewAndSubmitTests(TestCase):
 
     def test_the_count_after_a_real_start_includes_them_too(self):
         self.bundle.targets.clear()
-        with mock.patch.object(validate_runner.subprocess, 'Popen'):
+        # _environment as well, which asks java its version through the same Popen when
+        # that answer is not cached yet, so this test failed run on its own.
+        with mock.patch.object(validate_runner.subprocess, 'Popen'), \
+                mock.patch.object(validate_runner, '_environment', return_value={}):
             response = self.client.post(
                 reverse('build:start_validation', args=[self.bundle.pk]))
         self.assertEqual(response.json()['blocking'], 1)
@@ -177,10 +180,10 @@ class ReviewAndSubmitTests(TestCase):
     def test_the_review_window_no_longer_keeps_a_checklist_of_its_own(self):
         self.checked([])
         window = self.review_window(self.page())
-        # This bundle has no documents or data files, so the only ticks the window
-        # could show are the old checklist's: one each for Modification History,
-        # Citation Information and Targets, all met here.
-        self.assertEqual(window.count('bi-check-circle-fill text-success'), 0)
+        # This bundle has one document and no data files, so its row is the one tick. Any
+        # more would be the old checklist's: one each for Modification History, Citation
+        # Information and Targets, all met here.
+        self.assertEqual(window.count('bi-check-circle-fill text-success'), 1)
         self.assertNotIn('bi-x-circle-fill text-danger', window)
         self.assertIn('What you are sending', window)
 

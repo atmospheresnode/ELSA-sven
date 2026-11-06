@@ -1,0 +1,6 @@
+{% load account_tags %}{% comment %} When a precomputed list was made, and a way to make it again. Kept outside other forms. {% endcomment %}
+<form method="post" action="{% url 'staff:refresh_snapshot' key %}" class="staff-muted small d-flex align-items-center gap-2 mb-3" data-once>
+    {% csrf_token %}
+    <span>Updated {{ computed_at|ago }}. It is worked out nightly, because it looks at every bundle.</span>
+    <button type="submit" class="btn btn-link btn-sm p-0 align-baseline">Refresh now</button>
+</form>

@@ -28,6 +28,7 @@ from django.shortcuts import render, redirect
 from django.template.loader import get_template
 from django.http import HttpResponseRedirect, HttpResponse
 from .models import Joke
+from staff import hooks as staff_hooks
 from .forms import *
 from django.forms import modelformset_factory
 from django.urls import reverse
@@ -48,13 +49,19 @@ from django.core.cache import cache
 
 # index is the home page for elsa.
 def index(request):
+    from friends import next_page
     from friends.views import _read_passkey_hint
+
+    # Signed in and on the way to a linked page (friends/next_page.py).
+    if request.user.is_authenticated:
+        target = next_page.take(request)
+        if target:
+            return HttpResponseRedirect(target)
 
     contact_form = ContactForm(request.POST or None)
     context_dict = {
         'contact_form': contact_form,
-        # Only mention passkeys on a browser where one has actually been used.
-        # Everywhere else the note would promise something that will not happen.
+        # Only mention passkeys on a browser that has used one.
         'browser_has_passkey': bool(_read_passkey_hint(request)['known']),
     }
     return render(request, 'main/index.html', context_dict)
@@ -75,6 +82,10 @@ def contact_from_login(request):
         context_dict['message'] = contact_form.cleaned_data['message']
 
         content = template.render(context_dict)
+        staff_hooks.open_case('contact', 'Message from {}'.format(context_dict['name']),
+                              requester_name=context_dict['name'], requester_email=context_dict['email'],
+                              body=context_dict['message'], data={'agency': context_dict['agency'],
+                                                                  'sent_from': 'sign-in page'})
 
         email = EmailMessage(
             subject="{} is contacting ELSA".format(context_dict['name']),
@@ -98,20 +109,13 @@ def contact_from_login(request):
 
     return render(request, 'main/index.html', context_dict)
 
-# GitHub Releases is the canonical record of what shipped when. It used to be README.md, parsed
-# out of the markdown, but the notes lived in two places at once and drifted: a release would be
-# published while the README still ended at the version before it. The notes are now written once,
-# where they are published, and both the About page and the assistant read them from here.
+# GitHub Releases is the record of what shipped. The About page and assistant read it here.
 GITHUB_RELEASES_API = (
     'https://api.github.com/repos/atmospheresnode/ELSA-sven/releases?per_page=6')
 
 
 def format_release_bullets(body):
-    """Turn a release body's markdown bullets into the strings about.html renders.
-
-    Unchanged from when these were parsed out of README.md: a release body is the same
-    "- Area: what changed." list, so the area name is still bolded up to the first colon.
-    """
+    """Turn a release body's markdown bullets into strings for about.html. Area name is bold up to the colon."""
     bullets = []
     for line in re.findall(r'^-\s+(.+)$', body or '', re.MULTILINE):
         if ':' in line:
@@ -123,12 +127,10 @@ def format_release_bullets(body):
 
 
 def parse_releases(payload):
-    """Shape GitHub's /releases JSON into what the About page and the assistant expect.
+    """Shape GitHub's /releases JSON for the About page and the assistant.
 
-    The date comes from `created_at`, never `published_at`. GitHub documents created_at as the
-    date of the commit the release was cut from, while published_at is when the release was
-    created on GitHub. The 34 releases backfilled in September 2026 all carry that one afternoon
-    as their published_at, so using it would date two years of history to a single day.
+    Use `created_at`, the release commit's date. `published_at` is when it was made on GitHub,
+    and the backfilled releases all have the same one.
     """
     releases = []
     for item in payload:
@@ -147,8 +149,7 @@ def parse_releases(payload):
             '_sort': stamp or datetime.min,
         })
 
-    # GitHub returns these newest first already. Sorting the page we were given costs nothing and
-    # means the About page does not depend on that staying true.
+    # Sort anyway in case GitHub's order changes.
     releases.sort(key=lambda release: release['_sort'], reverse=True)
     for release in releases:
         del release['_sort']
@@ -156,12 +157,9 @@ def parse_releases(payload):
 
 
 def fetch_releases():
-    """Fetch and parse the published releases, or raise.
+    """Fetch and parse the releases, or raise. Used by the About page and the assistant's refresh.
 
-    Shared by the About page and the assistant's background refresh so the URL, the date handling
-    and the bullet formatting have exactly one definition. The repository is public, so this is
-    unauthenticated: the limit is 60 requests an hour per IP and both callers cache for at least
-    an hour, which puts normal use around one request in sixty.
+    The repo is public, so no auth: 60 requests an hour per IP, and both callers cache for an hour.
     """
     response = requests.get(
         GITHUB_RELEASES_API,
@@ -217,6 +215,9 @@ def contact(request):
             # context_dict['agency'] = request.user.userprofile.agency
             context_dict['message'] = user_contact_form.cleaned_data['message']
             content = template.render(context_dict)
+            staff_hooks.open_case('contact', 'Message from {}'.format(request.user.get_full_name() or request.user.username),
+                                  requester=request.user, body=context_dict['message'],
+                                  data={'sent_from': request.path})
 
             #Email to ELSA from user
             email = EmailMessage(
@@ -300,6 +301,9 @@ def context_products_contact(request):
             context_dict['email'] = request.user.email
             context_dict['message'] = user_contact_form.cleaned_data['message']
             content = template.render(context_dict)
+            staff_hooks.open_case('contact', 'Message from {}'.format(request.user.get_full_name() or request.user.username),
+                                  requester=request.user, body=context_dict['message'],
+                                  data={'sent_from': request.path})
             print('before email')
 
             #Email to ELSA from user

@@ -1,28 +1,14 @@
-"""The file behind a document product: what is accepted, how it is named, where it lives.
+"""The file behind a document product: what's accepted, how it's named, where it goes.
 
-Until this, ELSA could not attach a file to a document at all. The forms recorded a
-typed file name and the label pointed at it, but no file ever existed, so validate
-reported "URI reference does not exist" on every document in every bundle.
+PDS allows flat UTF-8 text, PDF/A-1a or PDF/A-1b (Standards Reference 8A.2.2):
 
-What is accepted is PDS policy, not preference. The "Policy on Formats for PDS4 Data
-and Documentation" (and Standards Reference 8A.2.2) allows documentation as flat UTF-8
-text, PDF/A-1a or PDF/A-1b, and validate itself only accepts PDF/A-1 ("Expected: 1a or
-1b"). So:
+* .pdf has to declare PDF/A-1 in its XMP metadata. validate checks full conformance with veraPDF.
+* .txt has to decode as UTF-8. Recorded as "7-Bit ASCII Text" if all ASCII, otherwise "UTF-8 Text".
 
-* .pdf, and the file must declare PDF/A-1 in its own XMP metadata. That is a claim, not
-  proof, but it is what separates an archival export from an ordinary one, and it is
-  read in Python without running any other program. validate checks full conformance
-  with veraPDF when it checks the bundle (for Archive documents).
-* .txt, which must decode as UTF-8. It is recorded as "7-Bit ASCII Text" when every byte
-  is ASCII, and "UTF-8 Text" otherwise, the two values PDS4 accepts for plain text.
+Ordinary PDFs are refused with instructions. We don't convert them with Ghostscript since
+its -dSAFER mode still wrote files on this server.
 
-Ordinary PDFs are refused with instructions rather than converted. Ghostscript can make
-PDF/A-1b, but on this server its -dSAFER mode was measured still writing files, and
-running it on files strangers upload, as apache, on a shared machine, is not a risk to
-take inside an upload.
-
-The uploaded file's own name becomes the document's file name, cleaned to PDS4's rules.
-There is no longer a separate typed name that can disagree with the file.
+The uploaded file's name, cleaned up, becomes the document's file name.
 """
 import os
 import re
@@ -32,8 +18,7 @@ import unicodedata
 from django import forms
 from django.conf import settings
 
-# PDS4 file_name: starts alphanumeric; letters, digits, dash, underscore, dot; ends in
-# a dot and an extension. Taken from the pattern in the PDS4 schema.
+# PDS4 file_name pattern: starts alphanumeric, letters, digits, dash, underscore, dot, ends in an extension.
 PDS_FILE_NAME = re.compile(r'^[a-zA-Z0-9]([a-zA-Z0-9]|[-]|[_]|[.])*[.][a-zA-Z0-9]+$')
 
 ALLOWED_EXTENSIONS = ('.pdf', '.txt')
@@ -55,10 +40,9 @@ def max_upload_bytes():
 
 
 def clean_file_name(name):
-    """The uploaded file's name, made into a legal PDS4 file name, or ValidationError.
+    """The upload's name as a legal PDS4 file name, or ValidationError.
 
-    Spaces become underscores and accents are dropped, which is what people mean; any
-    other character PDS4 does not allow is removed. The extension is lower-cased.
+    Spaces become underscores, accents are dropped, and the extension is lower-cased.
     """
     base = os.path.basename(name or '').strip()
     stem, extension = os.path.splitext(base)
@@ -113,8 +97,7 @@ class PreparedDocumentFile(object):
 
 
 def prepare(uploaded):
-    """Check an uploaded document file. Returns PreparedDocumentFile or raises
-    forms.ValidationError with a message the user can act on."""
+    """Check an uploaded document file. Returns PreparedDocumentFile or raises ValidationError."""
     file_name = clean_file_name(uploaded.name)
 
     size = getattr(uploaded, 'size', 0) or 0
@@ -165,11 +148,7 @@ def size(product_document):
 
 
 def text_excerpt(product_document, limit=1200):
-    """The opening of a plain text document, for its thumbnail on the bundle page.
-
-    '' for PDFs and for documents without a file. Cut at a byte limit, so a character
-    split by the cut is dropped rather than shown broken.
-    """
+    """Start of a plain text document for its thumbnail. '' for PDFs and no file."""
     path = servable_path(product_document)
     if not path or not path.lower().endswith('.txt'):
         return ''
@@ -179,21 +158,16 @@ def text_excerpt(product_document, limit=1200):
 
 
 def content_type(product_document):
-    """What to tell the browser a document's file is, so it can show it in place.
-
-    Only the two formats uploads accept. Text is declared UTF-8 because that is all
-    uploads let in, and ASCII is a subset of it.
-    """
+    """Content type so the browser can show a document's file in place."""
     if (product_document.file_name or '').lower().endswith('.pdf'):
         return 'application/pdf'
     return 'text/plain; charset=utf-8'
 
 
 def servable_path(product_document):
-    """The document's file, if it exists and really is inside the document collection.
+    """The document's file, if it exists and is inside the document collection.
 
-    Documents saved before uploads existed carry a typed file_name that was never
-    cleaned, so it is not trusted to stay in the directory.
+    Older documents have a typed file_name that was never cleaned, so don't trust it.
     """
     path = file_path(product_document)
     if not path:
@@ -206,11 +180,7 @@ def servable_path(product_document):
 
 
 def name_taken(bundle, file_name, excluding=None):
-    """Whether another document in this bundle already uses this file name.
-
-    Compared without case: two names differing only in case are one file on a
-    case-insensitive disk, and validate warns about case mismatches.
-    """
+    """Whether another document in this bundle uses this file name, ignoring case."""
     from build.models import Product_Document
     others = Product_Document.objects.filter(bundle=bundle)
     if excluding is not None and excluding.pk:
@@ -219,11 +189,9 @@ def name_taken(bundle, file_name, excluding=None):
 
 
 def store(product_document, prepared):
-    """Write a prepared upload next to the document's label and record it.
+    """Write an upload next to the document's label and save the document.
 
-    Written to a temporary name first and moved into place, so a failure part way
-    never leaves a truncated file where the label says the document is. A replaced file
-    under a different name is removed afterwards. Saves the document.
+    Written to a temp name and moved into place. A replaced file with a different name is removed.
     """
     directory = product_document.directory()
     os.makedirs(directory, exist_ok=True)

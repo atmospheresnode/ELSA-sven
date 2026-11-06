@@ -1,0 +1,294 @@
+{% extends 'staff/base.html' %}
+{% load tz account_tags staff_tags %}
+
+{% block console %}
+<p class="mb-2"><a href="{% url 'staff:users' %}" class="staff-muted"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Users</a></p>
+<h1 class="staff-title">{{ person.get_full_name|default:person.username }}</h1>
+<p class="staff-subtitle">
+    <span class="staff-mono">{{ person.username }}</span>
+    {% if profile.closed_at %}<span class="badge rounded-pill bg-secondary">Closed by user</span>
+    {% elif not person.is_active %}<span class="badge rounded-pill bg-danger">Disabled</span>
+    {% else %}<span class="badge rounded-pill bg-success">Active</span>{% endif %}
+    {% if person_role %}<span class="badge rounded-pill bg-dark">{{ person_role }}</span>{% endif %}
+</p>
+
+<div class="staff-detail">
+    <div>
+        <section class="staff-card" aria-labelledby="profile-heading">
+            <div class="staff-card-head"><h2 id="profile-heading">Profile</h2></div>
+            <dl class="staff-rows">
+                <dt>Email</dt><dd>{{ person.email|default:"None" }}{% if profile and not profile.email_verified_at and not person.last_login %} <span class="badge rounded-pill bg-warning text-dark">Not confirmed</span>{% endif %}</dd>
+                <dt>Agency</dt><dd>{{ profile.get_agency_display }} <span class="staff-mono">({{ profile.agency }})</span></dd>
+                <dt>ORCID iD</dt><dd>{{ profile.orcid|default:"Not added" }}</dd>
+                <dt>Affiliation</dt><dd>{{ profile.affiliation|default:"Not added" }}</dd>
+                <dt>Joined</dt><dd>{{ person.date_joined|localtime|date:"M j, Y" }}</dd>
+                <dt>Last sign-in</dt><dd>{% if person.last_login %}{{ person.last_login|ago }}{% else %}Never{% endif %}</dd>
+                <dt>Passkeys</dt><dd>{{ passkey_count }}</dd>
+                <dt>Archive folder</dt><dd class="staff-mono">{{ profile.directory }}</dd>
+            </dl>
+        </section>
+
+        <section class="staff-card" aria-labelledby="bundles-heading">
+            <div class="staff-card-head"><h2 id="bundles-heading">Bundles</h2><p>{{ bundles|length }}</p></div>
+            {% if bundles %}
+            <div class="table-responsive">
+            <table class="staff-table">
+                <thead><tr><th>Name</th><th>Type</th><th>Updated</th><th>Submitted</th></tr></thead>
+                <tbody>
+                {% for bundle in bundles %}
+                <tr>
+                    <td><a href="{% url 'staff:bundle' bundle.pk %}">{{ bundle.name }}</a></td>
+                    <td>{{ bundle.bundle_type }}</td>
+                    <td class="text-nowrap">{{ bundle.updated_at|ago }}</td>
+                    <td class="text-nowrap">{% if bundle.submitted_at %}{{ bundle.submitted_at|ago }}{% else %}<span class="staff-muted">No</span>{% endif %}</td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+</div>
+            {% else %}<p class="staff-muted mb-0">None.</p>{% endif %}
+        </section>
+
+        <section class="staff-card" aria-labelledby="activity-heading">
+            <div class="staff-card-head"><h2 id="activity-heading">Account activity</h2><p>What the user also sees on their Account page.</p></div>
+            {% if events %}
+            <div class="table-responsive">
+            <table class="staff-table">
+                <tbody>
+                {% for event in events %}
+                <tr><td>{{ event.get_kind_display }}{% if event.detail %} <span class="staff-muted">({{ event.detail }})</span>{% endif %}</td><td class="staff-mono">{{ event.ip|default:"" }}</td><td class="text-nowrap staff-muted">{{ event.created_at|ago }}</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+</div>
+            {% else %}<p class="staff-muted mb-0">Nothing recorded.</p>{% endif %}
+        </section>
+    </div>
+
+    <div>
+        {% if can.work and not is_self %}
+        <section class="staff-card" aria-labelledby="support-heading">
+            <div class="staff-card-head"><h2 id="support-heading">Help them sign in</h2></div>
+            <div class="d-grid gap-2">
+                {% if locked %}
+                <form method="post" action="{% url 'staff:user_action' person.pk %}" data-once>
+                    {% csrf_token %}<input type="hidden" name="action" value="unlock">
+                    <input type="hidden" name="reason" value="Locked out after too many code attempts">
+                    <button type="submit" class="btn btn-sm staff-btn w-100">Unlock sign-in codes</button>
+                </form>
+                {% else %}
+                <form method="post" action="{% url 'staff:user_action' person.pk %}" data-once>
+                    {% csrf_token %}<input type="hidden" name="action" value="unlock">
+                    <input type="hidden" name="reason" value="Cleared failed sign-in attempts">
+                    <button type="submit" class="btn btn-sm staff-btn-ghost w-100" title="Clears failed password and code attempts">Clear failed sign-in attempts</button>
+                </form>
+                {% endif %}
+                {% if unconfirmed %}
+                <form method="post" action="{% url 'staff:user_action' person.pk %}" data-once>
+                    {% csrf_token %}<input type="hidden" name="action" value="remind_confirm">
+                    <button type="submit" class="btn btn-sm staff-btn w-100">Remind them to confirm their email</button>
+                </form>
+                {% endif %}
+            </div>
+            {% if passkeys and can.accounts and not protected %}
+            <div class="fw-semibold mt-3 mb-1">Passkeys</div>
+            {% for passkey in passkeys %}
+            <div class="d-flex align-items-center gap-2 py-1">
+                <span class="flex-grow-1">{{ passkey.name }} <span class="staff-muted">{% if passkey.last_used_at %}used {{ passkey.last_used_at|ago }}{% else %}never used{% endif %}</span></span>
+                <button type="button" class="btn btn-sm staff-btn-ghost" data-bs-toggle="modal" data-bs-target="#passkeyModal{{ passkey.pk }}"><i class="bi bi-fingerprint me-1" aria-hidden="true" title="Asks for a passkey tap"></i>Remove</button>
+            </div>
+            {% endfor %}
+            {% endif %}
+        </section>
+        {% endif %}
+
+        {% if can.agency or can.accounts or can.work %}
+        <section class="staff-card" aria-labelledby="actions-heading">
+            <div class="staff-card-head"><h2 id="actions-heading">Actions</h2></div>
+            {% if is_self %}
+            <p class="staff-muted mb-0">These do not apply to your own account. Use your Account page.</p>
+            {% else %}
+            <div class="d-grid gap-2">
+                {% if agency_request %}<a class="staff-warning d-block text-decoration-none" href="{% url 'staff:case' agency_request.pk %}">Open agency request #{{ agency_request.pk }}: asks for <strong>{{ agency_request.data.requested }}</strong>. Decide it there.</a>{% endif %}
+                {% if can.agency %}<button type="button" class="btn btn-sm staff-btn" data-bs-toggle="modal" data-bs-target="#agencyModal">Change agency</button>{% endif %}
+                {% if can.work and person.is_active and person.email %}
+                    <button type="button" class="btn btn-sm staff-btn" data-bs-toggle="modal" data-bs-target="#messageUserModal">Message {{ person.username }}</button>
+                {% endif %}
+                {% if can.accounts and can_view_as %}
+                    <button type="button" class="btn btn-sm staff-btn" data-bs-toggle="modal" data-bs-target="#viewAsModal"><i class="bi bi-fingerprint me-1" aria-hidden="true" title="Asks for a passkey tap"></i>View ELSA as {{ person.username }}</button>
+                {% endif %}
+                {% if can.accounts and not protected %}
+                    <button type="button" class="btn btn-sm staff-btn" data-bs-toggle="modal" data-bs-target="#signOutModal"><i class="bi bi-fingerprint me-1" aria-hidden="true" title="Asks for a passkey tap"></i>Sign out everywhere</button>
+                    {% if person.is_active %}
+                    <button type="button" class="btn btn-sm btn-danger btn-keep-bg" data-bs-toggle="modal" data-bs-target="#disableModal"><i class="bi bi-fingerprint me-1" aria-hidden="true" title="Asks for a passkey tap"></i>Disable account</button>
+                    {% elif not profile.closed_at %}
+                    <button type="button" class="btn btn-sm staff-btn-primary" data-bs-toggle="modal" data-bs-target="#enableModal">Enable account</button>
+                    {% endif %}
+                {% elif can.accounts and protected %}
+                <p class="staff-muted mb-0">Staff accounts can only be disabled by an ELSA developer.</p>
+                {% endif %}
+            </div>
+            {% endif %}
+        </section>
+        {% endif %}
+
+        <section class="staff-card" aria-labelledby="sessions-heading">
+            <div class="staff-card-head"><h2 id="sessions-heading">Signed-in browsers</h2></div>
+            {% for session in sessions %}
+            <div class="py-1"><div class="staff-muted text-truncate" title="{{ session.user_agent }}">{{ session.user_agent|default:"Unknown browser"|truncatechars:60 }}</div><div class="staff-muted">{{ session.ip|default:"" }} &middot; seen {{ session.last_seen_at|ago }}</div></div>
+            {% empty %}<p class="staff-muted mb-0">None.</p>{% endfor %}
+        </section>
+
+        <section class="staff-card" aria-labelledby="cases-heading">
+            <div class="staff-card-head"><h2 id="cases-heading">Requests</h2></div>
+            {% for case in cases %}
+            <div class="py-1"><a href="{% url 'staff:case' case.pk %}">#{{ case.pk }} {{ case.title }}</a> <span class="badge rounded-pill {{ case.status_badge }}">{{ case.get_status_display }}</span></div>
+            {% empty %}<p class="staff-muted mb-0">None.</p>{% endfor %}
+        </section>
+
+        <section class="staff-card" aria-labelledby="history-heading">
+            <div class="staff-card-head"><h2 id="history-heading">Staff actions on this account</h2></div>
+            {% for entry in history %}
+            <div class="py-1">{{ entry.action|audit_action }} <span class="staff-muted">by {{ entry.actor_username }}, {{ entry.created_at|ago }}</span>{% if entry.reason %}<div class="staff-muted">{{ entry.reason }}</div>{% endif %}</div>
+            {% empty %}<p class="staff-muted mb-0">None.</p>{% endfor %}
+        </section>
+    </div>
+</div>
+
+{% if not is_self %}
+{% if can.agency %}
+<div class="modal fade" id="agencyModal" tabindex="-1" aria-labelledby="agencyLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form class="modal-content" method="post" action="{% url 'staff:user_action' person.pk %}" data-once>
+            {% csrf_token %}
+            <input type="hidden" name="action" value="agency">
+            <div class="modal-header"><h5 class="modal-title" id="agencyLabel">Change {{ person.username }}'s agency</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+            <div class="modal-body">
+                <label for="agency-select" class="form-label">Agency</label>
+                <select id="agency-select" name="agency" class="form-select">
+                    {% for key, label in agency_choices %}<option value="{{ key }}" {% if profile.agency == key %}selected{% endif %}>{{ label }} ({{ key }})</option>{% endfor %}
+                </select>
+                {% if bundles %}<p class="staff-warning mt-3 mb-0">Labels in {{ person.username }}'s {{ bundles|length }} existing bundle{{ bundles|length|pluralize }} use the new agency in their identifiers from the next time ELSA writes them.</p>{% endif %}
+                <label for="agency-reason" class="form-label mt-3">Reason</label>
+                <input type="text" id="agency-reason" name="reason" class="form-control" maxlength="1000" required>
+            </div>
+            <div class="modal-footer"><button type="button" class="btn staff-btn-ghost" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn staff-btn-primary">Change agency</button></div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+{% if can.accounts and not protected %}
+<div class="modal fade" id="signOutModal" tabindex="-1" aria-labelledby="signOutLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form class="modal-content" method="post" action="{% url 'staff:user_action' person.pk %}" data-passkey-confirm>
+            {% csrf_token %}
+            <input type="hidden" name="action" value="sign_out">
+            <div class="modal-header"><h5 class="modal-title" id="signOutLabel">Sign {{ person.username }} out everywhere?</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+            <div class="modal-body">
+                <p>Ends every session and forgets every remembered device. They can sign in again straight away.</p>
+                <label for="signout-reason" class="form-label">Reason</label>
+                <input type="text" id="signout-reason" name="reason" class="form-control" maxlength="1000" required>
+                <p class="staff-error d-none mt-2 staff-confirm-error" role="alert"></p>
+            </div>
+            <div class="modal-footer"><button type="button" class="btn staff-btn-ghost" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn staff-btn-primary"><i class="bi bi-fingerprint me-1" aria-hidden="true"></i>Confirm with passkey</button></div>
+        </form>
+    </div>
+</div>
+
+{% if person.is_active %}
+<div class="modal fade" id="disableModal" tabindex="-1" aria-labelledby="disableLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form class="modal-content" method="post" action="{% url 'staff:user_action' person.pk %}" data-passkey-confirm>
+            {% csrf_token %}
+            <input type="hidden" name="action" value="disable">
+            <div class="modal-header"><h5 class="modal-title" id="disableLabel">Disable {{ person.username }}?</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+            <div class="modal-body">
+                <p>They are signed out everywhere and cannot sign in until the account is enabled again. Their bundles and files stay as they are.</p>
+                <label for="disable-reason" class="form-label">Reason</label>
+                <input type="text" id="disable-reason" name="reason" class="form-control" maxlength="1000" required>
+                <p class="staff-error d-none mt-2 staff-confirm-error" role="alert"></p>
+            </div>
+            <div class="modal-footer"><button type="button" class="btn staff-btn-ghost" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-danger btn-keep-bg"><i class="bi bi-fingerprint me-1" aria-hidden="true"></i>Confirm with passkey</button></div>
+        </form>
+    </div>
+</div>
+{% elif not profile.closed_at %}
+<div class="modal fade" id="enableModal" tabindex="-1" aria-labelledby="enableLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form class="modal-content" method="post" action="{% url 'staff:user_action' person.pk %}" data-once>
+            {% csrf_token %}
+            <input type="hidden" name="action" value="enable">
+            <div class="modal-header"><h5 class="modal-title" id="enableLabel">Enable {{ person.username }}?</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+            <div class="modal-body">
+                <label for="enable-reason" class="form-label">Reason</label>
+                <input type="text" id="enable-reason" name="reason" class="form-control" maxlength="1000" required>
+            </div>
+            <div class="modal-footer"><button type="button" class="btn staff-btn-ghost" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn staff-btn-primary">Enable</button></div>
+        </form>
+    </div>
+</div>
+{% endif %}
+{% endif %}
+{% endif %}
+{% if not is_self and can.accounts and not protected %}
+{% for passkey in passkeys %}
+<div class="modal fade" id="passkeyModal{{ passkey.pk }}" tabindex="-1" aria-labelledby="passkeyLabel{{ passkey.pk }}" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form class="modal-content" method="post" action="{% url 'staff:user_action' person.pk %}" data-passkey-confirm>
+            {% csrf_token %}
+            <input type="hidden" name="action" value="remove_passkey">
+            <input type="hidden" name="passkey" value="{{ passkey.pk }}">
+            <div class="modal-header"><h5 class="modal-title" id="passkeyLabel{{ passkey.pk }}">Remove "{{ passkey.name }}"?</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+            <div class="modal-body">
+                <p>For a lost or stolen device. {{ person.username }} is emailed that it was removed, and can add a new passkey after signing in with their password.</p>
+                <label for="passkey-reason{{ passkey.pk }}" class="form-label">Reason</label>
+                <input type="text" id="passkey-reason{{ passkey.pk }}" name="reason" class="form-control" maxlength="1000" required>
+                <p class="staff-error d-none mt-2 staff-confirm-error" role="alert"></p>
+            </div>
+            <div class="modal-footer"><button type="button" class="btn staff-btn-ghost" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-danger btn-keep-bg"><i class="bi bi-fingerprint me-1" aria-hidden="true"></i>Confirm with passkey</button></div>
+        </form>
+    </div>
+</div>
+{% endfor %}
+{% endif %}
+
+{% if can.accounts and can_view_as %}
+<div class="modal fade" id="viewAsModal" tabindex="-1" aria-labelledby="viewAsLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form class="modal-content" method="post" action="{% url 'staff:user_action' person.pk %}" data-passkey-confirm>
+            {% csrf_token %}
+            <input type="hidden" name="action" value="view_as">
+            <div class="modal-header"><h5 class="modal-title" id="viewAsLabel">View ELSA as {{ person.username }}?</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+            <div class="modal-body">
+                <p>For 15 minutes you see their Bundle Hub, bundle pages, Account page and requests exactly as they do. Nothing can be changed: every form and every other page is refused until you stop. It is recorded in the audit log.</p>
+                <label for="viewas-reason" class="form-label">Reason</label>
+                <input type="text" id="viewas-reason" name="reason" class="form-control" maxlength="1000" required>
+                <p class="staff-error d-none mt-2 staff-confirm-error" role="alert"></p>
+            </div>
+            <div class="modal-footer"><button type="button" class="btn staff-btn-ghost" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn staff-btn-primary"><i class="bi bi-fingerprint me-1" aria-hidden="true"></i>Confirm with passkey</button></div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+{% if can.work and not is_self and person.is_active and person.email %}
+<div class="modal fade" id="messageUserModal" tabindex="-1" aria-labelledby="messageUserLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <form class="modal-content" method="post" action="{% url 'staff:user_action' person.pk %}" data-once>
+            {% csrf_token %}
+            <input type="hidden" name="action" value="message">
+            <div class="modal-header"><h5 class="modal-title" id="messageUserLabel">Message {{ person.get_full_name|default:person.username }}</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+            <div class="modal-body">
+                <label for="msg-subject" class="form-label">Subject</label>
+                <input type="text" id="msg-subject" name="subject" class="form-control" maxlength="150" required placeholder="e.g. Your bundle's citation needs an author">
+                <label for="msg-body" class="form-label mt-3">Message</label>
+                <textarea id="msg-body" data-draft="user{{ person.pk }}-message" name="body" class="form-control" rows="7" maxlength="10000" required></textarea>
+                <p class="staff-muted mt-2 mb-0">It starts a conversation they see under the bell and on their Account page, and is emailed to {{ person.email }} unless they switched email off. Their answer comes back to the queue.</p>
+            </div>
+            <div class="modal-footer"><button type="button" class="btn staff-btn-ghost" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn staff-btn-primary">Send</button></div>
+        </form>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

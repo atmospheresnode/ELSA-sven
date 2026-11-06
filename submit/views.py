@@ -4,6 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.files.storage import default_storage
 from .models import BundleSubmission
+from staff import hooks as staff_hooks
 from django.core.mail import EmailMessage
 from django.conf import settings
 from django.utils import timezone
@@ -93,6 +94,12 @@ def send_upload_emails(request, submission):
     user_email = request.user.email
     bundle_type_label = submission.get_bundle_type_display() # Gets "Archive" or "External"
 
+    case = staff_hooks.open_case(
+        'upload', '{0} upload: {1}'.format(bundle_type_label, uploaded_filename),
+        requester=request.user, body=submission.description or '',
+        data={'file_name': uploaded_filename, 'bundle_type': bundle_type_label,
+              'submission_id': submission.pk})
+
     # --- Email 1: To the User (Confirmation) ---
     user_subject = f"ELSA Submission Received: {uploaded_filename}"
     user_body = f"""
@@ -120,6 +127,7 @@ def send_upload_emails(request, submission):
     # FIX: Use timezone.now() instead of submission.created_at
     current_time = timezone.now().strftime("%Y-%m-%d %H:%M:%S") 
 
+    console = 'Open in the Admin Console: ' + staff_hooks.case_url(request, case) if case else ''
     staff_body = f"""
     A new file has been uploaded to ELSA.
 
@@ -130,6 +138,7 @@ def send_upload_emails(request, submission):
     Upload Time: {current_time}
     
     Please check the server/queue for processing.
+    {console}
     """
     
     # Staff email list

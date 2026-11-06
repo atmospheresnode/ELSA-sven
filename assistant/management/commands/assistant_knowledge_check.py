@@ -1,8 +1,8 @@
-"""Django wrapper around assistant/knowledge_check.py (see that file for docs).
+"""Django wrapper around assistant/knowledge_check.py.
 
     python3 manage.py assistant_knowledge_check
 
-CI runs the standalone script directly (no Django settings needed):
+CI runs the script directly:
     python3 assistant/knowledge_check.py
 """
 from django.core.management.base import BaseCommand, CommandError

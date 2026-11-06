@@ -1,22 +1,11 @@
-"""The setup page: what it shows, and the one save it does itself.
+"""The setup page: what it shows and the one save it does itself.
 
-Every step on the setup page but one saves through a view the bundle page already
-uses, in place, exactly as the bundle page's windows do (X-Elsa-Inplace, see
-_inplace_form in views.py). The page adds no second way of saving an alias, a
-modification history, a target, a document, a collection or a NetCDF file.
+Every step but one saves through the same view as the bundle page (X-Elsa-Inplace, see
+_inplace_form in views.py).
 
-The exception is the citation. The citation used to be created in two steps: a form
-asking how many authors and editors there would be, then a page with a blank for each
-one. The counts could never be changed afterwards (the edit page has a fixed number of
-blanks), so a wrong count meant deleting the citation and starting again. Here the
-user lists the people instead, and the counts follow from the list.
-
-The counts are still what the database stores, and the names still live only in the
-labels, so nothing about the model or the bundle page's own citation editor changes.
-A save writes the whole Citation_Information element into the bundle label, then
-copies that element into every other label, the same way the existing edit path
-keeps them in step (Citation_Information.sync_into_label and
-mirror_citation_into_data_products).
+The citation is the exception. The user lists the people and the counts come from the list.
+A save writes the whole Citation_Information into the bundle label and copies it to the others
+(Citation_Information.sync_into_label and mirror_citation_into_data_products).
 """
 
 import copy
@@ -30,13 +19,12 @@ from build import preflight, walkthrough
 from build.chocolate import close_label, open_label_with_tree
 from build.forms import (AdditionalCollectionForm, AliasForm, AnnexProductDocumentForm,
                          InvestigationForm, TargetFormAll,
-                         clean_pds_person_name)
+                         clean_pds_person_name, clean_ror_id)
 from build.models import (NAMESPACE, MAX_TEXT_FIELD, Citation_Information, Product_Bundle,
                           mirror_citation_into_data_products)
 
 
-# The two ATM editors every ELSA citation names first. The same values
-# Citation_Information.fill_label writes.
+# The two ATM editors. Same values as Citation_Information.fill_label.
 FIXED_EDITORS = [
     ('Lynn', 'Neakrase', '0000-0002-6370-5791'),
     ('Lyle', 'Huber', '0000-0002-1232-1982'),
@@ -44,9 +32,7 @@ FIXED_EDITORS = [
 FIXED_EDITOR_AFFILIATION = ('NASA Planetary Data System Atmospheres Node; '
                             'New Mexico State University, Las Cruces, NM')
 
-# The fields of each kind of row, as posted. The names are the ones the bundle
-# page's citation editor (EditCitationInformationForm) already uses, so an error
-# keyed by one of them means the same thing on either page.
+# Fields per row. Same names as EditCitationInformationForm.
 PERSON_FIELDS = ('given_name', 'family_name', 'orcid', 'affiliation')
 ORG_FIELDS = ('name', 'rorid', 'sequence_number', 'parent_org_name')
 GROUPS = {
@@ -64,6 +50,7 @@ REQUIREMENT_STEPS = {
     'modification-history-missing': '',
     'target-missing': 'targets',
     'netcdf-missing': 'data',
+    'document-collection-empty': 'documents',
 }
 
 
@@ -75,12 +62,9 @@ ORCID_PREFIX = re.compile(r'^(https?://)?(www\.)?orcid\.org/|^orcid:?\s*', re.IG
 
 
 def tidy_orcid(value):
-    """An ORCID iD written the way PDS labels use it, from however it was typed.
+    """Tidy an ORCID iD to the standard form (0000-0002-1825-0097).
 
-    People paste the link, type the sixteen digits without dashes, add spaces, or end
-    in a lower-case x. All of that is the same iD, so ELSA writes it the standard way
-    (0000-0002-1825-0097) instead of refusing it. Returns the tidied iD, or what is
-    left after tidying when it is not sixteen characters long.
+    Handles pasted links, missing dashes, spaces and a lower-case x.
     """
     value = ORCID_PREFIX.sub('', (value or '').strip()).strip().rstrip('/')
     characters = re.sub(r'[^0-9Xx]', '', value).upper()
@@ -90,13 +74,9 @@ def tidy_orcid(value):
 
 
 def clean_orcid(value):
-    """The ORCID iD PDS labels use, from what a person typed or pasted.
+    """Check an ORCID iD. PDS4 has no format for person_orcid so validate won't catch a typo.
 
-    PDS4 sets no format for person_orcid, so the validator accepts anything, and a
-    mistyped digit then credits the wrong person or no one. Anything that tidies to
-    sixteen characters is accepted in the standard form; what is refused is the wrong
-    number of digits, or a check digit that does not match (ISO 7064 11,2, as ORCID
-    itself checks), which means a typo.
+    Refuses the wrong number of digits or a bad check digit (ISO 7064 11,2).
     """
     if not (value or '').strip():
         return ''
@@ -119,9 +99,7 @@ def clean_orcid(value):
 class CitationListForm(forms.Form):
     """A citation as a list of people, however many rows were posted.
 
-    Rows are numbered by the page; the numbers only group a row's fields and may have
-    gaps where a row was removed. A row left entirely blank is ignored, so an unused
-    "Add a person" costs nothing.
+    Row numbers can have gaps. Rows left blank are ignored.
     """
 
     publication_year = forms.CharField(required=True, max_length=4, error_messages={
@@ -176,12 +154,16 @@ class CitationListForm(forms.Form):
                             row[field] = clean_pds_person_name(row[field], label)
                         except forms.ValidationError as error:
                             self.add_error(name(field), error)
-                elif _blank(row['name']):
-                    self.add_error(name('name'), 'Enter the organization\'s name, or remove it.')
+                else:
+                    if _blank(row['name']):
+                        self.add_error(name('name'), 'Enter the organization\'s name, or remove it.')
+                    try:
+                        row['rorid'] = clean_ror_id(row['rorid'])
+                    except forms.ValidationError as error:
+                        self.add_error(name('rorid'), error)
                 self.rows[group].append(row)
 
-        # External bundles need an author (build.preflight). Asked for here because this
-        # is where the user is looking at the list.
+        # External bundles need an author (build.preflight).
         if (self.bundle.bundle_type == 'External'
                 and not self.rows['author_people'] and not self.rows['author_orgs']):
             raise forms.ValidationError(
@@ -203,8 +185,7 @@ def citation_rows(bundle):
             'publication_year': str(timezone.now().year),
             'description': '',
             'keyword': '',
-            # No blank person to start with: a form open on arrival read as
-            # something already half done. The Add buttons open one.
+            # No blank person to start with. The Add buttons open one.
             'author_people': [],
             'author_orgs': [],
             'editor_people': [],
@@ -245,8 +226,7 @@ def _element(parent, tag, text=None):
 
 
 def _optional(parent, tag, text):
-    # Every optional field left blank is left out. An empty element is a validation
-    # error (PDS4 values have a minimum length); a missing optional one is not.
+    # Blank optional fields are left out since PDS4 rejects empty elements.
     if not _blank(text):
         _element(parent, tag, text.strip())
 
@@ -277,8 +257,7 @@ def citation_element(citation, rows):
     _optional(root, 'keyword', citation.keyword)
     _element(root, 'description', citation.description)
 
-    # List_Author and List_Editor are a sequence in the schema: every Organization
-    # comes before every Person.
+    # Every Organization comes before every Person in List_Author and List_Editor.
     if rows['author_people'] or rows['author_orgs']:
         authors = _element(root, 'List_Author')
         for row in rows['author_orgs']:
@@ -343,9 +322,7 @@ def finish(bundle):
             continue
         ok = requirement.satisfied(bundle)
         step = REQUIREMENT_STEPS.get(requirement.key, '')
-        # A requirement no step asks for is one ELSA meets itself (the first
-        # modification history entry). A tick for it read as something the user had
-        # done; it is listed only if it is somehow missing.
+        # ELSA does this one itself (the first modification history), so only list it if it's missing.
         if ok and not step:
             continue
         items.append({'key': requirement.key, 'title': requirement.title, 'ok': ok, 'step': step})

@@ -1,0 +1,33 @@
+{% extends 'base-derk.html' %}
+{% load static account_tags %}
+
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/staff.css' %}">{% endblock %}
+
+{% block body_block %}
+<div class="staff-page" style="max-width: 48rem;">
+    <div class="d-flex flex-wrap align-items-start gap-2">
+        <div class="flex-grow-1">
+            <h1 class="staff-title">Notifications</h1>
+            <p class="staff-subtitle">Replies from the ELSA team and news about your requests and bundles.</p>
+        </div>
+        {% if unread and can_write %}
+        <form method="post">{% csrf_token %}<button type="submit" class="btn btn-sm staff-btn">Mark all read</button></form>
+        {% endif %}
+    </div>
+    <section class="staff-card">
+        {% for item in page %}
+        <a href="{% url 'staff_public:open_notification' item.pk %}" class="d-flex gap-2 py-2 border-bottom text-decoration-none text-reset">
+            <span class="pt-1">{% if not item.read_at %}<span class="staff-unread" title="Unread"></span><span class="visually-hidden">Unread. </span>{% else %}<span class="d-inline-block" style="width: 0.875rem;"></span>{% endif %}</span>
+            <span class="flex-grow-1">
+                <span class="{% if not item.read_at %}fw-semibold{% endif %}">{{ item.title }}</span>
+                {% if item.body %}<span class="d-block staff-muted">{{ item.body }}</span>{% endif %}
+            </span>
+            <span class="staff-muted text-nowrap">{{ item.created_at|ago }}</span>
+        </a>
+        {% empty %}
+        <p class="staff-empty">Nothing yet.</p>
+        {% endfor %}
+        {% include 'staff/_pagination.html' %}
+    </section>
+</div>
+{% endblock %}

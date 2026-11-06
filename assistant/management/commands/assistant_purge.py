@@ -4,13 +4,8 @@
     python3 manage.py assistant_purge --days 60    # dry run, custom cutoff
     python3 manage.py assistant_purge --delete     # actually delete
 
-Deletes conversations (and their messages, via cascade) that have not been
-updated within the retention window. Run periodically (cron) once the team
-settles the privacy notice.
-
-A conversation with a rated reply is kept longer (--rated-days, default 365):
-the ratings are the evidence for fixing the assistant, and a weekly review can
-fall behind. They are still deleted in the end.
+Deletes conversations not updated within the window. Ones with a rated reply are kept
+longer (--rated-days, default 365).
 """
 from datetime import timedelta
 

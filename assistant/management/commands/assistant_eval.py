@@ -1,11 +1,9 @@
 """Regression evals for the ELSA Assistant.
 
-Runs the golden questions in assistant/evals.json against the live model with
-the real prompt pipeline, and checks each answer contains its required phrases.
-Run this after changing the system prompt, knowledge base, or model chain.
+Runs the questions in assistant/evals.json against the live model and checks each answer
+has its required phrases. Run after changing the prompt, knowledge base or model chain.
 
-NOTE: every question consumes free-tier quota (~20 requests/day/model), so run
-with --limit while iterating.
+Each question uses free-tier quota (about 20 requests/day/model), so use --limit while testing.
 
 Usage:
     python3 manage.py assistant_eval [--username NAME] [--limit N]
@@ -44,8 +42,7 @@ class Command(BaseCommand):
             user = User.objects.first()
 
         evals = json.loads(EVALS_PATH.read_text())
-        # A case with nothing to check passes whatever the model says; this
-        # catches a draft from `assistant_stats --export-evals` added unfinished.
+        # Catches an unfinished draft from `assistant_stats --export-evals`.
         empty = [case['question'] for case in evals
                  if not case.get('must_include') and not case.get('must_not_include')]
         if empty:
@@ -61,9 +58,7 @@ class Command(BaseCommand):
         passed = 0
         for i, case in enumerate(evals, 1):
             question = case['question']
-            # A case may carry prior turns ("history": [user, model, ...]) so
-            # follow-up behavior is testable; retrieval sees the previous user
-            # turn, mirroring the chat view.
+            # A case can have prior turns ("history": [user, model, ...]) to test follow-ups.
             history = case.get('history', [])
             contents = []
             for turn_i, turn in enumerate(history):
@@ -79,9 +74,8 @@ class Command(BaseCommand):
             except (QuotaExhausted, LLMUnavailable) as exc:
                 raise CommandError(f'Model unavailable at question {i}: {type(exc).__name__}')
 
-            # must_include: required substring, or a list of alternatives of
-            # which at least one must appear. must_not_include: forbidden
-            # substrings (regression guard against invented features/claims).
+            # must_include: required text, or a list where at least one has to appear.
+            # must_not_include: text that shouldn't appear.
             missing = []
             for phrase in case.get('must_include', []):
                 options = phrase if isinstance(phrase, list) else [phrase]

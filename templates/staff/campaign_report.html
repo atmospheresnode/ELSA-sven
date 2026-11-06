@@ -1,0 +1,46 @@
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  body { font-family: Helvetica, Arial, sans-serif; font-size: 10.5pt; color: #222; }
+  h1 { font-size: 17pt; margin: 0 0 4pt; }
+  h2 { font-size: 13pt; margin: 16pt 0 6pt; border-bottom: 1px solid #ccc; padding-bottom: 3pt; }
+  h3 { font-size: 11pt; margin: 10pt 0 2pt; }
+  .muted { color: #666; }
+  .answer { margin: 0 0 6pt; white-space: pre-wrap; }
+  table { width: 100%; border-collapse: collapse; }
+  td, th { border: 1px solid #ccc; padding: 4pt; vertical-align: top; text-align: left; }
+</style>
+</head>
+<body>
+  <h1>PDS Data Set Peer Review</h1>
+  <p class="muted">PDS Atmospheres Node &middot; generated {{ generated|date:"F j, Y" }}</p>
+  <p><strong>Data set:</strong> {{ campaign.data_set }}<br>
+     <strong>Review:</strong> {{ campaign.title }}{% if campaign.deadline %}<br>
+     <strong>Requested by:</strong> {{ campaign.deadline|date:"F j, Y" }}{% endif %}</p>
+  {% if campaign.description %}<p class="answer">{{ campaign.description }}</p>{% endif %}
+
+  <h2>Reviews ({{ reviews|length }})</h2>
+  {% for review in reviews %}
+    <h3>{{ review.name }} <span class="muted">&lt;{{ review.email }}&gt;, {{ review.submitted_at|date:"F j, Y" }}</span></h3>
+    {% for label, text in review.answers %}
+      <p><strong>{{ label }}</strong></p>
+      <p class="answer">{{ text|default:"(no answer)" }}</p>
+    {% endfor %}
+  {% empty %}
+    <p class="muted">No reviews have been submitted.</p>
+  {% endfor %}
+
+  <h2>Liens</h2>
+  {% if liens %}
+  <table>
+    <tr><th>#</th><th>Lien</th><th>Status</th></tr>
+    {% for lien in liens %}
+    <tr><td>{{ forloop.counter }}</td><td>{{ lien.description }}{% if lien.file_path %}<br><span class="muted">{{ lien.file_path }}</span>{% endif %}</td><td>{{ lien.get_status_display }}</td></tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="muted">None raised.</p>
+  {% endif %}
+</body>
+</html>

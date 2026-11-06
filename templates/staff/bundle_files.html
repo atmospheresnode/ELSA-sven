@@ -1,0 +1,109 @@
+{% extends 'staff/base.html' %}
+{% load staff_tags %}
+
+{% block console %}
+<p class="mb-2"><a href="{% url 'staff:bundle' bundle.pk %}" class="staff-muted"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>{{ bundle.name }}</a></p>
+<h1 class="staff-title">Files in {{ bundle.name }}</h1>
+<p class="staff-subtitle">Read-only. Files changed or added since the previous submission are marked{% if can_raise %}; click a line number to raise a lien on that line{% endif %}.</p>
+
+{% if folder_missing %}
+<div class="staff-warning">The bundle folder is missing on the server.</div>
+{% else %}
+<div class="staff-files">
+    <nav class="staff-card staff-files-list" aria-label="Files">
+        {% for folder, files in tree %}
+        <div class="staff-files-folder">{{ folder }}/</div>
+        {% for file in files %}
+        <a href="?path={{ file.path|urlencode }}{% if file.path in changed %}&amp;view=diff{% endif %}" class="{% if file.path == opened %}active{% endif %}">
+            {% if file.path in changed %}<span class="badge bg-warning text-dark me-1">changed</span>{% endif %}{{ file.name }}
+        </a>
+        {% endfor %}
+        {% empty %}<p class="staff-muted mb-0">The folder is empty.</p>{% endfor %}
+    </nav>
+    <section class="staff-card">
+        {% if opened %}
+        <div class="staff-card-head">
+            <h2 class="staff-mono">{{ opened }}</h2>
+            <div class="staff-card-tools d-flex gap-2">
+                <a class="btn btn-sm {% if view == 'diff' %}staff-btn-ghost{% else %}staff-btn{% endif %}" href="?path={{ opened|urlencode }}">File</a>
+                <a class="btn btn-sm {% if view == 'diff' %}staff-btn{% else %}staff-btn-ghost{% endif %}" href="?path={{ opened|urlencode }}&amp;view=diff">What changed</a>
+                <a class="btn btn-sm staff-btn-ghost" href="{% url 'staff:bundle_file_download' bundle.pk %}?path={{ opened|urlencode }}">Download</a>
+            </div>
+        </div>
+        {% if view == 'diff' %}
+            {% if diff and diff.changed %}
+            <p class="staff-muted">Between the previous submission ({{ diff.since|date:"M j" }}) and the latest.{% if diff.old_missing %} The file is new.{% elif diff.new_missing %} The file was removed.{% endif %}</p>
+            <table class="staff-diff">
+                {% for kind, old_no, new_no, line in diff.rows %}
+                <tr class="staff-diff-{{ kind }}">
+                    {% if kind == 'skip' %}<td colspan="3" class="staff-muted">{{ line }}</td>
+                    {% else %}<td class="staff-diff-no">{{ old_no|default:"" }}</td><td class="staff-diff-no">{{ new_no|default:"" }}</td><td class="staff-diff-text"><span class="visually-hidden">{% if kind == 'added' %}Added: {% elif kind == 'removed' %}Removed: {% endif %}</span>{{ line }}</td>{% endif %}
+                </tr>
+                {% endfor %}
+            </table>
+            {% elif diff %}<p class="staff-muted mb-0">Nothing inside this file changed between the last two submissions.</p>
+            {% else %}<p class="staff-muted mb-0">There is no earlier submission to compare with, or ELSA did not keep this file's text (only labels and small text files are kept).</p>{% endif %}
+        {% elif text is not None %}
+            <table class="staff-lines">
+                {% for line in lines %}
+                <tr id="L{{ forloop.counter }}"{% if forloop.counter in line_liens %} class="staff-line-lien"{% endif %}>
+                    <td class="staff-line-no">{% if can_raise %}<button type="button" class="staff-line-btn" data-line="{{ forloop.counter }}" aria-label="Raise a lien on line {{ forloop.counter }}">{{ forloop.counter }}</button>{% else %}{{ forloop.counter }}{% endif %}</td>
+                    <td class="staff-line-text">{{ line }}{% with here=line_liens|get_item:forloop.counter %}{% for lien in here %}<div class="staff-line-note"><span class="badge rounded-pill bg-danger">Lien</span> {{ lien.description }}</div>{% endfor %}{% endwith %}</td>
+                </tr>
+                {% endfor %}
+            </table>
+        {% else %}<p class="staff-muted mb-0">{{ note }}</p>{% endif %}
+        {% else %}
+        <p class="staff-muted mb-0">Choose a file on the left to read it here.</p>
+        {% endif %}
+        {% if liens %}
+        <div class="mt-3 pt-3 border-top">
+            <div class="fw-semibold mb-1">Open liens on this bundle</div>
+            {% for lien in liens %}<div class="small">{{ lien.description }}{% if lien.file_path %} <a class="staff-mono" href="?path={{ lien.file_path|urlencode }}{% if lien.line %}#L{{ lien.line }}{% endif %}">({{ lien.file_path }}{% if lien.line %}, line {{ lien.line }}{% endif %})</a>{% endif %}</div>{% endfor %}
+        </div>
+        {% endif %}
+    </section>
+</div>
+{% endif %}
+
+{% if can_raise and opened %}
+<div class="modal fade" id="lineLienModal" tabindex="-1" aria-labelledby="lineLienLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form class="modal-content" method="post" action="{% url 'staff:case_action' review_case.pk %}" data-once>
+            {% csrf_token %}
+            <input type="hidden" name="action" value="add_lien">
+            <input type="hidden" name="file_path" value="{{ opened }}">
+            <input type="hidden" name="line" value="" id="line-lien-line">
+            <input type="hidden" name="return_to" value="files">
+            <div class="modal-header"><h5 class="modal-title" id="lineLienLabel">Raise a lien on line <span id="line-lien-number"></span></h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+            <div class="modal-body">
+                <p class="staff-mono small text-truncate mb-2" id="line-lien-preview"></p>
+                <label for="line-lien-text" class="form-label">What needs fixing</label>
+                <textarea id="line-lien-text" name="description" class="form-control" rows="3" maxlength="10000" required></textarea>
+                <p class="staff-muted mt-2 mb-0">Added to review #{{ review_case.pk }}. The owner sees it on their bundle page with the file and line, and is notified.</p>
+            </div>
+            <div class="modal-footer"><button type="button" class="btn staff-btn-ghost" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn staff-btn-primary">Raise lien</button></div>
+        </form>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block console_js %}
+<script nonce="{{ request.csp_nonce }}">
+(function () {
+    var modal = document.getElementById('lineLienModal');
+    if (!modal) { return; }
+    document.querySelectorAll('.staff-line-btn').forEach(function (button) {
+        button.addEventListener('click', function () {
+            var line = button.getAttribute('data-line');
+            document.getElementById('line-lien-line').value = line;
+            document.getElementById('line-lien-number').textContent = line;
+            var row = document.getElementById('L' + line);
+            document.getElementById('line-lien-preview').textContent = row ? row.querySelector('.staff-line-text').firstChild.textContent : '';
+            bootstrap.Modal.getOrCreateInstance(modal).show();
+        });
+    });
+})();
+</script>
+{% endblock %}

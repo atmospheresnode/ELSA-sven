@@ -1,0 +1,48 @@
+{% extends 'staff/base.html' %}
+{% load tz staff_tags %}
+
+{% block console %}
+<h1 class="staff-title">Audit log</h1>
+<p class="staff-subtitle">Every change made through the Admin Console and every role granted on the server. Entries cannot be edited or deleted.</p>
+
+<div class="staff-card">
+    <form method="get" class="staff-filters" role="search" data-live-filter="audit-results">
+        <input type="search" name="actor" value="{{ actor }}" class="form-control form-control-sm" placeholder="Who" aria-label="Who">
+        <select name="action" class="form-select form-select-sm" aria-label="What">
+            <option value="">Every action</option>
+            {% for key, label in action_choices %}<option value="{{ key }}" {% if action == key %}selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select>
+        <button type="submit" class="btn btn-sm staff-btn" data-live-hide>Filter</button>
+        {% if actor or action %}<a href="{% url 'staff:audit' %}" class="btn btn-sm staff-btn-ghost">Clear</a>{% endif %}
+        <a href="{% url 'staff:audit_csv' %}?{{ querystring }}" data-live-href class="btn btn-sm staff-btn-ghost ms-auto"><i class="bi bi-download me-1" aria-hidden="true"></i>Export CSV</a>
+    </form>
+    <div id="audit-results">
+    {% if page.object_list %}
+    <div class="table-responsive">
+        <table class="staff-table">
+            <thead><tr><th>When</th><th>Who</th><th>What</th><th>On</th><th>Reason and details</th></tr></thead>
+            <tbody>
+            {% for entry in page %}
+            <tr>
+                <td class="text-nowrap">{{ entry.created_at|localtime|date:"M j, Y g:i A T" }}</td>
+                <td>{{ entry.actor_username }}<div class="staff-muted staff-mono">{{ entry.ip|default:"" }}</div></td>
+                <td>{{ entry.action|audit_action }}</td>
+                <td>
+                    {% if entry.target_type == 'user' %}<a href="{% url 'staff:user' entry.target_id %}">{{ entry.target_label }}</a>
+                    {% elif entry.target_type == 'bundle' %}<a href="{% url 'staff:bundle' entry.target_id %}">{{ entry.target_label }}</a>
+                    {% elif entry.target_type == 'case' %}<a href="{% url 'staff:case' entry.target_id %}">{{ entry.target_label }}</a>
+                    {% else %}{{ entry.target_label }}{% endif %}
+                </td>
+                <td>{{ entry.reason }}{% if entry.changes %}<div class="staff-muted">{{ entry.changes|audit_details }}</div>{% endif %}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% include 'staff/_pagination.html' %}
+    {% else %}
+    <p class="staff-empty">No entries.</p>
+    {% endif %}
+    </div>
+</div>
+{% endblock %}

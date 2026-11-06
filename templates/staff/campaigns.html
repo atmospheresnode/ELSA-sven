@@ -1,0 +1,46 @@
+{% extends 'staff/base.html' %}
+{% load account_tags %}
+
+{% block console %}
+<h1 class="staff-title">Peer reviews</h1>
+<p class="staff-subtitle">Invite reviewers who have no ELSA account, collect their answers, and track liens in one place.</p>
+
+<div class="staff-detail">
+    <section class="staff-card" aria-labelledby="list-heading">
+        <div class="staff-card-head"><h2 id="list-heading">Reviews</h2></div>
+        {% if campaigns %}
+        <table class="staff-table">
+            <thead><tr><th>Review</th><th>Reviewers</th><th>Deadline</th><th>Status</th></tr></thead>
+            <tbody>
+            {% for item in campaigns %}
+            <tr>
+                <td><a href="{% url 'staff:campaign' item.pk %}">{{ item.title }}</a><div class="staff-muted">{{ item.data_set }}</div></td>
+                <td>{{ item.done }} of {{ item.invited }} done</td>
+                <td>{% if item.deadline %}{{ item.deadline|date:"M j, Y" }}{% else %}<span class="staff-muted">None</span>{% endif %}</td>
+                <td><span class="badge rounded-pill {% if item.status == 'open' %}bg-primary{% else %}bg-secondary{% endif %}">{{ item.get_status_display }}</span></td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        {% else %}<p class="staff-empty">No peer reviews yet.</p>{% endif %}
+    </section>
+
+    {% if can.review %}
+    <section class="staff-card" aria-labelledby="new-heading">
+        <div class="staff-card-head"><h2 id="new-heading">Start a review</h2></div>
+        <form method="post" data-once>
+            {% csrf_token %}
+            <label class="form-label fw-semibold" for="c-title">Title</label>
+            <input class="form-control" id="c-title" data-draft="campaign-title" name="title" maxlength="200" required placeholder="e.g. Mars GCM output, 2026 delivery">
+            <label class="form-label fw-semibold mt-3" for="c-data">Data set</label>
+            <input class="form-control" id="c-data" name="data_set" maxlength="255" required placeholder="Bundle name or LID">
+            <label class="form-label fw-semibold mt-3" for="c-desc">What reviewers should know</label>
+            <textarea class="form-control" id="c-desc" data-draft="campaign-desc" name="description" rows="4" maxlength="10000" placeholder="Where to find the data, what to focus on. Included in the invitation."></textarea>
+            <label class="form-label fw-semibold mt-3" for="c-deadline">Please review by (optional)</label>
+            <input type="date" class="form-control" id="c-deadline" name="deadline">
+            <button type="submit" class="btn btn-sm staff-btn-primary mt-3">Create review</button>
+        </form>
+    </section>
+    {% endif %}
+</div>
+{% endblock %}

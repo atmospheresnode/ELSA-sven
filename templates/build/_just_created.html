@@ -1,0 +1,21 @@
+{% comment %}
+On the first page a new bundle opens on (the setup page, or the bundle page with
+the walkthrough off): remembers in this browser tab that the bundle now exists, so
+the create page can say so if the user comes Back to it instead of offering to
+create it again. sessionStorage only, so it never leaves this tab. See
+build/creation.py and templates/build/build.html.
+{% endcomment %}
+{% if just_created %}
+<div id="elsaJustCreated" hidden data-name="{{ bundle.name }}" data-url="{{ request.path }}"></div>
+<script>
+(function () {
+   'use strict';
+   try {
+      var note = document.getElementById('elsaJustCreated');
+      window.sessionStorage.setItem('elsa-bundle-created', JSON.stringify({
+         name: note.getAttribute('data-name'), url: note.getAttribute('data-url'), at: Date.now()
+      }));
+   } catch (e) { /* storage off: the create page simply shows the form */ }
+})();
+</script>
+{% endif %}

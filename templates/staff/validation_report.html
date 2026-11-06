@@ -1,0 +1,53 @@
+{% extends 'staff/base.html' %}
+{% load tz account_tags %}
+
+{% block console %}
+<p class="mb-2"><a href="{% url 'staff:bundle' bundle.pk %}" class="staff-muted"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>{{ bundle.name }}</a></p>
+<h1 class="staff-title">PDS validate run #{{ run.pk }}</h1>
+<p class="staff-subtitle">
+    {{ bundle.name }} &middot; {{ run.get_tier_display }} &middot; {{ run.get_status_display }} &middot;
+    {{ run.requested_at|localtime|date:"M j, Y g:i A T" }}{% if run.products_total %} &middot; {{ run.products_total }} label{{ run.products_total|pluralize }}{% endif %}{% if run.tool_version %} &middot; validate {{ run.tool_version }}{% endif %}
+</p>
+
+{% if run.is_stale %}<div class="staff-warning mb-3"><strong>Out of date.</strong> The bundle changed after this run, so some findings may already be fixed and new ones may be missing.</div>{% endif %}
+{% if run.failure_reason %}<div class="alert alert-danger py-2">This run did not complete. {{ run.failure_reason }}</div>{% endif %}
+
+<div class="staff-stats">
+    <div class="staff-stat"><div class="staff-stat-value {% if run.error_count %}text-danger{% else %}text-success{% endif %}">{{ run.error_count }}</div><div class="staff-stat-label">Error{{ run.error_count|pluralize }}</div></div>
+    <div class="staff-stat"><div class="staff-stat-value">{{ run.warning_count }}</div><div class="staff-stat-label">Warning{{ run.warning_count|pluralize }}</div></div>
+    <div class="staff-stat">
+        <div class="staff-stat-label mb-1">Full report from validate</div>
+        {% if raw_available %}<a class="btn btn-sm staff-btn" href="{% url 'staff:validation_raw' run.pk %}">Download</a>{% else %}<span class="staff-muted">Not kept for this run</span>{% endif %}
+    </div>
+</div>
+
+{% for title, rows in sections %}
+<section class="staff-card">
+    <div class="staff-card-head"><h2>{{ title }}</h2><p>{{ rows|length }}</p></div>
+    {% if rows %}
+    <div class="table-responsive">
+        <table class="staff-table">
+            <thead><tr><th>Label</th><th>Line</th><th>Where in the label</th><th>Message</th></tr></thead>
+            <tbody>
+            {% for finding in rows %}
+            <tr>
+                <td class="text-nowrap">{% if finding.file_link %}<a href="{% url 'staff:bundle_files' bundle.pk %}?path={{ finding.file_link|urlencode }}">{{ finding.label }}</a>{% else %}{{ finding.label }}{% endif %}</td>
+                <td class="staff-muted">{{ finding.line|default:"" }}</td>
+                <td class="staff-mono">{{ finding.element_path|default:"" }}</td>
+                <td>{{ finding.message }}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}<p class="staff-muted mb-0">None.</p>{% endif %}
+</section>
+{% endfor %}
+
+{% if by_type %}
+<section class="staff-card">
+    <div class="staff-card-head"><h2>Message types</h2><p>How often each kind of finding appears</p></div>
+    <dl class="staff-rows">{% for type_name, count in by_type %}<dt class="staff-mono fw-normal">{{ type_name }}</dt><dd>{{ count }}</dd>{% endfor %}</dl>
+</section>
+{% endif %}
+{% endblock %}

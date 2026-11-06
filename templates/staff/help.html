@@ -1,0 +1,56 @@
+{% extends 'staff/base.html' %}
+
+{% block console %}
+<h1 class="staff-title">Getting started with the Admin Console</h1>
+<p class="staff-subtitle">A five-minute tour. Every page also has "Help for this page" at the top right.</p>
+
+<section class="staff-card" aria-labelledby="gs-day">
+    <div class="staff-card-head"><h2 id="gs-day">A normal day</h2></div>
+    <ol class="mb-0">
+        <li class="mb-1">Open <a href="{% url 'staff:today' %}">Today</a>. It lists the requests that need you and the reviews you could pick up.</li>
+        <li class="mb-1">Open a request. The <strong>Next step</strong> box at the top shows only what fits it now: reply, take it, approve, ask for changes. Everything else is under <strong>More actions</strong>.</li>
+        <li class="mb-1">Reply. The user gets it in ELSA and by email, and can answer either way. Their answer brings the request back to Today.</li>
+        <li>When it is done, choose <strong>Reply and resolve</strong>, or just <strong>Resolve</strong>.</li>
+    </ol>
+</section>
+
+<section class="staff-card" aria-labelledby="gs-places">
+    <div class="staff-card-head"><h2 id="gs-places">Where things are</h2></div>
+    <dl class="staff-rows mb-0">
+        <dt>Today</dt><dd>What needs you now.</dd>
+        <dt>Requests</dt><dd>Everything users have asked: agency changes, submissions, contact forms, storage, messages.</dd>
+        <dt>Reviews</dt><dd>The pipeline of submitted bundles, provider projects and outside peer reviews.</dd>
+        <dt>People and bundles</dt><dd>Find any user or bundle, and bundles that have gone quiet.</dd>
+        <dt>Team</dt><dd>Saved replies, knowledge notes, who has what, announcements and email to users.</dd>
+        <dt>Oversight</dt><dd>Reports, validate insights, the email log, the audit log, system health and settings.</dd>
+    </dl>
+    <p class="staff-muted small mt-2 mb-0">The search box at the top (Ctrl+K) jumps to any request number, user or bundle.</p>
+</section>
+
+<section class="staff-card" aria-labelledby="gs-review">
+    <div class="staff-card-head"><h2 id="gs-review">Reviewing a bundle</h2></div>
+    <ol class="mb-0">
+        <li class="mb-1">A submission arrives as a request at the stage <strong>Submitted</strong>. Choose <strong>Start review</strong>; the owner is told.</li>
+        <li class="mb-1">Read the files on the bundle's page. Add a <strong>lien</strong> for each problem; you can point at a file and line.</li>
+        <li class="mb-1">Choose <strong>Ask for changes</strong> with a message, or <strong>Accept</strong> once the checklist is ticked and no liens are open.</li>
+        <li>An accepted bundle is released step by step from its release page, ending with the DOI going to the owner.</li>
+    </ol>
+</section>
+
+<section class="staff-card" aria-labelledby="gs-safety">
+    <div class="staff-card-head"><h2 id="gs-safety">Staying safe</h2></div>
+    <ul class="mb-0">
+        <li class="mb-1">Admin mode ends after 30 quiet minutes or 8 hours, and if your session turns up in another browser or network. A warning appears before it ends.</li>
+        <li class="mb-1">Buttons marked <i class="bi bi-fingerprint" aria-hidden="true"></i><span class="visually-hidden">passkey</span> ask for a passkey tap: they change an account or let you see what a user sees.</li>
+        <li class="mb-1">Everything you do is in the audit log, sealed so it cannot be quietly changed.</li>
+        <li>You cannot decide your own request or review your own bundle; a colleague does.</li>
+    </ul>
+</section>
+
+<section class="staff-card" aria-labelledby="gs-words">
+    <div class="staff-card-head"><h2 id="gs-words">What the words mean</h2></div>
+    <dl class="staff-rows mb-0">
+        {% for term, meaning in glossary %}<dt>{{ term }}</dt><dd>{{ meaning }}</dd>{% endfor %}
+    </dl>
+</section>
+{% endblock %}

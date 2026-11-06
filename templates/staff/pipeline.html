@@ -1,0 +1,49 @@
+{% extends 'staff/base.html' %}
+{% load account_tags %}
+
+{% block console %}
+<h1 class="staff-title">Archive pipeline</h1>
+<p class="staff-subtitle">Every submitted bundle on its way into the PDS archive. Oldest in each column first; anything sitting {{ stuck_days }} days or more is marked.</p>
+
+{% include 'staff/_saved_views.html' %}
+<form method="get" class="staff-filters" data-live-filter="pipeline-results">
+    <select name="project" class="form-select form-select-sm" aria-label="Project">
+        <option value="">Every project</option>
+        {% for item in projects %}<option value="{{ item.pk }}" {% if project.pk == item.pk %}selected{% endif %}>{{ item.name }}</option>{% endfor %}
+    </select>
+    <select name="type" class="form-select form-select-sm" aria-label="Bundle type">
+        <option value="">Archive and External</option>
+        <option value="Archive" {% if bundle_type == 'Archive' %}selected{% endif %}>Archive</option>
+        <option value="External" {% if bundle_type == 'External' %}selected{% endif %}>External</option>
+    </select>
+    <select name="reviewer" class="form-select form-select-sm" aria-label="Reviewer">
+        <option value="">Any reviewer</option>
+        <option value="me" {% if reviewer_value == 'me' %}selected{% endif %}>Me</option>
+        {% for person in workers %}{% if person.pk != user.pk %}<option value="{{ person.pk }}" {% if reviewer_value == person.pk|stringformat:"d" %}selected{% endif %}>{{ person.get_full_name|default:person.username }}</option>{% endif %}{% endfor %}
+    </select>
+    <button type="submit" class="btn btn-sm staff-btn" data-live-hide>Filter</button>
+</form>
+
+<div id="pipeline-results">
+{% if stuck_total %}<p class="staff-warning">{{ stuck_total }} bundle{{ stuck_total|pluralize }} {{ stuck_total|pluralize:"has,have" }} been in the same place for {{ stuck_days }} days or more.</p>{% endif %}
+<div class="staff-board">
+    {% for key, label, cards in columns %}
+    <section class="staff-column" aria-labelledby="col-{{ key }}">
+        <h2 id="col-{{ key }}" class="staff-column-head">{{ label }} <span class="badge rounded-pill bg-light text-dark border">{{ cards|length }}</span></h2>
+        {% for card in cards %}
+        <a class="staff-card staff-board-card{% if card.stuck %} staff-board-stuck{% endif %}" href="{% if card.release and key != 'released' %}{% url 'staff:release' card.release.pk %}{% else %}{% url 'staff:case' card.case.pk %}{% endif %}">
+            <div class="fw-semibold staff-board-name">{{ card.bundle.name }}</div>
+            <div class="staff-muted small staff-board-name">{{ card.bundle.user.username }} &middot; {{ card.bundle.bundle_type }}{% if card.projects %} &middot; {{ card.projects|join:", " }}{% endif %}</div>
+            <div class="d-flex flex-wrap gap-1 mt-1">
+                <span class="badge rounded-pill {% if card.stuck %}bg-danger{% else %}bg-light text-dark border{% endif %}">{{ card.days }} day{{ card.days|pluralize }}</span>
+                {% if card.open_liens %}<span class="badge rounded-pill bg-warning text-dark">{{ card.open_liens }} lien{{ card.open_liens|pluralize }}</span>{% endif %}
+                {% if card.release.doi_status %}<span class="badge rounded-pill bg-info text-dark">DOI {{ card.release.get_doi_status_display|lower }}</span>{% endif %}
+                {% if card.case.assignee %}<span class="badge rounded-pill bg-light text-dark border">{{ card.case.assignee.username }}</span>{% else %}<span class="badge rounded-pill bg-light text-muted border">no reviewer</span>{% endif %}
+            </div>
+        </a>
+        {% empty %}<p class="staff-muted small px-1">None.</p>{% endfor %}
+    </section>
+    {% endfor %}
+</div>
+</div>
+{% endblock %}

@@ -1,0 +1,44 @@
+{% extends 'staff/base.html' %}
+{% load tz %}
+
+{% block console %}
+<h1 class="staff-title">Announcements</h1>
+<p class="staff-subtitle">A banner across the top of ELSA for every signed-in user, between two times. Each person can dismiss it.</p>
+
+<div class="staff-detail">
+    <div>
+        <section class="staff-card">
+            <div class="staff-card-head"><h2>Showing now</h2></div>
+            {% for item in live %}{% include 'staff/_announcement_row.html' with item=item can_end=True %}{% empty %}<p class="staff-muted mb-0">Nothing.</p>{% endfor %}
+        </section>
+        <section class="staff-card">
+            <div class="staff-card-head"><h2>Scheduled</h2></div>
+            {% for item in upcoming %}{% include 'staff/_announcement_row.html' with item=item can_end=True %}{% empty %}<p class="staff-muted mb-0">Nothing.</p>{% endfor %}
+        </section>
+        <section class="staff-card">
+            <div class="staff-card-head"><h2>Finished</h2></div>
+            {% for item in past %}{% include 'staff/_announcement_row.html' with item=item %}{% empty %}<p class="staff-muted mb-0">Nothing.</p>{% endfor %}
+        </section>
+    </div>
+    {% if can.accounts %}
+    <section class="staff-card" aria-labelledby="new-ann">
+        <div class="staff-card-head"><h2 id="new-ann">New announcement</h2></div>
+        <form method="post" data-once>
+            {% csrf_token %}
+            <label class="form-label fw-semibold" for="a-title">Headline</label>
+            <input class="form-control" id="a-title" data-draft="announcement-title" name="title" maxlength="150" required placeholder="e.g. ELSA is down for maintenance Friday 6-8 PM MT" value="{{ prefill_title }}">
+            <label class="form-label fw-semibold mt-3" for="a-body">More detail (optional)</label>
+            <textarea class="form-control" id="a-body" data-draft="announcement-body" name="body" rows="3" maxlength="2000">{{ prefill_body }}</textarea>
+            <label class="form-label fw-semibold mt-3" for="a-level">Style</label>
+            <select class="form-select" id="a-level" name="level">{% for key, label in levels %}<option value="{{ key }}">{{ label }}</option>{% endfor %}</select>
+            <div class="row g-2 mt-1">
+                <div class="col"><label class="form-label fw-semibold" for="a-start">From</label><input type="datetime-local" class="form-control" id="a-start" name="starts_at" value="{{ default_start }}" required></div>
+                <div class="col"><label class="form-label fw-semibold" for="a-end">Until</label><input type="datetime-local" class="form-control" id="a-end" name="ends_at" value="{{ default_end }}" required></div>
+            </div>
+            <div class="staff-muted mt-1">Times are Mountain Time.</div>
+            <button type="submit" class="btn btn-sm staff-btn-primary mt-3">Post</button>
+        </form>
+    </section>
+    {% endif %}
+</div>
+{% endblock %}

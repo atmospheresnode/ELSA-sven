@@ -1,0 +1,26 @@
+{% extends 'base-derk.html' %}
+{% load static %}
+
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/staff.css' %}">{% endblock %}
+
+{% block body_block %}
+<div class="staff-page" style="max-width: 48rem;">
+    <p class="mb-2"><a href="{% url 'staff_public:requests' %}" class="staff-muted"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>My requests</a></p>
+    <h1 class="staff-title">Message the ELSA team</h1>
+    <p class="staff-subtitle">Questions about your bundles, labels, or anything else. The team replies here and you are notified.</p>
+    {% for message in messages %}<div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags|default:'info' }}{% endif %} py-2 px-3" role="alert">{{ message }}</div>{% endfor %}
+    <section class="staff-card">
+        <form method="post" data-once>
+            {% csrf_token %}
+            <label for="m-subject" class="form-label fw-semibold">Subject</label>
+            <input id="m-subject" name="subject" class="form-control" maxlength="150" required value="{{ subject }}" placeholder="e.g. How do I add a second target?">
+            <label for="m-body" class="form-label fw-semibold mt-3">Message</label>
+            <textarea id="m-body" name="body" class="form-control" rows="8" maxlength="10000" required>{{ body }}</textarea>
+            <div class="d-flex align-items-center mt-3">
+                <span class="staff-muted">If it is about a bundle, say which one.</span>
+                <button type="submit" class="btn btn-sm staff-btn-primary ms-auto">Send</button>
+            </div>
+        </form>
+    </section>
+</div>
+{% endblock %}

@@ -49,8 +49,7 @@ the views still handle that.
       return null;
    }
 
-   // Where the message goes: after the control, or after anything the page has built just
-   // after it (the chosen-file row the document window adds below its file input).
+   // Put the message after the control, or after anything built right after it.
    function anchorFor(field) {
       var after = field;
       var next = field.nextElementSibling;
@@ -116,8 +115,7 @@ the views still handle that.
       }
    }
 
-   // A redirect to this same page only changes the fragment, which a browser does without
-   // loading anything, so the page is reloaded to show what was saved.
+   // A redirect to this page only changes the fragment, so reload to show what was saved.
    function go(url) {
       var to = new URL(url, window.location.href);
       if (to.pathname === window.location.pathname && to.search === window.location.search) {
@@ -137,8 +135,7 @@ the views still handle that.
 
       var submitter = e.submitter || null;
       var body = new FormData(form);
-      // FormData leaves out the button that was pressed, and the External document
-      // window's button carries source=bundle, which is what brings the user back here.
+      // FormData leaves out the pressed button, and the document window's button has source=bundle.
       if (submitter && submitter.name) body.append(submitter.name, submitter.value);
 
       clearErrors(form);

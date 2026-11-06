@@ -1,0 +1,20 @@
+{% comment %} Saved views for one console list: chips to open them, and a small form to save the current filters. {% endcomment %}
+<div class="d-flex flex-wrap align-items-center gap-1 mb-2 staff-views">
+    {% for view in saved_views %}
+    <span class="staff-view-chip">
+        <a href="{% url view.page %}{% if view.query %}?{{ view.query }}{% endif %}">{{ view.name }}</a>{% if view.shared %} <i class="bi bi-people staff-muted" title="Shared by {{ view.user.username }}" aria-label="shared"></i>{% endif %}
+        {% if view.user_id == user.pk %}<form method="post" action="{% url 'staff:saved_views' %}" class="d-inline">{% csrf_token %}<input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="{{ view.pk }}"><button class="btn-close btn-close-sm" style="font-size: 0.55rem;" aria-label="Remove saved view {{ view.name }}"></button></form>{% endif %}
+    </span>
+    {% endfor %}
+    <details class="staff-view-save">
+        <summary class="staff-muted small">Save this view</summary>
+        <form method="post" action="{% url 'staff:saved_views' %}" class="d-flex flex-wrap gap-1 mt-1" data-once>
+            {% csrf_token %}
+            <input type="hidden" name="page" value="{{ view_page }}">
+            <input type="hidden" name="query" value="{{ request.GET.urlencode }}">
+            <input class="form-control form-control-sm" name="name" maxlength="80" required placeholder="Name, e.g. My Mars reviews" style="max-width: 14rem;">
+            {% if can.work %}<label class="form-check-label small d-flex align-items-center gap-1"><input class="form-check-input" type="checkbox" name="shared" value="1"> Share with the team</label>{% endif %}
+            <button class="btn btn-sm staff-btn">Save</button>
+        </form>
+    </details>
+</div>

@@ -181,8 +181,7 @@
                     }
                 }
             }, csrfToken).catch(function (error) {
-                // Ask the provider to drop a credential ELSA has forgotten, so
-                // it stops being offered on every future sign-in.
+                // Ask the provider to drop a credential ELSA has forgotten.
                 if (error && error.reason === 'unknown_credential') {
                     return forget(error.credentialId).then(function () { throw error; });
                 }

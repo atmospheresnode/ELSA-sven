@@ -1,16 +1,11 @@
 # -*- coding: utf-8 -*-
-"""
-Where an account is signed in, what has happened to it, and which browsers
-it trusts.
+"""Where an account is signed in, what's happened to it, and which browsers it trusts.
 
-- UserSession: one row per signed-in browser, so the owner can see them and
-  sign any of them out.
-- AccountEvent: the security log on the account page.
-- TrustedDevice: "remember this device", which lets a browser skip the emailed
-  code after a correct password for REMEMBER_DAYS.
+- UserSession: one row per signed-in browser
+- AccountEvent: the security log on the account page
+- TrustedDevice: "remember this device", skips the emailed code for REMEMBER_DAYS
 
-Everything here is best effort around the request it serves: a failure to log
-an event never blocks a sign-in.
+A failure here never blocks a sign-in.
 """
 from __future__ import unicode_literals
 
@@ -38,9 +33,7 @@ NEW_DEVICE_LOOKBACK = timedelta(days=180)
 EVENTS_SHOWN = 20
 
 
-# ---------------------------------------------------------------------------
-# Request details
-# ---------------------------------------------------------------------------
+# --- Request details ---
 
 def client_ip(request):
     from .views import _client_ip
@@ -80,9 +73,7 @@ def device_label(agent):
     return browser or system or 'Unknown browser'
 
 
-# ---------------------------------------------------------------------------
-# The activity log
-# ---------------------------------------------------------------------------
+# --- The activity log ---
 
 def record(user, kind, request=None, detail=''):
     try:
@@ -101,9 +92,7 @@ def recent_events(user):
     return events
 
 
-# ---------------------------------------------------------------------------
-# Sessions
-# ---------------------------------------------------------------------------
+# --- Sessions ---
 
 def _session_store():
     return import_module(settings.SESSION_ENGINE).SessionStore
@@ -204,9 +193,7 @@ def forget_session(request):
         UserSession.objects.filter(session_key=key).delete()
 
 
-# ---------------------------------------------------------------------------
-# Remembered devices
-# ---------------------------------------------------------------------------
+# --- Remembered devices ---
 
 def _hash(token):
     return hashlib.sha256(token.encode('utf-8')).hexdigest()

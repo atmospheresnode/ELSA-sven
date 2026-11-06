@@ -1,0 +1,9 @@
+{% extends 'staff/_gate.html' %}
+
+{% block gate %}
+<div class="staff-card">
+    <div class="staff-card-head"><h2>Not part of your role</h2></div>
+    <p>Your Admin Console role does not include this page. If you need it, ask the ELSA developers.</p>
+    <a class="btn staff-btn" href="{% url 'staff:today' %}">Back to Today</a>
+</div>
+{% endblock %}

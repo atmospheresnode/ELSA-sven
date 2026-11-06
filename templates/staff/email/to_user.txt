@@ -1,0 +1,24 @@
+{% autoescape off %}ELSA -- Educational Labeling System @Atmospheres
+
+{{ headline }}
+
+{{ lead }}
+{% if text %}
+{{ text }}
+{% endif %}{% if signature %}
+{{ signature }}
+{% endif %}{% if link %}
+View this in ELSA{% if can_reply %} and reply{% endif %}:
+    {{ link }}
+{% endif %}{% if answer_in_elsa_only %}
+Please answer in ELSA using the link above. Replies to this email are not
+tracked with your request.
+{% elif email_reply %}
+You can also reply to this email. Please keep the reference in the subject line.
+{% endif %}
+--
+Sent by ELSA, Planetary Data System Atmospheres Node,
+New Mexico State University.  {{ reference }}{% if unsubscribe_url %}
+You get ELSA's news and updates because you have an ELSA account.
+Unsubscribe: {{ unsubscribe_url }}{% endif %}
+{% endautoescape %}

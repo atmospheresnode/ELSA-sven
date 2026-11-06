@@ -1,0 +1,16 @@
+{% extends 'staff/base.html' %}
+
+{% block console %}
+<h1 class="staff-title">Validation insights</h1>
+<p class="staff-subtitle">The most common things PDS validate asks users to fix, across every bundle's latest check. Good topics for a knowledge note, a saved reply or better help text.</p>
+{% include 'staff/_snapshot_age.html' with key='insights' %}
+<section class="staff-card">
+    {% for row in rows %}
+    <div class="py-2 border-bottom">
+        <div class="d-flex gap-2 align-items-baseline"><span class="badge rounded-pill bg-light text-dark border">{{ row.count }} bundle{{ row.count|pluralize }}</span><strong>{{ row.title }}</strong></div>
+        {% if row.detail %}<div class="staff-muted small mt-1">{{ row.detail|truncatechars:280 }}</div>{% endif %}
+        <div class="small mt-1">{% for bundle in row.bundles %}<a href="{% url 'staff:bundle' bundle.pk %}">{{ bundle.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}{% if row.more %} and {{ row.more }} more{% endif %}</div>
+    </div>
+    {% empty %}<p class="staff-empty">No finished validate runs yet.</p>{% endfor %}
+</section>
+{% endblock %}

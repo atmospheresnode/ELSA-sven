@@ -1,4 +1,4 @@
-"""Keep this host's PDS validate release current, with a person deciding the switch.
+"""Keep this host's PDS validate release current. A person decides the switch.
 
     python3 manage.py validate_release status
     python3 manage.py validate_release check          # what the monthly cron runs
@@ -8,16 +8,12 @@
     python3 manage.py validate_release rollback
     python3 manage.py validate_release prune --dry-run
 
-`check` finds a new stable release on GitHub, downloads and verifies it, makes sure a
-Java new enough to run it is installed, compares it with the release in use over
-every bundle (and the validation test suites, where the host has them), and emails
-the result once. It never switches anything. `switch` is the human step: it proves
-the release starts, then points VALIDATE_CURRENT_LINK at it. `rollback` undoes the
-last switch. After either, and after `check` installs a release, releases nothing
-needs any more are removed (see validate_release.prune for what is kept).
+`check` finds a new release, verifies it, compares it with the current one and emails the
+result once. It never switches. `switch` points VALIDATE_CURRENT_LINK at the new release
+and `rollback` undoes it. Old releases get pruned (see validate_release.prune).
 
-A host takes part by following the link: VALIDATE_HOME set to VALIDATE_CURRENT_LINK
-and VALIDATE_JAVA_HOME = 'auto'. See docs/pds_validation_setup.md.
+Needs VALIDATE_HOME set to VALIDATE_CURRENT_LINK and VALIDATE_JAVA_HOME = 'auto'.
+See docs/pds_validation_setup.md.
 """
 import fcntl
 import getpass
@@ -227,8 +223,7 @@ class Command(BaseCommand):
                 baseline_home, validate_release.java_home_for(baseline_home))
             if before is not None:
                 after = validate_qualify.run_tests(home, validate_release.java_home_for(home))
-                # Only what the new release breaks. A test already failing with the
-                # release in use is somebody's work in progress, not this release.
+                # Only what the new release breaks, not tests already failing.
                 tests = {'baseline': before, 'candidate': after,
                          'new_failures': sorted(set(after['failed']) - set(before['failed']))}
                 if not after['ok'] and not after['failed']:
@@ -254,8 +249,7 @@ class Command(BaseCommand):
         if options.get('baseline'):
             baseline_home = self._installed(options['baseline'])
             current = options['baseline']
-        # A trial sends a real report to show what one looks like; like a preview it
-        # must leave no trace that would stop the real one being sent later.
+        # A trial sends a real report but shouldn't stop the real one being sent later.
         quiet = options.get('no_email') or options.get('trial')
         if options.get('release'):
             info = validate_release.release_info(options['release'])
@@ -273,12 +267,10 @@ class Command(BaseCommand):
             return
 
         def record(kind, status, context, attachment=None):
-            # Each blocked state is emailed once; the monthly run retries silently and
-            # writes again only when something moves on.
+            # Each blocked state is emailed once. The monthly run retries quietly.
             if previous != status or options.get('force') or options.get('trial'):
                 self._send(kind, context, attachment, options)
-            # A preview tells nobody, and a trial is not the real thing, so neither may
-            # stop the real run from telling them.
+            # Previews and trials can't stop the real run from telling people.
             if quiet:
                 return
             state[version] = {'status': status, 'at': validate_release._now()}
@@ -295,8 +287,7 @@ class Command(BaseCommand):
             record('install_failed', 'install_failed', dict(base, problem=str(error)))
             return
 
-        # Only when a newer release is on hand (an ordinary month returned above), and
-        # never on a preview or a trial, which must change nothing.
+        # Only with a newer release, and never on a preview or trial.
         if not quiet:
             self._prune()
 
@@ -519,12 +510,9 @@ class _Prebuilt(EmailMessage):
 
 
 def build_report_email(subject, text, ctx, recipients, attachment=None):
-    """The release email, in ELSA's branded account-email shell, ready to send.
+    """The release email in ELSA's account email style.
 
-    Built by hand because it needs a shape Django will not produce: the logo has to
-    sit beside the HTML in multipart/related, while the report is a real attachment
-    one level out, in multipart/mixed. Django puts both in one container, and mail
-    clients then either hide the attachment or show the logo as one.
+    Built by hand since Django can't produce this shape:
 
         mixed
           related

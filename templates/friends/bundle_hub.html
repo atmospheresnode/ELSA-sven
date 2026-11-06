@@ -197,7 +197,7 @@
                                                     {% elif status == 'ready' %}bg-success
                                                     {% else %}bg-warning text-dark{% endif %}"
                                                     style="font-size: 0.7rem;">
-                                                    {% if status == 'submitted' %}Submitted
+                                                    {% if status == 'submitted' %}{% if bundle.review.stage_label %}{{ bundle.review.stage_label }}{% else %}Submitted{% endif %}
                                                     {% elif status == 'ready' %}Ready
                                                     {% else %}In Progress{% endif %}
                                                 </span>
@@ -218,6 +218,12 @@
                                             {% endif %}
                                         </div>
                                     </a>
+                                    {% if bundle.setup_left %}
+                                    {# Outside the card's own link: a link cannot sit inside another. #}
+                                    <div class="pb-2 px-2">
+                                        <a class="small fw-medium hub-continue-setup" href="{% url 'build:setup' bundle.pk %}">Continue setup<span class="text-muted fw-normal"> &middot; {{ bundle.setup_left }} step{{ bundle.setup_left|pluralize }} left</span><i class="bi bi-arrow-right ms-1" aria-hidden="true"></i></a>
+                                    </div>
+                                    {% endif %}
 
                                 </div>
                             </div>
@@ -275,6 +281,9 @@
 </div>
 
 <style>
+    /* "Continue setup" on a card: the teal ELSA uses for its primary actions. */
+    .hub-continue-setup { color: teal; text-decoration: none; }
+    .hub-continue-setup:hover { color: #006d6d; text-decoration: underline; }
     .card-checkbox {
         opacity: 0;
         transition: opacity 0.15s ease;

@@ -3,9 +3,7 @@ from django.db import models
 
 
 class Conversation(models.Model):
-    """One chat thread. The active thread is tracked in the login session, so it
-    persists across pages but every new login opens on a fresh chat; past
-    threads stay reachable from the widget's chat list."""
+    """One chat thread. The active thread is kept in the login session, so each login starts fresh."""
     TITLE_SOURCE_CHOICES = [
         ('', 'Untitled'),
         ('question', 'First question'),  # placeholder until the AI names it
@@ -31,8 +29,7 @@ class Conversation(models.Model):
 class Message(models.Model):
     ROLE_CHOICES = [('user', 'User'), ('model', 'Assistant')]
     RATING_CHOICES = [(1, 'Thumbs up'), (-1, 'Thumbs down'), (0, 'No rating')]
-    # What went wrong, picked from chips under a thumbs-down. Each points at a
-    # different fix, which is the point of asking.
+    # Reason picked from the chips under a thumbs-down.
     REASON_CHOICES = [
         ('', 'Not given'),
         ('wrong', 'Wrong information'),
@@ -52,9 +49,7 @@ class Message(models.Model):
     latency_ms = models.PositiveIntegerField(null=True, blank=True)
     feedback_sent = models.BooleanField(default=False)
     error = models.CharField(max_length=200, blank=True, default='')
-    # Knowledge chunks retrieved for this reply, comma-separated. Tells a bad
-    # answer's cause apart: the right chunk missing means retrieval, the right
-    # chunk present means the chunk text or the prompt.
+    # Knowledge chunks used for this reply, comma-separated. Helps tell a retrieval problem from a bad chunk.
     knowledge_used = models.CharField(max_length=300, blank=True, default='')
 
     # Per-message quality feedback from the user
@@ -62,8 +57,7 @@ class Message(models.Model):
     rating_reason = models.CharField(max_length=12, blank=True, default='',
                                      choices=REASON_CHOICES)
     rating_comment = models.TextField(blank=True, default='')
-    # When the rating was last set, so the weekly digest catches an old reply
-    # rated this week.
+    # When the rating was last set, so the weekly digest catches old replies rated this week.
     rated_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
