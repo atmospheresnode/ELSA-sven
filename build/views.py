@@ -42,6 +42,8 @@ from django.core.cache import cache
 from django.utils import timezone
 from django.utils.timezone import localtime
 
+from datetime import timezone as datetime_timezone
+from django.utils import timezone
 
 # -------------------------------------------------------------------------------------------------- #
 # -------------------------------------------------------------------------------------------------- #
@@ -1853,27 +1855,39 @@ def bundle(request, pk_bundle):
             # fixes the refresh duplication issue, use this one for offline testing - deric
             # return HttpResponseRedirect('/build/' + pk_bundle + '/')
 
-        if form_data.is_valid():
+        with timezone.override(datetime_timezone.utc):
+            data_form_is_valid = form_data.is_valid()
+
+        if data_form_is_valid:
             print('\n\n---------------------- DATA INFO -------------------------------')
-            print('form_data is valid')  
+            print('form_data is valid')
 
             # Create Data Object
             data = form_data.save(commit=False)
             data.bundle = bundle
             print(form_data.cleaned_data['collection'])
-            # data.collection = AdditionalCollections.objects.get(id=form_data.data['collection'])
             data.collection = form_data.cleaned_data['collection']
             data.save()
 
             all_labels = []
             product_bundle = Product_Bundle.objects.get(bundle=bundle)
-            product_collections_list = Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data')
+            product_collections_list = Product_Collection.objects.filter(
+                bundle=bundle
+            ).exclude(collection='Data')
 
             all_labels.append(product_bundle)
-            all_labels.extend(product_collections_list)  
+            all_labels.extend(product_collections_list)
 
-            # data.build_directory()
-            data.build_base_file()
+            data.build_base_file(
+                start_date_time=form_data.cleaned_data['start_date_time'],
+                stop_date_time=form_data.cleaned_data['stop_date_time'],
+                start_date_time_nil_reason=form_data.cleaned_data[
+                    'start_date_time_nil_reason'
+                ],
+                stop_date_time_nil_reason=form_data.cleaned_data[
+                    'stop_date_time_nil_reason'
+                ],
+            )
 
             form_data = DataForm(request.POST or None, pk_bun=pk_bundle)
             context_dict['form_data'] = form_data

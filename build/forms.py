@@ -628,27 +628,94 @@ class DataEnum(forms.ModelForm):
 
 
 class DataForm(forms.ModelForm):
-    name = forms.CharField(required=True, validators=[validate_path_component],)
+    NIL_REASON_CHOICES = [
+        ('', 'Select a reason'),
+        ('inapplicable', 'Inapplicable'),
+        ('anticipated', 'Anticipated'),
+        ('missing', 'Missing'),
+        ('unknown', 'Unknown'),
+    ]
 
-    class Meta(object):
+    name = forms.CharField(
+        required=True,
+        validators=[validate_path_component],
+    )
+    start_date_time = forms.DateTimeField(
+        required=False,
+        widget=forms.DateTimeInput(
+            format='%Y-%m-%dT%H:%M',
+            attrs={'type': 'datetime-local', 'class': 'form-control'}
+        ),
+    )
+    stop_date_time = forms.DateTimeField(
+        required=False,
+        widget=forms.DateTimeInput(
+            format='%Y-%m-%dT%H:%M',
+            attrs={'type': 'datetime-local', 'class': 'form-control'}
+        ),
+    )
+    start_date_time_nil_reason = forms.ChoiceField(
+        required=False,
+        choices=NIL_REASON_CHOICES,
+        widget=forms.Select(attrs={'class': 'form-select'}),
+    )
+    stop_date_time_nil_reason = forms.ChoiceField(
+        required=False,
+        choices=NIL_REASON_CHOICES,
+        widget=forms.Select(attrs={'class': 'form-select'}),
+    )
+
+    start_date_time_is_nil = forms.BooleanField(required=False)
+    stop_date_time_is_nil = forms.BooleanField(required=False)
+
+    class Meta:
         model = Data
         exclude = ('bundle',)
         fields = ['name', 'processing_level', 'data_type', 'header', 'collection']
-        # widgets = {
-        #     'collection': forms.HiddenInput(),  # This makes the field hidden
-        # }
-        # exclude = ('bundle','collection')
-        #exclude = ('bundle','data_enum',)
 
     def __init__(self, *args, **kwargs):
         self.pk_bun = kwargs.pop('pk_bun')
-        super(DataForm, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
+
         self.fields['collection'] = forms.ModelChoiceField(
             queryset=AdditionalCollections.objects.filter(bundle=self.pk_bun),
             required=True,
             widget=forms.HiddenInput,
         )
-        # self.fields['collection'] = forms.ModelChoiceField(queryset=AdditionalCollections.objects.filter(bundle=self.pk_bun), required = True)
+
+        if self.is_bound:
+            self.data = self.data.copy()
+
+            for time_field in ('start_date_time', 'stop_date_time'):
+                checkbox_name = f'{time_field}_is_nil'
+                checkbox = self.fields[checkbox_name]
+                is_nil = checkbox.widget.value_from_datadict(
+                    self.data, self.files, self.add_prefix(checkbox_name)
+                )
+
+                inactive_field = time_field if is_nil else f'{time_field}_nil_reason'
+                self.data.pop(self.add_prefix(inactive_field), None)
+
+    def clean(self):
+        cleaned_data = super().clean()
+
+        for time_field in ('start_date_time', 'stop_date_time'):
+            if cleaned_data.get(f'{time_field}_is_nil'):
+                required_field = f'{time_field}_nil_reason'
+                message = 'Select a reason for leaving this time blank.'
+            else:
+                required_field = time_field
+                message = 'Enter a date and time or check the box below it.'
+
+            if required_field not in self.errors and not cleaned_data.get(required_field):
+                self.add_error(required_field, message)
+
+        start = cleaned_data.get('start_date_time')
+        stop = cleaned_data.get('stop_date_time')
+        if start is not None and stop is not None and stop < start:
+            self.add_error('stop_date_time', 'Stop time must be at or after start time.')
+
+        return cleaned_data
 
 """
     Facility

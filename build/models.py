@@ -3592,27 +3592,62 @@ class Data(models.Model):
     # Function make_directory(path) can be found in chocolate.py.  It checks the existence
     # of a directory before creating the directory.
 
-    def build_base_file(self):
-        source_file = os.path.join(settings.TEMPLATE_DIR, 'pds4_labels')
-        source_file = os.path.join(source_file, 'base_templates')
-        
-        if self.header:
-            source_file = os.path.join(source_file, 'data_{}_with_header.xml'.format(replace_all(self.data_type.lower(), ' ', '_')))
-        else:
-            source_file = os.path.join(source_file, 'data_{}.xml'.format(replace_all(self.data_type.lower(), ' ', '_')))
+    def build_base_file(
+        self,
+        *,
+        start_date_time=None,
+        stop_date_time=None,
+        start_date_time_nil_reason='',
+        stop_date_time_nil_reason='',
+    ):
+        source_file = os.path.join(
+            settings.TEMPLATE_DIR, 'pds4_labels', 'base_templates'
+        )
 
-        ret_name = self.name.lower()
-        ret_name = replace_all(ret_name, ' ', '_')
-        # data_directory = os.path.join(self.collection.directory(), ret_name)
+        data_type = replace_all(self.data_type.lower(), ' ', '_')
+        if self.header:
+            template_name = 'data_{}_with_header.xml'.format(data_type)
+        else:
+            template_name = 'data_{}.xml'.format(data_type)
+
+        source_file = os.path.join(source_file, template_name)
+
+        ret_name = replace_all(self.name.lower(), ' ', '_')
         out_file = os.path.join(self.collection.directory(), ret_name + '.xml')
 
-        #set selected version
         update = Version()
-        bundle = Bundle()
-        print (source_file + "<<<<<<<<")
-        print(out_file)
+        update.version_update_old(self.bundle.version, source_file, out_file)
 
-        update.version_update_old(self.bundle.version, source_file,out_file)
+        if (
+            start_date_time is None
+            and stop_date_time is None
+            and not start_date_time_nil_reason
+            and not stop_date_time_nil_reason
+        ):
+            return
+
+        label_object, label_root, label_metadata = open_label_with_tree(out_file)
+        time_coordinates = label_root.find(
+            f'{NAMESPACE}Observation_Area/{NAMESPACE}Time_Coordinates'
+        )
+        xsi_nil = '{http://www.w3.org/2001/XMLSchema-instance}nil'
+
+        for field_name, timestamp, nil_reason in (
+            ('start_date_time', start_date_time, start_date_time_nil_reason),
+            ('stop_date_time', stop_date_time, stop_date_time_nil_reason),
+        ):
+            element = time_coordinates.find(f'{NAMESPACE}{field_name}')
+
+            if nil_reason:
+                element.text = None
+                element.set(xsi_nil, 'true')
+                element.set('nilReason', nil_reason)
+            elif timestamp is not None:
+                element.text = timestamp.isoformat().replace('+00:00', 'Z')
+                element.attrib.pop(xsi_nil, None)
+                element.attrib.pop('nilReason', None)
+
+        close_label(label_object, label_root, label_metadata)
 
     def build_directory(self):
         data_name = self.name.lower()

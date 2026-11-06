@@ -859,3 +859,16 @@ a:hover .modal-card {
     }
 
 }
+
+[data-time-coverage] [data-time-reasons] {
+    display: none;
+}
+
+[data-time-coverage]:has([data-time-toggle] input:checked) [data-time-reasons] {
+    display: block;
+}
+
+[data-time-coverage]:has([data-time-toggle] input:checked) [data-time-inputs] input {
+    opacity: 0.5;
+    pointer-events: none;
+}

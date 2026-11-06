@@ -461,7 +461,32 @@
                         </div>
                      </div>   
                   </div>
-                  <!--TAB: Additional Collections -->
+
+                  <!--TAB: Additional Collections -->                 
+                  <style>
+                     .time-coverage .errorlist {
+                        list-style: none;
+                        margin: 0.375rem 0 0;
+                        padding: 0;
+                        color: var(--bs-danger, #dc3545);
+                        font-size: 0.875rem;
+                     }
+
+                     .time-coverage .time-reason {
+                        display: none;
+                     }
+
+                     .time-coverage .time-option:has(.time-toggle input:checked) .time-reason {
+                        display: block;
+                     }
+
+                     .time-coverage .time-option:has(.time-toggle input:checked) .time-input input {
+                        background-color: var(--bs-secondary-bg, #e9ecef);
+                        opacity: 0.6;
+                        pointer-events: none;
+                     }                        
+                     
+                  </style>
                   {% for add_collection in additional_collections_set %}
                   <div class="tab-pane fade" id="additional_collection_{{ add_collection.id }}" role="tabpanel">
                      <br>
@@ -582,65 +607,123 @@
                                           <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.064.293.006.399.287.47l.45.083.082.38-2.29-.287-.082-.38.45-.083c.294-.07.352-.176.288-.469l.738-3.468c.064-.293-.006-.399-.287-.47l-.45-.083-.082-.38 2.29.287zM8 5.5a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/>
                                        </svg>
                                        What do these processing levels mean?
-                                    </a>
-                                 </div>
-                                 
-                                 <div class="collapse" id="processing-help">
-                                    <div class="card card-body bg-light" style="font-size: 0.9em;">
-                                       <dl class="mb-0">
-                                          <dt>Raw</dt>
-                                          <dd class="mb-2">
-                                             Original data from an instrument. If compression, reformatting, packetization, or other translation has been applied to facilitate data transmission or storage, those processes will be reversed so that the archived data are in a PDS approved archive format.
-                                          </dd>
-                                          
-                                          <dt>Reduced</dt>
-                                          <dd class="mb-2">
-                                             Data that have been processed beyond the raw stage but which have not yet reached calibrated status.
-                                          </dd>
-                                          
-                                          <dt>Calibrated</dt>
-                                          <dd class="mb-2">
-                                             Data converted to physical units, which makes values independent of the instrument.
-                                          </dd>
-                                          
-                                          <dt>Derived</dt>
-                                          <dd class="mb-0">
-                                             Results that have been distilled from one or more calibrated data products (for example, maps, gravity or magnetic fields, or ring particle size distributions). Supplementary data, such as calibration tables or tables of viewing geometry, used to interpret observational data should also be classified as 'derived' data if not easily matched to one of the other three categories.
-                                          </dd>
-                                       </dl>
+                                       </a>
                                     </div>
-                                 </div>
                                  
-                                 <div class="mt-3">
-                                    <label for="{{ form_data.data_type.id_for_label }}">Data Type</label>
-                                    {{ form_data.data_type }}
-                                 </div>
+                                    <div class="collapse" id="processing-help">
+                                       <div class="card card-body bg-light" style="font-size: 0.9em;">
+                                          <dl class="mb-0">
+                                             <dt>Raw</dt>
+                                             <dd class="mb-2">
+                                                Original data from an instrument. If compression, reformatting, packetization, or other translation has been applied to facilitate data transmission or storage, those processes will be reversed so that the archived data are in a PDS approved archive format.
+                                             </dd>
+                                             
+                                             <dt>Reduced</dt>
+                                             <dd class="mb-2">
+                                                Data that have been processed beyond the raw stage but which have not yet reached calibrated status.
+                                             </dd>
+                                             
+                                             <dt>Calibrated</dt>
+                                             <dd class="mb-2">
+                                                Data converted to physical units, which makes values independent of the instrument.
+                                             </dd>
+                                             
+                                             <dt>Derived</dt>
+                                             <dd class="mb-0">
+                                                Results that have been distilled from one or more calibrated data products (for example, maps, gravity or magnetic fields, or ring particle size distributions). Supplementary data, such as calibration tables or tables of viewing geometry, used to interpret observational data should also be classified as 'derived' data if not easily matched to one of the other three categories.
+                                             </dd>
+                                          </dl>
+                                       </div>
+                                    </div>
                                  
-                                 <style>
-                                    #checkbox-container {
-                                       display: none;
-                                    }
-                                 </style>
-                                 
-                                 <div id="header_field" class="mt-3">
-                                    <label for="{{ form_data.header.id_for_label }}">Header?</label>
-                                    {{ form_data.header }}
-                                 </div>
-                                 
-                                 <!-- <input type="hidden" class="form-control" id="collection" name="collection" value="{{ add_collection }}"> -->
-                                 
-                                 <!-- <div class="mt-3">
-                                    <label for="{{ form_data.collection.id_for_label }}">Collection<span class="text-danger" title="This field is required">*</span></label>
-                                    {{ form_data.collection }}
-                                 </div> -->
-                                 {{ form_data.collection }}
-                                 
-                                 <button type="submit" class="btn btn-light text-light my-4">Add Data</button>
-                              </form>
+                                    <div class="mt-3">
+                                       <label for="{{ form_data.data_type.id_for_label }}">Data Type</label>
+                                       {{ form_data.data_type }}
+                                    </div>
+                                    
+                                    <style>
+                                       #checkbox-container {
+                                          display: none;
+                                       }
+                                    </style>
+                                    
+                                    <div id="header_field" class="mt-3">
+                                       <label for="{{ form_data.header.id_for_label }}">Header?</label>
+                                       {{ form_data.header }}
+                                    </div>
+
+                                    <fieldset class="border-top mt-3 pt-3 time-coverage">
+                                       <legend class="float-none w-auto fs-6 fw-semibold mb-2">
+                                          Time Coverage
+                                       </legend>
+
+                                       <div class="row g-3">
+                                          <div class="col-12 col-md-6 time-option">
+                                             <div class="time-input">
+                                                <label class="form-label"
+                                                      for="{{ form_data.start_date_time.id_for_label }}">
+                                                   Start date and time (UTC)
+                                                </label>
+                                                {{ form_data.start_date_time }}
+                                             </div>
+
+                                             <div class="mt-2 time-toggle">
+                                                <label>
+                                                   {{ form_data.start_date_time_is_nil }}
+                                                   No start timestamp
+                                                </label>
+                                             </div>
+
+                                             <div class="mt-2 time-reason">
+                                                <label class="form-label"
+                                                      for="{{ form_data.start_date_time_nil_reason.id_for_label }}">
+                                                   Reason
+                                                </label>
+                                                {{ form_data.start_date_time_nil_reason }}
+                                                {{ form_data.start_date_time_nil_reason.errors }}
+                                             </div>
+
+                                             {{ form_data.start_date_time.errors }}
+                                          </div>
+
+                                          <div class="col-12 col-md-6 time-option">
+                                             <div class="time-input">
+                                                <label class="form-label"
+                                                      for="{{ form_data.stop_date_time.id_for_label }}">
+                                                   Stop date and time (UTC)
+                                                </label>
+                                                {{ form_data.stop_date_time }}
+                                             </div>
+
+                                             <div class="mt-2 time-toggle">
+                                                <label>
+                                                   {{ form_data.stop_date_time_is_nil }}
+                                                   No stop timestamp
+                                                </label>
+                                             </div>
+
+                                             <div class="mt-2 time-reason">
+                                                <label class="form-label"
+                                                      for="{{ form_data.stop_date_time_nil_reason.id_for_label }}">
+                                                   Reason
+                                                </label>
+                                                {{ form_data.stop_date_time_nil_reason }}
+                                                {{ form_data.stop_date_time_nil_reason.errors }}
+                                             </div>
+
+                                             {{ form_data.stop_date_time.errors }}
+                                          </div>
+                                       </div>
+
+                                       {{ form_data.non_field_errors }}
+                                    </fieldset>                                                    
+                                    {{ form_data.collection }}                                 
+                                    <button type="submit" class="btn btn-light text-light my-4">Add Data</button>
+                                 </form>
+                              </div>
                            </div>
                         </div>
                      </div>
-                  </div>
                   </div>
                   {% endfor %}
                         
