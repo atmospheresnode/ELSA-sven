@@ -15,6 +15,7 @@ from xhtml2pdf import pisa
 
 from .forms import ReviewForm, UserInfoForm
 from .models import ReviewDraft
+from staff import hooks as staff_hooks
 
 import json
 import uuid
@@ -120,6 +121,22 @@ def index(request):
         context_dict['question4'] = review_form.cleaned_data['question4']
         context_dict['question5'] = review_form.cleaned_data['question5']
         context_dict['recipient'] = review_form.cleaned_data['recipient']
+
+        # Goes in the Admin Console too, where liens from the review are tracked.
+        answers = [
+            ('Documentation', context_dict['question1']),
+            ('Using and understanding the data', context_dict['question2']),
+            ('Creation, calibration and usability concerns', context_dict['question3']),
+            ('Access and references', context_dict['question4']),
+            ('Further comments', context_dict['question5']),
+        ]
+        staff_hooks.open_case(
+            'peer_review', 'Peer review of {}'.format(context_dict['derived_data']),
+            requester=request.user, requester_name=context_dict['contact_name'],
+            requester_email=context_dict['contact_email'],
+            body='\n\n'.join('{}:\n{}'.format(q, a or '(no answer)') for q, a in answers),
+            data={'reviewed_data_set': context_dict['derived_data'],
+                  'addressed_to': 'Lynn Neakrase' if context_dict['recipient'] == 'lynn' else 'Lyle Huber'})
 
         # Find template used for email confirmation
         template = get_template('review/comment_template.txt')

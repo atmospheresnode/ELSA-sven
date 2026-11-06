@@ -19,7 +19,14 @@ class FriendsConfig(AppConfig):
         from . import checks, signals  # noqa: F401  (registers checks and receivers)
         from .views import admin_login
 
-        # The admin's own login form takes a password and nothing else, which
-        # made it a way past the second factor for exactly the accounts that
-        # matter most.  Staff sign in through ELSA like everyone else.
+        # The admin login form only asks for a password, which skips the second factor.
+        # Staff sign in through ELSA.
         admin.site.login = admin_login
+
+        # Django admin has no audit trail or passkey step, so it's developers only.
+        # Staff use the Admin Console.
+        admin.site.has_permission = _developers_only
+
+
+def _developers_only(request):
+    return request.user.is_active and request.user.is_superuser

@@ -1,0 +1,140 @@
+{% extends 'staff/base.html' %}
+{% load tz account_tags staff_tags %}
+
+{% block console %}
+<p class="mb-2"><a href="{% url 'staff:bundles' %}" class="staff-muted"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Bundles</a></p>
+<h1 class="staff-title">{{ bundle.name }}</h1>
+<p class="staff-subtitle">
+    {{ bundle.bundle_type }} bundle by <a href="{% url 'staff:user' bundle.user.pk %}">{{ bundle.user.username }}</a>
+    {% if can.work and bundle.user.is_active and bundle.user.email and bundle.user.pk != user.pk %}<button type="button" class="btn btn-sm staff-btn ms-2" data-bs-toggle="modal" data-bs-target="#messageOwnerModal">Message the owner</button>{% endif %}
+    <a class="btn btn-sm staff-btn-ghost ms-1" href="{% url 'staff:bundle_dossier' bundle.pk %}">Dossier PDF</a>
+    {% if bundle_status == 'submitted' %}<span class="badge rounded-pill bg-primary">Submitted</span>
+    {% elif bundle_status == 'ready' %}<span class="badge rounded-pill bg-success">Ready</span>
+    {% else %}<span class="badge rounded-pill bg-warning text-dark">In progress</span>{% endif %}
+</p>
+
+<div class="staff-detail">
+    <div>
+        <section class="staff-card" aria-labelledby="facts-heading">
+            <div class="staff-card-head">
+                <h2 id="facts-heading">Details</h2>
+                <div class="staff-card-tools d-flex gap-2">{% if on_disk %}<a class="btn btn-sm staff-btn" href="{% url 'staff:bundle_files' bundle.pk %}">Browse files</a><a class="btn btn-sm staff-btn-ghost" href="{% url 'staff:bundle_download' bundle.pk %}">Download .tar.gz</a>{% endif %}</div>
+            </div>
+            <dl class="staff-rows">
+                <dt>Bundle ID</dt><dd class="staff-mono">{{ bundle.bundleID|default:"" }}</dd>
+                <dt>IM version</dt><dd class="staff-mono">{{ bundle.version }}</dd>
+                <dt>Created</dt><dd>{% if bundle.created_at %}{{ bundle.created_at|localtime|date:"M j, Y" }}{% else %}Unknown{% endif %}</dd>
+                <dt>Last change</dt><dd>{{ bundle.updated_at|ago }}</dd>
+                <dt>Submitted</dt><dd>{% if bundle.submitted_at %}{{ bundle.submitted_at|localtime|date:"M j, Y g:i A T" }}{% else %}Not yet{% endif %}</dd>
+                <dt>Folder</dt><dd class="staff-mono">{{ directory }}{% if not on_disk %} <span class="badge rounded-pill bg-danger">Missing</span>{% endif %}</dd>
+            </dl>
+        </section>
+
+        <section class="staff-card" aria-labelledby="checks-heading">
+            <div class="staff-card-head"><h2 id="checks-heading">ELSA's checks</h2><p>What the owner still has to do before ELSA lets them submit.</p></div>
+            {% for item in requirements %}
+            <div class="py-1"><span class="badge rounded-pill bg-danger me-1">Missing</span>{{ item.title }}</div>
+            {% empty %}
+            <p class="mb-0"><span class="badge rounded-pill bg-success me-1">All met</span></p>
+            {% endfor %}
+        </section>
+
+        {% if changes %}
+        <section class="staff-card" aria-labelledby="changes-heading">
+            <div class="staff-card-head"><h2 id="changes-heading">Changed since the previous submission</h2><p>Compared with {{ changes.since|ago }}.</p></div>
+            {% if changes.added or changes.changed or changes.removed %}
+            <ul class="list-unstyled mb-0">
+                {% for path in changes.changed %}<li><span class="badge bg-warning text-dark">changed</span> <a class="staff-mono" href="{% url 'staff:bundle_files' bundle.pk %}?path={{ path|urlencode }}">{{ path }}</a></li>{% endfor %}
+                {% for path in changes.added %}<li><span class="badge bg-success">added</span> <a class="staff-mono" href="{% url 'staff:bundle_files' bundle.pk %}?path={{ path|urlencode }}">{{ path }}</a></li>{% endfor %}
+                {% for path in changes.removed %}<li><span class="badge bg-secondary">removed</span> <span class="staff-mono">{{ path }}</span></li>{% endfor %}
+            </ul>
+            {% else %}<p class="staff-muted mb-0">No file changed between the two submissions.</p>{% endif %}
+        </section>
+        {% endif %}
+
+        <section class="staff-card" aria-labelledby="runs-heading">
+            <div class="staff-card-head">
+                <h2 id="runs-heading">PDS validate runs</h2>
+                {% if can.review and on_disk %}
+                <form method="post" action="{% url 'staff:bundle_validate' bundle.pk %}" class="staff-card-tools d-flex gap-2" data-once>
+                    {% csrf_token %}
+                    <select name="tier" class="form-select form-select-sm w-auto" aria-label="Which check">
+                        <option value="structure">Structure only</option>
+                        <option value="full">Full, including data content</option>
+                    </select>
+                    <button type="submit" class="btn btn-sm staff-btn">Run validate</button>
+                </form>
+                {% endif %}
+            </div>
+            {% if runs_queued and can.review %}
+            {% for run in runs_queued %}
+            <form method="post" action="{% url 'staff:run_cancel' run.pk %}" class="staff-warning d-flex align-items-center gap-2 mb-2" data-once>
+                {% csrf_token %}
+                <span class="flex-grow-1">Run #{{ run.pk }} is queued ({{ run.requested_at|ago }}).</span>
+                <button type="submit" class="btn btn-sm staff-btn-ghost">Cancel it</button>
+            </form>
+            {% endfor %}
+            {% endif %}
+            {% if runs %}
+            <div class="table-responsive">
+            <table class="staff-table">
+                <thead><tr><th>Run</th><th>Check</th><th>Result</th><th>When</th></tr></thead>
+                <tbody>
+                {% for run in runs %}
+                <tr>
+                    <td><a href="{% url 'staff:validation_report' run.pk %}">#{{ run.pk }}</a></td>
+                    <td>{{ run.get_tier_display }}</td>
+                    <td>{{ run.get_status_display }}{% if run.status == 'd' %} <span class="staff-muted">{{ run.error_count }} errors, {{ run.warning_count }} warnings</span>{% endif %}</td>
+                    <td class="text-nowrap">{{ run.requested_at|ago }}</td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+</div>
+            {% else %}<p class="staff-muted mb-0">Never run.</p>{% endif %}
+        </section>
+    </div>
+
+    <div>
+        <section class="staff-card" aria-labelledby="cases-heading">
+            <div class="staff-card-head"><h2 id="cases-heading">Requests about this bundle</h2></div>
+            {% for case in cases %}
+            <div class="py-1"><a href="{% url 'staff:case' case.pk %}">#{{ case.pk }} {{ case.get_kind_display }}</a> <span class="badge rounded-pill {{ case.status_badge }}">{{ case.get_status_display }}</span>{% if case.stage %} <span class="staff-muted">{{ case.get_stage_display }}</span>{% endif %}</div>
+            {% empty %}<p class="staff-muted mb-0">None.</p>{% endfor %}
+        </section>
+        {% if releases or projects %}
+        <section class="staff-card" aria-labelledby="rel-heading">
+            <div class="staff-card-head"><h2 id="rel-heading">Releases and projects</h2></div>
+            {% for item in releases %}<div class="py-1"><a href="{% url 'staff:release' item.pk %}">{{ item.label }}</a>{% if item.doi %} <span class="staff-mono">{{ item.doi }}</span>{% endif %} <span class="staff-muted">{% if item.released_at %}released {{ item.released_at|date:"M j, Y" }}{% else %}in progress{% endif %}</span></div>{% endfor %}
+            {% for item in projects %}<div class="py-1">Project: <a href="{% url 'staff:project' item.pk %}">{{ item.name }}</a></div>{% endfor %}
+        </section>
+        {% endif %}
+        <section class="staff-card" aria-labelledby="history-heading">
+            <div class="staff-card-head"><h2 id="history-heading">Staff actions</h2></div>
+            {% for entry in history %}
+            <div class="py-1">{{ entry.action|audit_action }} <span class="staff-muted">by {{ entry.actor_username }}, {{ entry.created_at|ago }}</span></div>
+            {% empty %}<p class="staff-muted mb-0">None.</p>{% endfor %}
+        </section>
+    </div>
+</div>
+
+{% if can.work and bundle.user.is_active and bundle.user.email and bundle.user.pk != user.pk %}
+<div class="modal fade" id="messageOwnerModal" tabindex="-1" aria-labelledby="messageOwnerLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <form class="modal-content" method="post" action="{% url 'staff:user_action' bundle.user.pk %}" data-once>
+            {% csrf_token %}
+            <input type="hidden" name="action" value="message">
+            <div class="modal-header"><h5 class="modal-title" id="messageOwnerLabel">Message {{ bundle.user.get_full_name|default:bundle.user.username }} about {{ bundle.name }}</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+            <div class="modal-body">
+                <label for="owner-subject" class="form-label">Subject</label>
+                <input type="text" id="owner-subject" name="subject" class="form-control" maxlength="150" required value="About your bundle {{ bundle.name }}">
+                <label for="owner-body" class="form-label mt-3">Message</label>
+                <textarea id="owner-body" data-draft="bundle{{ bundle.pk }}-message" name="body" class="form-control" rows="7" maxlength="10000" required></textarea>
+                <p class="staff-muted mt-2 mb-0">It starts a conversation they see under the bell, and is emailed unless they switched email off.</p>
+            </div>
+            <div class="modal-footer"><button type="button" class="btn staff-btn-ghost" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn staff-btn-primary">Send</button></div>
+        </form>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

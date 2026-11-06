@@ -1,0 +1,47 @@
+{% extends 'staff/base.html' %}
+
+{% block console %}
+<h1 class="staff-title">Reports</h1>
+<p class="staff-subtitle">How ELSA and the team are doing over the last {{ days }} days.</p>
+
+<div class="staff-filters">
+    <div class="staff-pills">
+        <a href="?days=30" class="{% if days == 30 %}active{% endif %}">30 days</a>
+        <a href="?days=90" class="{% if days == 90 %}active{% endif %}">90 days</a>
+        <a href="?days=365" class="{% if days == 365 %}active{% endif %}">1 year</a>
+        <a href="?days=1095" class="{% if days == 1095 %}active{% endif %}">3 years</a>
+    </div>
+    <a class="btn btn-sm staff-btn-ghost ms-auto" href="?days={{ days }}&format=csv"><i class="bi bi-download me-1" aria-hidden="true"></i>Download CSV</a>
+</div>
+
+<div class="staff-stats">
+    <div class="staff-stat"><div class="staff-stat-value">{{ data.cases_total }}</div><div class="staff-stat-label">Requests received</div></div>
+    <div class="staff-stat"><div class="staff-stat-value">{% if data.first_median is not None %}{{ data.first_median }} h{% else %}None{% endif %}</div><div class="staff-stat-label">Typical time to first reply ({{ data.first_count }} answered)</div></div>
+    <div class="staff-stat"><div class="staff-stat-value">{% if data.close_median is not None %}{{ data.close_median }} h{% else %}None{% endif %}</div><div class="staff-stat-label">Typical time to close ({{ data.close_count }} closed)</div></div>
+    <div class="staff-stat"><div class="staff-stat-value">{{ data.new_users }}</div><div class="staff-stat-label">New accounts</div></div>
+</div>
+
+<div class="staff-detail">
+    <section class="staff-card" aria-labelledby="months-heading">
+        <div class="staff-card-head"><h2 id="months-heading">Bundles by month</h2><p><span class="badge staff-bar-started">&nbsp;</span> started &nbsp; <span class="badge staff-bar-submitted" style="height:auto;">&nbsp;</span> submitted</p></div>
+        {% if months %}
+        <div class="staff-bars">
+            {% for row in months %}
+            <div class="staff-bar-row" title="{{ row.started }} started, {{ row.submitted }} submitted">
+                <span>{{ row.month|date:"M Y" }}</span>
+                <span class="staff-bar-track">
+                    <span class="staff-bar-fill staff-bar-started" style="width: {{ row.started_pct }}%;"></span>
+                    <span class="staff-bar-fill staff-bar-submitted" style="width: {{ row.submitted_pct }}%;"></span>
+                </span>
+                <span class="text-end">{{ row.started }} / {{ row.submitted }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}<p class="staff-muted mb-0">No bundles in this period.</p>{% endif %}
+    </section>
+    <section class="staff-card" aria-labelledby="types-heading">
+        <div class="staff-card-head"><h2 id="types-heading">Requests by type</h2></div>
+        <dl class="staff-rows">{% for label, count in data.by_kind %}<dt>{{ label }}</dt><dd>{{ count }}</dd>{% endfor %}</dl>
+    </section>
+</div>
+{% endblock %}

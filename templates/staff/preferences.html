@@ -1,0 +1,42 @@
+{% extends 'staff/base.html' %}
+
+{% block console %}
+<h1 class="staff-title">My preferences</h1>
+<p class="staff-subtitle">Which emails the Admin Console sends you. Everything is on until you switch it off.</p>
+
+<section class="staff-card" style="max-width: 44rem;">
+    <form method="post" data-once>
+        {% csrf_token %}
+        <div class="form-check py-2">
+            <input class="form-check-input" type="checkbox" name="daily_digest" value="1" id="pref-digest" {% if pref.daily_digest %}checked{% endif %}>
+            <label class="form-check-label" for="pref-digest"><strong>Morning summary</strong><br><span class="staff-muted">Weekdays at 8 AM: what is open, assigned to you, overdue, or answered by a user. Not sent when nothing is open.</span></label>
+        </div>
+        <div class="form-check py-2">
+            <input class="form-check-input" type="checkbox" name="when_assigned" value="1" id="pref-assigned" {% if pref.when_assigned %}checked{% endif %}>
+            <label class="form-check-label" for="pref-assigned"><strong>When a colleague assigns me a request</strong></label>
+        </div>
+        <div class="form-check py-2">
+            <input class="form-check-input" type="checkbox" name="when_user_replies" value="1" id="pref-replies" {% if pref.when_user_replies %}checked{% endif %}>
+            <label class="form-check-label" for="pref-replies"><strong>When a user answers a request assigned to me</strong></label>
+        </div>
+        <div class="form-check py-2">
+            <input class="form-check-input" type="checkbox" name="when_unassigned" value="1" id="pref-unassigned" {% if pref.when_unassigned %}checked{% endif %}>
+            <label class="form-check-label" for="pref-unassigned"><strong>When a user writes on a request nobody has taken</strong><br><span class="staff-muted">Off unless you want it: these are already under the bell, on Today and in the morning summary.</span></label>
+        </div>
+        <div class="form-check py-2">
+            <input class="form-check-input" type="checkbox" name="when_mentioned" value="1" id="pref-mention" {% if pref.when_mentioned %}checked{% endif %}>
+            <label class="form-check-label" for="pref-mention"><strong>When a colleague @mentions me in a note</strong><br><span class="staff-muted">It always appears under the bell; this is about email.</span></label>
+        </div>
+        <div class="form-check py-2">
+            <input class="form-check-input" type="checkbox" name="when_update" value="1" id="pref-update" {% if pref.when_update %}checked{% endif %}>
+            <label class="form-check-label" for="pref-update"><strong>When an outside service ELSA depends on has a new version</strong><br><span class="staff-muted">PDS validate, the PDS4 information model, the AMA dictionary, Django, the Assistant's models. It always appears under the bell and in the queue; this is about email.</span></label>
+        </div>
+        <div class="py-2">
+            <label class="form-label fw-semibold" for="pref-away">Away until</label>
+            <input type="date" class="form-control" id="pref-away" name="away_until" value="{{ pref.away_until|date:'Y-m-d' }}" style="max-width: 12rem;">
+            <div class="staff-muted small mt-1">Colleagues see it when assigning, and the morning summary pauses. To give your open requests to someone, use <a href="{% url 'staff:workload' %}">Workload</a>.</div>
+        </div>
+        <button type="submit" class="btn btn-sm staff-btn-primary mt-2">Save</button>
+    </form>
+</section>
+{% endblock %}

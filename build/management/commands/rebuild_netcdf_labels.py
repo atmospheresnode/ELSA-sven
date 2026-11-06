@@ -1,23 +1,11 @@
-"""Rebuild NetCDF product labels that were written before the generator was fixed.
+"""Rebuild NetCDF labels written before the generator fixes.
 
     python3 manage.py rebuild_netcdf_labels                 # report only, writes nothing
     python3 manage.py rebuild_netcdf_labels --apply         # rewrite them
     python3 manage.py rebuild_netcdf_labels --apply --bundle 831
 
-Labels written before 2026-09-11 identify their product as belonging to
-"sample_bundle" rather than to the bundle they are in: the identifier was built by
-appending onto the template's placeholder, which nothing replaced. PDS reports the
-product as a missing bundle member, which is a confusing way to be told the label
-is wrong.
-
-Rebuilding rather than patching the one line, because those same labels predate the
-rest of the Phase 0 work too: they are missing their schematron reference, carry
-empty containers ELSA never filled, and state an information model version that
-does not match the schema they name. One pass brings them all up to what the
-current code writes.
-
-Reports by default and writes nothing. These are archived files, some belonging to
-bundles that have already been submitted for review, so the write needs asking for.
+Labels from before 2026-09-11 say "sample_bundle" in their identifier, and have other old
+problems too, so these get rebuilt instead of patched. Only writes with --apply.
 """
 import os
 
@@ -26,7 +14,7 @@ from django.core.management.base import BaseCommand
 from build.models import Bundle, NetCDFFile
 from build.views import regenerate_netcdf_labels
 
-# What a label written by the old code says where the bundle identifier belongs.
+# What an old label says where the bundle identifier belongs.
 PLACEHOLDER = 'pds-ama:sample_bundle'
 
 
@@ -47,8 +35,7 @@ def stale_labels(bundle):
                     if PLACEHOLDER in label.read():
                         found.append(path)
             except OSError:
-                # A label we cannot read is a different problem, and not one this
-                # command can fix. Leave it and say so by omission.
+                # Can't read this label and this command can't fix that, so skip it.
                 continue
     return found
 
@@ -105,9 +92,7 @@ class Command(BaseCommand):
         failed = []
 
         for bundle, paths in affected:
-            # Only files whose NetCDF is still on disk can be rebuilt: the label is
-            # generated from the file's own metadata, so without it there is nothing
-            # to rebuild from.
+            # Only files still on disk, since the label comes from the file's metadata.
             rows = [row for row in NetCDFFile.objects.filter(bundle=bundle)
                     if os.path.exists(
                         os.path.join(row.directory(), os.path.basename(row.file.name)))]
@@ -124,8 +109,7 @@ class Command(BaseCommand):
             try:
                 errors = regenerate_netcdf_labels(bundle, rows)
             except Exception as error:
-                # One bundle failing must not stop the rest: these are independent
-                # repairs and a half-finished run is worse than a reported failure.
+                # Keep going if one bundle fails.
                 failed.append((bundle.name, str(error)))
                 continue
 

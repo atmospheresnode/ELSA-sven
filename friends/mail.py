@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
-"""
-Branded account email: sign-in codes, security notices, confirmation links.
+"""Account email: sign-in codes, security notices, confirmation links.
 
-Each message is rendered from a pair of templates, <name>.txt and <name>.html,
-and sent as multipart so clients that refuse HTML still get a readable body.
+Rendered from <name>.txt and <name>.html and sent as multipart.
 """
 from __future__ import unicode_literals
 
@@ -23,10 +21,8 @@ FROM_ADDRESS = 'atm-elsa@nmsu.edu'
 
 EMAIL_LOGO_CID = 'elsa_logo'
 
-# The white logo pre-scaled to 240px (twice its 120px display width), flattened
-# onto the teal band and reduced to a 128-colour palette: 7KB against the 70KB
-# source.  Built once as a checked-in asset rather than resized on every send,
-# so no image processing happens on the sign-in path.
+# White logo scaled to 240px on the teal band with a 128-colour palette, about 7KB.
+# A checked-in asset so there's no image processing on sign-in.
 EMAIL_LOGO_PATH = os.path.join(settings.STATIC_DIR, 'images', 'ELSA-Logo-email.png')
 
 
@@ -38,11 +34,7 @@ def _elsa_logo_png():
 
 
 def _elsa_logo_attachment():
-    """
-    The logo as an inline MIME part, or None if the asset cannot be read.  A
-    missing logo must never stop a sign-in code from going out, so failure
-    here is swallowed and the header falls back to its text wordmark.
-    """
+    """The logo as an inline MIME part, or None. A missing logo can't stop a sign-in code."""
     try:
         image = MIMEImage(_elsa_logo_png())
     except Exception:
@@ -55,8 +47,7 @@ def _elsa_logo_attachment():
 
 def build_branded(to, subject, template, context):
     """The message for ``template`` (a path without extension), not yet sent."""
-    # Carried with the message rather than linked, so the logo renders without
-    # the reader having to approve remote images.
+    # Attached so it shows without the reader approving remote images.
     logo = _elsa_logo_attachment()
     context = dict(context, logo_cid=EMAIL_LOGO_CID if logo else '')
 
@@ -69,8 +60,7 @@ def build_branded(to, subject, template, context):
     email.attach_alternative(render_to_string(template + '.html', context), 'text/html')
 
     if logo:
-        # multipart/related tells the client the image belongs to the HTML part
-        # rather than being a file the user is meant to download.
+        # multipart/related marks the image as part of the HTML, not a download.
         email.mixed_subtype = 'related'
         email.attach(logo)
 
@@ -78,10 +68,7 @@ def build_branded(to, subject, template, context):
 
 
 def send_branded(to, subject, template, context):
-    """
-    Sends one branded message and reports whether it went.  Never raises: a
-    mail server hiccup must not turn an already-saved change into a 500.
-    """
+    """Send one message and report whether it went. Never raises."""
     try:
         build_branded(to, subject, template, context).send()
         return True

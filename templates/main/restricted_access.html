@@ -1,0 +1,11 @@
+{% extends 'base-derk.html' %}
+
+{% block title %}Restricted access{% endblock %}
+
+{% block body_block %}
+<div class="container py-5 text-center" style="max-width: 36rem;">
+    <h1 class="h3 mb-3">You do not have access to this page</h1>
+    <p class="text-muted mb-4">It belongs to another account, or to a part of ELSA your account does not use. If you think you should have access, contact the ELSA team.</p>
+    <a class="btn btn-keep-bg text-white" style="background-color: teal;" href="{% url 'friends:bundle_hub' %}">Back to my bundles</a>
+</div>
+{% endblock %}

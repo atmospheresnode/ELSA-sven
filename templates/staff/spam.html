@@ -1,0 +1,18 @@
+{% extends 'staff/base.html' %}
+{% load account_tags %}
+
+{% block console %}
+<p class="mb-2"><a href="{% url 'staff:home' %}?show=spam" class="staff-muted"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Spam in Requests</a></p>
+<h1 class="staff-title">Blocked senders</h1>
+<p class="staff-subtitle">Contact-form messages from these addresses are filed as spam straight away. Nothing is sent back to them.</p>
+
+<section class="staff-card">
+    {% for item in blocked %}
+    <form method="post" class="d-flex align-items-center gap-2 py-2 border-bottom" data-once>
+        {% csrf_token %}<input type="hidden" name="id" value="{{ item.pk }}">
+        <span class="flex-grow-1"><strong>{{ item.email }}</strong> <span class="staff-muted">{{ item.reason }}, {{ item.created_at|ago }}{% if item.created_by %} by {{ item.created_by.username }}{% endif %}</span></span>
+        {% if can.work %}<button type="submit" class="btn btn-sm staff-btn-ghost">Unblock</button>{% endif %}
+    </form>
+    {% empty %}<p class="staff-empty">No blocked senders.</p>{% endfor %}
+</section>
+{% endblock %}

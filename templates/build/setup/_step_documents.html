@@ -1,11 +1,11 @@
 <section class="setup-panel" id="step-documents" data-step="documents" aria-labelledby="step-documents-title">
    <header class="setup-panel-head">
-      <span class="setup-kicker">Step {{ step.number }} of {{ setup.steps|length }} &middot; Optional</span>
+      <span class="setup-kicker">Step {{ step.number }} of {{ setup.steps|length }} &middot; Required</span>
       <h2 id="step-documents-title" tabindex="-1">Documents</h2>
       <p class="setup-why">A user guide or other documentation that helps people understand and use your data.</p>
       <details class="setup-more">
          <summary>More about this</summary>
-         <p>ATM suggests including a user guide. Documents must be PDF/A-1 (.pdf) or plain 7-bit ASCII text (.txt). ELSA writes a label for each one. You can add more documents, or change a document's label, later from the bundle page.</p>
+         <p>Every AMA bundle needs at least one document, and a README or user guide is enough. Documents must be PDF/A-1 (.pdf) or plain 7-bit ASCII text (.txt). ELSA writes a label for each one. You can add more documents, or change a document's label, later from the bundle page.</p>
       </details>
    </header>
 
@@ -44,5 +44,5 @@
       <div><button type="submit" class="btn setup-btn-ghost">Add document</button></div>
    </form>
 
-   {% include 'build/setup/_actions.html' with step=step primary='continue' %}
+   {% include 'build/setup/_actions.html' with step=step primary='continue' blocked='Add at least one document to continue. A README or user guide is enough.' %}
 </section>

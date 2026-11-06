@@ -1,0 +1,33 @@
+{% extends 'base-derk.html' %}
+{% load static tz %}
+
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/staff.css' %}">{% endblock %}
+
+{% block body_block %}
+<div class="staff-page" style="max-width: 50rem;">
+    <h1 class="staff-title">Peer review: {{ campaign.data_set }}</h1>
+    <p class="staff-subtitle">Hello {{ item.name }}. Thank you for reviewing this data set for the PDS Atmospheres Node.{% if campaign.deadline %} We would be grateful for your review by {{ campaign.deadline|date:"F j, Y" }}.{% endif %}</p>
+    {% for message in messages %}<div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags|default:'info' }}{% endif %} py-2 px-3" role="alert">{{ message }}</div>{% endfor %}
+    {% if campaign.description %}<section class="staff-card"><div class="staff-card-head"><h2>About this review</h2></div><pre class="staff-request">{{ campaign.description }}</pre></section>{% endif %}
+
+    <section class="staff-card">
+        {% if submitted %}
+        <div class="staff-card-head"><h2>Your review was submitted {{ item.submitted_at|localtime|date:"F j, Y" }}</h2><p>Thank you. This is what you sent.</p></div>
+        {% for key, label, value in questions %}<p class="fw-semibold mb-1">{{ label }}</p><div class="staff-note-body mb-3">{{ value|default:"(no answer)" }}</div>{% endfor %}
+        {% else %}
+        <form method="post">
+            {% csrf_token %}
+            {% for key, label, value in questions %}
+            <label for="q-{{ key }}" class="form-label fw-semibold mt-2">{{ label }}</label>
+            <textarea id="q-{{ key }}" name="{{ key }}" class="form-control" rows="4" maxlength="10000">{{ value }}</textarea>
+            {% endfor %}
+            <div class="d-flex flex-wrap gap-2 mt-3">
+                <button type="submit" name="action" value="save" class="btn staff-btn-ghost">Save and finish later</button>
+                <button type="submit" name="action" value="submit" class="btn staff-btn-primary ms-auto">Submit review</button>
+            </div>
+            <p class="staff-muted mt-2 mb-0">This link is personal to you; please do not share it. A submitted review cannot be changed.</p>
+        </form>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}

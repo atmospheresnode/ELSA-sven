@@ -1,0 +1,25 @@
+{% extends 'staff/base.html' %}
+{% load account_tags %}
+
+{% block console %}
+<h1 class="staff-title">Email users</h1>
+<p class="staff-subtitle">One message to a group of ELSA users, sent in ELSA's own style. Send yourself a test before it goes.</p>
+<p><a class="btn btn-sm staff-btn-primary" href="{% url 'staff:broadcast_new' %}">Write a new email</a></p>
+<section class="staff-card">
+    {% if items %}
+    <table class="staff-table">
+        <thead><tr><th>Subject</th><th>To</th><th>Status</th><th>When</th></tr></thead>
+        <tbody>
+        {% for item in items %}
+        <tr>
+            <td><a href="{% url 'staff:broadcast' item.pk %}">{{ item.subject }}</a></td>
+            <td>{{ item.get_segment_display }}</td>
+            <td>{% if item.stalled %}<span class="badge rounded-pill bg-warning text-dark">Stopped</span> <span class="staff-muted">{{ item.handled }} of {{ item.total }}; open it to resume</span>{% else %}<span class="badge rounded-pill {% if item.status == 'sent' %}bg-success{% elif item.status == 'sending' %}bg-primary{% else %}bg-light text-dark border{% endif %}">{{ item.get_status_display }}</span>{% if item.status == 'sent' %} <span class="staff-muted">{{ item.recipient_count }} sent{% if item.failed_count %}, {{ item.failed_count }} failed{% endif %}</span>{% elif item.status == 'sending' %} <span class="staff-muted">{{ item.handled }} of {{ item.total }}</span>{% endif %}{% endif %}</td>
+            <td class="text-nowrap">{% if item.sent_at %}{{ item.sent_at|ago }}{% else %}{{ item.created_at|ago }}{% endif %}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}<p class="staff-empty">Nothing sent yet.</p>{% endif %}
+</section>
+{% endblock %}

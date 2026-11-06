@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 {% load static %}
 {% load assistant_tags %}
+{% load account_tags %}
 <html lang="en">
 
 <style>
@@ -40,11 +41,11 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
     <script src="https://use.fontawesome.com/dc496c8662.js"></script>
 
-    <title>ELSA: Educational Labeling System @Atmospheres</title>
+    <title>{% block title %}ELSA: Educational Labeling System @Atmospheres{% endblock %}</title>
     {% block extra_css %}{% endblock %}
     {% comment %} The browser's time zone, so pages and account emails show local times
        without asking. Only written when it changes. {% endcomment %}
-    <script>
+    <script nonce="{{ request.csp_nonce }}">
     (function () {
         try {
             var zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -124,6 +125,87 @@
                     </ul>
 
                         <ul class="navbar-nav ms-auto me-5">
+                        {% notification_bell as bell %}
+                        {% admin_alerts as admin %}
+                        {% if bell or admin %}
+                        <li class="nav-item dropdown">
+                            <button class="nav-link dropdown-toggle position-relative" id="elsaBell" type="button" data-bs-toggle="dropdown" aria-expanded="false"
+                                    aria-label="Notifications{% if bell.count %}, {{ bell.count }} unread{% endif %}{% if admin.total %}, {{ admin.total }} for you in the Admin Console{% endif %}">
+                                <i class="bi bi-bell{% if bell.count or admin.total %}-fill{% endif %}" aria-hidden="true"></i>
+                                {% if bell.count or admin.total %}<span class="badge rounded-pill bg-danger" style="font-size: 0.65rem;">{% if admin %}{{ bell.count|default:0|add:admin.total }}{% else %}{{ bell.count }}{% endif %}</span>{% endif %}
+                            </button>
+                            <div class="dropdown-menu dropdown-menu-end p-0" aria-labelledby="elsaBell" style="width: 22rem; max-width: 90vw;">
+                                {% if admin %}
+                                <div class="d-flex border-bottom" role="tablist" aria-label="Notifications">
+                                    <button type="button" class="btn btn-link flex-fill text-decoration-none rounded-0 py-2 elsa-bell-tab{% if bell.count or not admin.total %} active fw-semibold{% endif %}" data-pane="elsa-bell-user" role="tab" aria-selected="{% if bell.count or not admin.total %}true{% else %}false{% endif %}">
+                                        For you{% if bell.count %} <span class="badge rounded-pill bg-danger">{{ bell.count }}</span>{% endif %}
+                                    </button>
+                                    <button type="button" class="btn btn-link flex-fill text-decoration-none rounded-0 py-2 elsa-bell-tab{% if not bell.count and admin.total %} active fw-semibold{% endif %}" data-pane="elsa-bell-admin" role="tab" aria-selected="{% if not bell.count and admin.total %}true{% else %}false{% endif %}">
+                                        Admin Console{% if admin.total %} <span class="badge rounded-pill bg-danger">{{ admin.total }}</span>{% endif %}
+                                    </button>
+                                </div>
+                                {% else %}
+                                <div class="px-3 py-2 border-bottom fw-semibold">Notifications</div>
+                                {% endif %}
+                                <div id="elsa-bell-user" role="tabpanel"{% if admin and not bell.count and admin.total %} hidden{% endif %}>
+                                    {% for item in bell.items %}
+                                    <a class="dropdown-item py-2{% if not item.read_at %} fw-semibold{% endif %}" href="{{ item.link }}" style="white-space: normal;">
+                                        {% if not item.read_at %}<span class="d-inline-block rounded-circle me-1 align-middle" style="width: 0.5rem; height: 0.5rem; background: #008b8b;"></span>{% endif %}{{ item.title }}
+                                        {% if item.body %}<div class="small text-muted fw-normal text-truncate">{{ item.body }}</div>{% endif %}
+                                        <div class="small text-muted fw-normal">{{ item.created_at|ago }}</div>
+                                    </a>
+                                    {% empty %}
+                                    <div class="px-3 py-3 small text-muted">Nothing yet. Replies from the ELSA team and news about your requests appear here.</div>
+                                    {% endfor %}
+                                    {% if bell %}<a class="dropdown-item text-center small py-2 border-top" href="{{ bell.url }}">See all notifications</a>{% endif %}
+                                </div>
+                                {% if admin %}
+                                <div id="elsa-bell-admin" role="tabpanel"{% if bell.count or not admin.total %} hidden{% endif %}>
+                                    {% if admin.total %}
+                                    <a class="dropdown-item py-2" href="{{ admin.url }}" style="white-space: normal;">
+                                        <span class="fw-semibold">{{ admin.total }} request{{ admin.total|pluralize }} for your attention</span>
+                                        <div class="small text-muted">{% if admin.unopened %}{{ admin.unopened }} you have not opened{% endif %}{% if admin.unopened and admin.answered %} &middot; {% endif %}{% if admin.answered %}{{ admin.answered }} with a new answer from the user{% endif %}</div>
+                                    </a>
+                                    {% if admin.updates %}
+                                    <a class="dropdown-item py-2 border-top" href="{{ admin.updates_url }}" style="white-space: normal;">
+                                        <span class="fw-semibold">{{ admin.updates }} new version{{ admin.updates|pluralize }} of outside services</span>
+                                        <div class="small text-muted">PDS validate, the PDS4 information model and others ELSA depends on</div>
+                                    </a>
+                                    {% endif %}
+                                    {% else %}
+                                    <div class="px-3 py-3 small text-muted">Nothing new for you. Requests that are unassigned or yours appear here until you open them.</div>
+                                    {% endif %}
+                                    <a class="dropdown-item text-center small py-2 border-top" href="{{ admin.queue_url }}">Open the queue{% if admin.mine %} ({{ admin.mine }} assigned to you){% endif %}</a>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </li>
+                        {% if admin %}
+                        <style>
+                        .elsa-bell-tab { color: #6a737d; border-bottom: 2px solid transparent !important; }
+                        .elsa-bell-tab:hover { color: #1f2328; }
+                        .elsa-bell-tab.active { color: #1f8a7f; border-bottom-color: #008b8b !important; }
+                        </style>
+                        <script nonce="{{ request.csp_nonce }}">
+                        (function () {
+                            // Bootstrap 5.0 closes the dropdown on any click inside it. Keep it open for the tabs.
+                            document.querySelectorAll('.elsa-bell-tab').forEach(function (tab) {
+                                tab.addEventListener('click', function (event) {
+                                    event.preventDefault();
+                                    event.stopPropagation();
+                                    document.querySelectorAll('.elsa-bell-tab').forEach(function (other) {
+                                        var on = other === tab;
+                                        other.classList.toggle('active', on);
+                                        other.classList.toggle('fw-semibold', on);
+                                        other.setAttribute('aria-selected', on ? 'true' : 'false');
+                                        document.getElementById(other.getAttribute('data-pane')).hidden = !on;
+                                    });
+                                });
+                            });
+                        })();
+                        </script>
+                        {% endif %}
+                        {% endif %}
                         <li class="nav-item dropdown">
                             <button class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                 <i class="fa fa-user"></i> 
@@ -133,7 +215,9 @@
                             <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
                                 <a class="dropdown-item" href="{{ user.userprofile.get_absolute_url }}">Bundle Hub</a>
                                 <a class="dropdown-item" href="{% url 'friends:useraccount' %}">Account</a>
-                                <a class="dropdown-item" href="{% url 'friends:logout' %}">Logout</a>
+                                {% console_link as console_url %}
+                                {% if console_url %}<a class="dropdown-item" href="{% if admin.total %}{{ admin.url }}{% else %}{{ console_url }}{% endif %}">Admin Console{% if admin.total %} <span class="badge rounded-pill bg-danger">{{ admin.total }}</span><span class="visually-hidden"> for your attention</span>{% endif %}</a>{% endif %}
+                                <a class="dropdown-item" href="{% url 'friends:logout' %}" id="elsa-logout-link">Logout</a>
                             </div>
                         </li>
                     </ul>
@@ -142,6 +226,7 @@
         </header>
         {% endif %}
         {# /knowledge:nav #}
+        {% if user.is_authenticated %}<div class="row"><div class="col-12 px-0">{% site_banners %}</div></div>{% endif %}
 
         <!-- Main Content -->
         <main class="row py-4">
@@ -489,9 +574,23 @@
         </div>
     </div>
 
+    <script nonce="{{ request.csp_nonce }}">
+    (function () {
+        // Staff replies drafted in this browser are removed on signing out.
+        var link = document.getElementById('elsa-logout-link');
+        if (!link) { return; }
+        link.addEventListener('click', function () {
+            try {
+                Object.keys(window.localStorage).forEach(function (k) {
+                    if (k.indexOf('elsa-draft:') === 0) { window.localStorage.removeItem(k); }
+                });
+            } catch (e) {}
+        });
+    })();
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
-    <script>
+    <script nonce="{{ request.csp_nonce }}">
     (function () {
         const toggle = document.getElementById('elsaAssistantToggle');
         const panel = document.getElementById('elsaAssistantPanel');
@@ -503,8 +602,7 @@
         const sendBtn = document.getElementById('elsaAssistantSend');
         const csrfToken = form.querySelector('[name=csrfmiddlewaretoken]').value;
 
-        // Suggestions follow the page: the first pattern that matches wins, so
-        // the specific form pages come before the bundle page itself.
+        // Suggestions by page. First match wins, so specific form pages go before the bundle page.
         const PAGE_SUGGESTIONS = [
             [/^\/build\/\d+\/citation_information/, [
                 "What goes in Citation Information?",
@@ -570,10 +668,7 @@
         let titleSource = '';
         let historyReady = null;  // the first history load, once started
 
-        // The panel stays open (and expanded) as the user moves between pages
-        // in this tab, e.g. after following a link in an answer. Storage can be
-        // unavailable (private windows, blocked site data); the panel then just
-        // starts closed, as before.
+        // Keep the panel open between pages in this tab. If storage isn't available it starts closed.
         function remember(key, on) {
             try {
                 if (on) sessionStorage.setItem(key, '1'); else sessionStorage.removeItem(key);
@@ -596,8 +691,7 @@
             }).then(r => r.json());
         }
 
-        // The header shows the thread's name once the AI (or the user) has
-        // given it one; until then, the usual tagline.
+        // Show the thread's name once it has one, otherwise the tagline.
         function setThreadTitle(title, source) {
             titleSource = source || '';
             const named = title && (source === 'ai' || source === 'user');
@@ -608,9 +702,7 @@
 
         function renderText(text) {
             if (window.marked && window.DOMPurify) {
-                // Same-origin links only: the model is told to emit relative
-                // ELSA paths; anything else (external URLs, or links smuggled
-                // in via prompt injection) is demoted to plain text.
+                // Same-origin links only. Anything else becomes plain text, in case of prompt injection.
                 if (!window.__elsaAssistantLinkHook) {
                     DOMPurify.addHook('afterSanitizeAttributes', function (node) {
                         if (node.tagName === 'A') {
@@ -676,8 +768,7 @@
                 });
                 bar.appendChild(copyBtn);
             }
-            // One reply's rating requests go out in order, so a quick
-            // thumbs-down, reason, undo can never land out of sequence.
+            // Send a reply's rating requests in order.
             let chain = Promise.resolve();
             function send(body) {
                 const request = chain.then(function () {
@@ -712,8 +803,7 @@
             col.appendChild(bar);
         }
 
-        // Asked after a thumbs-down: the vote is already recorded, this only
-        // says why, which is what tells the team what to fix.
+        // Asked after a thumbs-down, to say why. The vote is already saved.
         const REASONS = [
             ['wrong', 'Wrong info'],
             ['unanswered', "Didn't answer my question"],
@@ -820,8 +910,7 @@
             messagesEl.innerHTML = '';
         }
 
-        // Without an id this restores the thread that is active in this login
-        // (a fresh login has none, so it greets); with one it opens a past chat.
+        // No id restores the active thread, with one it opens a past chat.
         function loadThread(id) {
             let url = "{% url 'assistant:history' %}?page=" + encodeURIComponent(window.location.pathname);
             if (id) url += '&conversation_id=' + encodeURIComponent(id);
@@ -844,9 +933,7 @@
                 .catch(function () { resetThread(); greet(false); });
         }
 
-        // Resolves once the saved thread is on screen. Anything that sends a
-        // message right after opening waits for it, or the history arriving
-        // late would wipe the new question and its streaming reply.
+        // Resolves once the thread is showing. Sends wait for this so history doesn't wipe a new question.
         function openPanel(options) {
             panel.classList.toggle('elsa-restored', !!(options && options.restore));
             panel.classList.remove('d-none');
@@ -855,8 +942,7 @@
             toggle.setAttribute('aria-label', 'Open the ELSA Assistant');
             remember('elsaAssistantOpen', true);
             if (!historyReady) historyReady = loadThread(null);
-            // Restoring the panel on page load must not steal focus (or pop up
-            // the keyboard on a phone); a click on the toggle should.
+            // Don't take focus when restoring on page load, only on a click.
             if (!(options && options.restore)) input.focus();
             return historyReady;
         }
@@ -872,8 +958,7 @@
         });
         closeBtn.addEventListener('click', function () { closePanel(); toggle.focus(); });
 
-        // Escape closes the panel, unless it is closing something inside it
-        // first (the delete modal, or a rename in progress, handle their own).
+        // Escape closes the panel, unless the delete modal or a rename handles it first.
         document.addEventListener('keydown', function (e) {
             if (e.key !== 'Escape' || panel.classList.contains('d-none')) return;
             if (document.querySelector('.modal.show')) return;
@@ -886,8 +971,7 @@
             showChats(false);
             resetThread();
             greet(hadThread);
-            // Forget the active thread server-side too, so moving to another
-            // page before sending anything doesn't bring the old chat back.
+            // Forget the active thread on the server too.
             postJson("{% url 'assistant:new_chat' %}").catch(function () {});
             input.focus();
         }
@@ -910,8 +994,7 @@
             showChats(chatsEl.classList.contains('d-none'));
         });
 
-        // Only the newest request paints the list, so a slow search for "cit"
-        // can't overwrite the results for "citation" that came back first.
+        // Only the newest request updates the list, so a slow search can't overwrite a newer one.
         let chatsRequest = 0;
         function refreshChats() {
             const query = searchEl.value.trim();
@@ -1042,9 +1125,7 @@
                 .finally(refreshChats);
         });
 
-        // After each reply, ask the server whether this thread is due a name.
-        // It answers from the question and the reply together, so the title
-        // reflects the kind of help asked for, and it is a no-op otherwise.
+        // After each reply, ask the server if this thread is due a name.
         function requestTitle(id) {
             if (!id || titleSource === 'user') return;
             postJson("{% url 'assistant:auto_title' %}", {conversation_id: id})
@@ -1071,9 +1152,7 @@
             input.focus();
         });
 
-        // The answer ends with a <followups> line that the server turns into
-        // chips; keep it (and a tag that is still arriving, "<fol...") out of
-        // the bubble while the reply streams in.
+        // The answer ends with a <followups> line that becomes chips. Keep it out of the bubble while streaming.
         const FOLLOWUPS_TAG = '<followups>';
         function withoutFollowups(text) {
             const at = text.indexOf(FOLLOWUPS_TAG);
@@ -1144,8 +1223,7 @@
             chatsBtn.disabled = on;
         }
 
-        // A failed reply offers to ask again. The question is already on screen
-        // (and saved), so the retry only replaces the failed reply.
+        // A failed reply offers to ask again. The question is already saved, so only the reply gets replaced.
         function addRetry(reply, text) {
             const btn = document.createElement('button');
             btn.type = 'button';
@@ -1191,8 +1269,7 @@
             })
             .catch((err) => {
                 if (err && err.name === 'AbortError') {
-                    // User pressed stop: keep whatever streamed in; the server
-                    // saves the partial reply to history too.
+                    // User pressed stop. Keep what came in, the server saves the partial reply too.
                     if (reply.bubble.querySelector('.elsa-typing')) {
                         reply.row.remove();
                     }
@@ -1233,8 +1310,7 @@
             sendMessage(text);
         });
 
-        // Textarea behavior: Enter sends, Shift+Enter inserts a newline, and
-        // the box grows with the content up to its CSS max-height.
+        // Enter sends, Shift+Enter is a newline, and the box grows up to its CSS max-height.
         function autoGrow() {
             input.style.height = 'auto';
             input.style.height = Math.min(input.scrollHeight, 120) + 'px';
@@ -1268,9 +1344,7 @@
 
         // Put the panel back the way the user left it on the previous page.
         if (remembered('elsaAssistantExpanded')) setExpanded(true);
-        // Not on a phone or a short screen, where the panel takes the whole screen (the
-        // media query above): reopened there, it covers the page someone just navigated
-        // to. One "Why does this matter?" used to hide every page after it until closed.
+        // Not on a phone or short screen, where the panel would cover the whole page.
         const fullScreen = window.matchMedia &&
             window.matchMedia('(max-width: 576px), (max-height: 560px)').matches;
         if (remembered('elsaAssistantOpen') && !fullScreen) openPanel({restore: true});

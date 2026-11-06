@@ -1,14 +1,9 @@
-"""Execute one queued validation run.
+"""Run one queued validation.
 
     python3 manage.py run_validation <run_id>
 
-This is the unit of work. A view creates a ValidationRun row and launches this as a
-detached child, then returns immediately; the command does the waiting and records
-the result on the row it was given, so nothing in the web process is holding a
-handle to a subprocess that outlives the request.
-
-Runnable by hand, which is the point of it being a command rather than a thread: a
-stuck or failed run can be re-executed and watched directly.
+A view creates the ValidationRun row and launches this as a detached child.
+Can also be run by hand to re-run a stuck or failed run.
 """
 from django.core.management.base import BaseCommand, CommandError
 
@@ -36,8 +31,7 @@ class Command(BaseCommand):
         validation_run = run(run_id)
 
         if validation_run.status == ValidationRun.STATUS_FAILED:
-            # Written to the row as well, so the UI can say what went wrong rather
-            # than showing a run that simply never finished.
+            # Save it on the row too so the UI can say what went wrong.
             self.stdout.write(self.style.ERROR(
                 '  failed: {}'.format(validation_run.failure_reason)))
             return

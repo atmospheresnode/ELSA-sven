@@ -1,11 +1,10 @@
-"""Instant kill switch for the assistant, no config edit or restart needed.
+"""Kill switch for the assistant, no config edit or restart needed.
 
     python3 manage.py assistant_toggle off   # hide widget, 503 all endpoints
     python3 manage.py assistant_toggle on    # re-enable
     python3 manage.py assistant_toggle       # show current state
 
-Uses the shared DB-backed cache, so it applies to every worker process at
-once and survives restarts until toggled back on.
+Uses the shared DB cache, so it applies to every worker and survives restarts.
 """
 from django.core.cache import cache
 from django.core.management.base import BaseCommand

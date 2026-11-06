@@ -28,8 +28,14 @@ To make an External bundle ready to submit, these are REQUIRED:
 4. At least one NetCDF file that ELSA has processed, uploaded into a collection
    (create a collection in the Collections card first if there is none). A file
    ELSA could not process does not count.
+5. At least one document describing the data. A README or user guide is enough.
 
 Alias is optional (yellow "Optional" badge) and never blocks submission.
+
+ELSA fills in what a model output label needs by itself, so nobody has to enter it:
+the AMA investigation on every label, and start and stop times marked as not applicable
+on collection labels (model output has no observation time). An organization's ROR ID is optional, and when given it must be a real
+ROR ID, such as https://ror.org/027k65916. It can be looked up at ror.org/search.
 
 The bundle page shows a Bundle Components card (top right) with the status of
 each component: green "Added" when complete, red "Missing" when required and
@@ -72,14 +78,16 @@ When a check finishes, the window updates itself. It does not ask anyone to
 reload the page, and it must not: a reload would abort a NetCDF upload that was
 in progress, which is a bug this already had once. Items listed under "Need your attention" have to be
 resolved before the bundle can be submitted for review; items under "Worth
-reviewing" are advisory and do not stop a submission. Problems caused by ELSA
-itself rather than by the user are not shown in the first tab; they go to the
-ELSA team, and they do appear in the second tab.
+reviewing" are advisory and do not stop a submission. If validation finds an error
+ELSA could not repair, the first tab shows one item asking the user to contact the
+ELSA team, and the bundle cannot be submitted until that is sorted out. The details
+are in the second tab.
 
 Submission is gated on two separate things. First, ELSA's own requirements:
 a bundle needs Citation Information, a Modification History entry, and at least
 one target before it can go for review, and an External bundle also needs at
-least one author on its citation and at least one processed NetCDF file. These
+least one author on its citation, at least one document and at least one processed
+NetCDF file. These
 are checked against the bundle itself rather than against its labels, because
 PDS4 allows all of them except the citation to be absent, so the PDS tool reports
 nothing when they are. They appear in the PDS Validation window alongside the findings, marked as

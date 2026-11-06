@@ -1,0 +1,97 @@
+{% extends 'staff/base.html' %}
+{% load tz account_tags staff_tags %}
+
+{% block console %}
+<h1 class="staff-title">Requests</h1>
+<p class="staff-subtitle">Everything users have asked of the team. Oldest first, so nothing waits at the bottom.</p>
+
+<div class="staff-stats">
+    <a class="staff-stat text-decoration-none" href="?show=attention"><div class="staff-stat-value">{{ counts.attention }}</div><div class="staff-stat-label">For you</div></a>
+    <a class="staff-stat text-decoration-none" href="?show=active"><div class="staff-stat-value">{{ counts.active }}</div><div class="staff-stat-label">Open{% if counts.unassigned %}, {{ counts.unassigned }} not taken yet{% endif %}</div></a>
+    <div class="staff-stat"><div class="staff-stat-value {{ counts.oldest|age_class }}">{% if counts.oldest %}{{ counts.oldest|age }}{% else %}None{% endif %}</div><div class="staff-stat-label">Oldest open request</div></div>
+</div>
+
+<div class="staff-card">
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+        <div class="staff-pills" aria-label="Show">
+            {% for key, label in status_filters %}{% if key in main_filters %}
+            <a href="?show={{ key }}{% if kind %}&kind={{ kind }}{% endif %}{% if query %}&q={{ query|urlencode }}{% endif %}" class="{% if show == key %}active{% endif %}"{% if show == key %} aria-current="true"{% endif %}>{{ label }}</a>
+            {% endif %}{% endfor %}
+        </div>
+        <div class="dropdown">
+            <button class="btn btn-sm staff-btn-ghost dropdown-toggle{% if show not in main_filters %} active{% endif %}" type="button" id="more-filters" data-bs-toggle="dropdown" aria-expanded="false">
+                {% if show not in main_filters %}{{ show_label }}{% else %}More filters{% endif %}
+            </button>
+            <ul class="dropdown-menu" aria-labelledby="more-filters">
+                {% for key, label in status_filters %}{% if key not in main_filters %}
+                <li><a class="dropdown-item{% if show == key %} active{% endif %}" href="?show={{ key }}{% if kind %}&kind={{ kind }}{% endif %}{% if query %}&q={{ query|urlencode }}{% endif %}">{{ label }}</a></li>
+                {% endif %}{% endfor %}
+            </ul>
+        </div>
+    </div>
+    {% include 'staff/_saved_views.html' %}
+    <form method="get" class="staff-filters" role="search" data-live-filter="queue-results">
+        <input type="hidden" name="show" value="{{ show }}">
+        <select name="kind" class="form-select form-select-sm" aria-label="Type">
+            <option value="">Every type</option>
+            {% for key, label, count in kinds %}
+            <option value="{{ key }}" {% if kind == key %}selected{% endif %}>{{ label }}{% if count %} ({{ count }} open){% endif %}</option>
+            {% endfor %}
+        </select>
+        <input type="search" name="q" value="{{ query }}" class="form-control form-control-sm" placeholder="Name, email, bundle or #" aria-label="Search the queue" autocomplete="off">
+        <button type="submit" class="btn btn-sm staff-btn" data-live-hide>Filter</button>
+    </form>
+
+    <div id="queue-results">
+    {% if page.object_list %}
+    <form method="post" action="{% url 'staff:bulk_action' %}" id="bulk-form" data-once>
+    {% csrf_token %}
+    <input type="hidden" name="seen_version" value="{{ seen_version }}">
+    <input type="hidden" name="return_query" value="{{ querystring }}">
+    {% if can.work %}
+    <div class="staff-bulk d-flex flex-wrap align-items-center gap-2 mb-2" id="bulk-bar">
+        <span class="staff-muted" id="bulk-count">Tick requests to act on several at once.</span>
+        <select name="bulk" class="form-select form-select-sm w-auto" aria-label="What to do" id="bulk-action">
+            <option value="">Choose an action</option>
+            <option value="assign">Assign to</option>
+            <option value="resolve">Resolve (users are told)</option>
+            <option value="spam">Mark as spam</option>
+        </select>
+        <select name="assignee" class="form-select form-select-sm w-auto d-none" aria-label="Assign to" id="bulk-assignee">
+            <option value="">Choose someone</option>
+            {% for person in workers %}<option value="{{ person.pk }}">{% if person.pk == user.pk %}Me{% else %}{{ person.get_full_name|default:person.username }}{% endif %}</option>{% endfor %}
+        </select>
+        <button type="submit" class="btn btn-sm staff-btn" id="bulk-apply" disabled>Apply</button>
+    </div>
+    {% endif %}
+    <div class="table-responsive">
+        <table class="staff-table">
+            <thead><tr>{% if can.work %}<th><input type="checkbox" class="form-check-input" id="bulk-all" aria-label="Tick all on this page"></th>{% endif %}<th>#</th><th>Request</th><th>From</th><th>Status or stage</th><th>Taken by</th><th>Opened</th></tr></thead>
+            <tbody>
+            {% for case in page %}
+            <tr>
+                {% if can.work %}<td><input type="checkbox" class="form-check-input bulk-pick" name="case" value="{{ case.pk }}" aria-label="Tick request {{ case.pk }}"></td>{% endif %}
+                <td class="staff-muted">{{ case.pk }}</td>
+                <td>
+                    {% if case.pk in unread %}<span class="staff-unread" title="The user answered since you last looked"></span><span class="visually-hidden">New answer. </span>{% endif %}
+                    <a href="{% url 'staff:case' case.pk %}">{{ case.title }}</a>
+                    <div class="staff-muted">{{ case.get_kind_display }}{% with due=case|reply_state %}{% if due == 'late' %} &middot; <span class="staff-age-danger">first reply overdue</span>{% elif due == 'soon' %} &middot; <span class="staff-age-warning">first reply due today</span>{% endif %}{% endwith %}</div>
+                </td>
+                <td>{{ case.requester_label }}{% if case.requester_username and case.requester_name %}<div class="staff-muted">{{ case.requester_username }}</div>{% endif %}</td>
+                <td>{% if case.kind == 'submission' and case.stage %}<span class="badge rounded-pill bg-light text-dark border" title="Review stage">{{ case.get_stage_display }}</span>{% else %}<span class="badge rounded-pill {{ case.status_badge }}">{{ case.get_status_display }}</span>{% endif %}</td>
+                <td>{% if case.assignee %}{{ case.assignee.username }}{% else %}<span class="staff-muted">Nobody</span>{% endif %}</td>
+                <td class="text-nowrap {% if case.is_active %}{{ case.created_at|age_class }}{% endif %}" title="{{ case.created_at|localtime|date:'M j, Y g:i A T' }}">{{ case.created_at|ago }}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    </form>
+    {% include 'staff/_pagination.html' %}
+    {% else %}
+    <p class="staff-empty">{% if query or kind %}Nothing matches. <a href="?show={{ show }}">Clear the search</a> or try <a href="?show=all{% if query %}&q={{ query|urlencode }}{% endif %}">Everything</a>.{% elif show == 'attention' %}Nothing needs you right now. <a href="?show=active">See all open requests</a>.{% elif show == 'active' %}Nothing is open. New requests appear here as users send them.{% elif show == 'waiting' %}Nobody is waiting to hear back from a user.{% else %}Nothing here.{% endif %}</p>
+    {% endif %}
+    </div>
+    {% if show == 'spam' %}<p class="staff-muted mt-2 mb-0"><a href="{% url 'staff:spam' %}">Blocked senders</a></p>{% endif %}
+</div>
+{% endblock %}

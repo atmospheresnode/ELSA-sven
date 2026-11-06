@@ -14,9 +14,11 @@ from django.db import transaction
 from django.db.models import Q
 from django.http import FileResponse, Http404, HttpResponse, HttpRequest, JsonResponse
 from django.views.decorators.clickjacking import xframe_options_sameorigin
+from django.views.decorators.http import require_POST
 
 from build import document_files, netcdf_header, preflight, validate_report, validate_rules, validate_runner
-from build import bundle_setup, walkthrough
+from staff import hooks as staff_hooks
+from build import bundle_setup, creation, walkthrough
 from build.label_repair import AMA_LID
 from django.shortcuts import render, redirect, get_object_or_404
 from django.template import RequestContext
@@ -53,68 +55,36 @@ from django.utils import timezone
 # -------------------------------------------------------------------------------------------------- #
 @login_required
 def rebuild_collection_inventories(bundle):
-    """Rewrite every collection's inventory table and the record counts in its label.
+    """Rewrite every collection's inventory table and record counts.
 
-    A PDS4 collection is required to carry an inventory naming each of its members,
-    and the label declares how many records that table holds. Both are derived from
-    membership, so both are wrong the moment membership changes and nothing rewrites
-    them.
-
-    Five of the views that add a document did not. The document collection therefore
-    sat at records=0 with an empty inventory file no matter how many documents were
-    added, and PDS rejected it as an empty collection, which the validation panel
-    then reported as "the document collection has nothing in it" to someone who had
-    just put three documents in it.
-
-    Cheap and idempotent: it rewrites from the current membership every time, so
-    calling it more often than strictly necessary costs nothing and missing a call
-    is the only way to be wrong.
+    Both depend on membership, so call this whenever a product is added or removed.
+    Safe to call more often than needed.
     """
     for collection in bundle_label_targets(bundle):
         try:
             collection.build_inventory()
         except Exception as error:
-            # One collection failing must not lose the others, and must not take
-            # down the request that was only adding a document.
+            # Keep going if one collection fails, and don't break the request adding the document.
             print('rebuild_collection_inventories: {} failed: {}'.format(
                 collection, error))
 
 
 def _submission_status(bundle):
-    """The three components the Review & Submit button checks, for the fragment view.
-
-    Computed in build.preflight, which is also what the validation panel reads, so
-    the button and the panel cannot disagree about whether a bundle is ready. They
-    used to: the panel knew only what PDS reported, and PDS4 makes a target optional,
-    so a bundle with no target had a red "Targets" badge and a green "passed" panel
-    at the same time.
-    """
+    """The three components the Review & Submit button checks, from build.preflight."""
     from build import preflight
 
     return preflight.status(bundle)
 
 
 def validation_summary_for_email(bundle):
-    """What the node needs to know about a submitted bundle, in plain text.
+    """Plain text summary of a submitted bundle for the node.
 
-    The submission notification used to say only that a bundle had arrived, so
-    whoever opened it still had to find the bundle in ELSA and check it before
-    knowing whether there was anything to do. Since reducing that back-and-forth is
-    the point of running the validator at all, the answer belongs in the message.
-
-    Advisory items are listed because they are the ones that reach a reviewer: the
-    gate already refuses a submission with anything blocking. ELSA's own findings
-    are counted rather than listed; they are our backlog, and a number is enough for
-    someone to know whether to mention them.
+    Advisory items are listed since the gate already blocks anything serious. ELSA's own
+    findings are only counted.
     """
     from build import validate_rules
 
-    # The most recently *finished* run, not the most recent one. Submitting starts a
-    # full content check, so at the moment this message is composed the newest run
-    # is the one that has just been queued and knows nothing yet. What the node
-    # wants is the verdict the submission was judged on, which is the gate's tier:
-    # a full run refused at submission because the server was busy would otherwise
-    # be reported as "could not run" over a check that did.
+    # Use the latest finished run. Submitting queues a new one, which has no results yet.
     run = ValidationRun.objects.filter(
         bundle=bundle, tier=ValidationRun.TIER_STRUCTURE,
         status__in=[ValidationRun.STATUS_DONE, ValidationRun.STATUS_FAILED],
@@ -143,9 +113,7 @@ def validation_summary_for_email(bundle):
     if translated['user']:
         lines.append('  Still outstanding for the submitter:')
         for item in translated['user']:
-            # Some items name the thing they are about: three documents with bad
-            # file names are three identical lines otherwise, which tells a reader
-            # nothing about which ones.
+            # Some items name what they're about, otherwise bad file names look like identical lines.
             subject = item.get('subject')
             lines.append('    - {}{}'.format(
                 item['title'], ' ({})'.format(subject) if subject else ''))
@@ -169,33 +137,22 @@ def validation_summary_for_email(bundle):
 
 
 def validation_context(bundle, user):
-    """Everything the PDS validation panel needs to render.
+    """Everything the PDS validation panel needs, for the bundle page and the partial.
 
-    Shared by the bundle page and by the partial the page fetches when a check
-    finishes, so the two cannot drift: the panel that replaces itself is rendered by
-    the same code that rendered it in the first place.
-
-    Read-only and cheap. The most recent run is looked up and its stored findings
-    translated; nothing is started. Running a check is an explicit POST.
+    Read-only, nothing gets started here. Running a check is a POST.
     """
     from build import preflight
 
-    # ELSA's own requirements, checked against the database rather than the labels.
-    # Three EXISTS queries, so these are shown whenever the panel is open, including
-    # before any check has run and while one is in flight. A user who has not chosen
-    # a target does not have to wait for a JVM to be told so.
+    # ELSA's own requirements, from the database, so they show before any check has run.
     outstanding = preflight.requirements(bundle)
 
     latest_validation = validate_runner.latest_run_for(bundle)
     context = {
         'validation_run': latest_validation,
         'validation_requirements': outstanding,
-        # Whether the page should start a check for itself once it has loaded. The
-        # view does not start one: rendering a bundle must never spawn a JVM, or a
-        # crawler would.
+        # Whether the page should start a check after loading. Rendering never starts one.
         'validation_auto_check': validate_runner.should_auto_check(bundle),
-        # Why submission is blocked, if it is, so the page can say so in the same
-        # words the view would use when refusing.
+        # Why submission is blocked, in the same words the view uses when refusing.
         'validation_block': validate_runner.submission_block(bundle, user),
         'validation_summary': None,
         'validation_cards': [],
@@ -205,34 +162,23 @@ def validation_context(bundle, user):
         'validation_raw_elsa': 0,
     }
 
-    # A summary is built when there is anything at all to say, which now includes a
-    # bundle with no findings but an unmet requirement. Without the second clause the
-    # template fell through to its "PDS reported nothing, all labels passed" branch,
-    # which is how a bundle with no target was told it had passed.
-    # Findings come from the run the verdict rests on, which is the latest unless the
-    # latest failed while an earlier check still describes the bundle. Taking them
-    # from a failed run would empty the list while the gate, reading the earlier
-    # check, went on refusing, with nothing on screen to say why.
+    # Build a summary if there's anything to say, including an unmet requirement with no findings.
+    # Findings come from the run the verdict is based on, which may not be the latest if that one failed.
     judged = validate_runner.judged_run(bundle)
     findings = (judged.findings or []) if judged else []
+    # Same list the gate uses, so the panel and the gate agree.
+    blocking = list(outstanding) + validate_rules.unresolved_items(findings, bundle)
     if findings or outstanding:
-        context['validation_summary'] = validate_rules.summarise(findings, outstanding)
-        context['validation_cards'] = validate_rules.cards(findings, outstanding)
-        context['validation_advisory'] = validate_rules.translate(findings)['advisory']
-        # The raw output, for the second tab. Everything PDS reported, including the
-        # findings the translation hides. Grouped by the thing each is about rather
-        # than listed one per line: PDS reports most defects twice, once as a pattern
-        # failure and once as a type failure on the same element and line, so a
-        # bundle with four problems read as eight errors and looked twice as bad as
-        # it was. Each group carries the plain-language item it became, which is what
-        # makes the tab worth opening rather than merely honest.
+        context['validation_summary'] = validate_rules.summarise(findings, blocking)
+        context['validation_cards'] = validate_rules.cards(findings, blocking)
+        context['validation_advisory'] = validate_rules.translate(
+            validate_rules.without_unresolved(findings, blocking))['advisory']
+        # Raw output for the second tab. PDS reports most defects twice, so group them by what
+        # they're about. Each group has the plain-language item it became.
         context['validation_raw'] = validate_rules.raw_groups(findings)
         context['validation_raw_total'] = sum(
             len(groups) for _label, groups in context['validation_raw'])
-        # Counted in the same unit as the total, distinct problems. The summary's
-        # "hidden" is a count of ELSA's rule categories, so the tab used to read
-        # "36 distinct problems. 8 of these are caused by ELSA" above 36 items that
-        # were all ELSA's.
+        # Count distinct problems, same as the total. The summary's "hidden" counts rule categories.
         context['validation_raw_elsa'] = sum(
             1 for _label, groups in context['validation_raw']
             for group in groups if group['audience'] == validate_rules.ELSA)
@@ -243,21 +189,9 @@ def validation_context(bundle, user):
 def bundle_label_targets(bundle):
     """Every collection label a bundle-level metadata edit has to reach.
 
-    A bundle's collections live in two tables. Product_Collection holds the ones
-    ELSA creates for it (Document, Context, XML Schema); AdditionalCollections holds
-    the ones the user adds. Bundle-level metadata, the citation, the modification
-    history, the alias, is copied into all of their labels, so a write that queries
-    only the first table leaves the user's own collections behind.
-
-    That is how a citation could be filled in and still fail validation: the author
-    was written into the bundle and the document collection, while the collection
-    the user had added kept the empty <given_name/> skeleton it was created with,
-    and PDS reported the blank as an error against a citation the user had
-    demonstrably filled in. The context views had already grown a chain() for this;
-    every other one had not.
-
-    Data collections are excluded here as they were at each of the old call sites:
-    they carry their own observational metadata rather than the bundle's.
+    Collections are in two tables. Product_Collection has the ones ELSA creates and
+    AdditionalCollections has the ones the user adds. Data collections are excluded since they
+    have their own observational metadata.
     """
     return list(chain(
         Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data'),
@@ -593,19 +527,26 @@ def build(request):
         # Check Uniqueness  --- GOTTA BE A BETTER WAY (k)
         bundle_name = form_bundle.cleaned_data['name']
         bundle_user = request.user
-        # Names are unique across all of ELSA, not per user: the database says so, and the
-        # name becomes the bundle's identifier. Checked here so a taken name is a message
-        # on the form rather than a 500 (another user's name) or a silent reload (your own).
-        # Case-insensitive, as the database's collation is.
+        enable_walkthrough = request.POST.get('enable_walkthrough') == 'on'
+
+        # Same form sent again goes to the bundle it already made (see build/creation.py).
+        create_token = request.POST.get('create_token', '')
+        repeat = creation.already_created(request, create_token, bundle_name)
+        if repeat is not None:
+            creation.mark_just_created(request, repeat, again=True)
+            if enable_walkthrough:
+                return redirect(walkthrough.setup_url(repeat))
+            messages.info(request, 'You already created "{}"; here it is.'.format(repeat.name))
+            return redirect(walkthrough.bundle_url(repeat))
+
+        # Names are unique across all of ELSA, not per user, and case-insensitive. Check here
+        # so a taken name is a form message instead of a 500.
         bundle_count = Bundle.objects.filter(name__iexact=bundle_name).count()
 
         if bundle_count == 0:  # If user and bundle name are unique, then...
             print('At the start')
-            # One transaction for everything the bundle is made of in the database. A request
-            # cut off partway (a server restart, a crash) used to leave a Bundle with no
-            # Product_Bundle, which the hub lists but the bundle page sends straight back
-            # to the hub. Now the half-made rows go with it. Files already written stay, and
-            # are harmless: creating the same name again writes over them.
+            # One transaction so a crash can't leave a Bundle with no Product_Bundle.
+            # Files already written are fine, creating the same name again overwrites them.
             with transaction.atomic():
                 # Create Bundle model.
                 bundle = form_bundle.save(commit=False)
@@ -630,10 +571,8 @@ def build(request):
 
                 print('Bundle model object: {}'.format(bundle))
 
-                # Build PDS4 Compliant Bundle directory in User Directory.
-                # If the filesystem refuses (disk full, missing user directory,
-                # permissions), remove the just-saved Bundle record: leaving it
-                # behind produces a bundle that 500s on every page load.
+                # Build the bundle directory. If this fails remove the Bundle record,
+                # otherwise that bundle gives a 500 on every page.
                 try:
                     bundle.build_directory()
                 except OSError as e:
@@ -672,10 +611,7 @@ def build(request):
                 print('---------------- End Build Product_Bundle Base Case -------------------------')
 
                 if bundle.bundle_type == 'External':
-                    # Looked up by LID, not name: the crawler and PDS title this row
-                    # differently, and on prod migration 0075 kept the row named
-                    # "Atmospheric Modeling Annex Individual Investigation", so a name
-                    # lookup found nothing and every External bundle creation 500ed.
+                    # Look up by LID, not name. The name differs on prod, and a failed lookup gives a 500.
                     ama_investigation = Investigation.objects.filter(lid=AMA_LID).order_by('pk').first()
                     print(ama_investigation)
                     write_into_label(ama_investigation, product_bundle, [])
@@ -727,13 +663,8 @@ def build(request):
                     #label_root = bundle.version.fill_xml_schema(label_root)
                     label_root = product_collection.fill_base_case(label_root)
 
-                    # The AMA investigation is written into the bundle label above, but the
-                    # collection carries its own Investigation_Area and was shipping it empty:
-                    # a blank name, type and lid_reference are each a validation error, and the
-                    # collection genuinely does belong to the same investigation. fill_label
-                    # already picks 'collection_to_investigation' from the root tag, so the same
-                    # call serves both labels. Done on the tree that is already open rather than
-                    # reopening it.
+                    # The collection has its own Investigation_Area, so fill it too. fill_label picks
+                    # 'collection_to_investigation' from the root tag.
                     if ama_investigation:
                         print(' ... Adding Investigation Area ... ')
                         label_root = ama_investigation.fill_label(label_root)
@@ -742,9 +673,7 @@ def build(request):
                     print(' ... Closing Label ... ')
                     close_label(product_collection.label(), label_root, label_list[2])
 
-                    # Write the inventory table the label promises. A brand new collection has
-                    # no members yet, so this writes an empty table; it is rewritten each time a
-                    # document is added or removed.
+                    # Write the inventory table. It's empty for now and gets rewritten when documents change.
                     product_collection.build_inventory()
                     print('-------------End Build Product_Collection Base Case-----------------')
                 else:
@@ -817,9 +746,7 @@ def build(request):
                             print(' ... Closing Label ... ')
                             close_label(product_collection.label(), label_root, label_list[2])
 
-                            # Write the inventory table the label promises. Archive bundles
-                            # need this exactly as much as External ones do: every PDS4
-                            # collection is required to carry one.
+                            # Write the inventory table. Every PDS4 collection needs one, Archive too.
                             product_collection.build_inventory()
                             print('-------------End Build Product_Collection Base Case-----------------')
 
@@ -838,35 +765,41 @@ def build(request):
                 # print('trying to trigger server reset')
                 # return redirect(url, request, context_dict)
 
-            # Determine where to redirect based on walkthrough checkbox
-            enable_walkthrough = request.POST.get('enable_walkthrough') == 'on'
+            # This form already made this bundle (see build/creation.py).
+            creation.remember(request, create_token, bundle)
+            creation.mark_just_created(request, bundle)
 
+            # Determine where to redirect based on walkthrough checkbox
             if enable_walkthrough:
                 request.session['walkthrough_bundle_type'] = bundle.bundle_type #Rupak
                 print('Walkthrough enabled: redirecting to the setup page.')
                 return redirect(walkthrough.setup_url(bundle))
             else:
-                # Declining the walkthrough needs no page of its own: the bundle page
-                # does everything the setup does.
+                # No walkthrough, so just go to the bundle page.
                 print('Walkthrough not enabled: redirecting to the bundle page.')
+                messages.success(request, 'Bundle "{}" created and saved to your Bundle Hub.'.format(bundle.name))
                 return redirect(walkthrough.bundle_url(bundle))
         else:
             print('failed uniqueness')
-            form_bundle.add_error('name', 'A bundle named "{}" already exists in ELSA. Bundle names have to be unique, because the name becomes the bundle\'s identifier. Please choose another.'.format(bundle_name))
+            own = Bundle.objects.filter(name__iexact=bundle_name, user=request.user).first()
+            if own is not None:
+                # Name is already theirs, so tell them and link to it.
+                form_bundle.add_error('name', 'You already have a bundle named "{}". Choose another name '
+                                              'to create a new one.'.format(own.name))
+                context_dict['own_existing'] = own
+                context_dict['own_existing_url'] = (walkthrough.setup_url(own) if walkthrough.required_left(own)
+                                                    else walkthrough.bundle_url(own))
+            else:
+                form_bundle.add_error('name', 'A bundle named "{}" already exists in ELSA. Bundle names have to be unique, because the name becomes the bundle\'s identifier. Please choose another.'.format(bundle_name))
 
-
+    # A fresh key each time the form is shown (build/creation.py).
+    context_dict['create_token'] = creation.issue_token(request)
+    context_dict['discarded'] = request.session.pop('bundle_discarded', None)
     return render(request, 'build/build.html', context_dict)
 
 
 def _create_initial_modification_history(bundle):
-    """Give a new bundle the first entry of its Modification History.
-
-    PDS4's Modification History lists the versions of a bundle that have been
-    delivered: version, date, and what changed. A bundle being created has exactly
-    one, and its entry is always the same ("1.0", today, "Bundle creation"), so ELSA
-    writes it rather than asking. Later entries are added from the bundle page when
-    a corrected or extended version is delivered.
-    """
+    """Add the first Modification History entry for a new bundle: 1.0, today, Bundle creation."""
     if Modification_History.objects.filter(bundle=bundle).exists():
         return
     mod_history = Modification_History(
@@ -880,8 +813,7 @@ def _create_initial_modification_history(bundle):
     write_into_label(mod_history, product_bundle, bundle_label_targets(bundle))
 
 
-# The walkthrough's two intro pages, kept as addresses so old links still land
-# somewhere sensible. The setup page says on its first line what the intro page did.
+# Old walkthrough intro pages, kept so old links still work.
 @login_required
 def yes_intro_page(request, bundle_id):
     bundle = get_object_or_404(Bundle, pk=bundle_id)
@@ -900,13 +832,16 @@ def no_intro_page(request, bundle_id):
 
 @login_required
 def setup(request, pk_bundle):
-    """The guided setup: every step of the walkthrough on one page.
+    """Guided setup, all the walkthrough steps on one page.
 
-    GET only. Each step saves through the view the bundle page uses for the same
-    thing (see build/bundle_setup.py), except the citation, which has setup_citation.
-    The page fetches itself again after a save to bring its steps up to date.
+    GET only. Each step saves through the same view as the bundle page (see build/bundle_setup.py),
+    except the citation, which has setup_citation.
     """
-    bundle = get_object_or_404(Bundle, pk=pk_bundle)
+    bundle = Bundle.objects.filter(pk=pk_bundle).first()
+    if bundle is None:
+        # Usually discarded a moment ago and reached again with the Back button.
+        messages.info(request, 'That bundle no longer exists.')
+        return redirect('friends:bundle_hub')
     if request.user != bundle.user:
         return redirect('main:restricted_access')
     try:
@@ -914,16 +849,49 @@ def setup(request, pk_bundle):
     except Product_Bundle.DoesNotExist:
         # Creation crashed partway; the bundle page sends these back to the hub too.
         return HttpResponseRedirect(reverse('friends:bundle_hub'))
-    return render(request, 'build/setup/setup.html', bundle_setup.context(bundle))
+    context = bundle_setup.context(bundle)
+    context['just_created'] = creation.pop_just_created(request, bundle)
+    context['can_discard'] = walkthrough.is_untouched(bundle)
+    return render(request, 'build/setup/setup.html', context)
+
+
+@login_required
+@require_POST
+def setup_discard(request, pk_bundle):
+    """Discard a new bundle with nothing in it, from the setup page.
+
+    Anything with content has to be deleted from the Bundle Hub.
+    """
+    bundle = Bundle.objects.filter(pk=pk_bundle).first()
+    if bundle is None:
+        return redirect('build:build')
+    if request.user != bundle.user:
+        return redirect('main:restricted_access')
+    if not walkthrough.is_untouched(bundle):
+        messages.error(request, '"{}" already has content, so it was not discarded. If you no longer need it, '
+                                'delete it from your Bundle Hub.'.format(bundle.name))
+        return redirect(walkthrough.setup_url(bundle))
+    name = bundle.name
+    try:
+        # Same as the Bundle Hub delete: remove the folder first, then the records.
+        bundle.remove_bundle()
+        Bundle.objects.filter(pk=bundle.pk).delete()
+    except Exception:
+        import logging
+        logging.getLogger(__name__).exception('discarding bundle %s for %s failed', pk_bundle, request.user.username)
+        messages.error(request, 'ELSA could not discard "{}". Please try again, or delete it from your '
+                                'Bundle Hub.'.format(name))
+        return redirect(walkthrough.setup_url(bundle))
+    request.session['bundle_discarded'] = name
+    messages.success(request, 'Discarded "{}". Nothing was kept, and the name is free again.'.format(name))
+    return redirect('build:build')
 
 
 @login_required
 def setup_citation(request, pk_bundle):
-    """Save the citation from the setup page's list of people.
+    """Save the citation from the setup page.
 
-    Answers in JSON when the page posts it itself, as every other step's view does
-    for the bundle page's windows. A plain post (no JavaScript) goes back to the
-    setup page, on the next step when it saved and on this one when it did not.
+    Answers in JSON when the page posts it. A plain post goes back to the setup page.
     """
     bundle = get_object_or_404(Bundle, pk=pk_bundle)
     if request.user != bundle.user:
@@ -933,8 +901,7 @@ def setup_citation(request, pk_bundle):
 
     form = bundle_setup.CitationListForm(request.POST, bundle=bundle)
     in_place = _is_panel_request(request)
-    # The bundle page's Citation Information window posts here too (source=bundle),
-    # and goes back to the bundle page rather than on through the setup steps.
+    # The bundle page's citation window posts here too and goes back to the bundle page.
     from_bundle = walkthrough.returning_to_bundle(request)
     if not form.is_valid():
         if in_place:
@@ -945,8 +912,7 @@ def setup_citation(request, pk_bundle):
                         else walkthrough.setup_url(bundle, 'citation'))
 
     try:
-        # All or nothing: a citation in the database that never reached the labels
-        # would say the bundle has one while every label says it does not.
+        # All or nothing, so the database and the labels don't disagree about the citation.
         with transaction.atomic():
             bundle_setup.save_citation(bundle, form)
     except (OSError, LxmlSyntaxError, Product_Bundle.DoesNotExist) as error:
@@ -1030,16 +996,11 @@ def data_prep(request, bundle, data_enum):
     return render(request, 'build/data_prep/data_prep.html', context_dict)
 
 
-# -- forms on the bundle page that save in place ------------------------------------
-#
-# The windows on the bundle page used to post as ordinary forms. A save that worked
-# reloaded the page, which was fine; one that did not either re-rendered the bundle page
-# with the reasons hidden inside a closed window, or, for the forms whose views are
-# shared with the walkthrough, rendered a walkthrough page with no way back. Now the
-# page posts them itself (templates/build/bundle/_inplace_forms.html) and names the
-# form in X-Elsa-Inplace. A refusal comes back as the form's errors, shown in the
-# window that is still open, with everything the user typed or picked still in it; a
-# success comes back as the address to go to. Without JavaScript nothing changes.
+# -- forms on the bundle page that save in place --
+# 
+# The page posts these itself (templates/build/bundle/_inplace_forms.html) and names the form in
+# X-Elsa-Inplace. A refusal comes back as form errors in the open window. A success comes back
+# as the address to go to. Without JavaScript nothing changes.
 
 def _inplace_form(request):
     """The name of the bundle-page form saving itself in place, or None."""
@@ -1057,10 +1018,9 @@ def _inplace_refused(form, message=''):
 
 
 def inplace_redirects(view):
-    """Turn a view's redirect into JSON when the bundle page posted in place.
+    """Turn a redirect into JSON when the bundle page posted in place.
 
-    fetch() follows a redirect by itself and renders the page it lands on, which would
-    use up the confirmation toast before the page the user actually sees is loaded.
+    fetch() would follow the redirect and use up the toast before the real page loads.
     """
     @functools.wraps(view)
     def wrapper(request, *args, **kwargs):
@@ -1097,16 +1057,14 @@ def bundle(request, pk_bundle):
 
         citation_information_set = Citation_Information.objects.filter(bundle=bundle)
 
-        # A bundle whose creation crashed partway (e.g. disk full) has no Product_Bundle; send the
-        # user back to the hub instead of a 500. This has to sit above the first access, not further
-        # down the view: DoesNotExist is raised here long before a check placed lower is reached.
+        # A failed bundle creation has no Product_Bundle, so go back to the hub instead of a 500.
+        # This has to stay above the first access.
         try:
             product_bundle = Product_Bundle.objects.get(bundle=bundle)
         except Product_Bundle.DoesNotExist:
             print('Bundle {} has no Product_Bundle (creation likely failed); redirecting.'.format(bundle.pk))
             return HttpResponseRedirect(reverse('friends:bundle_hub'))
-        # A missing or unreadable bundle label must not 500 the whole page;
-        # citation author/editor display just falls back to the DB values.
+        # Bad or missing bundle label shouldn't break the page. Fall back to the DB values.
         citation_xml = None
         try:
             label_list = open_label_with_tree(product_bundle.label())
@@ -1290,8 +1248,7 @@ def bundle(request, pk_bundle):
         form_target = TargetFormAll(request.POST or None, pk_bundle=pk_bundle)
         form_instrument_host = InstrumentHostForm(request.POST or None, pk_inv=None)
         form_facility = FacilityForm(request.POST or None)
-        # Its own id prefix: rendered on the bundle page beside the Data Product form, its
-        # name field came out as id_name too. Ids only; the field names it posts are unchanged.
+        # Own id prefix because the Data Product form on this page also has id_name.
         context_products_contact = ContextProductsContactForm(request.POST or None, auto_id='contact_%s')
         contact_form = ContactForm(request.POST or None)
 
@@ -1403,6 +1360,10 @@ def bundle(request, pk_bundle):
 
         context_dict['status_dict'] = status_dict
         context_dict['file_tree'] = file_tree
+        # Where the team is with a submitted bundle, and what they last said.
+        context_dict['review_state'] = staff_hooks.review_state(bundle)
+        # Lets the create page know a bundle was made, in case the user goes Back to it.
+        context_dict['just_created'] = creation.pop_just_created(request, bundle)
 
         context_dict.update(validation_context(bundle, request.user))
 
@@ -1425,9 +1386,7 @@ def bundle(request, pk_bundle):
                 files = form_netcdf.cleaned_data['netcdf_files']
                 collection = form_netcdf.cleaned_data['collection']
 
-                # Scoped to this bundle: collection_name is not unique across the table, so an
-                # unscoped lookup can match another user's collection of the same name and write
-                # the upload into their archive directory.
+                # Scoped to this bundle since collection_name isn't unique across users.
                 netcdf_collection = AdditionalCollections.objects.filter(
                     bundle=bundle, collection_name=collection).first()
 
@@ -1439,16 +1398,12 @@ def bundle(request, pk_bundle):
                     )
 
                 netcdf_collection_directory = netcdf_collection.directory()
-                # The collection directory is created when the collection is built, but an upload
-                # into a collection whose folder is missing would otherwise fail on os.rename.
+                # Make sure the folder exists, otherwise os.rename fails.
                 os.makedirs(netcdf_collection_directory, exist_ok=True)
 
 
-                # Refuse the upload if the disk can't hold it (plus a safety margin) - running out
-                # of space mid-write corrupts labels and used to leave the whole bundle 500ing.
-                # The page asks the same question before sending anything; this is the backstop
-                # for a browser without the script, or a disk that filled up in between. The code
-                # lets the page open its storage dialog instead of a bare error.
+                # Refuse the upload if the disk can't hold it plus a margin. The page checks first, this is
+                # the backstop. The code tells the page to open its storage dialog.
                 from build import storage_report
                 total_upload = sum(getattr(f, 'size', 0) for f in files)
                 space = storage_report.check_space(total_upload)
@@ -1465,20 +1420,9 @@ def bundle(request, pk_bundle):
                     )
 
                 created_objs = []
-                # A file is filed under its own name inside the collection directory, and its label
-                # is named after it, so two uploads of the same name into the same collection
-                # collide: the second overwrites the first file AND its label, leaving two database
-                # rows pointing at one path. Their AMA metadata then silently overwrites each
-                # other, because both regenerate the same label. Refuse instead, and say what to do.
-                #
-                # Compared after sanitising, on both sides, because the sanitised name is what
-                # actually lands on disk: the storage turns "a - Copy.nc" into "a_-_Copy.nc".
-                # Comparing the raw upload name against stored names let a second copy of any such
-                # file straight through, and storage did not catch it either: by then the first
-                # copy has been moved out of MEDIA_ROOT into the collection, so there was no name
-                # there to uniquify against. The second upload overwrote the first file and its
-                # label, and the two rows left pointing at that one path overwrote each other's
-                # AMA metadata. The message quotes the name the user chose, not the sanitised one.
+                # Two uploads with the same name in a collection would overwrite the file and its label, so refuse.
+                # Compare sanitised names since that's what lands on disk ("a - Copy.nc" becomes "a_-_Copy.nc").
+                # The message uses the name the user chose.
                 storage = NetCDFFile._meta.get_field('file').storage
                 existing_names = {
                     storage.get_valid_name(os.path.basename(name)) for name in
@@ -1541,19 +1485,11 @@ def bundle(request, pk_bundle):
                             status=400
                         )
 
-                # The upload posts over XHR and the page reloads itself afterwards, so the reply
-                # has to carry enough for the reloaded page to land the user back on the collection
-                # they uploaded into and name the files that just arrived. A redirect says none of
-                # that, and messages.success() cannot fill the gap either: XHR follows the 302
-                # silently and the message is consumed rendering a response that is thrown away.
-                # The plain-form path (no JS) keeps the redirect it has always had.
+                # Upload is XHR and the page reloads itself, so the reply says which collection and files
+                # to show. The plain form path without JS keeps its redirect.
                 if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                    # The AMA reading travels with the reply rather than being read back off the
-                    # Files tree once the page reloads. The tree is a view of the labels on disk,
-                    # so a file it cannot place leaves the notice with nothing to say and no offer
-                    # to make; these numbers come from the same resolution the tree uses and are
-                    # true whether or not a row turns up. ama_url is the standalone editor, which
-                    # is where the offer leads when there is no label row to open the drawer from.
+                    # AMA reading goes in the reply since the Files tree might not have a row for the file.
+                    # ama_url is the standalone editor.
                     ama_filled = _ama_completeness_by_file(bundle)
                     return JsonResponse({
                         'collection_id': netcdf_collection.id,
@@ -1574,9 +1510,7 @@ def bundle(request, pk_bundle):
                   and not request.headers.get('X-Elsa-Inplace')
                   and 'collection' in request.POST
                   and 'netcdf_files' in form_netcdf.errors):
-                # An upload that arrived with no files used to fall through to the full page, which
-                # the upload script took for success. The page now stops this before sending; this
-                # is for anything that still gets here (a stale page, a file the browser dropped).
+                # No files in the upload. The page normally stops this before sending.
                 return JsonResponse({'error': 'Choose at least one NetCDF file to upload.'}, status=400)
 
         if form_investigation.is_valid():
@@ -1604,10 +1538,8 @@ def bundle(request, pk_bundle):
             return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/')
 
 
-        # A citation that was posted and refused reopens its window, so the reason is on
-        # screen rather than in a closed modal. Only when the post was the citation
-        # form's: every form on this page is bound to every POST, so the citation form
-        # also "fails" whenever anything else is submitted.
+        # Reopen the citation window if its post was refused. Only for the citation form,
+        # since every form on this page is bound to every POST.
         if (request.method == 'POST' and 'number_of_authors_people' in request.POST
                 and not form_citation_information.is_valid()):
             context_dict['reopen_citation_modal'] = True
@@ -1735,14 +1667,7 @@ def bundle(request, pk_bundle):
             for modification_history in modification_history_set:
                 write_into_label(modification_history, additional_collections, None)
 
-            # The inventory the label promises. Every PDS4 collection is required to
-            # carry one, and a collection the user added was shipping with the whole
-            # File_Area_Inventory blank: no file name, no local identifier, no
-            # creation date. That alone was ten of the seventeen findings on a
-            # freshly built bundle, because validate reports each empty field twice
-            # and then gives up on the product entirely for want of a file name.
-            # ELSA's own document collection has had this call since the inventory
-            # work; the user's collections were simply never given it.
+            # Write the inventory. Every PDS4 collection needs one or validate gives up on the product.
             additional_collections.build_inventory()
 
             additional_collections_set = _collections_with_ama(bundle)
@@ -1753,8 +1678,7 @@ def bundle(request, pk_bundle):
             # return render(request, 'build/bundle/bundle.html', context_dict)
 
             # # fixes the refresh duplication issue - deric
-            # The fragment tells the page to open the new collection's tab instead of the
-            # Add New Collection form it was just created from.
+            # Open the new collection's tab.
             return HttpResponseRedirect('/elsa/build/' + pk_bundle + '/#additional_collection_' + str(additional_collections.pk))
 
             # fixes the refresh duplication issue, use this one for offline testing - deric
@@ -1829,8 +1753,7 @@ def bundle(request, pk_bundle):
                 close_label(label.label(), label_root, label_list[2])
             print('\n----------------End Build Internal_Reference for Document-------------------')
 
-            # The document collection's inventory names every member product, so it has to
-            # be rewritten whenever membership changes.
+            # Rewrite the document collection's inventory whenever membership changes.
             for product_collection in product_collections_list:
                 product_collection.build_inventory()
 
@@ -1928,8 +1851,7 @@ def bundle(request, pk_bundle):
             # fixes the refresh duplication issue, use this one for offline testing - deric
             # return HttpResponseRedirect('/build/' + pk_bundle + '/')
 
-        # A window that saved in place and got this far was refused: send back its
-        # reasons rather than the whole page.
+        # A window that saved in place and got here was refused, so send back its errors.
         inplace = _inplace_form(request)
         if inplace:
             return _inplace_refused({
@@ -1966,16 +1888,11 @@ def bulk_delete_netcdf(request, pk_bundle):
                 try:
                     netcdf_file = NetCDFFile.objects.get(pk=netcdf_id, bundle=bundle)
 
-                    # Delete the corresponding XML label from the archive.
-                    # Label naming must mirror _process_single_netcdf: uploads may be
-                    # extensionless, so strip a trailing .nc only if present and always
-                    # append .xml (a bare .replace('.nc', '.xml') misses extensionless
-                    # files and mangles names with '.nc' in the middle).
+                    # Delete the XML label. Uploads may have no extension, so only strip a trailing .nc
+                    # and always add .xml. Same naming as _process_single_netcdf.
                     nc_filename = os.path.basename(netcdf_file.file.name)
-                    # Captured before the record is deleted, per the project's delete convention.
-                    # Uploads are filed under their collection's directory, so that is where both
-                    # the NetCDF and its label live; NetCDFFile.directory() falls back to the
-                    # bundle root for rows that predate the collection field.
+                    # Get these before deleting the record. NetCDFFile.directory() falls back to the
+                    # bundle root for older rows with no collection.
                     file_directory = netcdf_file.directory()
                     try:
                         nc_name = nc_filename[:-3] if nc_filename.endswith('.nc') else nc_filename
@@ -1988,10 +1905,8 @@ def bulk_delete_netcdf(request, pk_bundle):
                     except Exception as e:
                         print('Could not delete XML for {}: {}'.format(netcdf_id, e))
 
-                    # Delete NetCDF file from disk. Processing moves the file from the upload
-                    # location into the collection directory, so check there first; the bundle
-                    # root covers legacy rows, and the original upload path covers files whose
-                    # processing never completed.
+                    # Delete the NetCDF from disk. Check the collection directory first, then the
+                    # bundle root for older rows, then the upload path if processing never finished.
                     candidates = [os.path.join(file_directory, nc_filename),
                                   os.path.join(bundle.directory(), nc_filename)]
                     try:
@@ -2024,14 +1939,9 @@ def bulk_delete_netcdf(request, pk_bundle):
         return redirect('main:restricted_access')
 
 
-# ------------------------------------------------------------------------------------------------ #
-#                                    NetCDF storage check and report
-# ------------------------------------------------------------------------------------------------ #
-# The upload page asks netcdf_storage_check before sending any bytes, and when there is no room it
-# opens a dialog that fetches a drafted message from netcdf_storage_draft and posts the user's
-# reviewed version to netcdf_storage_report. All three answer JSON, since only the page's script
-# calls them, so a stranger's request gets a 403 rather than the restricted-access redirect.
-# The logic lives in build/storage_report.py.
+# --- NetCDF storage check and report ---
+# The upload page calls netcdf_storage_check before sending. If there's no room it opens a dialog
+# that uses netcdf_storage_draft and netcdf_storage_report. All JSON. Logic is in build/storage_report.py.
 
 def _storage_request(request, pk_bundle):
     """(bundle, payload, error_response) for the storage views, after the usual owner check."""
@@ -2106,22 +2016,12 @@ def netcdf_storage_report(request, pk_bundle):
     return JsonResponse({'sent': True, 'email': request.user.email})
 
 
-# ------------------------------------------------------------------------------------------------ #
-#                                    AMA discipline metadata views
-# ------------------------------------------------------------------------------------------------ #
-# The NetCDF harvest fills ama:Variable and ama:Coordinate. These views collect the rest of the AMA
-# area from the user.
-#
-# All three classes share one scoping rule: a per-collection default that every file in the
-# collection inherits (including files uploaded later), plus an optional per-file override. The
-# editor is one panel that renders all three, either for a collection's defaults or for one file.
-#
-# Every save re-runs label generation so the XML on disk matches what was just entered - labels are
-# otherwise only written at upload time, which is before these forms are ever filled in.
-#
-# The forms carry prefixes because the three classes share field names (start_time, end_time and
-# time_unit appear in two of them) and all three render in one panel. Without prefixes they would
-# emit duplicate element ids and a <label for> click would focus the wrong section's input.
+# --- AMA discipline metadata views ---
+# The NetCDF harvest fills ama:Variable and ama:Coordinate. These views collect the rest.
+# 
+# All three classes have a per-collection default that files inherit, plus an optional per-file override.
+# Every save regenerates the labels. The forms use prefixes because they share field names
+# like start_time and render in one panel.
 AMA_MODEL_METADATA_PREFIX = 'model'
 AMA_SIMULATION_PREFIX = 'sim'
 AMA_FILE_DESCRIPTION_PREFIX = 'desc'
@@ -2161,11 +2061,7 @@ def _ama_status(collection):
 
 
 def _netcdf_files_for_collection(collection):
-    """Files belonging to one collection, each tagged with whether it overrides the defaults.
-
-    Scoped to the collection so a file uploaded into one collection no longer shows up under
-    every other collection's tab. A constant number of queries regardless of file count.
-    """
+    """Files in one collection, each marked if it overrides the defaults."""
     netcdf_files = list(NetCDFFile.objects.filter(collection=collection))
 
     overridden_ids = set()
@@ -2181,11 +2077,9 @@ def _netcdf_files_for_collection(collection):
 
 
 def _collections_with_ama(bundle):
-    """The bundle's collections, each carrying its own file list and AMA status.
+    """The bundle's collections with their file lists and AMA status.
 
-    The NetCDF card renders inside the loop over collections, so the data is hung on the collection
-    objects the template already iterates. Attributes are named ama_* rather than netcdf_files to
-    avoid shadowing the reverse accessor of the NetCDFFile.collection foreign key.
+    Named ama_* to avoid clashing with the NetCDFFile.collection reverse accessor.
     """
     collections = list(AdditionalCollections.objects.filter(bundle=bundle))
     for collection in collections:
@@ -2196,31 +2090,19 @@ def _collections_with_ama(bundle):
 
 
 def _unassigned_netcdf_files(bundle):
-    """Files uploaded before the collection field existed that the backfill could not place.
-
-    They belong to no collection, so they are listed in their own section rather than folded into
-    one. Showing them under whichever collection happened to sort first made them look like they
-    moved between collections whenever a collection was deleted, when in truth their collection
-    was NULL the whole time.
-    """
+    """Older files the backfill couldn't place in a collection, listed in their own section."""
     return list(NetCDFFile.objects.filter(bundle=bundle, collection__isnull=True))
 
 
-# Every AMA attribute across the three sections. Derived from ELEMENT_ORDER rather than written out,
-# so adding a field to a model moves this number without anyone having to remember to.
+# Every AMA attribute across the three sections, from ELEMENT_ORDER so it stays in sync.
 AMA_TOTAL_FIELDS = sum(len(model_class.ELEMENT_ORDER) for model_class, _f, _p, _l in AMA_SECTIONS)
 
 
 def _ama_completeness_by_file(bundle):
-    """How many AMA attributes each file's label will actually carry, keyed by NetCDFFile id.
+    """How many AMA attributes each file's label will have, keyed by NetCDFFile id.
 
-    Resolution is the same as `resolve_for_file()`: a per-file override wins, otherwise the file
-    inherits its collection's default. It is done here in Python off two bulk queries per section
-    rather than by calling `resolve_for_file()` per file, which would be three queries per file and
-    would put a hundred-odd queries on the page for a forty-file bundle.
-
-    Returns {} for Archive bundles: AMA is External-only, so an Archive bundle must not pay for any
-    of this.
+    Same logic as `resolve_for_file()`, but with bulk queries so it's not three queries per file.
+    Returns {} for Archive bundles.
     """
     if bundle.bundle_type != 'External':
         return {}
@@ -2250,27 +2132,19 @@ def _ama_completeness_by_file(bundle):
     return filled
 
 
-# ------------------------------------------------------------------------------------------------ #
-#                                       Files tree (XML labels)
-# ------------------------------------------------------------------------------------------------ #
-# The Files card used to render one flat button per label, so a data product's label sat at the same
-# level as the collection label that contains it and there was no way to tell what belonged to what.
-# The bundle directory already encodes the PDS4 hierarchy, so the tree below simply keeps the shape
-# that the flat list was throwing away:
-#
-#   <bundle>_bundle/            bundle_<name>.xml            Product_Bundle
-#   +-- document/               collection_<id>_document.xml Product_Collection
-#   |                           <doc>.xml                    Product_Document
-#   +-- <collection>/           collection_<id>_<coll>.xml   Product_Collection
-#                               <file>.xml                   Product_Observational
-#                               <file>.nc                    the data file that label describes
-#
-# Label CONTENT is deliberately NOT read here. It is fetched one label at a time by label_content(),
-# so a bundle with many products neither parses every label on page load nor ships every label's
-# full XML inside the page HTML.
+# --- Files tree (XML labels) ---
+# The tree follows the bundle directory, which has the PDS4 hierarchy:
+# 
+# <bundle>_bundle/            bundle_<name>.xml            Product_Bundle
+# +-- document/               collection_<id>_document.xml Product_Collection
+# |                           <doc>.xml                    Product_Document
+# +-- <collection>/           collection_<id>_<coll>.xml   Product_Collection
+# <file>.xml                   Product_Observational
+# <file>.nc                    the data file that label describes
+# 
+# Label content isn't read here. label_content() gets one label at a time.
 
-# Caption shown under each row in the tree. The kind is derived from the filename prefix that the
-# label builders in models.py already guarantee, not by parsing the label.
+# Caption under each row. The kind comes from the filename prefix.
 LABEL_KIND_CAPTIONS = {
     'bundle': 'Bundle Label',
     'collection': 'Collection Label',
@@ -2278,23 +2152,17 @@ LABEL_KIND_CAPTIONS = {
     'data': 'Data Product Label',
 }
 
-# Last-resort types for directories ELSA creates itself when the Product_Collection row behind one
-# is missing. The badge is meant to read as the label's own <collection_type>, so it uses the PDS4
-# enumerated spelling ("XML Schema", not "XML_Schema" or "Schema").
+# Fallback types when a directory has no Product_Collection row. Uses the PDS4 spelling.
 IMPLIED_COLLECTION_TYPES = {
     'document': 'Document',
     'context': 'Context',
     'xml_schema': 'XML Schema',
 }
 
-# Order the tree lists directories in, most structural first: the collections ELSA creates for every
-# bundle, then the user's own. Listing directories alphabetically instead put a newly added
-# collection above `document` and split the user's collections around it, which is not the order
-# anything else on the page uses.
+# Order of directories in the tree: ELSA's collections first, then the user's.
 ELSA_MANAGED_DIRS = ('document', 'context', 'xml_schema')
 
-# Kinds the Files card offers as filter chips, in the order they appear, with the plural wording
-# used on the chip itself.
+# Filter chip kinds, in order, with the plural text for the chip.
 FILTERABLE_KINDS = (
     ('collection', 'Collections'),
     ('data', 'Data'),
@@ -2351,12 +2219,9 @@ def _collection_inventory(label_path):
 
 
 def _bundle_file_tree(bundle):
-    """The bundle's generated labels, grouped by the directory that gives each one its meaning.
+    """The bundle's labels, grouped by directory.
 
-    Returns a dict with 'root_labels' (labels sitting at the bundle root, normally just the
-    Product_Bundle label), 'folders' (one per collection directory, each carrying its own labels),
-    and 'total'. A bundle whose directory is missing (failed creation, manual cleanup) yields an
-    empty tree rather than a 500.
+    Returns a dict with 'root_labels', 'folders' and 'total'. A missing directory gives an empty tree.
     """
     root_dir = bundle.directory()
     if not os.path.isdir(root_dir):
@@ -2373,28 +2238,17 @@ def _bundle_file_tree(bundle):
         collection.collection_name.lower(): collection
         for collection in collections_in_order}
 
-    # The collections ELSA creates itself (document, context, xml_schema) are Product_Collection
-    # rows rather than AdditionalCollections, and their declared type is not the stored key:
-    # xml_schema is labelled "XML Schema", and in an External bundle every collection is labelled
-    # "External". Read the type off the record so the badge matches the label on disk.
+    # ELSA's own collections are Product_Collection rows and the stored key isn't the declared type,
+    # so read the type off the record to match the label.
     product_collections_by_dir = {
         collection.collection.lower(): collection
         for collection in Product_Collection.objects.filter(bundle=bundle)}
 
-    # A data label is matched to the file it describes by stem: 00000.atmos.nc <-> 00000.atmos.xml.
-    # Keyed on file.name, not title: title keeps the name the user uploaded, while Django's storage
-    # sanitises what actually lands on disk ("a - Copy.nc" becomes "a_-_Copy.nc"), and the label is
-    # written next to the file. Matching on title alone silently lost the status of every file whose
-    # name needed sanitising. Both are registered so rows with no stored file still resolve.
-    #
-    # Keyed on the collection directory as well, because a stem is only unique inside one
-    # collection. Two collections may hold a file of the same name, and an old row left unassigned
-    # keeps its stem for the whole bundle; a stem-only lookup handed the label to whichever row had
-    # the lower pk. When that row was the unassigned one, the label came out with no netcdf_id at
-    # all, which took the AMA reading and the Edit AMA metadata button off a file that had both.
-    # The directory the label sits in is what says which collection it belongs to, so that is what
-    # decides. The stem-only map stays as a fallback for labels whose directory matches no
-    # collection record, and for files with nothing stored on disk.
+    # Match a data label to its file by stem: 00000.atmos.nc <-> 00000.atmos.xml.
+    # Use file.name since title keeps the uploaded name and storage sanitises the real one.
+    # 
+    # Also keyed on the collection directory since a stem is only unique in one collection.
+    # The stem-only map is the fallback when nothing matches.
     collection_dir_by_id = {
         collection.id: os.path.basename(collection.directory())
         for collection in collections_in_order}
@@ -2409,26 +2263,22 @@ def _bundle_file_tree(bundle):
                 netcdf_by_dir_stem.setdefault((directory, stem), netcdf_file)
                 netcdf_by_stem.setdefault(stem, netcdf_file)
 
-    # Empty for Archive bundles, which is what keeps the AMA reading off the Archive Files card:
-    # the template only renders it when the entry carries an ama_total.
+    # Empty for Archive, which keeps the AMA reading off the Archive Files card.
     ama_filled_by_file = _ama_completeness_by_file(bundle)
 
     def describe(dir_path, folder_name, filename, siblings):
         kind = _label_kind(filename, folder_name)
         entry = {
             'name': filename,
-            # Relative to the bundle directory. This is the key label_content() resolves back to
-            # an absolute path, so it must stay a path and not a bare filename: two collections can
-            # each hold a label of the same name.
+            # Relative to the bundle directory. label_content() uses this, and two collections can
+            # have a label with the same name.
             'path': '{}/{}'.format(folder_name, filename) if folder_name else filename,
             'kind': kind,
             'kind_label': LABEL_KIND_CAPTIONS[kind],
             'describes': None,
             'processed': None,
             'processing_error': '',
-            # Set only for data labels in an External bundle: the id the AMA editor is opened with,
-            # and how much of the AMA the label currently carries. None everywhere else, which is
-            # what keeps both out of the Archive Files card.
+            # Only set for External data labels: id for the AMA editor and how much AMA the label has.
             'netcdf_id': None,
             'ama_filled': None,
             'ama_total': None,
@@ -2451,8 +2301,7 @@ def _bundle_file_tree(bundle):
         if kind != 'data':
             return entry
 
-        # Naming the data file under its label is the point of the whole exercise: it is what tells
-        # the user this label is not a free-standing thing.
+        # Show the data file under its label.
         stem = os.path.splitext(filename)[0]
         for sibling in siblings:
             if sibling != filename and os.path.splitext(sibling)[0] == stem:
@@ -2467,8 +2316,7 @@ def _bundle_file_tree(bundle):
                 # The label is on disk but its data file is not; still say what it stands for.
                 entry['describes'] = netcdf_file.title
 
-            # A file with no collection has nowhere to inherit defaults from and no AMA editor to
-            # open, so it is left without a reading rather than shown as 0 of 28.
+            # No collection means no defaults and no AMA editor, so don't show a reading.
             if ama_filled_by_file and netcdf_file.collection_id is not None:
                 entry['netcdf_id'] = netcdf_file.id
                 entry['ama_filled'] = ama_filled_by_file.get(netcdf_file.id, 0)
@@ -2488,8 +2336,7 @@ def _bundle_file_tree(bundle):
             for name in siblings
             if name.lower().endswith('.xml') and os.path.isfile(os.path.join(dir_path, name))]
 
-        # The collection label heads its own group: it is the parent of everything under it, so
-        # alphabetical order putting 00000.xml above collection_....xml would read backwards.
+        # The collection label goes first in its group since it's the parent.
         labels.sort(key=lambda label: (0 if label['kind'] == 'collection' else 1, label['name']))
         return labels
 
@@ -2503,8 +2350,7 @@ def _bundle_file_tree(bundle):
         name = os.path.basename(collection.directory())
         if name in on_disk and name not in ordered_names:
             ordered_names.append(name)
-    # Anything on disk with no collection record behind it (hand-made, or a record since deleted)
-    # still belongs in the tree, after the directories whose order is known.
+    # Files with no collection record still go in the tree, after the known directories.
     ordered_names.extend(sorted(on_disk.difference(ordered_names)))
 
     folders = []
@@ -2525,10 +2371,7 @@ def _bundle_file_tree(bundle):
             'count': len(labels),
         })
 
-    # Which kinds actually occur, so the filter offers only chips that can match something. The
-    # bundle label is left out: there is exactly one and it is pinned at the top, so a chip for it
-    # would filter the tree down to something already in view. Fewer than two chips is no choice at
-    # all, so the row is dropped entirely in that case.
+    # Only offer chips that match something. Skip the bundle label, and hide the row if fewer than two.
     kinds_present = {label['kind'] for label in root_labels}
     for folder in folders:
         kinds_present.update(label['kind'] for label in folder['labels'])
@@ -2546,10 +2389,9 @@ def _bundle_file_tree(bundle):
 
 
 def _resolve_label_path(bundle, relative_path):
-    """The absolute path of a label inside this bundle, or None if it is not one.
+    """Absolute path of a label in this bundle, or None.
 
-    relative_path arrives from the browser, so it is resolved first and then checked to be inside
-    the bundle directory: a crafted '../../secrets.py' must not be readable through this view.
+    relative_path comes from the browser, so check it stays inside the bundle directory.
     """
     if not relative_path or not relative_path.lower().endswith('.xml'):
         return None
@@ -2567,11 +2409,7 @@ def _resolve_label_path(bundle, relative_path):
 
 @login_required
 def label_content(request, pk_bundle):
-    """One generated label's XML, fetched on demand by the Files tree.
-
-    Serving labels one at a time is what lets the bundle page stop embedding every label's full
-    XML in a data-content attribute and stop parsing every label on every page load.
-    """
+    """One label's XML, fetched on demand by the Files tree."""
     bundle = get_object_or_404(Bundle, pk=pk_bundle)
 
     if request.user != bundle.user:
@@ -2594,8 +2432,7 @@ def label_content(request, pk_bundle):
         response['Cache-Control'] = 'private, no-cache'
         return response
 
-    # A corrupt label (interrupted write, full disk) must report itself in the viewer rather than
-    # break the page, matching how the old inline reader handled it.
+    # A corrupt label should show up in the viewer, not break the page.
     try:
         tree = etree.parse(label_path)
         content = etree.tostring(tree, pretty_print=True, encoding='unicode')
@@ -2676,13 +2513,7 @@ def inventory_content(request, pk_bundle):
 
 @login_required
 def netcdf_file(request, pk_bundle, pk_netcdf):
-    """One uploaded NetCDF file, downloaded by its owner.
-
-    The bundle page used to link to nc_file.file.url, which names the upload area that
-    processing moves the file out of, so every link was dead: a 404 under the dev server and a
-    403 on prod, where nothing serves /uploads/. Going through a view also keeps unpublished data
-    behind the same owner check as the rest of the bundle.
-    """
+    """Download one uploaded NetCDF file, owner only."""
     bundle = get_object_or_404(Bundle, pk=pk_bundle)
     if request.user != bundle.user:
         return redirect('main:restricted_access')
@@ -2702,10 +2533,9 @@ def netcdf_file(request, pk_bundle, pk_netcdf):
 
 @login_required
 def netcdf_inspect(request, pk_bundle, pk_netcdf):
-    """What one NetCDF file holds and the PDS4 label ELSA wrote for it, for the inspector window.
+    """What a NetCDF file holds and its label, for the inspector window.
 
-    Each half fails on its own: a file xarray cannot open still shows its label, and a file with
-    no label (processing failed) still shows its contents, with the reason processing gave.
+    Each half can fail on its own, so a bad file still shows its label and the other way round.
     """
     bundle = get_object_or_404(Bundle, pk=pk_bundle)
     if request.user != bundle.user:
@@ -2755,13 +2585,7 @@ def _report_label_refresh(request, errors):
 
 
 def _report_ama_save(request, errors, summary=''):
-    """Exactly one message per save.
-
-    There used to be one per section plus one for the labels, so sharing two sections stacked
-    three full-width alerts across the top of the page. "NetCDF labels have been updated" also
-    described plumbing the user did not ask about; that the labels get rewritten is ELSA's job,
-    not news. A failure to rewrite them still is.
-    """
+    """One message per save. A failure to rewrite the labels is still reported."""
     if errors:
         messages.warning(
             request,
@@ -2779,12 +2603,7 @@ def _join_readably(items):
 
 
 def _describe_ama_save(collection, shared_sections, others_affected):
-    """Say what a save changed beyond the obvious, in the user's terms.
-
-    Only the collection-wide effect is worth a sentence: saving values that stay where they were
-    needs no explanation. Where other files did lose values of their own, say so plainly - that
-    is the one outcome a user might not have intended.
-    """
+    """Say what a save changed for other files, if anything."""
     if not shared_sections:
         return ''
 
@@ -2810,17 +2629,14 @@ def _is_panel_request(request):
 def _build_ama_forms(data, collection, netcdf_file, scope):
     """Bind or prefill the three AMA forms for one scope.
 
-    On GET for a file that has no values of its own, each section is prefilled from the collection
-    default so the user can see what the file will inherit and adjust from there rather than
-    starting from an empty form.
+    On GET for a file with no values of its own, prefill from the collection default.
     """
     forms_by_prefix = {}
     for model_class, form_class, prefix, _label in AMA_SECTIONS:
         has_override = False
         if scope == 'file':
             instance = model_class.override_for_file(netcdf_file)
-            # Whether the file holds its own values decides which scope radio starts selected, so
-            # it has to be read before the fallback to the default replaces `instance`.
+            # Read this before the fallback replaces `instance`. It decides the starting scope radio.
             has_override = instance is not None
             if data is None and instance is None:
                 instance = model_class.default_for_collection(collection)
@@ -2833,36 +2649,25 @@ def _build_ama_forms(data, collection, netcdf_file, scope):
 
 
 def _save_ama_section(request, collection, netcdf_file, model_class, form, label):
-    """Persist one section of the panel and honour its apply-to-collection checkbox.
+    """Save one section and handle its apply-to-collection checkbox.
 
-    Returns (applied_to_collection, other_files_affected). The caller needs the first to know
-    whether the other files' labels must be rebuilt, and the second to say something accurate
-    about it afterwards.
+    Returns (applied_to_collection, other_files_affected).
     """
     scope_is_file = netcdf_file is not None
 
     if scope_is_file and not form.has_any_value():
-        # Clearing every field means "go back to inheriting". An empty override would still
-        # outrank the default, silently stripping values and ignoring every later edit to it.
-        # Ticking apply-to-collection on an empty section is treated as nothing to apply rather
-        # than as an instruction to blank the collection default, which is never what a user who
-        # simply did not fill that section in wants.
+        # Clearing every field means go back to inheriting. Apply-to-collection on an empty section
+        # does nothing, so it can't blank the collection default.
         model_class.objects.filter(netcdf_file=netcdf_file).delete()
         return False, 0
 
     candidate = form.save(commit=False)
 
     if scope_is_file and not form.wants_apply_to_collection() and not form.wants_file_scope():
-        # A file's panel is pre-filled from the collection default, so submitting it unchanged
-        # posts those same values straight back. Storing them would fork the file off the default
-        # for good: later edits to the collection would stop reaching it, silently, just because
-        # the user opened the file and pressed Save. Only a genuine difference becomes an override.
-        #
-        # `wants_file_scope()` is the exception, and it is why the control is a radio rather than a
-        # checkbox. A user who explicitly picks "just this file" has said what they want, so the
-        # override is stored even when the values match the default. Without this the radio would
-        # spring back to "same for every file" on the next load whenever the two happened to agree,
-        # which reads as the setting not sticking.
+        # The file's panel is prefilled from the default, so only save an override if something
+        # changed, otherwise later collection edits stop reaching it.
+        # 
+        # `wants_file_scope()` is the exception. If the user picks "just this file" we store it anyway.
         default = model_class.default_for_collection(collection)
         default_values = default.filled_values() if default else {}
         if candidate.filled_values() == default_values:
@@ -2878,10 +2683,7 @@ def _save_ama_section(request, collection, netcdf_file, model_class, form, label
     if not form.wants_apply_to_collection():
         return False, 0
 
-    # Counted before the push, and excluding the file being edited. apply_to_collection() clears
-    # every per-file row including this one, so its own return value counts the user's own file as
-    # having been "reset" - which produced the alarming and untrue "1 file reset to the collection
-    # values" after a save where nobody else's values had been touched at all.
+    # Count before the push and leave out the file being edited.
     others_cleared = (model_class.objects
                       .filter(collection=collection, netcdf_file__isnull=False)
                       .exclude(netcdf_file=netcdf_file)
@@ -2889,8 +2691,7 @@ def _save_ama_section(request, collection, netcdf_file, model_class, form, label
 
     model_class.apply_to_collection(record, collection)
     if scope_is_file:
-        # The file's own row has been promoted to the collection default, so it should no longer
-        # carry a private copy of the same values.
+        # This file's row became the collection default, so it doesn't need its own copy.
         model_class.objects.filter(netcdf_file=netcdf_file).delete()
     return True, others_cleared
 
@@ -2905,13 +2706,11 @@ def _ama_panel_context(collection, netcdf_file, forms_by_prefix, saved=False):
             'label': label,
             'form': forms_by_prefix[prefix],
             'has_override': override is not None,
-            # Shown on the tab so nobody opens Simulation Configuration expecting four fields and
-            # finds seventeen.
+            # Field count for the tab.
             'field_count': len(model_class.ELEMENT_ORDER),
         })
 
-    # Offered by the copy-from-another-file control. Empty in collection scope and for a
-    # collection holding only this one file, which is what hides the control in both cases.
+    # For the copy-from-another-file control. Empty hides the control.
     if netcdf_file is None:
         siblings = []
     else:
@@ -2931,11 +2730,7 @@ def _ama_panel_context(collection, netcdf_file, forms_by_prefix, saved=False):
 
 
 def _render_ama_panel(request, context_dict):
-    """Return the panel alone for the inline editor, or the standalone page for a direct hit.
-
-    The standalone URLs stay usable (bookmarks, and a no-JS fallback), and both paths render the
-    same partial, so the inline panel and the full page cannot drift apart.
-    """
+    """Panel only for the inline editor, full page for a direct hit. Both use the same partial."""
     if _is_panel_request(request):
         return render(request, 'build/bundle/_ama_panel.html', context_dict)
     return render(request, 'build/bundle/netcdf_ama.html', context_dict)
@@ -2946,8 +2741,7 @@ def _handle_ama_panel_post(request, collection, netcdf_file):
     scope = 'file' if netcdf_file is not None else 'collection'
     forms_by_prefix = _build_ama_forms(request.POST, collection, netcdf_file, scope)
 
-    # Every section is validated before any is written, so a bad value in one cannot leave the
-    # others half-saved.
+    # Validate every section before writing any of them.
     if not all(form.is_valid() for form in forms_by_prefix.values()):
         return False, forms_by_prefix
 
@@ -2962,8 +2756,7 @@ def _handle_ama_panel_post(request, collection, netcdf_file):
             shared_sections.append(label)
             others_affected = max(others_affected, others)
 
-    # Editing one file only touches that file's label, unless its values were pushed out to the
-    # whole collection.
+    # Only this file's label changes, unless values were pushed to the whole collection.
     if netcdf_file is not None and not applied_to_collection:
         targets = [netcdf_file]
     else:
@@ -3016,8 +2809,7 @@ def netcdf_ama(request, pk_bundle, pk_netcdf):
     collection = netcdf_file.collection
 
     if collection is None:
-        # Predates the collection field and the backfill could not place it. Editing AMA values
-        # would have nowhere to scope them, so say so rather than failing obscurely.
+        # Older file with no collection, so there's nowhere to save AMA values. Say so.
         messages.error(
             request,
             '"{}" is not attached to a collection, so its AMA metadata cannot be edited. '
@@ -3043,12 +2835,9 @@ def netcdf_ama(request, pk_bundle, pk_netcdf):
 
 @login_required
 def assign_netcdf_collection(request, pk_bundle, pk_netcdf):
-    """Put a collection-less NetCDF file into a collection.
+    """Put a NetCDF file with no collection into a collection.
 
-    Legacy files sit in the bundle root with their label beside them. Assigning moves both into
-    the collection's directory and rebuilds the label there, so the file ends up indistinguishable
-    from one uploaded into that collection. The alternative was making the user re-upload, which
-    is unreasonable for multi-gigabyte model output.
+    Moves the file and label into the collection directory and rebuilds the label.
     """
     bundle = get_object_or_404(Bundle, pk=pk_bundle)
 
@@ -3084,8 +2873,7 @@ def assign_netcdf_collection(request, pk_bundle, pk_netcdf):
                 shutil.move(source_file, os.path.join(destination_directory, basename))
                 moved = True
 
-            # The old label describes the file at its old path, and the rebuild writes a fresh one
-            # in the collection directory, so the stale copy has to go.
+            # The rebuild writes a new label in the collection directory, so remove the old one.
             stale_label = os.path.join(source_directory, label_name)
             if source_directory != destination_directory and os.path.exists(stale_label):
                 os.remove(stale_label)
@@ -3130,15 +2918,10 @@ def netcdf_ama_reset(request, pk_bundle, pk_netcdf):
 
 @login_required
 def netcdf_ama_copy(request, pk_bundle, pk_netcdf):
-    """Copy one section's values across from a sibling file in the same collection.
+    """Copy one section's values from another file in the same collection.
 
-    The concrete counterpart to the collection default: inheritance is what keeps a whole
-    collection consistent, including files uploaded later, and this is for the case where one file
-    should look like one other file. It only ever writes a per-file override, never the default.
-
-    The source's *resolved* values are read, not its override, so copying from a file that is
-    itself following the collection default copies what that file's label actually says rather
-    than nothing at all.
+    Only writes a per-file override. Reads the source's resolved values, so copying from
+    a file that follows the default still works.
     """
     bundle = get_object_or_404(Bundle, pk=pk_bundle)
 
@@ -3158,8 +2941,7 @@ def netcdf_ama_copy(request, pk_bundle, pk_netcdf):
         for model_class, _form_class, prefix, label in AMA_SECTIONS}
     section = sections_by_prefix.get(request.POST.get('section'))
 
-    # Same collection only: values from another collection would describe a different model run,
-    # which is the one thing the collection scope exists to keep apart.
+    # Same collection only, another collection would be a different model run.
     source = NetCDFFile.objects.filter(
         pk=request.POST.get('source_netcdf'), bundle=bundle, collection=collection).first()
 
@@ -3177,8 +2959,7 @@ def netcdf_ama_copy(request, pk_bundle, pk_netcdf):
                                      netcdf_file=netcdf_file)
             record.copy_values_from(resolved)
             record.save()
-            # One message, not two: this already says what happened, so it carries the label
-            # outcome itself rather than letting the generic reporter add a second "Saved." alert.
+            # This message already covers it, so don't add a second "Saved." alert.
             errors = regenerate_netcdf_labels(bundle, [netcdf_file])
             if errors:
                 messages.warning(request, '{} copied from "{}", but the label could not be '
@@ -3208,9 +2989,11 @@ def submit_bundle_internal(request, pk_bundle):
 
     if request.user == bundle.user:
         if request.method == 'POST':
-            # Enforced here, not only by disabling the button. A disabled button is
-            # a courtesy to someone reading the page; it stops nobody who reloads,
-            # scripts the form, or has it open from before the results changed.
+            # Check here too, not just by disabling the button.
+            # 
+            # Repair first so staff who pass the gate still send clean labels. If the repair changes
+            # anything, the last check is out of date and the gate asks for a new one.
+            validate_runner.repair_before_check(bundle)
             blocked = validate_runner.submission_block(bundle, request.user)
             if blocked is not None:
                 _reason, explanation = blocked
@@ -3224,9 +3007,13 @@ def submit_bundle_internal(request, pk_bundle):
             bundle.submitted_at = timezone.now()
             bundle.save()
 
-            # No second check is started here. The gate above has just confirmed a
-            # check that matches these exact files, and that check already reads
-            # inside data files, so another run would only repeat it.
+            # Goes in the Admin Console as well as the email.
+            case = staff_hooks.open_case(
+                'submission', 'Bundle "{}"'.format(bundle.name), requester=bundle.user,
+                bundle=bundle, body='The bundle was resubmitted.' if is_resubmission else '',
+                data={'bundle_name': bundle.name, 'bundle_type': bundle.bundle_type})
+
+            # No second check here, the gate just confirmed one that matches these files.
 
             # Build email
             archive_path = bundle.directory()
@@ -3249,6 +3036,7 @@ def submit_bundle_internal(request, pk_bundle):
                 'Archive Path:\n{}\n\n'
                 'Download URL:\n{}\n\n'
                 '{}\n'
+                '{}'
             ).format(
                 'resubmitted' if is_resubmission else 'submitted',
                 bundle.name,
@@ -3259,6 +3047,7 @@ def submit_bundle_internal(request, pk_bundle):
                 archive_path,
                 download_url,
                 validation_summary_for_email(bundle),
+                '\nReview in the Admin Console:\n{}\n'.format(staff_hooks.case_url(request, case)) if case else '',
             )
 
             try:
@@ -3499,8 +3288,7 @@ def citation_information(request, pk_bundle):
             product_collections_list = bundle_label_targets(bundle)
 
             write_into_label(citation_information, product_bundle, product_collections_list)
-            # A NetCDF uploaded before the citation existed has a label with no
-            # citation in it; one uploaded after gets it at generation time.
+            # A NetCDF uploaded before the citation existed has no citation in its label.
             mirror_citation_into_data_products(bundle)
 
             print('------------- End Build Citation Information -------------------')
@@ -3566,18 +3354,11 @@ def edit_citation_information(request, pk_bundle, pk_citation_information):
                 print(' ... Closing Label ... ')
                 close_label(label.label(), label_root, label_list[2])
 
-            # Data product labels carry the citation too, and were in no write path at
-            # all: a NetCDF label could only be reached by regenerating it from the
-            # file it describes. So editing the citation updated the bundle and its
-            # collections while every data product kept the blank it was born with,
-            # PDS reported that blank, and the panel showed a citation error on a
-            # citation that had just been filled in. Copied from the bundle label
-            # rather than filled from the form, because a label written when the
-            # citation had one author cannot be filled from a form that now has three.
+            # Data labels have the citation too, so copy it from the bundle label. Can't fill from the
+            # form since the label may have been written with a different number of authors.
             mirror_citation_into_data_products(bundle)
 
-            # Back to the bundle when the edit was opened from it, otherwise on to the
-            # walkthrough step after the citation.
+            # Back to the bundle if opened from there, otherwise the next walkthrough step.
             if walkthrough.returning_to_bundle(request):
                 messages.success(request, 'Citation information updated.')
             return redirect(walkthrough.after_save(request, bundle, 'citation_information'))
@@ -3587,8 +3368,7 @@ def edit_citation_information(request, pk_bundle, pk_citation_information):
             'form_edit_citation_information': form_edit_citation_information,
             'bundle': bundle,
             'citation_information': citation_information,
-            # The same page is the walkthrough's citation step and the bundle page's
-            # editor; only the walkthrough gets the stepper.
+            # Same page for the walkthrough and the bundle page. Only the walkthrough gets the stepper.
             'walkthrough': None if walkthrough.returning_to_bundle(request)
                            else walkthrough.progress(bundle, 'citation_information'),
         }
@@ -3886,10 +3666,10 @@ def context_search_target(request, pk_bundle):
                 product_collections_list = chain(Product_Collection.objects.filter(bundle=bundle).exclude(collection='Data'), AdditionalCollections.objects.filter(bundle=bundle))
 
                 write_into_label(i, product_bundle, product_collections_list)
+                mirror_targets_into_products(bundle)
                 messages.success(request, 'Target "{}" added.'.format(i.name))
             else:
-                # Used to be dropped without a word, and from the walkthrough the user
-                # was moved on to the next step as though the target had been added.
+                # Tell the user if the target wasn't added.
                 if _inplace_form(request):
                     return _inplace_refused(form_target)
                 messages.error(request, 'No target was added: {}'.format(
@@ -3901,8 +3681,7 @@ def context_search_target(request, pk_bundle):
 
         if walkthrough.returning_to_bundle(request):
             return redirect(walkthrough.bundle_url(bundle))
-        # The walkthrough moves on from targets. Archive has no step after context
-        # products, so it lands on the bundle page as it always did.
+        # On to the next walkthrough step. Archive has none after context, so back to the bundle page.
         return redirect(walkthrough.next_url(bundle, 'context_search'))
 
 
@@ -3948,12 +3727,9 @@ def context_search_target_inv(request, pk_bundle, pk_investigation):
                 context_dict['target'] = i
                 bundle.targets.add(i)
 
-                # Deliberately NOT doing i.investigations.add(investigation) here.
-                # Investigation.targets mirrors the target list PDS publishes for
-                # that investigation. It is shared reference data behind every
-                # user's bundle, so writing one user's pick into it would drift
-                # the "related targets" grouping for everyone. The user's choice
-                # belongs to their bundle, which bundle.targets.add already records.
+                # Don't do i.investigations.add(investigation) here.
+                # Investigation.targets is the PDS target list and it's shared by everyone's bundles.
+                # The user's choice goes in bundle.targets.
 
                 # Label Fix for context products - Said
                 product_bundle = Product_Bundle.objects.get(bundle=bundle)
@@ -4346,27 +4122,21 @@ def annex_collection_document(request, pk_bundle):
         product_bundle = Product_Bundle.objects.get(bundle=bundle)
         product_collections_list = bundle_label_targets(bundle)
 
-        # The collection now has a member it did not have a moment ago, and both the
-        # inventory table and the record count in the label are derived from
-        # membership. Without this the document collection stays at records=0 with
-        # an empty inventory however many documents are added to it.
+        # The document collection has a new member, so rewrite its inventory and record count.
         rebuild_collection_inventories(bundle)
         mirror_citation_into_data_products(bundle)
+        mirror_targets_into_products(bundle)
 
         messages.success(request, 'Document "{}" added.'.format(document.document_name))
         return redirect(walkthrough.after_save(request, bundle, 'annex_collection_document', 'doc_collection'))
 
         #write_into_label(document, product_bundle, product_collections_list)
 
-    # Refused. From the bundle page's window, in place: the reasons go back to the
-    # window, which is still open with the chosen file still in it.
+    # Refused. From the bundle page's window, send the errors back to the open window.
     if _inplace_form(request):
         return _inplace_refused(annex_form_document)
 
-    # Otherwise this page is shown, and it has to know which of its two lives it is in.
-    # It used to assume the walkthrough, so a bundle-page add that was refused (a name
-    # already taken, a file missing) arrived on a walkthrough step with no way back, and
-    # correcting it there moved the user on to the next step of the walkthrough.
+    # Otherwise show this page, which has to know if it's the walkthrough or the bundle page.
     from_bundle = walkthrough.returning_to_bundle(request)
     return render(request, 'build/collections/annex_collection_document.html', {
         "pk_bundle": pk_bundle, "bundle": bundle, "annex_form_document": annex_form_document,
@@ -4409,6 +4179,7 @@ def collection_document(request, pk_bundle):
 
         rebuild_collection_inventories(bundle)
         mirror_citation_into_data_products(bundle)
+        mirror_targets_into_products(bundle)
 
         return redirect(reverse('build:collection_additional', args=[pk_bundle]))
 
@@ -4773,6 +4544,7 @@ def document(request, pk_bundle):
 
         rebuild_collection_inventories(bundle)
         mirror_citation_into_data_products(bundle)
+        mirror_targets_into_products(bundle)
 
     return render(request, 'build/document/document.html', context_dict)
 
@@ -4836,8 +4608,7 @@ def annex_product_document(request, pk_bundle, pk_product_document):
                 
             product_document.save()
 
-            # A replacement file, stored before the label is rebuilt so it names the new
-            # file; the old one is removed if the name changed.
+            # Save a replacement file before rebuilding the label. Remove the old one if the name changed.
             if annex_form_product_document.prepared_file is not None:
                 document_files.store(product_document, annex_form_product_document.prepared_file)
 
@@ -4855,10 +4626,10 @@ def annex_product_document(request, pk_bundle, pk_product_document):
             print(' ... Closing Label ... ')
             close_label(product_document.label(), label_root, label_list[2])
 
-        # An edit can change the document's identifier, which is what the inventory
-        # lists, so the table has to be rewritten here as well as on the add.
+        # An edit can change the identifier, so rewrite the inventory here too.
         rebuild_collection_inventories(bundle)
         mirror_citation_into_data_products(bundle)
+        mirror_targets_into_products(bundle)
 
         print('Changed: {}'.format(annex_form_product_document.changed_data))
 
@@ -4990,8 +4761,7 @@ def product_document(request, pk_bundle, pk_product_document):
                 
                 product_document.save()
 
-            # A replacement file, stored before the label is rebuilt so it names the new
-            # file; the old one is removed if the name changed.
+            # Save a replacement file before rebuilding the label. Remove the old one if the name changed.
             if form_product_document.prepared_file is not None:
                 document_files.store(product_document, form_product_document.prepared_file)
 
@@ -5009,12 +4779,10 @@ def product_document(request, pk_bundle, pk_product_document):
             print(' ... Closing Label ... ')
             close_label(product_document.label(), label_root, label_list[2])
 
-            # An edit can change the document's identifier, which is what the inventory
-            # lists, so the tables are rewritten before the page moves on. Inside this
-            # block because the redirect below returns: placed after it, as it was before
-            # the redirect existed, this never ran for a successful edit.
+            # An edit can change the identifier, so rewrite the inventories. Has to be before the redirect.
             rebuild_collection_inventories(bundle)
             mirror_citation_into_data_products(bundle)
+            mirror_targets_into_products(bundle)
 
             messages.success(request, "Document successfully updated.")
 
@@ -5048,10 +4816,9 @@ def product_document(request, pk_bundle, pk_product_document):
 @login_required
 @xframe_options_sameorigin
 def document_file(request, pk_bundle, pk_product_document):
-    """The file a document product is, so its owner can see what they uploaded.
+    """Show a document's file to its owner.
 
-    Shown in place (the bundle page previews it in a window, which is why this one
-    response may be framed by ELSA's own pages); ?download=1 saves it instead.
+    Shown in place, ?download=1 saves it. The bundle page previews it in a frame.
     """
     bundle = get_object_or_404(Bundle, pk=pk_bundle)
     if request.user != bundle.user:
@@ -5108,15 +4875,13 @@ def delete_product_document(request, pk_bundle, pk_product_document):
             else:
                 print('XML file not found at path: {}'.format(xml_path))
 
-        # And the document's own file, which lives next to its label. Removed while the
-        # record still says where it is, per the rule for deletes.
+        # Remove the document's file too, while the record still has its path.
         document_files.remove(product_document)
 
         # Delete the product_document from the database
         product_document.delete()
 
-        # Rewrite the inventory so it stops naming a product that is no longer there.
-        # Done after the delete, so member_lidvids() sees the new membership.
+        # Rewrite the inventory after the delete so it stops listing this product.
         for product_collection in product_collections_list:
             product_collection.build_inventory()
 
@@ -5528,6 +5293,7 @@ def delete_target(request, pk_bundle, pk_target):
     remove_from_label(target, product_bundle, product_collections_list)
 
     bundle.targets.remove(target)
+    mirror_targets_into_products(bundle)
     # target.delete()
 
     # I'm not convinced this does what I want it to do
@@ -5556,9 +5322,7 @@ def delete_citation_information(request, pk_bundle, pk_citation_information):
     product_collections_list = bundle_label_targets(bundle)
 
     remove_from_label(citation_information, product_bundle, product_collections_list)
-    # And out of the data product labels, which otherwise keep a citation the bundle
-    # no longer has: the bundle then says it has none while one of its own products
-    # still carries one.
+    # Remove it from the data labels too, so they match the bundle.
     mirror_citation_into_data_products(bundle)
     bundle.citation_information.remove(citation_information)
 
@@ -5582,8 +5346,7 @@ def delete_instrument(request, pk_bundle, pk_instrument):
     bundle.instruments.remove(instrument)
     # instrument.delete()
 
-    # Removed from the bundle page's own list: go back to it, not to a context search
-    # page the user never asked for.
+    # Back to the bundle page.
     if walkthrough.returning_to_bundle(request):
         return redirect(walkthrough.bundle_url(bundle))
 
@@ -5617,8 +5380,7 @@ def delete_instrument_host(request, pk_bundle, pk_instrument_host):
 
     bundle.instrument_hosts.remove(instrument_host)
 
-    # Removed from the bundle page's own list: go back to it, not to a context search
-    # page the user never asked for.
+    # Back to the bundle page.
     if walkthrough.returning_to_bundle(request):
         return redirect(walkthrough.bundle_url(bundle))
 
@@ -5650,8 +5412,7 @@ def delete_facility(request, pk_bundle, pk_facility):
 
     bundle.facilities.remove(facility)
 
-    # Removed from the bundle page's own list: go back to it, not to a context search
-    # page the user never asked for.
+    # Back to the bundle page.
     if walkthrough.returning_to_bundle(request):
         return redirect(walkthrough.bundle_url(bundle))
 
@@ -5707,9 +5468,7 @@ def delete_citation_information(request, pk_bundle, pk_citation_information):
         product_collections_list = bundle_label_targets(bundle)
 
         remove_from_label(citation_information, product_bundle, product_collections_list)
-        # And out of the data product labels, which otherwise keep a citation the
-        # bundle no longer has: the bundle then says it has none while one of its
-        # own products still carries one.
+        # Remove it from the data labels too, so they match the bundle.
         mirror_citation_into_data_products(bundle)
 
         citation_information.delete()
@@ -5764,8 +5523,7 @@ def delete_instrument(request, pk_bundle, pk_instrument):
     bundle.instruments.remove(instrument)
     # instrument.delete()
 
-    # Removed from the bundle page's own list: go back to it, not to a context search
-    # page the user never asked for.
+    # Back to the bundle page.
     if walkthrough.returning_to_bundle(request):
         return redirect(walkthrough.bundle_url(bundle))
 
@@ -5799,8 +5557,7 @@ def delete_instrument_host(request, pk_bundle, pk_instrument_host):
 
     bundle.instrument_hosts.remove(instrument_host)
 
-    # Removed from the bundle page's own list: go back to it, not to a context search
-    # page the user never asked for.
+    # Back to the bundle page.
     if walkthrough.returning_to_bundle(request):
         return redirect(walkthrough.bundle_url(bundle))
 
@@ -5832,8 +5589,7 @@ def delete_facility(request, pk_bundle, pk_facility):
 
     bundle.facilities.remove(facility)
 
-    # Removed from the bundle page's own list: go back to it, not to a context search
-    # page the user never asked for.
+    # Back to the bundle page.
     if walkthrough.returning_to_bundle(request):
         return redirect(walkthrough.bundle_url(bundle))
 
@@ -5867,9 +5623,7 @@ def delete_investigation(request, pk_bundle, pk_investigation):
 
     bundle.investigations.remove(investigation)
 
-    # Used to redirect to context_search_investigation, which re-renders
-    # bundle.html from a four-key context and so painted a near-empty page.
-    # Return to the bundle page, the same place delete_target goes.
+    # Back to the bundle page, same as delete_target.
     return redirect('build:bundle', pk_bundle=pk_bundle)
 
 # Directory View
@@ -5892,14 +5646,9 @@ import glob
 # to extract information from online ldd
 import urllib.request
 
-# =========================================================================================
-# Define Functions
-# =========================================================================================
-# Function to Load & Parse the  AMA LDD so that we know
-# what Coordinate Elements are permitted and in what order they are expected
-# Fetch and cache the raw LDD schema bytes so we don't hit the network on every
-# NetCDF upload. Cached for 1 hour (matches the About-page release-notes pattern).
-# A short timeout ensures a slow/unreachable PDS server fails fast instead of hanging.
+# --- Define Functions ---
+# Load and parse the AMA LDD to get the permitted Coordinate elements and their order.
+# Cached for an hour so we don't hit the network on every upload. Short timeout in case PDS is down.
 def _fetch_ldd_content(ldd_url: str) -> bytes:
     cache_key = 'ldd_schema:' + ldd_url
     xml_content = cache.get(cache_key)
@@ -5971,10 +5720,18 @@ def dataframe_to_variable_elements(variable_metadata: pd.DataFrame, NS: dict, al
                 original_metadata_field = metadata_fields_normalized[norm_field]
                 val = variable_metadata.loc[original_metadata_field, variable_name]
 
+                # pandas gives NaN when this variable doesn't have the field. All of these are optional
+                # in the AMA dictionary, so skip it instead of writing "nan".
+                if pd.isna(val) or str(val).strip().lower() == "nan":
+                    continue
+
                 # replace empty strings for units with "[]"
-                if pd.notna(val):
-                    if field == "units" and str(val).strip() == "":
-                        val = "[]"
+                if field == "units" and str(val).strip() == "":
+                    val = "[]"
+
+                # Skip other empty attributes too. WRF sets stagger="" and PDS rejects empty elements.
+                if str(val).strip() == "":
+                    continue
 
                 # Place in appropriate allowed field (not normalized version since just using field)
                 sub_elem = ET.SubElement(variable_elem, f"{{{NS['ama']}}}{field}")
@@ -6013,10 +5770,18 @@ def dataframe_to_coord_elements(coord_metadata: pd.DataFrame, NS: dict, allowed_
                 original_metadata_field = metadata_fields_normalized[norm_field]
                 val = coord_metadata.loc[original_metadata_field, coord_name]
 
+                # pandas gives NaN when this variable doesn't have the field. All of these are optional
+                # in the AMA dictionary, so skip it instead of writing "nan".
+                if pd.isna(val) or str(val).strip().lower() == "nan":
+                    continue
+
                 # replace empty strings for units with "[]"
-                if pd.notna(val):
-                    if field == "units" and str(val).strip() == "":
-                        val = "[]"
+                if field == "units" and str(val).strip() == "":
+                    val = "[]"
+
+                # Skip other empty attributes too. WRF sets stagger="" and PDS rejects empty elements.
+                if str(val).strip() == "":
+                    continue
 
                 # Place in appropriate allowed field (not normalized version since just using field)
                 sub_elem = ET.SubElement(coord_elem, f"{{{NS['ama']}}}{field}")
@@ -6031,12 +5796,8 @@ def normalize(field):
     return field.lower().replace("_", "")
 
 
-# =========================================================================================
-# AMA user-supplied classes (Model_Metadata, Simulation_Configuration, File_Description)
-# =========================================================================================
-# The harvest above can only produce ama:Variable and ama:Coordinate. Everything else in the AMA
-# area is model provenance the file does not carry, so it comes from the forms backed by the
-# ModelMetadata / SimulationConfiguration / FileDescription models.
+# --- AMA user-supplied classes (Model_Metadata, Simulation_Configuration, File_Description) ---
+# The file only gives us ama:Variable and ama:Coordinate. The rest comes from the forms.
 AMA_LDD_URL = 'https://pds.nasa.gov/pds4/ama/v1/PDS4_AMA_1O00_1300.xsd'
 
 
@@ -6049,26 +5810,16 @@ def _ama_namespaces():
         'ama': 'http://pds.nasa.gov/pds4/ama/v1',
     }
     ET.register_namespace('ama', NS['ama'])  # Needed to preserve ama prefix in output
-    # The PDS namespace is registered under the EMPTY prefix, not 'pds'. PDS4 labels carry the
-    # pds namespace as the default one (xmlns="...", bare <Identification_Area>), which is what
-    # Template_PE.xml and every other label ELSA writes look like. Registering it as 'pds' here
-    # made the stdlib serializer prefix every pds element on output (<pds:Identification_Area>),
-    # so the NetCDF labels came out looking unlike the rest of the archive.
+    # Register the PDS namespace with the empty prefix so elements don't come out as <pds:...>.
     ET.register_namespace('', NS['pds'])
     return NS
 
 
 def _label_prolog(template_path):
-    """The XML declaration and xml-model instructions that belong above the root element.
+    """The XML declaration and xml-model lines above the root element.
 
-    ElementTree keeps only the element tree, so the processing instructions sitting above
-    the root of the template are dropped on parse and cannot be serialized back out. Those
-    instructions are what point validate at the schematrons: without them the tool reports
-    warning.label.missing_schematron_spec, "No schematrons specified in the label", and then
-    silently skips every schematron rule. That is where the PDS4 value constraints live,
-    including the assertion that information_model_version matches the referenced schema, so
-    the label passes while roughly 500 checks never run. Copy them from the template verbatim
-    so the schema references stay defined in exactly one place.
+    ElementTree drops these on parse. validate needs them to find the schematrons, otherwise it
+    skips every schematron rule. Copied from the template.
     """
     prolog = ['<?xml version="1.0" encoding="UTF-8"?>']
 
@@ -6085,12 +5836,9 @@ def _label_prolog(template_path):
 
 
 def _fill_ama_container(container, values, NS, unit_attributes=None):
-    """Replace a container's children with only the non-blank values, in LDD sequence order.
+    """Replace a container's children with the non-blank values, in LDD order.
 
-    Every AMA attribute has minLength="1" in the schema, so an element with empty text is invalid.
-    The base template ships these containers pre-populated with empty elements, which means the
-    labels ELSA generated before this existed did not validate. Clearing first fixes that as a
-    side effect: a field the user left blank produces no element at all.
+    Every AMA attribute has minLength="1", so a blank field gets no element.
     """
     if container is None:
         return
@@ -6109,11 +5857,10 @@ def _fill_ama_container(container, values, NS, unit_attributes=None):
 
 
 def write_ama_user_classes(root, NS, bundle, netcdf_obj=None):
-    """Write Model_Metadata, Simulation_Configuration and File_Description into a parsed label.
+    """Write Model_Metadata, Simulation_Configuration and File_Description into a label.
 
-    Each class resolves the same way: this file's override if it has one, otherwise its
-    collection's default. The containers themselves are always kept, even when empty, because the
-    LDD declares all three as minOccurs="1" inside ama:AMA.
+    Each uses the file's override if it has one, otherwise the collection default.
+    The containers stay even when empty, the LDD has them as minOccurs="1" inside ama:AMA.
     """
     ama = root.find('.//pds:Context_Area/pds:Discipline_Area/ama:AMA', namespaces=NS)
     if ama is None:
@@ -6137,9 +5884,7 @@ def write_ama_user_classes(root, NS, bundle, netcdf_obj=None):
         NS,
         unit_attributes=SimulationConfiguration.BOUNDARY_UNIT_ATTRIBUTE)
 
-    # File_Description must stay the FIRST child of Model_Output: the LDD sequence is
-    # File_Description, Variable*, Coordinate*, and the harvest appends Variables and Coordinates
-    # after it. Filling it in place (rather than removing and re-adding it) preserves that order.
+    # File_Description has to stay first in Model_Output, so fill it in place.
     _fill_ama_container(
         ama.find('ama:Model_Output/ama:File_Description', namespaces=NS),
         resolved[AMA_FILE_DESCRIPTION_PREFIX].filled_values()
@@ -6148,16 +5893,10 @@ def write_ama_user_classes(root, NS, bundle, netcdf_obj=None):
 
 
 def regenerate_netcdf_labels(bundle, netcdf_objs=None):
-    """Rebuild the PDS4 label for already-uploaded NetCDF files.
+    """Rebuild the label for NetCDF files already uploaded.
 
-    Labels used to be written only during upload, so AMA values entered afterwards never reached
-    the XML. This rebuilds each label from the pristine template, which keeps the operation
-    idempotent - re-running it cannot double-append to the logical_identifier the way patching an
-    already-written label would.
-
-    Files whose NetCDF is not on disk are skipped rather than failed: an upload that never got
-    processed has no label to refresh, and its label is built by the upload path instead.
-    Returns a list of human-readable error strings; empty means everything succeeded.
+    Starts from the template each time, so re-running can't double up the logical_identifier.
+    Files not on disk are skipped. Returns a list of error strings, empty means all good.
     """
     NS = _ama_namespaces()
 
@@ -6171,8 +5910,7 @@ def regenerate_netcdf_labels(bundle, netcdf_objs=None):
         allowed_variable_fields = get_allowed_variable_fields_from_ldd_url(AMA_LDD_URL, NS)
         allowed_coord_fields = get_allowed_coord_fields_from_ldd_url(AMA_LDD_URL, NS)
     except Exception as e:
-        # A PDS outage must not lose the user's form input - the values are already saved, and the
-        # next regeneration will pick them up.
+        # The values are already saved, so a PDS outage doesn't lose them. Next rebuild picks them up.
         print('regenerate_netcdf_labels: could not load LDD: {}'.format(e))
         return ['Could not reach the PDS data dictionary, so labels were not refreshed: {}'.format(e)]
 
@@ -6183,9 +5921,7 @@ def regenerate_netcdf_labels(bundle, netcdf_objs=None):
         try:
             if not nc_obj.file:
                 continue
-            # Uploads are filed under their collection's directory, so that is where the NetCDF
-            # and its label live. NetCDFFile.directory() falls back to the bundle root for rows
-            # that predate the collection field.
+            # NetCDF and label are in the collection directory. directory() falls back to the bundle root for older rows.
             collection_directory = nc_obj.directory()
             nc_path = os.path.join(collection_directory, os.path.basename(nc_obj.file.name))
             if not os.path.exists(nc_path):
@@ -6207,9 +5943,7 @@ def regenerate_netcdf_labels(bundle, netcdf_objs=None):
             nc_obj.save(update_fields=['processed', 'processing_error'])
             errors.append('{}: {}'.format(nc_obj.title, e))
 
-    # Membership changed, so every collection inventory in this bundle is rewritten.
-    # build_inventory() only lists files whose label was written successfully, so a
-    # failed harvest drops out of the inventory rather than pointing at a missing label.
+    # Rewrite the inventories. Only files with a good label get listed.
     for additional_collection in AdditionalCollections.objects.filter(bundle=bundle):
         additional_collection.build_inventory()
 
@@ -6217,22 +5951,15 @@ def regenerate_netcdf_labels(bundle, netcdf_objs=None):
 
 
 def variable_coord_to_product(bundle, netcdf_objs, collection_directory):
-    """Extract metadata from each uploaded NetCDF file and generate its PDS4 XML label.
+    """Extract metadata from each uploaded NetCDF and generate its label.
 
-    Processes ONLY the NetCDFFile objects passed in (scoped to this bundle) rather than
-    every .nc file on disk. Each object's `processed` / `processing_error` fields are
-    updated so the UI can report status. Returns a list of human-readable error strings
-    for files that failed; an empty list means everything succeeded.
+    Only handles the NetCDFFile objects passed in, and updates `processed` / `processing_error`.
+    Returns a list of error strings, empty means all good.
     """
-    # =========================================================================================
-    # Set Up XML Namespace
-    # =========================================================================================
+    # --- Set Up XML Namespace ---
     NS = _ama_namespaces()
 
-    # =========================================================================================
-    # Load Online Local Data Dictionary & Extract Permitted Variable/Coordinate Fields
-    # (cached for an hour; see _fetch_ldd_content)
-    # =========================================================================================
+    # --- Load Online Local Data Dictionary & Extract Permitted Variable/Coordinate Fields (cached for an hour) ---
     allowed_variable_fields = get_allowed_variable_fields_from_ldd_url(AMA_LDD_URL, NS)
     allowed_coord_fields = get_allowed_coord_fields_from_ldd_url(AMA_LDD_URL, NS)
 
@@ -6245,9 +5972,7 @@ def variable_coord_to_product(bundle, netcdf_objs, collection_directory):
             if not os.path.exists(nc_path):
                 raise FileNotFoundError('Uploaded file is missing from disk.')
 
-            # shutil.move, not os.rename: the upload area and the archive can sit on different
-            # filesystems (a dedicated archive volume is a normal deployment), and os.rename
-            # fails across devices with EXDEV, which would break every upload.
+            # shutil.move, not os.rename, since uploads and the archive can be on different filesystems.
             destination = os.path.join(collection_directory, os.path.basename(nc_obj.file.path))
             shutil.move(nc_path, destination)
             nc_path = destination
@@ -6267,9 +5992,7 @@ def variable_coord_to_product(bundle, netcdf_objs, collection_directory):
             nc_obj.save(update_fields=['processed', 'processing_error'])
             errors.append('{}: {}'.format(nc_obj.title, e))
 
-    # Membership changed, so every collection inventory in this bundle is rewritten.
-    # build_inventory() only lists files whose label was written successfully, so a
-    # failed harvest drops out of the inventory rather than pointing at a missing label.
+    # Rewrite the inventories. Only files with a good label get listed.
     for additional_collection in AdditionalCollections.objects.filter(bundle=bundle):
         additional_collection.build_inventory()
 
@@ -6278,16 +6001,11 @@ def variable_coord_to_product(bundle, netcdf_objs, collection_directory):
 
 def _process_single_netcdf(bundle, nc_path, collection_directory, NS, allowed_variable_fields, allowed_coord_fields,
                            netcdf_obj=None):
-    """Generate the PDS4 XML label for a single NetCDF file. Raises on failure.
+    """Generate the label for one NetCDF file. Raises on failure.
 
-    `netcdf_obj` is the NetCDFFile record for this path, when known. It is what lets the AMA
-    Simulation_Configuration and File_Description resolve a per-file override instead of the
-    bundle default, so regeneration must always pass it.
+    Pass `netcdf_obj` so per-file AMA overrides get used.
     """
-    # Define output file name. Files may be uploaded WITHOUT a .nc extension
-    # (validation is by magic bytes, not extension), so strip a trailing .nc only
-    # if present and always append .xml. This avoids producing extensionless labels
-    # for extensionless uploads (e.g. 00000.atmos_average → 00000.atmos_average.xml).
+    # Output file name. Uploads may have no .nc extension, so only strip a trailing .nc and add .xml.
     base = os.path.basename(nc_path)
     nc_filename = base  # e.g., 00000.atmos_average.nc OR 00000.atmos_average
     nc_name = base[:-3] if base.endswith('.nc') else base  # e.g., 00000.atmos_average
@@ -6298,9 +6016,7 @@ def _process_single_netcdf(bundle, nc_path, collection_directory, NS, allowed_va
     output_dir = collection_directory
     output_path = os.path.join(output_dir, xml_name)
 
-    # =====================================================================================
-    # 1. Open NetCDF File and Extract Variable & Coordinate Metadata into a Pandas Table
-    # =====================================================================================
+    # --- 1. Open NetCDF File and Extract Variable & Coordinate Metadata into a Pandas Table ---
     DS = xr.open_dataset(nc_path, decode_times=False, engine='netcdf4')
 
     # variable metadata
@@ -6348,9 +6064,7 @@ def _process_single_netcdf(bundle, nc_path, collection_directory, NS, allowed_va
     # Create a DataFrame from the metadata dictionary
     coord_metadata= pd.DataFrame(metadata)
 
-    # =====================================================================================
-    # 2. Load & Parse Template XML
-    # =====================================================================================
+    # --- 2. Load & Parse Template XML ---
     source_file = os.path.join(PDS4_LABEL_TEMPLATE_DIRECTORY, 'base_templates')
     source_file = os.path.join(source_file, 'Template_PE.xml') # May have to change to Template_PE_document.xml
     tree = ET.parse(source_file)
@@ -6358,34 +6072,16 @@ def _process_single_netcdf(bundle, nc_path, collection_directory, NS, allowed_va
 
 
 
-    # =====================================================================================
-    # 3. Locate <Identification_Area> and Insert <pds:logical_identifier>, <pds:title>
-    # =====================================================================================
+    # --- 3. Locate <Identification_Area> and Insert <pds:logical_identifier>, <pds:title> ---
     # Find the Identification_Area
     id_area = root.find(".//pds:Identification_Area", namespaces=NS)
 
     if id_area is not None:
 
-        # Build the identifier from the bundle rather than from the template.
-        #
-        # This used to append the collection and file name onto whatever the template
-        # already said, and the template says "urn:nasa:pds-ama:sample_bundle". So
-        # every NetCDF product ELSA has written carries sample_bundle where the real
-        # bundle id belongs: unfindable, and not the product the bundle's own
-        # Bundle_Member_Entry and collection inventory point at. PDS reports the
-        # member as missing, which is a confusing way to be told the label is wrong.
-        #
-        # Composed the same way AdditionalCollections.member_lidvids() composes it,
-        # so the inventory and the label it names cannot disagree.
-        # (must be prefixed: unprefixed find() misses default-namespace elements
-        # and the else branch would append a duplicate logical_identifier)
-        # pds_lid_segment, not .lower(): PDS4 restricts a LID segment to lowercase
-        # letters, digits, hyphen, dot and underscore, and neither a collection
-        # directory nor an uploaded file name is bound by that. A file copied on
-        # Windows arrives as "... - Copy.nc" and produced a LID with a capital C in
-        # it, which PDS rejected and which the user had no way to act on. Applied on
-        # both segments, matching AdditionalCollections.member_lidvids exactly, so
-        # the inventory and this label cannot name the product differently.
+        # Build the identifier from the bundle, not the template, which says sample_bundle.
+        # Same format as AdditionalCollections.member_lidvids() so the inventory matches.
+        # Needs the namespace prefix or find() misses the element and we'd add a second one.
+        # Use pds_lid_segment, not .lower(), since names can have characters PDS4 doesn't allow in a LID.
         product_lid = "{}:{}:{}".format(bundle.lid(),
                                         pds_lid_segment(subdir_name),
                                         pds_lid_segment(nc_filename))
@@ -6400,12 +6096,8 @@ def _process_single_netcdf(bundle, nc_path, collection_directory, NS, allowed_va
             title_elem = ET.SubElement(id_area, f"{{{NS['pds']}}}title")
         title_elem.text = f"{nc_name}"
 
-    # =====================================================================================
-    # 4. Locate <ama:Model_Output> inside <Discipline_Area>/<ama:AMA>
-    # =====================================================================================
-    # Context_Area and Discipline_Area live in the default (pds) namespace in the
-    # template, so they must be prefixed too — unprefixed names only match
-    # no-namespace elements in ElementTree and the lookup would return None.
+    # --- 4. Locate <ama:Model_Output> inside <Discipline_Area>/<ama:AMA> ---
+    # These are in the default (pds) namespace, so they need the prefix too.
     model_output = root.find(
         ".//pds:Context_Area/pds:Discipline_Area/ama:AMA/ama:Model_Output",
         namespaces=NS
@@ -6415,9 +6107,7 @@ def _process_single_netcdf(bundle, nc_path, collection_directory, NS, allowed_va
         print("Could not find <ama:Model_Output> under <ama:AMA> in template.")
         raise ValueError("Could not find <ama:Model_Output> under <ama:AMA> in template.")
 
-    # =====================================================================================
-    # 5. Insert New Variable & Coordinate Metadata
-    # =====================================================================================
+    # --- 5. Insert New Variable & Coordinate Metadata ---
     variable_elements = dataframe_to_variable_elements(variable_metadata, NS, allowed_variable_fields)
 
     for elem in variable_elements:
@@ -6428,16 +6118,11 @@ def _process_single_netcdf(bundle, nc_path, collection_directory, NS, allowed_va
     for elem in coord_elements:
         model_output.append(elem)
 
-    # =====================================================================================
-    # 5b. Fill the AMA classes the NetCDF cannot supply (user-entered via the AMA forms)
-    # =====================================================================================
-    # Runs after the Variable/Coordinate append so File_Description keeps its place as the first
-    # child of Model_Output, matching the LDD sequence.
+    # --- 5b. Fill the AMA classes the NetCDF cannot supply (from the AMA forms) ---
+    # After the Variable/Coordinate append so File_Description stays first in Model_Output.
     write_ama_user_classes(root, NS, bundle, netcdf_obj=netcdf_obj)
 
-    # =====================================================================================
-    # 6. Fill <File_Area_External> with the Actual Uploaded File's Info
-    # =====================================================================================
+    # --- 6. Fill <File_Area_External> with the Actual Uploaded File's Info ---
     file_elem = root.find(".//pds:File_Area_External/pds:File", namespaces=NS)
     if file_elem is not None:
         file_name_elem = file_elem.find("pds:file_name", namespaces=NS)
@@ -6455,18 +6140,15 @@ def _process_single_netcdf(bundle, nc_path, collection_directory, NS, allowed_va
     if encoded_name_elem is not None:
         encoded_name_elem.text = nc_name
 
-    # =====================================================================================
-    # 7. Write to Output File
-    # =====================================================================================
+    # --- 7. Write to Output File ---
     with open(output_path, "w", encoding="utf-8") as f:
         f.write(_label_prolog(source_file))
         f.write(ET.tostring(root, encoding='unicode'))
 
     update = Version()
 
-    # Stamp the PDS4 version into the label just written (in place). The source must
-    # be output_path, not the template — version_update_old copies its source over
-    # its destination, so passing the template here blanks the populated label.
+    # Stamp the PDS4 version into the label. Source has to be output_path, not the template,
+    # since version_update_old copies its source over its destination.
     update.version_update_old(bundle.version, output_path, output_path)
 
 
@@ -6683,20 +6365,14 @@ def submit_feedback(request):
         
 
 
-# ------------------------------------------------------------------------------------------------ #
-#                                    PDS validation
-# ------------------------------------------------------------------------------------------------ #
+# --- PDS validation ---
 
 
 @login_required
 def start_validation(request, pk_bundle):
-    """Queue a validation run for a bundle and report where it got to.
+    """Queue a validation run and report its state. POST only.
 
-    POST only: it starts work. Answers with the run's state rather than a redirect,
-    so the page that asked can go straight into polling without a round trip.
-
-    An already-running validation is returned instead of a second one being started;
-    see validate_runner.start.
+    If one is already running, that one is returned (see validate_runner.start).
     """
     bundle = get_object_or_404(Bundle, pk=pk_bundle)
 
@@ -6717,12 +6393,9 @@ def start_validation(request, pk_bundle):
 
 @login_required
 def validation_status(request, pk_bundle):
-    """The current state of this bundle's most recent validation, for polling.
+    """Current state of this bundle's latest validation, for polling. No side effects.
 
-    Deliberately small and side-effect free: it is hit every couple of seconds while
-    a run is in flight. 404 rather than 500 on a bundle that is gone, because a user
-    deleting a bundle with the panel open is ordinary, and a polled endpoint that
-    raises fills the log with something nobody needs to read.
+    Gives a 404 for a deleted bundle, which is normal if the panel was left open.
     """
     bundle = get_object_or_404(Bundle, pk=pk_bundle)
 
@@ -6733,9 +6406,7 @@ def validation_status(request, pk_bundle):
     tier = request.GET.get('tier') or None
     validation_run = validate_runner.latest_run_for(bundle, tier)
 
-    # Whether the Review & Submit window should start a check when it opens: never
-    # checked, or changed since. Decided here rather than in the page so the page
-    # and the background check follow one rule.
+    # Whether Review & Submit should start a check: never checked, or changed since.
     needs = validate_runner.needs_check(bundle)
 
     if validation_run is None:
@@ -6748,22 +6419,9 @@ def validation_status(request, pk_bundle):
 
 @login_required
 def validation_panel(request, pk_bundle):
-    """The validation panel's contents, rendered fresh, for the page to swap in.
+    """The panel's contents, rendered fresh for the page to swap in.
 
-    When a check finishes the panel used to say "Results updated. Refresh to see the
-    details", which asked someone to reload a page in order to see a result the
-    server already had.
-
-    A page reload is not the fix. This used to reload, and it broke NetCDF uploads:
-    a check starts by itself on page load, the upload posts over XMLHttpRequest, and
-    a reload firing mid-upload tore the request down with the progress bar still
-    saying "Processing". Nothing the user did was wrong and nothing told them what
-    had happened.
-
-    So the page fetches this instead and replaces the panel's contents in place.
-    Nothing else on the page is disturbed, an upload in flight stays in flight, and
-    the rendering happens once, here, rather than being duplicated in JavaScript
-    where it would drift from the template.
+    Don't reload the page instead. A reload in the middle of a NetCDF upload kills the upload.
     """
     bundle = get_object_or_404(Bundle, pk=pk_bundle)
 
@@ -6773,19 +6431,13 @@ def validation_panel(request, pk_bundle):
 
     context = validation_context(bundle, request.user)
     context['bundle'] = bundle
-    # Also carries the Review & Submit window's verdict band and Submit button, which
-    # depend on the same result and used to be left behind when the panel refreshed.
+    # Also has the Review & Submit verdict band and button, which use the same result.
     context['status_dict'] = _submission_status(bundle)
     return render(request, 'build/validation/fragments.html', context)
 
 
 def _validation_state(validation_run):
-    """What a polling client needs, and nothing it does not.
-
-    Findings are summarised rather than sent in full: a poll every two seconds does
-    not need the whole list, and the Phase 2 panel will render them from a page load
-    once the run is complete.
-    """
+    """What a polling client needs. Findings are summarised since this runs every two seconds."""
     return {
         'id': validation_run.pk,
         'status': validation_run.status,
@@ -6798,40 +6450,26 @@ def _validation_state(validation_run):
         'products_total': validation_run.products_total,
         'errors': validation_run.error_count,
         'warnings': validation_run.warning_count,
-        # The translated count, which is what the Bundle Components badge shows. The
-        # raw error count is a different and much larger number (43 against 3 on a
-        # real AMA bundle), so sending only that would make the badge jump the moment
-        # a check finished, from what the page rendered to what the poll reported.
-        #
-        # ELSA's own requirements are counted too, exactly as the page counts them on
-        # load. Without them a clean check turned the badge to "Passed" on a bundle
-        # with no target, while the list inside said a target was missing, and only a
-        # reload brought back "1 to fix". PDS cannot see a missing target, so its
-        # silence is not a pass.
+        # Translated count, same as the Bundle Components badge. The raw error count is much larger.
+        # ELSA's own requirements are counted too, since PDS can't see a missing target.
         'blocking': validate_rules.summarise(
             validation_run.findings or [],
-            preflight.requirements(validation_run.bundle))['blocking'],
+            preflight.requirements(validation_run.bundle)
+            + validate_rules.unresolved_items(validation_run.findings, validation_run.bundle)
+        )['blocking'],
         'finished': validation_run.status in (
             ValidationRun.STATUS_DONE, ValidationRun.STATUS_FAILED),
-        # A completed run whose bundle has since changed still describes a real
-        # bundle, just not this one. The client has to be able to say so.
+        # A finished run whose bundle has since changed, so the client can say it's out of date.
         'stale': validation_run.is_stale(),
         'failure_reason': validation_run.failure_reason,
-        # Refused because the server was already running its limit. Never saved, so
-        # it has no id; the page waits and asks again rather than reporting a result.
+        # Refused because the server is at its limit. Not saved, so no id. The page tries again.
         'busy': validation_run.pk is None,
     }
 
 
 @login_required
 def validation_report(request, pk_run):
-    """Staff view of one run: every finding, grouped, with the raw report available.
-
-    Staff-only on purpose. In this phase nothing is translated for data providers
-    yet, and raw validate output shown to someone who does not read PDS4 is worse
-    than showing them nothing - which is exactly the mistake this phase exists to
-    avoid making at scale.
-    """
+    """Staff view of one run: every finding, grouped, with the raw report."""
     if not request.user.is_staff:
         print('unauthorized user attempting to access a restricted area.')
         return redirect('main:restricted_access')
@@ -6857,20 +6495,14 @@ def validation_report(request, pk_run):
 
 @login_required
 def validation_runs(request):
-    """Staff list of recent runs across every bundle.
-
-    This is the phase's actual deliverable: what findings occur in the wild, so the
-    Phase 2 rule table is built from observation rather than from the one bundle
-    that happened to be at hand.
-    """
+    """Staff list of recent runs across all bundles."""
     if not request.user.is_staff:
         print('unauthorized user attempting to access a restricted area.')
         return redirect('main:restricted_access')
 
     runs = ValidationRun.objects.select_related('bundle', 'bundle__user')[:100]
 
-    # Aggregated across every stored run, which is the view worth having: a message
-    # type that shows up on most bundles is the first thing worth translating.
+    # Across all stored runs, to see which message types come up the most.
     type_counts = {}
     for validation_run in ValidationRun.objects.exclude(findings=None):
         for finding_type, count in validate_report.summarise_types(

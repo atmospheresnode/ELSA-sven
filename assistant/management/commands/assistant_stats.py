@@ -1,23 +1,13 @@
-"""Usage and quality report for the assistant; closes the ratings loop.
+"""Usage and quality report for the assistant.
 
     python3 manage.py assistant_stats             # last 7 days
     python3 manage.py assistant_stats --days 30
-    python3 manage.py assistant_stats --email     # also email staff, if anything was thumbed down
+    python3 manage.py assistant_stats --email     # also email staff if anything was thumbed down
     python3 manage.py assistant_stats --export-evals drafts.json
 
-Prints volume, model mix, latency percentiles, error breakdown, ratings, and
-the actual thumbs-down exchanges so they can be triaged into knowledge-chunk
-updates or new eval cases. A thumbs-down counts in the window it was *rated*
-in, so an old reply voted down this week still shows up.
-
---email is meant for a weekly cron (see assistant/README.md). It sends nothing
-when there is no thumbs-down, so an empty week costs nobody an email.
-
---export-evals writes each thumbs-down question as a draft eval case, with
-must_include left empty for a person to fill in. assistant_eval refuses a case
-with nothing to check, so a draft copied into evals.json unfinished cannot pass
-by accident. The drafts hold users' own words: reword anything personal before
-committing them.
+--email is for a weekly cron (see assistant/README.md). Nothing is sent if there's no thumbs-down.
+--export-evals writes each thumbs-down question as a draft eval case. The drafts have
+users' own words, so reword anything personal before committing.
 """
 import json
 from collections import Counter
@@ -72,8 +62,7 @@ def _normalize(question):
 
 
 def thumbs_down_since(since):
-    """Thumbs-down replies rated since `since`. Ratings from before rated_at
-    existed have no timestamp and fall back to when the reply was written."""
+    """Thumbs-down replies rated since `since`. Older ratings with no timestamp use the reply time."""
     return (Message.objects
             .filter(role='model', rating=-1)
             .filter(Q(rated_at__gte=since) | Q(rated_at__isnull=True, created_at__gte=since))
@@ -82,8 +71,7 @@ def thumbs_down_since(since):
 
 
 def exchange(reply):
-    """The reply with the turns that led to it: the question it answered, and
-    the exchange before that when the question was a follow-up."""
+    """The reply with its question, and the exchange before it if it was a follow-up."""
     earlier = list(reply.conversation.messages
                    .filter(created_at__lt=reply.created_at)
                    .order_by('-created_at', '-pk')[:3])
@@ -114,8 +102,7 @@ LOGO_CID = 'elsa_logo'
 
 
 def _logo():
-    """ELSA's inline email logo (shared with the sign-in emails), or None: a
-    missing logo must never stop the digest going out."""
+    """ELSA's inline email logo, or None. A missing logo shouldn't stop the digest."""
     try:
         from friends.views import _elsa_logo_attachment
         return _elsa_logo_attachment()
@@ -124,8 +111,7 @@ def _logo():
 
 
 def digest_context(rows, down_qs, since, replies, ups):
-    """Everything the digest templates show. Counts cover every thumbs-down in
-    the window, not only the rows listed in full."""
+    """Everything the digest templates show. Counts cover every thumbs-down in the window."""
     total = down_qs.count()
     by_reason = Counter(down_qs.values_list('rating_reason', flat=True))
     reasons = [dict(REASON_STYLES[key], count=by_reason[key])
@@ -229,8 +215,7 @@ class Command(BaseCommand):
         logo = _logo()
         context['logo_cid'] = LOGO_CID if logo else ''
         total = context['total']
-        # Multipart like ELSA's other emails: clients that refuse HTML still get
-        # a readable plain-text digest.
+        # Multipart so clients that refuse HTML still get plain text.
         email = EmailMultiAlternatives(
             subject=f'[ELSA Assistant] {total} thumbs-down answer{"" if total == 1 else "s"} to review',
             body=render_to_string('assistant/email/weekly_digest.txt', context),

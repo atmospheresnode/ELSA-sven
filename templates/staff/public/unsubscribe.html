@@ -1,0 +1,32 @@
+{% extends 'base-derk.html' %}
+{% load static %}
+{% block title %}Email from ELSA{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/staff.css' %}">{% endblock %}
+{% block body_block %}
+<div class="staff-gate">
+    <div class="staff-card">
+        {% if invalid %}
+        <div class="staff-card-head"><h2>This link does not work</h2></div>
+        <p class="mb-0">It may have been copied incompletely. You can choose which email you get from ELSA on your Account page after signing in.</p>
+        {% else %}
+        <div class="staff-card-head"><h2>News and updates from ELSA</h2><p>For {{ person.username }}</p></div>
+        {% if changed == 'unsubscribed' %}
+        <p class="staff-success" role="status">Done. You will not get news and updates from ELSA by email any more.</p>
+        {% elif changed == 'subscribed' %}
+        <p class="staff-success" role="status">Done. News and updates will reach you by email again.</p>
+        {% endif %}
+        <p>{% if wants_news %}You get news and updates by email: a few messages a year about ELSA and the PDS versions your bundles use.{% else %}You do not get news and updates by email.{% endif %}</p>
+        <p class="staff-muted small">Either way, ELSA still emails you about your account and its security, and about requests and bundle reviews you are part of (you can change that on your Account page).</p>
+        <form method="post">
+            {% if wants_news %}
+            <input type="hidden" name="action" value="unsubscribe">
+            <button type="submit" class="btn staff-btn-primary">Unsubscribe from news and updates</button>
+            {% else %}
+            <input type="hidden" name="action" value="subscribe">
+            <button type="submit" class="btn staff-btn-primary">Get news and updates again</button>
+            {% endif %}
+        </form>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,22 @@
+{% extends 'staff/base.html' %}
+
+{% block console %}
+<h1 class="staff-title">Console settings</h1>
+<p class="staff-subtitle">Team-wide rules for the Admin Console. Every change is written to the audit log.</p>
+<section class="staff-card" style="max-width: 44rem;">
+    <form method="post" data-once>
+        {% csrf_token %}
+        <div class="form-check py-2">
+            <input class="form-check-input" type="checkbox" name="two_person_acceptance" value="1" id="s-two" {% if values.two_person_acceptance %}checked{% endif %}>
+            <label class="form-check-label" for="s-two"><strong>Two reviewers to accept a bundle</strong><br><span class="staff-muted">One reviewer proposes Accepted; a different one confirms it.</span></label>
+        </div>
+        <label class="form-label fw-semibold mt-2" for="s-reply">First reply target (working days)</label>
+        <input type="number" class="form-control" id="s-reply" name="first_reply_days" min="1" max="30" value="{{ values.first_reply_days }}" style="max-width: 8rem;">
+        <label class="form-label fw-semibold mt-3" for="s-stalled">A bundle counts as stalled after (days)</label>
+        <input type="number" class="form-control" id="s-stalled" name="stalled_days" min="7" max="365" value="{{ values.stalled_days }}" style="max-width: 8rem;">
+        <label class="form-label fw-semibold mt-3" for="s-stuck">Pipeline marks a bundle as stuck after (days in one stage)</label>
+        <input type="number" class="form-control" id="s-stuck" name="pipeline_stuck_days" min="3" max="365" value="{{ values.pipeline_stuck_days }}" style="max-width: 8rem;">
+        <button class="btn btn-sm staff-btn-primary mt-3">Save settings</button>
+    </form>
+</section>
+{% endblock %}

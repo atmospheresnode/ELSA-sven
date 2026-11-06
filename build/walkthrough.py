@@ -1,17 +1,11 @@
-"""The guided setup, in one place.
+"""The guided setup.
 
-The walkthrough used to be a page per step. It is now one page, the setup page
-(templates/build/setup/setup.html), that shows one step at a time and saves each
-step in place. The order of the steps, which ones are required, and what counts as
-done all live here and nowhere else; the setup page and its finish checklist read
-them from here. The setup is offered only when a bundle is created: the bundle page
-does everything it does, so it does not link back to it.
+The setup page (templates/build/setup/setup.html) shows one step at a time. Step order, what's
+required and what counts as done all live here.
 
-The views that used to be walkthrough pages still exist, because the bundle page
-uses them for its own edits. A request that came from the bundle page says so
-(``source=bundle`` on the post, or ``?next=bundle`` on the URL) and goes back there.
-Anything else is the walkthrough: a GET is sent to that step on the setup page
-(moved_to_setup), and a save moves on to the next step there (after_save).
+Old walkthrough views are still used by the bundle page. A request from there says so
+(``source=bundle`` or ``?next=bundle``) and goes back. Anything else goes to the setup page
+(moved_to_setup, after_save).
 """
 
 import functools
@@ -20,9 +14,7 @@ from django.shortcuts import redirect
 from django.urls import reverse
 
 
-# A step counts as done when the bundle holds what it asks for, not because the user
-# has gone past it: steps can be skipped and taken in any order, and a tick on a
-# skipped step said something was there when it was not.
+# Done means the bundle has it, since steps can be skipped or done in any order.
 def _has_alias(bundle):
     return bundle.alias_set.exists()
 
@@ -36,15 +28,13 @@ def _has_citation(bundle):
 
 
 def _has_author(bundle):
-    # Imported here: preflight imports nothing from this module, but keeping the
-    # dependency one-way at import time avoids a cycle if it ever does.
+    # Imported here to avoid a circular import.
     from build import preflight
     return preflight._has_author(bundle)
 
 
 def _has_complete_citation(bundle):
-    # An External citation without an author is still missing something the bundle
-    # cannot be submitted without (build.preflight), so the step is not done.
+    # An External citation needs an author (build.preflight), so it isn't done without one.
     if not _has_citation(bundle):
         return False
     return bundle.bundle_type != 'External' or _has_author(bundle)
@@ -68,11 +58,10 @@ def _has_processed_netcdf(bundle):
 
 
 class Step(object):
-    """One step of the setup page.
+    """One setup step.
 
-    ``key`` is the step's address on the setup page (``#citation``). ``legacy`` is
-    the name the old walkthrough views still pass to after_save() and progress(), so
-    a save made through one of them continues on the right step here.
+    ``key`` is its address on the page (``#citation``). ``legacy`` is the name the old views pass
+    to after_save() and progress().
     """
 
     def __init__(self, key, label, required, done, legacy=None):
@@ -85,21 +74,18 @@ class Step(object):
 
 STEPS = {
     'Archive': [
-        # No modification history step: ELSA writes the first entry when the bundle is
-        # created (views._create_initial_modification_history). Later entries describe
-        # later versions, which a bundle being set up does not have yet.
+        # No modification history step, ELSA writes the first entry at creation.
         Step('alias', 'Alias', False, _has_alias, legacy='alias'),
         Step('citation', 'Citation', True, _has_complete_citation, legacy='citation_information'),
         Step('investigation', 'Investigation', False, _has_investigation, legacy='context_search'),
-        # New: an Archive bundle cannot be submitted without a target (build.preflight),
-        # and the old walkthrough never asked for one.
+        # Archive bundles need a target too (build.preflight).
         Step('targets', 'Targets', True, _has_target),
     ],
     'External': [
         # No modification history step here either; see Archive.
         Step('citation', 'Citation', True, _has_complete_citation, legacy='citation_information'),
         Step('targets', 'Targets', True, _has_target, legacy='context_search'),
-        Step('documents', 'Documents', False, _has_document, legacy='annex_collection_document'),
+        Step('documents', 'Documents', True, _has_document, legacy='annex_collection_document'),
         Step('data', 'Data', True, _has_processed_netcdf, legacy='collection_additional'),
     ],
 }
@@ -137,8 +123,7 @@ def setup_url(bundle, step=''):
 
 
 def next_url(bundle, step):
-    """The setup step after ``step``, the finish step after the last one, or the
-    bundle page for a step this bundle type does not have."""
+    """The step after ``step``, finish after the last, or the bundle page if this type doesn't have it."""
     index, _ = _find(bundle, step)
     if index is None:
         return bundle_url(bundle)
@@ -155,12 +140,7 @@ def after_save(request, bundle, step, anchor=''):
 
 
 def moved_to_setup(step):
-    """Send a walkthrough GET of an old step page to that step on the setup page.
-
-    The view still answers everything else: its posts, and any request that came
-    from the bundle page, which uses these views for its own edits. A user who does
-    not own the bundle is left to the view, which turns them away.
-    """
+    """Send a GET of an old step page to that step on the setup page. Posts and bundle page requests stay."""
     def decorator(view):
         @functools.wraps(view)
         def wrapper(request, *args, **kwargs):
@@ -178,8 +158,7 @@ def moved_to_setup(step):
 
 
 def chip(bundle, step, done=None):
-    """The status shown beside a step: Added, Missing or Optional, as on the bundle
-    page's Bundle Components card, with a count where one says more."""
+    """Status beside a step: Added, Missing or Optional, same as Bundle Components."""
     done = step.done(bundle) if done is None else done
     if done:
         counts = {
@@ -200,6 +179,20 @@ def chip(bundle, step, done=None):
     if step.required:
         return {'text': 'Missing', 'tone': 'missing'}
     return {'text': 'Optional', 'tone': 'optional'}
+
+
+def is_untouched(bundle):
+    """True if nothing was added since the bundle was created, so it can be discarded."""
+    if bundle.submitted_at:
+        return False
+    if bundle.netcdf_files.exists() or bundle.product_document_set.exists():
+        return False
+    return not any(step.done(bundle) for step in steps_for(bundle))
+
+
+def required_left(bundle):
+    """How many required setup steps this bundle still needs (0 when set up)."""
+    return sum(1 for step in steps_for(bundle) if step.required and not step.done(bundle))
 
 
 def summary(bundle):
@@ -225,12 +218,7 @@ def summary(bundle):
 
 
 def progress(bundle, step):
-    """What the stepper on an old walkthrough page shows, or None off the walkthrough.
-
-    Those pages are only rendered now when a post to one of them is refused; every
-    GET goes to the setup page. The stepper still says where the user is, and each
-    step links to its place on the setup page.
-    """
+    """Stepper for an old walkthrough page, or None. Only used when a post there is refused."""
     index, _ = _find(bundle, step)
     if index is None:
         return None

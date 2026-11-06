@@ -1,20 +1,8 @@
-"""Turn a validate JSON report into findings ELSA can act on.
+"""Turns a validate JSON report into findings ELSA can use.
 
-validate reports a line number. ELSA needs to know which card fixes the problem,
-and the bridge between the two is the label itself: because ELSA generated every
-element, resolving a line back to its XML path says which part of the bundle a
-finding is about. `Identification_Area/Modification_History` is a thing ELSA has a
-form for; "line 10" is not.
-
-Everything here is a pure function over a report file and the labels it names, so it
-can be tested without a database and re-run against reports gathered earlier - which
-matters, because the rule table in the next phase should be built from findings
-observed in production rather than guessed at.
-
-Two message types carry most of the weight. error.label.schema and
-error.label.schematron are catch-alls whose meaning lives in free text, so grouping
-by type alone says very little; grouping by resolved path is what separates "your
-citation is incomplete" from "this collection is empty".
+validate gives a line number. We resolve that back to the element's path in the label, which
+says which card fixes it. These are pure functions over a report and its labels, so
+they can run without a database.
 """
 import json
 import os
@@ -24,9 +12,7 @@ from lxml import etree
 
 PDS_NS = '{http://pds.nasa.gov/pds4/pds/v1}'
 
-# Both keys hold the same shape. Product-level results are per label; bundle-level
-# results are the referential integrity checks that only exist for a -R pds4.bundle
-# run. Missing either would silently drop findings.
+# Same shape in both. Product results are per label, bundle results are the reference checks.
 RESULT_KEYS = ('productLevelValidationResults', 'pDS4BundleLevelValidationResults')
 
 
@@ -43,20 +29,15 @@ def element_path(element):
 def _line_index(label_path):
     """Map each line number in a label to the element that starts on it.
 
-    setdefault, not assignment: several elements can share a source line when a
-    label is written compactly, and the first one is the outermost, which is the
-    one a line-numbered finding is talking about.
+    Use setdefault so the outermost element on a line wins.
     """
-    # Some findings are about a directory (a collection with no label, say). Handing
-    # one to libxml2 fails the same way, but prints "I/O error : Is a directory" first.
+    # Some findings are about a directory. libxml2 would print an I/O error for those.
     if not os.path.isfile(label_path):
         return {}
     try:
         tree = etree.parse(label_path)
     except (OSError, etree.XMLSyntaxError):
-        # A label can be unreadable precisely because it is broken, which is often
-        # what the report is complaining about. Findings still come back, just
-        # without a resolved path.
+        # The label can be unreadable if it's broken. Findings still come back, just with no path.
         return {}
 
     index = {}
@@ -69,8 +50,7 @@ def _line_index(label_path):
 def parse_report(report_path):
     """Read a validate JSON report into a flat list of findings plus a summary.
 
-    Returns {'summary': {...}, 'findings': [...]}. Each finding carries the resolved
-    element_path when the label could be read and the message named a line.
+    Returns {'summary': {...}, 'findings': [...]}.
     """
     with open(report_path, encoding='utf-8') as report_file:
         report = json.load(report_file)
@@ -82,8 +62,7 @@ def parse_report(report_path):
 
     for key in RESULT_KEYS:
         for result in report.get(key) or []:
-            # validate reports a file: URI, so a space arrives as %20. Left encoded,
-            # the label cannot be opened and every finding in it loses its path.
+            # validate gives a file: URI, so decode it or a space stays as %20.
             label_path = unquote((result.get('label') or '').replace('file:', ''))
             label_name = os.path.basename(label_path)
 
@@ -106,11 +85,7 @@ def parse_report(report_path):
                     'element_path': path,
                 }
 
-                # The same problem is reported once per result key when a label is
-                # both a product and a bundle member, and the schema and schematron
-                # can each flag one bad value. Identical findings are noise.
-                # Keyed on the full path: two collections can each hold a label with
-                # the same file name, and those are two problems, not one.
+                # Drop identical findings. Keyed on the full path since two collections can have the same file name.
                 fingerprint = (finding['label_path'], finding['type'], finding['line'],
                                finding['message'])
                 if fingerprint in seen:
@@ -118,8 +93,7 @@ def parse_report(report_path):
                 seen.add(fingerprint)
                 findings.append(finding)
 
-    # Which release wrote this, as validate states it in the report's own header.
-    # Absent from hand-made reports, so read defensively and left blank then.
+    # Release from the report's header. Blank if it isn't there.
     configuration = report.get('configuration')
     if not isinstance(configuration, dict):
         configuration = {}
@@ -139,7 +113,8 @@ def parse_report(report_path):
 
 
 def errors(findings):
-    return [finding for finding in findings if finding['severity'] == 'ERROR']
+    # validate reports schematron failures as FATAL_ERROR, so count those too.
+    return [finding for finding in findings if finding['severity'] in ('ERROR', 'FATAL_ERROR')]
 
 
 def warnings(findings):
@@ -147,12 +122,7 @@ def warnings(findings):
 
 
 def group_by_location(findings):
-    """{element_path: [findings]}, which is the shape the eventual UI groups on.
-
-    Findings with no resolved path collect under '' rather than being dropped: a
-    finding nobody can place is still a finding, and losing it quietly would be
-    worse than showing it without a location.
-    """
+    """{element_path: [findings]}. Findings with no path go under ''."""
     grouped = {}
     for finding in findings:
         grouped.setdefault(finding['element_path'], []).append(finding)

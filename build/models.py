@@ -80,12 +80,8 @@ def get_most_current_version():
 
 
 
-# PDS4 Target_Identification/type is a closed list, spelled exactly this way in
-# the schematron. The context crawler stores whatever the PDS registry returned,
-# which is usually upper case: of 1548 stored targets, 1490 hold a value PDS
-# rejects ('ASTEROID', 'TRANS-NEPTUNIAN OBJECT'). Writing type_of straight through
-# therefore made almost every target a user could pick an error in their label,
-# reported against them as though they had typed it.
+# PDS4 Target_Identification/type is a closed list. The crawler stores what the registry
+# returned, usually upper case, so map it to the spelling PDS accepts.
 PDS_TARGET_TYPES = (
     'Asteroid', 'Astrophysical', 'Calibration', 'Calibration Field', 'Calibrator',
     'Centaur', 'Comet', 'Dust', 'Dwarf Planet', 'Equipment', 'Exoplanet System',
@@ -99,27 +95,18 @@ PDS_TARGET_TYPES = (
 
 _PDS_TARGET_TYPE_BY_KEY = {value.lower(): value for value in PDS_TARGET_TYPES}
 
-# Which reference_type a Target_Identification carries depends on what is doing the
-# referring. 'is_target', which this used to write for everything that was not a
-# Product_Observational, is not a PDS4 value at all and never has been.
+# The reference_type depends on what's doing the referring.
 TARGET_REFERENCE_TYPES = {
     'Product_Bundle': 'bundle_to_target',
     'Product_Collection': 'collection_to_target',
     'Product_Observational': 'data_to_target',
     'Product_Document': 'document_to_target',
-    # Every AMA data product is a Product_External, so leaving this out meant the
-    # fallback wrote collection_to_target into the one label type AMA bundles are
-    # made of. Missed because the fixture bundles had no target selected: nothing
-    # writes a Target_Identification until someone picks one.
+    # Every AMA data product is a Product_External, so it needs its own entry.
     'Product_External': 'external_to_target',
 }
 
 
-# Context_Area is an xs:sequence in PDS4, so its children have a fixed order and a
-# child appended to the end is invalid wherever a later one already exists. AMA
-# labels always carry a Discipline_Area, which sorts after Target_Identification, so
-# appending a target to one produced "Invalid content was found starting with
-# element 'Target_Identification'" on every AMA product with a target selected.
+# Context_Area is an xs:sequence, so children have a fixed order and can't just be appended.
 CONTEXT_AREA_ORDER = (
     'comment', 'Time_Coordinates', 'Primary_Result_Summary', 'Investigation_Area',
     'Observing_System', 'Target_Identification', 'Mission_Area', 'Discipline_Area',
@@ -127,11 +114,7 @@ CONTEXT_AREA_ORDER = (
 
 
 def insert_in_context_area(Context_Area, element):
-    """Put element into Context_Area where the PDS4 sequence says it belongs.
-
-    Appends when nothing that sorts after it is present, which is the common case
-    and what the old code always did.
-    """
+    """Put element into Context_Area where the PDS4 sequence says it goes."""
     try:
         position = CONTEXT_AREA_ORDER.index(etree.QName(element).localname)
     except ValueError:
@@ -148,18 +131,10 @@ def insert_in_context_area(Context_Area, element):
     return element
 
 
-# PDS4 Document_Edition/language is a closed list of one: the schematron asserts
-# it "must be equal to the value 'English'". A free-text field in front of a rule
-# like that only produces errors, so what the user typed is normalised to the value
-# PDS accepts when it plainly means the same thing, and passed through otherwise so
-# PDS can report a value ELSA has no business guessing about.
+# PDS4 only accepts 'English' for Document_Edition/language, so normalize what the user typed.
+# Anything that clearly isn't English is passed through so PDS reports it.
 def _require_text(parent, tag, value, fallback):
-    """Give a required element a value, creating it if the template lacks one.
-
-    PDS4 has no notion of an empty required element: a blank one is reported the
-    same way a wrong one is, so a field the form left optional still needs
-    something defensible written into it.
-    """
+    """Give a required element a value, creating it if the template doesn't have one."""
     if parent is None:
         return None
     element = parent.find('{}{}'.format(NAMESPACE, tag))
@@ -184,16 +159,9 @@ def pds_document_language(value):
 
 
 def pds_context_title(name, type_of):
-    """The title PDS publishes for a context product, which is what it checks against.
+    """The title PDS publishes for a context product: "<name> <type>".
 
-    validate compares Investigation_Area/name to the title of the registered context
-    product and warns when they differ. PDS titles those products "<name> <type>":
-    the registered title for the AMA investigation is "Atmospheric Modeling Annex
-    Individual Investigation", while ELSA's crawler stored only "Atmospheric
-    Modeling Annex", so every AMA bundle carried a warning nobody could act on.
-
-    Idempotent, so a crawled name that already includes its type is left alone
-    rather than having it appended twice.
+    validate warns if Investigation_Area/name doesn't match. Won't add the type twice.
     """
     name = (name or '').strip()
     type_of = (type_of or '').strip()
@@ -205,68 +173,91 @@ def pds_context_title(name, type_of):
 
 
 def pds_target_type(value):
-    """The PDS spelling of a stored target type.
-
-    Falls back to title case for a value not in the list, which keeps the label
-    closer to valid and leaves PDS to report the value as unknown, which it is.
-    """
+    """PDS spelling of a stored target type. Falls back to title case if it's not in the list."""
     if not value:
         return value
     cleaned = value.strip()
     return _PDS_TARGET_TYPE_BY_KEY.get(cleaned.lower(), cleaned.title())
 
 
-# PDS4 constrains every segment of a logical identifier to this set, via the pattern
-# urn(:[\p{Ll}\p{Nd}\-._]+){3,5} on the logical_identifier type: lowercase letters,
-# digits, hyphen, dot and underscore. Nothing else, and in particular no uppercase.
+# PDS4 only allows lowercase letters, digits, hyphen, dot and underscore in a LID segment:
+# urn(:[\p{Ll}\p{Nd}\-._]+){3,5}
 _LID_ALLOWED = re.compile(r'[^a-z0-9._-]')
 
 
 def pds_lid_segment(value):
-    """One segment of a logical identifier, made to satisfy the PDS4 pattern.
+    """Clean up one segment of a logical identifier so it matches the PDS4 pattern.
 
-    A NetCDF uploaded as "00000.atmos_average_pstd_-_Copy.nc" produced the LID
-    urn:nasa:pds-ama:sept_ama:new:00000.atmos_average_pstd_-_Copy.nc, which PDS
-    rejects: \p{Ll} is lowercase-only and the file name carried a capital C and P.
-    The user had done nothing wrong. A file name may be mixed case in PDS4, and
-    file_name in the label keeps it; only the identifier built from it may not.
-
-    So the derivation is fixed here rather than asked of the user, the same way the
-    document format decides its own extension. Anything outside the permitted set
-    becomes an underscore instead of being dropped, because dropping characters can
-    collide two distinct names into one identifier.
-
-    Callers must apply this on *segments*, never on a whole LID: the colons that
-    separate them are not permitted inside one.
+    File names can be mixed case but LIDs can't. Bad characters become an underscore instead
+    of being dropped, so two names don't end up the same. Use on segments, not a whole LID,
+    since colons aren't allowed.
     """
     if not value:
         return value
     return _LID_ALLOWED.sub('_', value.strip().lower())
 
 
+# Acronyms to keep in caps in titles, since str.title() would turn NASA into Nasa.
+_TITLE_ACRONYMS = {
+    word.lower(): word for word in (
+        'NASA', 'ESA', 'JAXA', 'ISRO', 'NOAA', 'NCAR', 'GFDL', 'JPL', 'GSFC', 'SwRI',
+        'PDS', 'PDS4', 'AMA', 'ELSA', 'NMSU', 'GCM', 'MGCM', 'LES', 'WRF', 'MTWRF',
+        'EPIC', 'FV3', 'TOI', 'UV', 'IR')
+}
+
+
+def pds_title_case(name):
+    """Title-case a name but keep acronyms and anything the user already capitalized."""
+    words = []
+    for word in (name or '').split():
+        known = _TITLE_ACRONYMS.get(word.lower())
+        if known:
+            words.append(known)
+        elif any(character.isupper() for character in word[1:]):
+            words.append(word)
+        else:
+            words.append(word.title())
+    return ' '.join(words)
+
+
+# PDS4 titles max out at 255 characters. Past that, drop the collection name.
+_TITLE_MAX_LENGTH = 255
+
+
+def collection_title(bundle_title, collection_name):
+    """Collection title is the bundle title plus the collection name."""
+    name = pds_title_case((collection_name or '').replace('_', ' '))
+    title = '{} {} Collection'.format(bundle_title, name) if name else bundle_title
+    return title if len(title) <= _TITLE_MAX_LENGTH else bundle_title
+
+
+def reference_list_element(root):
+    """Find the label's Reference_List, or create it in the right place if it's missing."""
+    Reference_List = root.find('{}Reference_List'.format(NAMESPACE))
+    if Reference_List is not None:
+        return Reference_List
+    Reference_List = etree.Element('{}Reference_List'.format(NAMESPACE))
+    previous = root.find('{}Context_Area'.format(NAMESPACE))
+    if previous is None:
+        previous = root.find('{}Identification_Area'.format(NAMESPACE))
+    previous.addnext(Reference_List)
+    return Reference_List
+
+
 def target_reference_type(label_root):
     """The reference_type a Target_Identification needs in this kind of label.
 
-    The fallback is deliberately the one PDS accepts in the most places rather than
-    a guess, but every product class ELSA writes should be in the table above: a
-    fallback that happens to be wrong is how external_to_target went missing.
+    Every product class ELSA writes should be in the table above.
     """
     localname = etree.QName(label_root).localname
     return TARGET_REFERENCE_TYPES.get(localname, 'collection_to_target')
 
 
 def context_container(Context_Area, tag):
-    """Find a Context_Area child, creating it in the PDS namespace when absent.
+    """Find a Context_Area child, creating it in the PDS namespace if missing.
 
-    The bundle and collection templates no longer ship empty Investigation_Area and
-    Observing_System containers. An empty one is a validation error on every bundle
-    that has not had context products added yet, and both are optional in
-    Context_Area, so they are created here the first time there is something to put
-    in them.
-
-    Created with the namespace, because the find() above is namespaced: an element
-    built bare would be invisible to the next lookup, which is the failure that made
-    build_internal_reference collapse two documents into one.
+    The templates don't have empty Investigation_Area and Observing_System since those fail
+    validation. Has to use the namespace so the next find() can see it.
     """
     child = Context_Area.find('{}{}'.format(NAMESPACE, tag))
     if child is None:
@@ -329,15 +320,8 @@ class Version(models.Model):
     """
 
     def with_dots(self, number):
-        # PDS4 encodes a version component of 10 or greater as a single letter,
-        # so that every build number stays four characters wide: A=10, B=11,
-        # ... O=24, ... Z=35. Build 1O00 is therefore information model
-        # version 1.24.0.0, and 1800 is 1.8.0.0.
-        #
-        # This used to be a hand-written branch per letter, and it stopped at K.
-        # Anything past that fell through every branch and was dropped silently, so
-        # 1O00 -- the version ELSA writes today -- came out as "1.0.0" instead of
-        # "1.24.0.0", and 1Q00 would do the same.
+        # PDS4 uses a single letter for version components of 10 or more, so build numbers stay
+        # four characters: A=10, B=11, ... O=24, ... Z=35. 1O00 is 1.24.0.0 and 1800 is 1.8.0.0.
         components = []
 
         for character in number:
@@ -443,19 +427,12 @@ class Version(models.Model):
             print(inFile + " is an invalid file")
             return
 
-        # Templates pinned to a single information model version (the External ones,
-        # which are tied to the AMA LDD build) carry no placeholder, so this is a copy
-        # rather than a substitution. Only say so; it is not an error.
+        # External templates are pinned to one IM version and have no placeholder, so it's just a copy.
         if 'AAAA' not in fileText:
             print(inFile + " has no 'AAAA' placeholder; copying its version as pinned.")
 
-        # information_model_version holds the dotted form of the version (1.24.0.0);
-        # every other placeholder is part of a schema or schematron filename and holds
-        # the four-character build number (1O00). Fill the dotted one first so the
-        # blanket replace below cannot claim it. Keying off the tag instead of off the
-        # placeholder's position in the file keeps this right for templates that carry
-        # a different number of placeholders, and for labels that lost their xml-model
-        # instructions to an ElementTree round-trip before reaching us.
+        # information_model_version gets the dotted form (1.24.0.0). The other placeholders are in
+        # schema filenames and get the build number (1O00). Fill the dotted one first, by tag.
         fileText = re.sub(
             r'(<(?:\w+:)?information_model_version>)AAAA(</(?:\w+:)?information_model_version>)',
             r'\g<1>{}\g<2>'.format(self.with_dots(number)),
@@ -976,9 +953,7 @@ class Investigation(models.Model):
 
     instrument_hosts = models.ManyToManyField("Instrument_Host")
     facilities = models.ManyToManyField("Facility")
-    # related_name gives Target back a `.investigations` accessor. There used to
-    # be a second, separate M2M declared on Target with that name; the two were
-    # never kept in sync, so it was merged into this one in migration 0067.
+    # related_name gives Target a `.investigations` accessor (merged in migration 0067).
     targets = models.ManyToManyField("Target", related_name='investigations')
 
     # Attributes used to manage Investigation object
@@ -997,17 +972,14 @@ class Investigation(models.Model):
         return self.name
 
     def fill_label(self, label_root):
-        # 'is None', not truthiness: an lxml element with no children is falsy today,
-        # so an empty Context_Area would fall through and look for an Observation_Area
-        # that is not there. lxml also warns that truth-testing will always return True
-        # in a future release, which would break the Product_Observational path instead.
+        # Use 'is None', not truthiness. An lxml element with no children is falsy.
         Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE))
         if Context_Area is None:
             Context_Area = label_root.find('{}Observation_Area'.format(NAMESPACE))
 
         Investigation_Area = context_container(Context_Area, 'Investigation_Area')
 
-        # The template no longer carries these, so build whichever are missing.
+        # Build whichever of these are missing.
         name = Investigation_Area.find('{}name'.format(NAMESPACE))
         if name is None:
             name = etree.SubElement(Investigation_Area, '{}name'.format(NAMESPACE))
@@ -1129,11 +1101,8 @@ class Investigation(models.Model):
 
         Investigation_Area = Context_Area.find('{}Investigation_Area'.format(NAMESPACE))
 
-        # Remove the whole Investigation_Area rather than blanking its fields. Emptying
-        # them leaves a container full of empty elements, each of which is a validation
-        # error, so removing an investigation used to swap one problem for several.
-        # Investigation_Area is optional in Context_Area, and fill_label rebuilds it
-        # from nothing when another investigation is added.
+        # Remove the whole Investigation_Area. Blanking the fields would fail validation.
+        # It's optional, and fill_label rebuilds it when another investigation is added.
         if Investigation_Area is not None:
             Context_Area.remove(Investigation_Area)
 
@@ -1359,10 +1328,7 @@ class Instrument(models.Model):
         self.save()
 
     def fill_label(self, label_root):
-        # 'is None', not truthiness: an lxml element with no children is falsy today,
-        # so an empty Context_Area would fall through and look for an Observation_Area
-        # that is not there. lxml also warns that truth-testing will always return True
-        # in a future release, which would break the Product_Observational path instead.
+        # Use 'is None', not truthiness. An lxml element with no children is falsy.
         Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE))
         if Context_Area is None:
             Context_Area = label_root.find('{}Observation_Area'.format(NAMESPACE))
@@ -1567,8 +1533,7 @@ class Target(models.Model):
     vid = models.FloatField(default=1.0)
     file_ref = models.CharField(max_length=MAX_CHAR_FIELD)
 
-    # The investigations this target belongs to are reachable as
-    # target.investigations, supplied by Investigation.targets' related_name.
+    # Investigations for this target come from target.investigations (Investigation.targets).
 
     # Attributes used to manage Instrument Host object
     #objects = TargetManager()
@@ -1587,10 +1552,7 @@ class Target(models.Model):
         self.save()
 
     def fill_label(self, label_root):
-        # 'is None', not truthiness: an lxml element with no children is falsy today,
-        # so an empty Context_Area would fall through and look for an Observation_Area
-        # that is not there. lxml also warns that truth-testing will always return True
-        # in a future release, which would break the Product_Observational path instead.
+        # Use 'is None', not truthiness. An lxml element with no children is falsy.
         Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE))
         if Context_Area is None:
             Context_Area = label_root.find('{}Observation_Area'.format(NAMESPACE))
@@ -1779,10 +1741,7 @@ class Instrument_Host(models.Model):
         self.save()
 
     def fill_label(self, label_root):
-        # 'is None', not truthiness: an lxml element with no children is falsy today,
-        # so an empty Context_Area would fall through and look for an Observation_Area
-        # that is not there. lxml also warns that truth-testing will always return True
-        # in a future release, which would break the Product_Observational path instead.
+        # Use 'is None', not truthiness. An lxml element with no children is falsy.
         Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE))
         if Context_Area is None:
             Context_Area = label_root.find('{}Observation_Area'.format(NAMESPACE))
@@ -2136,10 +2095,7 @@ class Telescope(models.Model):
         self.save()
 
     def fill_label(self, label_root):
-        # 'is None', not truthiness: an lxml element with no children is falsy today,
-        # so an empty Context_Area would fall through and look for an Observation_Area
-        # that is not there. lxml also warns that truth-testing will always return True
-        # in a future release, which would break the Product_Observational path instead.
+        # Use 'is None', not truthiness. An lxml element with no children is falsy.
         Context_Area = label_root.find('{}Context_Area'.format(NAMESPACE))
         if Context_Area is None:
             Context_Area = label_root.find('{}Observation_Area'.format(NAMESPACE))
@@ -2288,44 +2244,27 @@ class Bundle(models.Model):
 
 
     def content_fingerprint(self):
-        """A short digest of every file in this bundle, as it is on disk right now.
+        """A short digest of every file in this bundle as it is on disk.
 
-        Used to tell whether a validation result still describes the bundle. The
-        obvious alternative, Bundle.updated_at, does not work: it is auto_now, so it
-        moves only when Bundle.save() is called, and none of the views that edit a
-        bundle's metadata save the bundle. Adding a modification history rewrote four
-        labels and left updated_at untouched, so nothing ever looked stale and the
-        automatic re-check had no reason to run.
-
-        Files are stat-ed, never read, so a bundle holding a 200MB NetCDF costs the
-        same as an empty one. Size and modification time together catch every edit
-        ELSA makes, all of which rewrite a whole label. Paths are included so that
-        adding or deleting a file registers even when nothing else changes.
-
-        Returns '' when the directory does not exist yet, which callers read as
-        "nothing to compare".
+        Used to tell if a validation result is still current. Can't use updated_at since most
+        views that edit labels don't save the bundle. Files are stat-ed, not read, so large NetCDFs
+        don't cost anything. Returns '' if the directory doesn't exist yet.
         """
-        # Deliberately not cached on the instance. Caching it saves a few directory
-        # walks per page load, and those walks only stat files, so the saving is
-        # negligible; what it costs is a value that is wrong the moment anything in
-        # the same request writes a label, which is a whole class of bug for no real
-        # gain. Measured on a bundle holding a 190MB NetCDF, the walk is not visible.
+        # Not cached on purpose. Anything in the same request could write a label and the walk is cheap.
         directory = self.directory()
         if not os.path.isdir(directory):
             return ''
 
         digest = hashlib.sha256()
         for dirpath, dirnames, filenames in os.walk(directory):
-            # Sorted, so the digest depends on the contents and not on the order the
-            # filesystem happens to hand them back.
+            # Sorted so the digest doesn't depend on filesystem order.
             dirnames.sort()
             for filename in sorted(filenames):
                 path = os.path.join(dirpath, filename)
                 try:
                     stat = os.stat(path)
                 except OSError:
-                    # A file that vanished mid-walk is itself a change; record the
-                    # name so the digest still moves.
+                    # A file that vanished mid-walk is a change too, so still record the name.
                     digest.update(os.path.relpath(path, directory).encode('utf-8'))
                     continue
                 digest.update('{}|{}|{}'.format(
@@ -2347,7 +2286,7 @@ class Bundle(models.Model):
     def name_title_case(self):
         name_edit = self.name
         name_edit = replace_all(name_edit, '_', ' ')
-        return name_edit.title()
+        return pds_title_case(name_edit)
 
     """
     - name_directory_case
@@ -2408,11 +2347,7 @@ class Bundle(models.Model):
         else:
             bundle_id = self.name_lid_case()
 
-        # The bundle name and ID are free text on the form, bounded only in length.
-        # "Mars & Venus" or "test#1" would otherwise put a character in the LID that
-        # PDS4 does not permit there, and the user would be told about it in terms of
-        # a pattern they never saw. With this, nothing a user can type reaches a LID
-        # unpermitted, so the rule for that error is ELSA's own bug, not theirs.
+        # The bundle name and ID are free text, so clean them up for the LID.
         bundle_id = pds_lid_segment(bundle_id)
 
         if self.bundle_type == 'External':
@@ -2456,10 +2391,7 @@ class Bundle(models.Model):
             print('remove_bundle \n\n')
             print('bundle_directory: {}'.format(self.directory()))
 
-        # A name like "../someone/x" used to resolve into another user's
-        # archive, and this rmtree followed it there.  BundleForm now refuses
-        # such names, but rows created before that still exist, so the disk is
-        # only touched when the path really is this owner's.
+        # Older rows may have a name like "../someone/x", so only delete if the path is really this owner's.
         if not self.directory_is_contained():
             logging.getLogger(__name__).warning(
                 'remove_bundle: %r resolves outside %s\'s archive; files left in place',
@@ -2492,11 +2424,7 @@ class Bundle(models.Model):
     def get_status(self):
         if self.submitted_at is not None:
             return 'submitted'
-        # ELSA's requirements are written down once, in build.preflight, which the
-        # panel and the submission gate also read. This used to keep its own copy of
-        # the first three, so the Bundle Hub would have said "Ready" on a bundle the
-        # gate refuses for having no author or no NetCDF file. Imported here because
-        # preflight reads these models.
+        # Requirements live in build.preflight. Imported here because preflight reads these models.
         from build import preflight
         return 'ready' if preflight.met(self) else 'in_progress'
 
@@ -2593,11 +2521,9 @@ def _local_name(element):
 
 
 def bundle_member_entries(label_root):
-    """The Bundle_Member_Entry elements of a bundle label, as (element, lid_reference).
+    """Bundle_Member_Entry elements of a bundle label, as (element, lid_reference).
 
-    Matched on the local name, because an entry added in this request has no namespace
-    (build_additional_bundle_member_entry creates it bare) while one read back from
-    disk is in the PDS namespace.
+    Match on local name since new entries have no namespace and ones read from disk do.
     """
     entries = []
     for element in label_root:
@@ -2687,13 +2613,9 @@ class AdditionalCollections(models.Model):
         return '{}:{}'.format(self.bundle.lid(), self.collection_name.lower())
 
     def remove_xml(self, label_root):
-        """Take this collection out of a label: its entry in the bundle's member list.
+        """Remove this collection's entry from the bundle's member list.
 
-        delete_collection calls this through remove_from_label, and it used not to
-        exist. The AttributeError was caught and printed, so every deleted collection
-        stayed listed in the bundle label: PDS then reported a member that could not
-        be found, and creating a collection of the same name again listed it twice.
-        The collection labels passed alongside carry no such entry and are unchanged.
+        Called by delete_collection through remove_from_label.
         """
         remove_bundle_member_entries(label_root, self.bundle_member_lid())
         return label_root
@@ -2702,9 +2624,14 @@ class AdditionalCollections(models.Model):
         return os.path.join(self.directory(), self.name_label_case())
     
     def build_base_case(self):
-        # Locate base case Product_Collection template found in templates/pds4_labels/base_case/
-        source_file = os.path.join(PDS4_LABEL_TEMPLATE_DIRECTORY, 'base_case')
-        source_file = os.path.join(source_file, 'product_collection.xml')
+        # External collections use the External template, which has the AMA investigation.
+        if self.bundle.bundle_type == 'External':
+            source_file = os.path.join(PDS4_LABEL_TEMPLATE_DIRECTORY, 'base_templates')
+            source_file = os.path.join(source_file, 'product_external_collection.xml')
+        else:
+            # Locate base case Product_Collection template found in templates/pds4_labels/base_case/
+            source_file = os.path.join(PDS4_LABEL_TEMPLATE_DIRECTORY, 'base_case')
+            source_file = os.path.join(source_file, 'product_collection.xml')
 
         # Locate collection directory and create path for new label
         label_file = os.path.join(self.directory(), self.name_label_case())
@@ -2717,29 +2644,16 @@ class AdditionalCollections(models.Model):
         return
 
     def member_lidvids(self):
-        """The LIDVID of every NetCDF product filed into this collection.
-
-        Only files whose label was written successfully belong in the inventory: a
-        failed harvest leaves a NetCDFFile row with no product label to point at.
-        """
-        # Derived exactly the way views._process_single_netcdf builds the product's own
-        # logical_identifier: the bundle LID, the collection's directory name, then the
-        # file's basename with its extension intact. Both sides read the same directory,
-        # so the inventory cannot drift from the labels it points at.
-        # pds_lid_segment on both, exactly as views._process_single_netcdf applies
-        # it: a collection directory or a file name may carry characters a LID may
-        # not, and if only one side cleaned them the inventory would name products
-        # whose labels call themselves something else.
+        """LIDVID of every NetCDF product in this collection, only files with a good label."""
+        # Same as views._process_single_netcdf: bundle LID, collection directory, file name.
+        # Use pds_lid_segment on both, the same way, so the inventory matches the labels.
         collection_segment = pds_lid_segment(os.path.basename(self.directory()))
         return ['{}:{}:{}::1.0'.format(self.bundle.lid(), collection_segment,
                                        pds_lid_segment(os.path.basename(nc.file.name)))
                 for nc in self.netcdf_files.filter(processed=True).order_by('id')]
 
     def build_inventory(self):
-        """Write this collection's inventory table and update its label to match.
-
-        Safe to call again whenever membership changes; it rewrites both from scratch.
-        """
+        """Write this collection's inventory table and update its label. Safe to call again."""
         return write_collection_inventory(self.label(), self.member_lidvids())
 
     def fill_base_case(self, root):
@@ -2772,7 +2686,7 @@ class AdditionalCollections(models.Model):
 
         #     title
         title = Identification_Area.find('{}title'.format(NAMESPACE))
-        title.text = self.bundle.name_title_case()
+        title.text = collection_title(self.bundle.name_title_case(), self.collection_name)
 
         collection = Product_Collection.find('{}Collection'.format(NAMESPACE))
         col_type = collection.find('{}collection_type'.format(NAMESPACE))
@@ -3144,16 +3058,9 @@ class Product_Bundle(models.Model):
 
     def build_internal_reference(self, root, relation):
 
-        Reference_List = root.find('{}Reference_List'.format(NAMESPACE))
+        Reference_List = reference_list_element(root)
 
-        # Every element has to be created in the PDS namespace. The previous version
-        # built them bare - etree.Element("Internal_Reference") - which the namespaced
-        # find() below could not see, so each call appended an invisible stray element
-        # and then wrote its values into the template's placeholder instead. A second
-        # reference re-filled that same placeholder, so a bundle with two documents
-        # emitted one mangled reference with duplicated empty children rather than two
-        # good ones. Building each element in the namespace and holding on to it means
-        # the template needs no placeholder at all.
+        # Create every element in the PDS namespace so the find() below can see them.
         Internal_Reference = etree.SubElement(
             Reference_List, '{}Internal_Reference'.format(NAMESPACE))
 
@@ -3193,9 +3100,8 @@ class Product_Bundle(models.Model):
         member_status.text = 'Primary'
 
 
-        # The reference type has to agree with the collection's declared <collection_type>, so it
-        # comes from the collection itself rather than from the stored key: an External bundle's
-        # document collection is bundle_has_external_collection, not bundle_has_document_collection.
+        # Reference type has to match the declared <collection_type>, so get it from the collection.
+        # External document collections are bundle_has_external_collection.
         reference_type = etree.SubElement(Bundle_Member_Entry, 'reference_type')
         reference_type.text = collection.reference_type()
 
@@ -3215,9 +3121,7 @@ class Product_Bundle(models.Model):
         
         lid = '{}:{}'.format(self.bundle.lid(), collection.collection_name.lower())
 
-        # Once per collection. A collection deleted and created again under the same
-        # name used to be appended a second time, and PDS rejects a bundle listing one
-        # member twice.
+        # Once per collection. PDS rejects a bundle that lists a member twice.
         if any(entry_lid == lid for _element, entry_lid in bundle_member_entries(root)):
             return root
 
@@ -3280,9 +3184,8 @@ Referenced from        none
 
 # @python_2_unicode_compatible
 class Product_Collection(models.Model):
-    # Stored key on the left, what a human reads on the right. The key stays underscored because
-    # it names the directory, the LID segment and the label filename; only the admin dropdown reads
-    # the right-hand side.
+    # Stored key on the left, display name on the right. The key is used for the directory,
+    # LID segment and label filename, so it stays underscored.
     COLLECTION_CHOICES = (
 
         ('Document', 'Document'),
@@ -3299,31 +3202,24 @@ class Product_Collection(models.Model):
 
     collection = models.CharField(max_length=MAX_CHAR_FIELD, choices=COLLECTION_CHOICES)
 
-    # The stored `collection` value is ELSA's internal key: it names the directory on disk, the
-    # last segment of the collection LID, and the label filename, so it stays underscored and
-    # safe to lowercase. What PDS4 wants in <collection_type> is an enumerated value from
-    # Collection/type, and the two are not always the same string. IM v1.24.0.0 (1O00) accepts:
-    # Browse, Calibration, Context, Data, Document, External, Geometry, Miscellaneous,
-    # SPICE Kernel, XML Schema.
+    # The stored `collection` value is our internal key. <collection_type> needs one of the
+    # Collection/type values from IM v1.24.0.0 (1O00): Browse, Calibration, Context, Data,
+    # Document, External, Geometry, Miscellaneous, SPICE Kernel, XML Schema.
     PDS4_COLLECTION_TYPES = {
         'XML_Schema': 'XML Schema',
     }
 
-    # Bundle_Member_Entry/reference_type is derived from the collection type, but two of the
-    # enumerated types do not spell out to a valid reference_type on their own.
+    # reference_type comes from the collection type, but two types need a different spelling.
     PDS4_REFERENCE_TYPES = {
         'XML Schema': 'bundle_has_schema_collection',
         'SPICE Kernel': 'bundle_has_spice_kernel_collection',
     }
 
     def collection_type(self):
-        """The PDS4 enumerated Collection/type that belongs in this collection's label.
+        """The Collection/type for this collection's label.
 
-        External (AMA) bundles carry LIDs in the urn:nasa:pds-ama namespace, which the Document
-        collection type does not admit. Every collection in an External bundle is therefore of
-        type External, the document collection included: the directory is still called `document`
-        and the LID still ends in `:document`, only the declared type differs. This matches the
-        External type already forced on the AdditionalCollections of an External bundle.
+        External (AMA) bundles use urn:nasa:pds-ama LIDs, which the Document type doesn't allow,
+        so every collection in an External bundle is External, including the document one.
         """
         if self.bundle.bundle_type == 'External':
             return 'External'
@@ -3429,10 +3325,9 @@ class Product_Collection(models.Model):
         return
 
     def member_lidvids(self):
-        """The LIDVID of every product in this collection, for the inventory table.
+        """LIDVID of every product in this collection, for the inventory table.
 
-        Only the Document collection has members ELSA tracks as products today; Context
-        and XML Schema collections are placeholders with nothing filed into them yet.
+        Only the Document collection has products we track right now.
         """
         if self.collection != 'Document':
             return []
@@ -3440,10 +3335,7 @@ class Product_Collection(models.Model):
                 for document in Product_Document.objects.filter(bundle=self.bundle)]
 
     def build_inventory(self):
-        """Write this collection's inventory table and update its label to match.
-
-        Safe to call again whenever membership changes; it rewrites both from scratch.
-        """
+        """Write this collection's inventory table and update its label. Safe to call again."""
         return write_collection_inventory(self.label(), self.member_lidvids())
 
 
@@ -3508,7 +3400,7 @@ class Product_Collection(models.Model):
 
         #     title
         title = Identification_Area.find('{}title'.format(NAMESPACE))
-        title.text = self.bundle.name_title_case()
+        title.text = collection_title(self.bundle.name_title_case(), self.collection)
 
         collection = Product_Collection.find('{}Collection'.format(NAMESPACE))
         col_type = collection.find('{}collection_type'.format(NAMESPACE))
@@ -3526,7 +3418,7 @@ class Product_Collection(models.Model):
 
     def build_internal_reference(self, root, relation):
 
-        Reference_List = root.find('{}Reference_List'.format(NAMESPACE))
+        Reference_List = reference_list_element(root)
 
         Internal_Reference = etree.SubElement(
             Reference_List, 'Internal_Reference')
@@ -4405,8 +4297,6 @@ class Product_Observational(models.Model):
         label_file = os.path.join(self.data.directory(), edit_name)
 
         # set selected version
-        # Stamps the bundle's information model version in while copying the
-        # template across, the same way every other Archive label is built.
         update = Version()
         update.version_update_old(self.data.bundle.version, source_file, label_file)
 
@@ -4601,11 +4491,8 @@ Referenced from        Product_Document
 
 # @python_2_unicode_compatible
 def pds_document_standard(value):
-    """The PDS4 name for a document's format.
-
-    Documents saved before uploads existed chose their format from a list whose plain
-    text option was stored as "ASCII", which is not a value PDS4 accepts; its name for
-    it is "7-Bit ASCII Text". Uploads record the right value themselves.
+    """PDS4 name for a document's format. Older documents stored "ASCII" for plain text,
+    which needs to be "7-Bit ASCII Text".
     """
     return {'ASCII': '7-Bit ASCII Text'}.get((value or '').strip(), value)
 
@@ -4771,10 +4658,7 @@ class Product_Document(models.Model):
                         '{}encoding_standard_id'.format(NAMESPACE))
                     encoding_standard_id.text = pds_document_standard(self.document_std_id)
             if File is not None:
-                # A document added without a comment has no comment element left in its
-                # label, so giving it one in the editor was a 500. Made when needed (last
-                # in File, where PDS puts it), and removed when the comment is cleared
-                # rather than left saying what it used to.
+                # Add a comment element if needed (last in File), and remove it if the comment is cleared.
                 comment = File.find('{}comment'.format(NAMESPACE))
                 if self.comment:
                     if comment is None:
@@ -4839,11 +4723,7 @@ class Product_Document(models.Model):
                 edition_name = Document_Edition.find(
                     '{}edition_name'.format(NAMESPACE))
                 edition_name.text = self.edition_name
-            # PDS4 accepts exactly one value here: "pds:Document_Edition/pds:language
-            # must be equal to the value 'English'." Anything else a user types,
-            # including "english" or "EN", is rejected. language is required by the
-            # schema, so it is always written rather than only when the model has a
-            # value.
+            # PDS4 only accepts 'English' here, and language is required, so always write it.
             language = Document_Edition.find('{}language'.format(NAMESPACE))
             if language is None:
                 language = etree.SubElement(
@@ -4872,23 +4752,14 @@ class Product_Document(models.Model):
         except (TypeError, ValueError):
             file_count = 0
 
-        # Both of these belong to the Archive shape of the label. An External
-        # document has a File_Area_External and no Document_Edition at all, so
-        # neither Document_Edition nor Files exists on that path.
+        # Archive documents only. External documents have File_Area_External and no Document_Edition.
         if self.bundle.bundle_type != 'External':
             for i in range(file_count - 1):
                 cloned_file = copy.deepcopy(Files)
                 Document_Edition.append(cloned_file)
 
-            # PDS4 requires these three and the form does not, so a document saved
-            # without them shipped a label with empty required elements. An empty
-            # value is not a valid value, so each has to carry something: the
-            # edition being described is the first unless the user says otherwise,
-            # a document is one file unless it says otherwise, and language has
-            # exactly one accepted value.
-            # publication_date is required by PDS4 and by the Archive document form,
-            # but not by the annex form, which is what an AMA bundle's documents go
-            # through. A document added that way had an empty required element.
+            # PDS4 requires these three and the form doesn't, so give them defaults.
+            # publication_date is required too, but the annex form doesn't ask for it.
             _require_text(Document, 'publication_date', self.publication_date,
                           timezone.localdate().isoformat())
             _require_text(Document_Edition, 'edition_name', self.edition_name, '1.0')
@@ -4898,12 +4769,8 @@ class Product_Document(models.Model):
                           pds_document_language(self.language),
                           PDS_DOCUMENT_LANGUAGE)
 
-        # Everything the template offers that this document has nothing to say
-        # about. Optional in PDS4 and therefore better absent than blank: a document
-        # with no copyright line is not a document with an empty copyright.
-        # Imported here rather than at module scope: label_repair imports from
-        # chocolate, which models already imports, and a top-level import would
-        # close that loop.
+        # Optional fields the document has nothing for, better absent than blank.
+        # Imported here to avoid a circular import through label_repair.
         from build.label_repair import prune_blank_containers
         prune_blank_containers(root)
 
@@ -5032,11 +4899,8 @@ class Alias(models.Model):
             Identification_Area.insert(Identification_Area.index(Citation_Information), Alias_List)
 
         else:
-            # PDS4 fixes the order inside Identification_Area: Alias_List comes after
-            # product_class and before Citation_Information and Modification_History.
-            # Either of those may legitimately be absent now that empty ones are no
-            # longer shipped, so anchor on whichever exists and fall back to appending,
-            # which lands Alias_List straight after product_class.
+            # PDS4 order: Alias_List goes after product_class and before Citation_Information and
+            # Modification_History. Use whichever exists, otherwise append.
             if Modification_History is not None:
                 Identification_Area.insert(
                     Identification_Area.index(Modification_History), Alias_List)
@@ -5059,9 +4923,7 @@ class Alias(models.Model):
         # Add Alias information
         Alias = Alias_List.find('{}Alias'.format(NAMESPACE))
         if Alias is None:
-            # A freshly made Alias_List has no Alias in it yet, and a label that
-            # was written before this alias existed has nothing here to edit.
-            # fill_label is what puts an Alias in; this only ever updates one.
+            # A new Alias_List has no Alias yet. fill_label adds one, this only updates it.
             return label_root
         if self.alternate_id:
             alternate_id = Alias.find('{}alternate_id'.format(NAMESPACE))
@@ -5082,14 +4944,11 @@ class Alias(models.Model):
 
         Alias_List = Identification_Area.find('{}Alias_List'.format(NAMESPACE))
         if Alias_List is None:
-            # Collection labels do not ship an Alias_List; fill_label adds one the
-            # first time an alias is written. A collection made after that alias
-            # therefore has no Alias_List at all, and there is nothing to remove.
+            # Collection labels don't have an Alias_List until an alias is written, so there may be nothing to remove.
             return label_root
 
         for alias in Alias_List.findall('{}Alias'.format(NAMESPACE)):
-            # By tag, not by position: alternate_id is optional, so it is not
-            # reliably the first child.
+            # By tag, since alternate_id is optional and may not be first.
             alternate_id = alias.find('{}alternate_id'.format(NAMESPACE))
             if alternate_id is None or not alternate_id.text or not self.alternate_id:
                 continue
@@ -5167,22 +5026,19 @@ Referenced from        Identification_Area
 
 
 # @python_2_unicode_compatible
+def _same_xml(first, second):
+    """Check if two elements are the same, ignoring indentation."""
+    def signature(element):
+        return (element.tag, (element.text or '').strip(), sorted(element.attrib.items()),
+                [signature(child) for child in element if isinstance(child.tag, str)])
+    return signature(first) == signature(second)
+
+
 def mirror_citation_into_data_products(bundle):
-    """Make every data product label agree with the bundle label about the citation.
+    """Make every data product label match the bundle label's citation.
 
-    Data product labels carry a Citation_Information of their own and were in no
-    write path at all: adding, editing or deleting a citation rewrote the bundle and
-    its collections and left every NetCDF product holding whatever it was born with.
-    That produced two different wrong states. A label written before the names were
-    entered kept a blank <given_name/>, which PDS reports as an error on a citation
-    the user had just filled in; and a citation that was then deleted stayed behind
-    in the data product, so the bundle said it had no citation while one of its
-    products still carried one.
-
-    Mirroring rather than replaying the edit: the bundle label is the source of
-    truth, so if it has a citation every data product gets a copy, and if it does not
-    every data product loses its own. One rule covers all three operations, which is
-    why this is called from each of them rather than each one growing its own.
+    The bundle label is the source of truth. If it has a citation each product gets a copy,
+    if not each product loses its own. Called on add, edit and delete.
 
     Returns the number of labels changed.
     """
@@ -5202,11 +5058,7 @@ def mirror_citation_into_data_products(bundle):
     source = source_root.find(
         '{0}Identification_Area/{0}Citation_Information'.format(NAMESPACE))
 
-    # Every product label in the bundle, not only the NetCDF ones. A document is a
-    # product too, and its label carries a Citation_Information the schematron asks
-    # for; leaving documents out meant adding one to an Archive bundle produced a
-    # label the panel then reported as missing its citation, on a bundle whose
-    # citation was filled in.
+    # Every product label, not just NetCDF. Documents carry a citation too.
     products = list(NetCDFFile.objects.filter(bundle=bundle))
     products.extend(Product_Document.objects.filter(bundle=bundle))
 
@@ -5234,12 +5086,14 @@ def mirror_citation_into_data_products(bundle):
                 continue
             identification.remove(existing)
         else:
+            # Same already, so skip the write. Writing would mark validation out of date.
+            if existing is not None and _same_xml(existing, source):
+                continue
             replacement = copy.deepcopy(source)
             if existing is not None:
                 identification.replace(existing, replacement)
             else:
-                # Citation_Information precedes Modification_History in the PDS4
-                # content model, so it cannot simply be appended.
+                # Citation_Information goes before Modification_History, so it can't just be appended.
                 modification = identification.find(
                     '{}Modification_History'.format(NAMESPACE))
                 if modification is not None:
@@ -5251,6 +5105,84 @@ def mirror_citation_into_data_products(bundle):
         close_label(label_path, target_root, target_list[2])
         changed += 1
 
+    return changed
+
+
+def write_organization_fields(organization, name, rorid, sequence, parent_name):
+    """Write an Organization's fields in the order PDS4 requires.
+
+    Rebuilt from scratch because the setup page leaves optional fields out of the label.
+    Blank optional fields are skipped since PDS4 rejects empty elements.
+    """
+    for child in list(organization):
+        organization.remove(child)
+    etree.SubElement(organization, '{}organization_name'.format(NAMESPACE)).text = name
+    if (rorid or '').strip():
+        etree.SubElement(organization, '{}organization_rorid'.format(NAMESPACE)).text = rorid.strip()
+    if sequence is not None:
+        etree.SubElement(organization, '{}sequence_number'.format(NAMESPACE)).text = sequence
+    if (parent_name or '').strip():
+        parent = etree.SubElement(organization, '{}Parent_Organization'.format(NAMESPACE))
+        etree.SubElement(parent, '{}parent_organization_name'.format(NAMESPACE)).text = parent_name.strip()
+
+
+def _fill_organization(organization, cleaned_form, prefix, index):
+    """Write one organization from the bundle page's citation editor."""
+    sequence = cleaned_form.get('{}_{}_sequence_number'.format(prefix, index))
+    if sequence not in (None, '') or organization.find('{}sequence_number'.format(NAMESPACE)) is not None:
+        sequence = str(sequence)
+    else:
+        sequence = None
+    write_organization_fields(
+        organization,
+        cleaned_form.get('{}_{}_name'.format(prefix, index)),
+        cleaned_form.get('{}_{}_rorid'.format(prefix, index)),
+        sequence,
+        cleaned_form.get('{}_{}_parent_org_name'.format(prefix, index)))
+
+
+def mirror_targets_into_products(bundle):
+    """Make every product label in an External bundle list the bundle's targets.
+
+    Archive documents are left alone. Returns the number of labels changed.
+    """
+    if bundle.bundle_type != 'External':
+        return 0
+
+    targets = list(bundle.targets.all())
+    wanted = sorted(target.lid for target in targets)
+    products = list(NetCDFFile.objects.filter(bundle=bundle))
+    products.extend(Product_Document.objects.filter(bundle=bundle))
+
+    changed = 0
+    for product in products:
+        try:
+            label_path = product.label()
+        except (AttributeError, ValueError):
+            continue
+        if not label_path or not os.path.exists(label_path):
+            continue
+        try:
+            label = open_label_with_tree(label_path)
+        except (etree.XMLSyntaxError, OSError):
+            continue
+        root = label[1]
+        Context_Area = root.find('{}Context_Area'.format(NAMESPACE))
+        if Context_Area is None:
+            continue
+        existing = Context_Area.findall('{}Target_Identification'.format(NAMESPACE))
+        lids = sorted(
+            element.findtext('{0}Internal_Reference/{0}lid_reference'.format(NAMESPACE))
+            or '' for element in existing)
+        # Skip if nothing changed. Writing would mark validation out of date.
+        if lids == wanted:
+            continue
+        for element in existing:
+            Context_Area.remove(element)
+        for target in targets:
+            root = target.fill_label(root)
+        close_label(label_path, root, label[2])
+        changed += 1
     return changed
 
 
@@ -5270,11 +5202,9 @@ class Citation_Information(models.Model):
     
 
     def _recorded_citation_element(self):
-        """A copy of the Citation_Information the bundle label carries, or None.
+        """A copy of the bundle label's Citation_Information, or None.
 
-        The bundle label is the source of truth for the citation: it is written
-        first everywhere the citation is written, so it always holds the newest
-        values by the time the other labels are reached.
+        The bundle label is written first, so it always has the newest values.
         """
         try:
             product_bundle = Product_Bundle.objects.get(bundle=self.bundle)
@@ -5292,19 +5222,10 @@ class Citation_Information(models.Model):
         return copy.deepcopy(source) if source is not None else None
 
     def _recorded_people(self):
-        """The author and editor values this bundle has already recorded.
+        """Author and editor values already recorded for this bundle.
 
-        Author names are held only in the XML; the model stores how many there are
-        and nothing else. A label created after the citation was filled in therefore
-        has nowhere to learn the names from, and used to be written with the blank
-        skeleton fill_label produces. PDS then reported the blank as an error on a
-        citation the user had demonstrably filled in, which read to them as the
-        author not having saved.
-
-        The bundle label is the one always written first and always the target of
-        the edit form, so it is where the values are read back from. A bundle whose
-        label does not exist yet, or which has no citation in it yet, returns
-        nothing and the skeleton stays blank, which is correct at that point.
+        Names are only in the XML, the model just has counts, so read them from the bundle label.
+        Returns nothing if that label or its citation doesn't exist yet.
         """
         empty = {'author_people': [], 'author_orgs': [],
                  'editor_people': [], 'editor_orgs': []}
@@ -5365,8 +5286,7 @@ class Citation_Information(models.Model):
 
         list_editor = citation.find('{}List_Editor'.format(NAMESPACE))
         if list_editor is not None:
-            # The first two Persons are the fixed ATM editors, which fill_label
-            # writes for itself; only the user-added ones after them are carried.
+            # The first two Persons are the fixed ATM editors. Only carry the user-added ones.
             recorded['editor_people'] = people(list_editor)[2:]
             recorded['editor_orgs'] = organizations(list_editor)
 
@@ -5383,12 +5303,8 @@ class Citation_Information(models.Model):
         Modification_History = Identification_Area.find(
             '{}Modification_History'.format(NAMESPACE))
 
-        # A label made after the citation (a collection or document added later) gets a
-        # copy of the one the bundle label carries, as sync_into_label does, rather than
-        # a skeleton rebuilt from the counts. The skeleton has an element for every
-        # optional field whether or not it was filled in, and PDS refuses an empty one;
-        # the setup page's citation leaves blank fields out, and a rebuilt skeleton put
-        # them back. Only the bundle label's own first citation is still built here.
+        # A label made after the citation gets a copy from the bundle label, not a rebuilt skeleton,
+        # which would put back blank fields. Only the bundle label's first citation is built here.
         recorded = self._recorded_citation_element()
         if recorded is not None:
             existing = Identification_Area.find('{}Citation_Information'.format(NAMESPACE))
@@ -5422,8 +5338,7 @@ class Citation_Information(models.Model):
         description = etree.SubElement(Citation_Information, 'description')
         description.text = self.description
 
-        # What this bundle already knows about its authors, so a label created after
-        # the citation was filled in is born with the names rather than with blanks.
+        # Use what the bundle already has so a new label gets the names, not blanks.
         recorded = self._recorded_people()
 
         def recorded_value(kind, index, field):
@@ -5434,19 +5349,15 @@ class Citation_Information(models.Model):
         if self.number_of_authors_people > 0 or self.number_of_authors_organization > 0:
             list_author = etree.SubElement(Citation_Information, 'List_Author')
 
-            # List_Author is a sequence in the PDS4 schema: every Organization comes
-            # before every Person, so a citation with both was schema-invalid when the
-            # people were written first.
+            # List_Author order: every Organization comes before every Person.
             for index in range(self.number_of_authors_organization):
                 organization = etree.SubElement(list_author, 'Organization')
-                for field in ('organization_name', 'organization_rorid', 'sequence_number'):
-                    element = etree.SubElement(organization, field)
-                    element.text = recorded_value('author_orgs', index, field)
-                parent_organization = etree.SubElement(organization, 'Parent_Organization')
-                parent_organization_name = etree.SubElement(
-                    parent_organization, 'parent_organization_name')
-                parent_organization_name.text = recorded_value(
-                    'author_orgs', index, 'parent_organization_name')
+                write_organization_fields(
+                    organization,
+                    recorded_value('author_orgs', index, 'organization_name'),
+                    recorded_value('author_orgs', index, 'organization_rorid'),
+                    recorded_value('author_orgs', index, 'sequence_number'),
+                    recorded_value('author_orgs', index, 'parent_organization_name'))
 
             for index in range(self.number_of_authors_people):
                 author = etree.SubElement(list_author, 'Person')
@@ -5464,14 +5375,12 @@ class Citation_Information(models.Model):
         # Organizations first, as in List_Author: the schema orders them before Persons.
         for index in range(self.number_of_editors_organization):
             organization = etree.SubElement(list_editor, 'Organization')
-            for field in ('organization_name', 'organization_rorid', 'sequence_number'):
-                element = etree.SubElement(organization, field)
-                element.text = recorded_value('editor_orgs', index, field)
-            parent_organization = etree.SubElement(organization, 'Parent_Organization')
-            parent_organization_name = etree.SubElement(
-                parent_organization, 'parent_organization_name')
-            parent_organization_name.text = recorded_value(
-                'editor_orgs', index, 'parent_organization_name')
+            write_organization_fields(
+                organization,
+                recorded_value('editor_orgs', index, 'organization_name'),
+                recorded_value('editor_orgs', index, 'organization_rorid'),
+                recorded_value('editor_orgs', index, 'sequence_number'),
+                recorded_value('editor_orgs', index, 'parent_organization_name'))
 
         for given, family, orcid in [
             ('Lynn', 'Neakrase', '0000-0002-6370-5791'),
@@ -5488,9 +5397,7 @@ class Citation_Information(models.Model):
             org_name_el = etree.SubElement(affiliation, 'organization_name')
             org_name_el.text = 'NASA Planetary Data System Atmospheres Node; New Mexico State University, Las Cruces, NM'
 
-        # User-added editors follow the two fixed ATM editors. Like authors,
-        # empty skeletons are created here and filled in on the edit page
-        # (fill_label_values).
+        # User-added editors go after the two fixed ATM editors. Filled in on the edit page.
         for index in range(self.number_of_editors_people):
             editor = etree.SubElement(list_editor, 'Person')
             for field in ('given_name', 'family_name', 'person_orcid'):
@@ -5504,15 +5411,9 @@ class Citation_Information(models.Model):
         return label_root
 
     def sync_into_label(self, label_path):
-        """Give the label at this path the citation the bundle label carries.
+        """Copy the bundle label's citation into the label at this path. Returns True if it wrote.
 
-        Copies the whole Citation_Information element rather than editing field by
-        field, which keeps labels in step even when they disagree about how many
-        authors there are: a label written when the citation had one author cannot
-        be filled correctly from a form that now has three, and a per-field copy
-        would leave the extra ones blank, which is the error being fixed.
-
-        Returns True if it wrote anything.
+        Copies the whole element since labels may disagree on how many authors there are.
         """
         try:
             product_bundle = Product_Bundle.objects.get(bundle=self.bundle)
@@ -5547,8 +5448,7 @@ class Citation_Information(models.Model):
         if existing is not None:
             identification.replace(existing, replacement)
         else:
-            # Citation_Information precedes Modification_History in the PDS4 content
-            # model, so it cannot simply be appended.
+            # Citation_Information goes before Modification_History, so it can't just be appended.
             modification = identification.find(
                 '{}Modification_History'.format(NAMESPACE))
             if modification is not None:
@@ -5571,19 +5471,8 @@ class Citation_Information(models.Model):
         Citation_Information = Identification_Area.find('{}Citation_Information'.format(NAMESPACE))
 
         if Citation_Information is None:
-            # The comment above has always said it would make one; it never did, and
-            # every label this ran against happened to have one already, so nothing
-            # noticed. That stopped being true when the edit was widened to reach the
-            # collections a user adds: a collection created while the bundle had no
-            # citation has no Citation_Information at all, and this walked straight
-            # into .find() on None and 500ed the edit.
-            #
-            # Copied whole from the bundle label rather than filled field by field.
-            # The bundle label is the first entry in the list this loop walks, so by
-            # the time a collection is reached it already carries the values being
-            # saved; and the per-field path below assumes a shape a label without a
-            # citation does not have, which is the bug being fixed rather than a
-            # foundation to build on.
+            # A collection created with no citation doesn't have this element, so copy it whole from
+            # the bundle label. The bundle label is first in this loop, so it already has the new values.
             replacement = self._recorded_citation_element()
             if replacement is None:
                 return label_root
@@ -5622,17 +5511,7 @@ class Citation_Information(models.Model):
             authors_organization_count = 0
 
             for author in authors_organization:
-                organization_name = author.find('{}organization_name'.format(NAMESPACE))
-                organization_name.text = cleaned_form.get(f'author_org_{authors_organization_count}_name')
-                organization_rorid = author.find('{}organization_rorid'.format(NAMESPACE))
-                organization_rorid.text = cleaned_form.get(f'author_org_{authors_organization_count}_rorid')
-                sequence_number = author.find('{}sequence_number'.format(NAMESPACE))
-                sequence_number.text = str(cleaned_form.get(f'author_org_{authors_organization_count}_sequence_number'))
-
-                parent_organization = author.find('{}Parent_Organization'.format(NAMESPACE))
-                parent_organization_name = parent_organization.find('{}parent_organization_name'.format(NAMESPACE))
-                parent_organization_name.text = cleaned_form.get(f'author_org_{authors_organization_count}_parent_org_name')
-
+                _fill_organization(author, cleaned_form, 'author_org', authors_organization_count)
                 authors_organization_count = authors_organization_count + 1
 
         # Default editors are  Lynn Neakrase and Lyle Huber.
@@ -5674,8 +5553,7 @@ class Citation_Information(models.Model):
                         if org is not None:
                             org.text = affiliation_text
                 else:
-                    # Persons after the fixed pair are user-added editors, filled
-                    # from the edit form just like authors.
+                    # Persons after the fixed pair are user-added, filled from the edit form.
                     u = i - len(default_editors)
                     editor.find('{}given_name'.format(NAMESPACE)).text = cleaned_form.get(f'editor_person_{u}_given_name')
                     editor.find('{}family_name'.format(NAMESPACE)).text = cleaned_form.get(f'editor_person_{u}_family_name')
@@ -5689,18 +5567,7 @@ class Citation_Information(models.Model):
                             org.text = cleaned_form.get(f'editor_person_{u}_affiliation')
 
             for j, organization in enumerate(list_editor.findall('{}Organization'.format(NAMESPACE))):
-                organization.find('{}organization_name'.format(NAMESPACE)).text = cleaned_form.get(f'editor_org_{j}_name')
-                rorid_el = organization.find('{}organization_rorid'.format(NAMESPACE))
-                if rorid_el is not None:
-                    rorid_el.text = cleaned_form.get(f'editor_org_{j}_rorid')
-                seq_el = organization.find('{}sequence_number'.format(NAMESPACE))
-                if seq_el is not None:
-                    seq_el.text = str(cleaned_form.get(f'editor_org_{j}_sequence_number'))
-                parent = organization.find('{}Parent_Organization'.format(NAMESPACE))
-                if parent is not None:
-                    parent_name = parent.find('{}parent_organization_name'.format(NAMESPACE))
-                    if parent_name is not None:
-                        parent_name.text = cleaned_form.get(f'editor_org_{j}_parent_org_name')
+                _fill_organization(organization, cleaned_form, 'editor_org', j)
 
         return label_root
     
@@ -5746,10 +5613,7 @@ class Modification_History(models.Model):
         Identification_Area = label_root.find(
             '{}Identification_Area'.format(NAMESPACE))
 
-        # The templates no longer ship an empty Modification_History: the class requires
-        # at least one Modification_Detail, so an empty one is a validation error on
-        # every bundle that has not had an entry added yet. It is created here, the
-        # first time there is something to put in it.
+        # Create Modification_History the first time there's an entry, an empty one fails validation.
         Modification_History = Identification_Area.find(
             '{}Modification_History'.format(NAMESPACE))
         if Modification_History is None:
@@ -5760,11 +5624,7 @@ class Modification_History(models.Model):
         Modification_Detail = etree.SubElement(
             Modification_History, '{}Modification_Detail'.format(NAMESPACE))
 
-        # Built in the PDS namespace like everything else. These three came out
-        # correct anyway, because lxml resolves an unprefixed child against the
-        # default namespace on serialization, but an in-memory tree where some
-        # elements are namespaced and some are not is a trap for the next person
-        # who tries to find() one of them before it is written.
+        # Create these in the PDS namespace like everything else, so find() works on them.
         modification_date = etree.SubElement(
             Modification_Detail, '{}modification_date'.format(NAMESPACE))
         modification_date.text = self.modification_date
@@ -5786,16 +5646,12 @@ class Modification_History(models.Model):
         Modification_History = Identification_Area.find(
             '{}Modification_History'.format(NAMESPACE))
         if Modification_History is None:
-            # Collection labels do not ship a Modification_History; fill_label adds
-            # one the first time an entry is written. A collection made after that
-            # entry therefore has none, and there is nothing to remove.
+            # Collection labels don't have a Modification_History until an entry is written, so there may be nothing to remove.
             return label_root
 
         for modification_detail in Modification_History.findall(
                 '{}Modification_Detail'.format(NAMESPACE)):
-            # By tag, not by position: version_id is optional, so description is
-            # not reliably the third child and indexing it raises IndexError on
-            # every entry saved without a version.
+            # By tag, since version_id is optional and description may not be third.
             description = modification_detail.find('{}description'.format(NAMESPACE))
             if description is None or not description.text or not self.description:
                 continue
@@ -6273,10 +6129,7 @@ class NetCDFFile(models.Model):
     # extension, so no FileExtensionValidator here — uploads may be extensionless.
     file = models.FileField(upload_to='')
     bundle = models.ForeignKey(Bundle, on_delete=models.CASCADE, related_name='netcdf_files', null=True, blank=True)
-    # Which collection this file was uploaded into. The upload already writes the file into the
-    # collection's directory, but the directory alone is not enough: label regeneration and the
-    # AMA forms both need to know a file's collection long after the upload request is over.
-    # Nullable only for rows that predate this field; new uploads always set it.
+    # Which collection this file was uploaded into. Null only for older rows.
     collection = models.ForeignKey(
         AdditionalCollections, on_delete=models.CASCADE, related_name='netcdf_files',
         null=True, blank=True)
@@ -6288,10 +6141,9 @@ class NetCDFFile(models.Model):
         return self.title
 
     def directory(self):
-        """Where this file and its XML label live on disk.
+        """Where this file and its label are on disk.
 
-        Falls back to the bundle root for rows uploaded before files were filed by collection, so
-        that legacy labels remain findable.
+        Falls back to the bundle root for older rows.
         """
         if self.collection_id is not None:
             return self.collection.directory()
@@ -6300,28 +6152,17 @@ class NetCDFFile(models.Model):
     def label(self):
         """The PDS4 label for this file.
 
-        Named the way _process_single_netcdf names it when it writes the label: a
-        trailing .nc is dropped if present and .xml appended, so an extensionless
-        upload does not get an extensionless label.
-
-        This exists so a NetCDF product can join the label-writing paths that
-        bundle-level metadata already walks. Without it these labels were reachable
-        only by regenerating them from the NetCDF file, which is why editing a
-        citation updated the bundle and its collections and left every data product
-        holding whatever it was born with.
+        Same naming as _process_single_netcdf: drop a trailing .nc if there is one and add .xml.
         """
         base = os.path.basename(self.file.name)
         stem = base[:-3] if base.endswith('.nc') else base
         return os.path.join(self.directory(), stem + '.xml')
 
     def stored_path(self):
-        """Where this file actually is on disk, or None if it is nowhere.
+        """Where this file really is on disk, or None.
 
-        file.path and file.url are stale for every processed upload: processing moves the file
-        out of MEDIA_ROOT into its collection's directory and leaves the field naming the upload
-        area. Checked in the order the delete views check: the collection directory, the bundle
-        root for rows that predate collections, then the upload area for files whose processing
-        never got as far as the move.
+        file.path and file.url are stale after processing moves the file. Checks the collection
+        directory, then the bundle root for older rows, then the upload area.
         """
         name = os.path.basename(self.file.name)
         candidates = [os.path.join(self.directory(), name)]
@@ -6337,48 +6178,29 @@ class NetCDFFile(models.Model):
         return None
 
 
-# ------------------------------------------------------------------------------------------------ #
-#                              AMA Discipline Dictionary user-supplied classes
-# ------------------------------------------------------------------------------------------------ #
-# The NetCDF harvest (views.variable_coord_to_product) fills ama:Variable and ama:Coordinate inside
-# ama:Model_Output automatically. The remaining AMA content cannot be harvested from the file, so it
-# is collected from the user through the models below:
-#
-#   ModelMetadata           -> ama:Model_Metadata
-#   SimulationConfiguration -> ama:Simulation_Configuration
-#   FileDescription         -> ama:Model_Output/ama:File_Description
-#
-# All three share one shape: a per-collection default that every file in that collection inherits,
-# including files uploaded later, plus an optional per-file override. In practice Model Metadata is
-# uniform across a collection and File Description differs per file, but the mechanism is the same
-# for all three so there is one code path rather than three.
-#
-# The `bundle` FK is kept alongside `collection` as a denormalised convenience for the bundle-wide
-# queries the page does (counting overrides, regenerating every label). `collection` is the scope
-# that matters; `bundle` must always agree with `collection.bundle`.
-#
+# --- AMA Discipline Dictionary user-supplied classes ---
+# The NetCDF harvest fills ama:Variable and ama:Coordinate. The rest comes from these models:
+# 
+# ModelMetadata           -> ama:Model_Metadata
+# SimulationConfiguration -> ama:Simulation_Configuration
+# FileDescription         -> ama:Model_Output/ama:File_Description
+# 
+# All three have a per-collection default that files inherit, plus an optional per-file override.
+# `bundle` has to match `collection.bundle`.
+# 
 # Field types follow PDS4_AMA_1O00_1300.xsd:
-#   - every string attribute is ASCII_Short_String_Collapsed with minLength=1, maxLength=255
-#   - description is ASCII_Text_Collapsed with minLength=1
-#   - model_timestep / upper_boundary / lower_boundary / top_level / bottom_level are ASCII_Real
-#   - the four compass boundaries are ASCII_Real with ranges, carried with a required unit attribute
-# minLength=1 is why blank values must be OMITTED from the label rather than written as empty
-# elements: an empty <ama:type/> is schema-INVALID, not merely uninformative.
+# - strings are ASCII_Short_String_Collapsed, minLength=1, maxLength=255
+# - description is ASCII_Text_Collapsed, minLength=1
+# - model_timestep / upper_boundary / lower_boundary / top_level / bottom_level are ASCII_Real
+# - the four compass boundaries are ASCII_Real with ranges and a required unit
+# minLength=1 means blank values have to be left out of the label.
 
 
 class AMACollectionScopedMixin(models.Model):
-    """Shared resolution for the AMA classes: a collection default plus per-file overrides.
+    """Shared logic for the AMA classes: a collection default plus per-file overrides.
 
-    A row with `netcdf_file` NULL is the default for its collection, applied to every file in that
-    collection that has no values of its own - including files uploaded later. A row with
-    `netcdf_file` set overrides the default for that one file.
-
-    Scope is the collection, not the bundle: one bundle can hold output from more than one model
-    run, and PDS collections are the unit a set of model output is described at.
-
-    MariaDB treats NULLs as distinct in a UNIQUE index, so "at most one default per collection"
-    cannot be a database constraint and is instead maintained by always going through
-    `default_for_collection()`.
+    `netcdf_file` NULL is the collection default. Set, it overrides that one file.
+    MariaDB allows multiple NULLs in a UNIQUE index, so always use `default_for_collection()`.
     """
 
     class Meta(object):
@@ -6412,11 +6234,8 @@ class AMACollectionScopedMixin(models.Model):
     def apply_to_collection(cls, source, collection):
         """Push one row's values out to every file in the collection.
 
-        Implemented by writing the values onto the collection default and deleting the per-file
-        overrides, rather than by copying the values into each file's own row: with no override
-        present a file resolves to the default, so the labels come out identical and later edits to
-        the default keep propagating instead of going stale. Returns how many overrides were
-        cleared.
+        Writes them on the default and deletes the overrides, so later edits to the default still
+        reach the files. Returns how many overrides were cleared.
         """
         default = cls.default_for_collection(collection)
         if default is None:
@@ -6432,11 +6251,7 @@ class AMACollectionScopedMixin(models.Model):
         return self.netcdf_file_id is None
 
     def filled_values(self):
-        """Ordered {element_name: text} of non-blank values, ready to write into a PDS4 label.
-
-        Blank values are dropped so the caller never emits an empty element. Order follows
-        `ELEMENT_ORDER`, which mirrors the xs:sequence in the LDD - PDS4 labels are order-sensitive.
-        """
+        """Ordered {element_name: text} of non-blank values for the label, in `ELEMENT_ORDER`."""
         values = {}
         for field_name in self.ELEMENT_ORDER:
             value = getattr(self, field_name)
@@ -6458,12 +6273,7 @@ class AMACollectionScopedMixin(models.Model):
 
 
 class ModelMetadata(AMACollectionScopedMixin):
-    """ama:Model_Metadata - which model produced the files, per collection.
-
-    Normally identical for every file in a collection, so it is edited as the collection default
-    and pushed out with apply_to_collection(). The per-file override exists because a user may need
-    to correct a single file without disturbing the rest.
-    """
+    """ama:Model_Metadata: which model produced the files, per collection."""
 
     ELEMENT_ORDER = ('type', 'name', 'version', 'institution')
     BOUNDARY_UNIT_ATTRIBUTE = {}
@@ -6511,8 +6321,7 @@ class SimulationConfiguration(AMACollectionScopedMixin):
         'description',
     )
 
-    # The four compass boundaries carry a required unit attribute in the LDD. The template hardcodes
-    # degrees, so the writer stamps the same value rather than asking the user for a unit.
+    # These need a unit in the LDD. The template uses degrees, so write the same.
     BOUNDARY_UNIT_ATTRIBUTE = {
         'northern_boundary': 'deg',
         'southern_boundary': 'deg',
@@ -6562,11 +6371,9 @@ class SimulationConfiguration(AMACollectionScopedMixin):
 
 
 class FileDescription(AMACollectionScopedMixin):
-    """ama:Model_Output/ama:File_Description - collection default plus per-file overrides.
+    """ama:Model_Output/ama:File_Description: collection default plus per-file overrides.
 
-    The one class where per-file values are expected rather than exceptional: each output file
-    typically covers a different slice of time or altitude. The harvest never populates it, and
-    postprocessing_methods can never be derived from the file at all.
+    Usually differs per file, since each one covers different times or altitudes.
     """
 
     ELEMENT_ORDER = (
@@ -6603,21 +6410,14 @@ class FileDescription(AMACollectionScopedMixin):
             return 'File Description default for {}'.format(self.collection)
         return 'File Description for {}'.format(self.netcdf_file)
 
-# ------------------------------------------------------------------------------------------------ #
-#                                    PDS validation runs
-# ------------------------------------------------------------------------------------------------ #
+# --- PDS validation runs ---
 
 
 class ValidationRun(models.Model):
-    """One execution of the PDS validate tool against one bundle.
+    """One run of the PDS validate tool on one bundle.
 
-    Kept as a row rather than a cached blob so that a run has a lifecycle a page can
-    poll, and so staff can see what a data provider saw when they submitted.
-
-    Two tiers, because the cost differs by orders of magnitude. STRUCTURE skips
-    content validation and takes a few seconds, which is cheap enough to run whenever
-    a bundle changes. FULL reads inside every data file and is the one that has to
-    happen before submission.
+    STRUCTURE skips content validation and takes seconds. FULL reads inside every data file
+    and has to happen before submission.
     """
 
     STATUS_QUEUED = 'q'
@@ -6638,22 +6438,15 @@ class ValidationRun(models.Model):
         (TIER_FULL, 'Full, including data content'),
     )
 
-    # Phases validate moves through, in order. It emits nothing at all while it
-    # compiles the schemas, which takes about five seconds, so that period has to be
-    # shown as indeterminate rather than as a bar sitting at zero.
+    # validate's phases, in order. It prints nothing for about five seconds while compiling schemas.
     PHASE_LOADING = 'loading'
     PHASE_LABELS = 'labels'
     PHASE_CONTENT = 'content'
     PHASE_REFERENCES = 'references'
     PHASE_DONE = 'done'
 
-    # The passes each tier actually makes over the bundle's products. A structure run
-    # skips content validation, so it makes two passes; a full run makes three. This
-    # is what percent_complete divides by, rather than a set of invented weights.
-    #
-    # Note that validate emits a [content.validation] counter even when content
-    # validation is skipped, so the pass list - not the counter's presence - is what
-    # decides whether a structure run can be in the content phase.
+    # Passes each tier makes over the products: two for structure, three for full.
+    # validate prints a content counter even when it's skipped, so go by this list.
     PASSES = {
         TIER_STRUCTURE: [PHASE_LABELS, PHASE_REFERENCES],
         TIER_FULL: [PHASE_LABELS, PHASE_CONTENT, PHASE_REFERENCES],
@@ -6693,23 +6486,15 @@ class ValidationRun(models.Model):
     error_count = models.PositiveIntegerField(default=0)
     warning_count = models.PositiveIntegerField(default=0)
 
-    # Where the raw JSON report landed, and the findings parsed out of it. The raw
-    # file is kept because staff will want to see exactly what the tool said, and
-    # because a parser change should be re-runnable against old reports.
+    # Where the raw JSON report is, and the findings parsed from it.
     report_path = models.CharField(max_length=MAX_CHAR_FIELD, blank=True, default='')
     findings = models.JSONField(null=True, blank=True)
 
-    # The validate release that produced the findings, e.g. '5.0.0', as the report
-    # itself states it. Read from the report rather than from settings, so a result
-    # keeps naming the tool that judged it after the host moves to a newer release.
-    # Blank for runs that wrote no report, and for runs made before this was recorded.
-    # Nullable on purpose: a process still running older code (a wsgi worker between
-    # migrate and reload, another checkout sharing the dev database) inserts rows
-    # without this column, and NOT NULL would make MariaDB refuse them.
+    # The validate version from the report, e.g. '5.0.0'. Blank if there was no report.
+    # Nullable since older code may still insert rows without this column during a deploy.
     tool_version = models.CharField(max_length=32, null=True, blank=True, default='')
 
-    # Why a run failed to produce a report at all: validate missing, Java missing,
-    # a crash, a timeout. Distinct from a bundle that validated and had errors.
+    # Why a run couldn't produce a report: validate or Java missing, a crash, a timeout.
     failure_reason = models.TextField(blank=True, default='')
 
     class Meta:
@@ -6744,9 +6529,7 @@ class ValidationRun(models.Model):
         if self.content_fingerprint:
             current = self.bundle.content_fingerprint()
             if not current:
-                # The directory is gone. That is a change, but not one re-running can
-                # describe, and saying "out of date" about a bundle with no files is
-                # less useful than leaving the last result standing.
+                # The directory is gone, so leave the last result. Re-running wouldn't help.
                 return False
             return current != self.content_fingerprint
 
@@ -6762,11 +6545,7 @@ class ValidationRun(models.Model):
     def percent_complete(self):
         """0-100, or None while validate is still compiling schemas.
 
-        None is not zero. Returning 0 during the loading phase would show a bar that
-        sits still for five seconds and then jumps, which reads as a hang.
-
-        Each pass over the products is an equal share of the bar, so the figure is
-        (passes finished + progress through this one) / passes this tier makes.
+        Each pass is an equal share of the bar.
         """
         if self.status == self.STATUS_DONE:
             return 100

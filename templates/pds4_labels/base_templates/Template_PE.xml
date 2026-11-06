@@ -64,15 +64,12 @@
 			</ama:AMA>
 		</Discipline_Area>
 	</Context_Area>
-	<Reference_List>
-	</Reference_List>
 	<File_Area_External>
 		<File>
 			<file_name>Filename_output.nc</file_name>
 			<creation_date_time>2023-07-09T15:45Z</creation_date_time>
 			<file_size unit="byte">312983</file_size>
 			<records>1</records>
-			<comment>netCDF file for output --- </comment>
 		</File>
 		<Encoded_External>
 			<name>filename_output</name>

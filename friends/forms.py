@@ -11,39 +11,31 @@ from django_recaptcha.widgets import ReCaptchaV2Checkbox
 from .models import UserProfile
 
 
-# A username becomes a directory name under ARCHIVE_DIR, so it has to be safe
-# as a single path segment.  Django's own validator allows "..", which is a
-# perfectly legal username and a directory that escapes the archive root.
+# A username becomes a folder under ARCHIVE_DIR, so it has to be one safe path segment.
 SAFE_USERNAME = re.compile(r'^[A-Za-z0-9._@+-]+$')
 
-# Folder names ELSA itself keeps inside ARCHIVE_DIR, so no account may own one.
+# Folder names ELSA keeps in ARCHIVE_DIR.
 RESERVED_USERNAMES = {'_closed_accounts'}
 
-# auth_user's name columns are 150 wide.  The form allowed 255, which MariaDB
-# either truncates or refuses with a 500, depending on its SQL mode.
+# auth_user's name columns are 150 wide.
 NAME_MAX = 150
 
 
 def validate_new_username(username, exclude=None):
-    """
-    The rules for a username, shared by sign-up and renaming.  A username
-    becomes ARCHIVE_DIR/<username>, so it must be one safe path segment.
-    """
+    """Username rules for sign-up and renaming. It becomes ARCHIVE_DIR/<username>."""
     username = (username or '').strip()
 
     if not SAFE_USERNAME.match(username):
         raise ValidationError('Use letters, digits and . @ + - _ only.')
 
-    # "." and ".." are valid Django usernames and disastrous directory
-    # names; a leading dot would also make the archive folder hidden.
+    # "." and ".." are valid Django usernames but bad folder names. A leading dot hides the folder.
     if username.startswith('.'):
         raise ValidationError('Usernames cannot start with a dot.')
 
     if username.lower() in RESERVED_USERNAMES:
         raise ValidationError('That username is not available.')
 
-    # Case-insensitive, so "Admin" cannot be registered alongside "admin"
-    # and so the two do not collide on a case-insensitive filesystem.
+    # Case-insensitive, so "Admin" can't be registered alongside "admin".
     taken = User.objects.filter(username__iexact=username)
     if exclude is not None:
         taken = taken.exclude(pk=exclude.pk)
@@ -54,11 +46,7 @@ def validate_new_username(username, exclude=None):
 
 
 def email_in_use(email, exclude=None):
-    """
-    Whether another account already uses this address, ignoring case.  Email
-    is the second factor and the recovery path, so two accounts sharing one
-    inbox makes both ambiguous to operate and to recover.
-    """
+    """Whether another account uses this address, ignoring case. Email is the second factor and recovery."""
     taken = User.objects.filter(email__iexact=email)
     if exclude is not None:
         taken = taken.exclude(pk=exclude.pk)
@@ -76,11 +64,7 @@ def email_in_use(email, exclude=None):
 # Create Forms Here.
 
 def flag_invalid_fields(*forms):
-    """
-    Puts is-invalid on the widgets Django rejected, so the field styling matches
-    the error text beside it.  Django does not do this on its own, and there is
-    no widget-tweaks dependency in this project.
-    """
+    """Put is-invalid on rejected widgets so the styling matches the error text."""
     for form in forms:
         for name in form.errors:
             field = form.fields.get(name)
@@ -93,9 +77,7 @@ def flag_invalid_fields(*forms):
 
 # Standard UserForm allows a user to be created given first name, last name, username, email, and password.  The PasswordInput widget is used to hide the typed in characters.
 class UserForm(forms.ModelForm):
-    # autocomplete tokens let password managers fill and, more importantly,
-    # offer to save the new credential.  col-md-* classes were on the inputs
-    # themselves, which is a grid class doing nothing useful on a form control.
+    # autocomplete tokens so password managers can fill and save.
     first_name = forms.CharField(
         max_length = NAME_MAX,
         widget = forms.TextInput(attrs={
@@ -138,9 +120,7 @@ class UserForm(forms.ModelForm):
             'autocomplete': 'new-password',
         })
     )
-    # Same field the contact form uses.  The per-address throttle in the view
-    # limits how fast one client can try; this is what stops it being scripted
-    # from many addresses at once.
+    # Same field as the contact form, to stop scripted sign-ups from many addresses.
     captcha = ReCaptchaField(widget=ReCaptchaV2Checkbox(), label='')
     def clean_username(self):
         return validate_new_username(self.cleaned_data.get('username'))
@@ -156,9 +136,7 @@ class UserForm(forms.ModelForm):
     def clean_password(self):
         password = self.cleaned_data.get('password') or ''
 
-        # settings.AUTH_PASSWORD_VALIDATORS was configured but nothing ever
-        # ran it, so "a" was an acceptable password.  The half-built user lets
-        # the similarity validator compare against the name and address.
+        # Run AUTH_PASSWORD_VALIDATORS. The half-built user lets it compare against the name and address.
         probe = User(
             username=self.cleaned_data.get('username') or '',
             email=self.cleaned_data.get('email') or '',
@@ -186,9 +164,7 @@ class UserProfileForm(forms.ModelForm):
         fields = ('agency',)
 
 
-#----------------------------------------------------------------------------------------
-# Profile Settings.  One form per card, each posted on its own.
-#----------------------------------------------------------------------------------------
+# --- Profile Settings. One form per card, each posted on its own. ---
 
 class NameForm(forms.ModelForm):
     first_name = forms.CharField(max_length=NAME_MAX, widget=forms.TextInput(attrs={
@@ -212,11 +188,7 @@ def _password_widget(autocomplete):
 
 
 class EmailChangeForm(forms.Form):
-    """
-    Asks for the new address and the current password.  The address is not
-    changed here: the view mails a code to it, and only that code switches the
-    account over.
-    """
+    """Asks for the new address and current password. The view mails a code, and that code does the switch."""
     new_email = forms.EmailField(label='New email address', widget=forms.EmailInput(attrs={
         'class': 'form-control', 'autocomplete': 'email',
         'autocapitalize': 'none', 'spellcheck': 'false'}))
@@ -244,10 +216,7 @@ class EmailChangeForm(forms.Form):
 
 
 class ElsaPasswordChangeForm(PasswordChangeForm):
-    """
-    Django's own form: checks the old password, runs AUTH_PASSWORD_VALIDATORS
-    and compares the two new entries.  Only the widgets are restyled.
-    """
+    """Django's own form. Only the widgets are restyled."""
     def __init__(self, *args, **kwargs):
         super(ElsaPasswordChangeForm, self).__init__(*args, **kwargs)
         for field in self.fields.values():

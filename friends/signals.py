@@ -13,8 +13,7 @@ from .models import AccountEvent
 
 logger = logging.getLogger(__name__)
 
-# Views set request.elsa_sign_in_method before login(); anything else (an
-# admin's force login, a test) is described generically.
+# Views set request.elsa_sign_in_method before login().
 DEFAULT_METHOD = ''
 
 
@@ -28,8 +27,7 @@ def on_sign_in(sender, request, user, **kwargs):
         logger.exception('could not track the sign-in of %s', user.pk)
         return
     if new_device and user.email:
-        # A notice that cannot be built (no host on a synthetic request) or
-        # sent must never undo the sign-in that triggered it.
+        # A failed notice can't undo the sign-in.
         try:
             from .views import _send_security_notice
             ip = devices.client_ip(request)

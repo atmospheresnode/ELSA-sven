@@ -70,8 +70,7 @@ Include once per page, outside any card or collapse.
       var labelEl = document.getElementById('netcdfInspectLabel');
       var canCopy = !!(navigator.clipboard && navigator.clipboard.writeText);
       var cache = {};
-      // The file whose window is open. A slow answer for a file the user has since moved on
-      // from is cached but not shown.
+      // The file whose window is open. A slow answer for another file is cached but not shown.
       var currentUrl = null;
 
       function showMessage(el, text, isError) {

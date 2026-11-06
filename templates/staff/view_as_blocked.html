@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Read-only - ELSA</title>
+<style>body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:#f6f7f9;color:#1f2328;margin:0;padding:3rem 1rem}
+.box{max-width:34rem;margin:0 auto;background:#fff;border:1px solid #e4e8ec;border-left:4px solid #008b8b;border-radius:12px;padding:1.5rem}
+button,a.btn{font:inherit;padding:.4rem .9rem;border-radius:6px;border:1px solid #008b8b;background:#008b8b;color:#fff;cursor:pointer;text-decoration:none;display:inline-block}
+a.ghost{background:#fff;color:#1f2328;border-color:#e4e8ec;margin-left:.5rem}</style></head>
+<body><div class="box">
+<h1 style="font-size:1.25rem;margin-top:0">You are viewing ELSA as {{ target.username }}</h1>
+<p>While you do, only their Bundle Hub, bundle pages, Account page and requests can be opened, and nothing can be changed. Stop viewing to use ELSA as yourself again.</p>
+<form method="post" action="{% url 'staff_public:view_as_stop' %}" style="display:inline">{% csrf_token %}<button type="submit">Stop viewing as {{ target.username }}</button></form>
+<a class="btn ghost" href="{% url 'friends:bundle_hub' %}">Back to their Bundle Hub</a>
+</div></body></html>

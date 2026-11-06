@@ -1,0 +1,19 @@
+{% load account_tags %}
+{% if rows %}
+<div class="table-responsive">
+<table class="staff-table">
+    <thead><tr>{% if can.work %}<th><input type="checkbox" class="form-check-input" data-tick-all aria-label="Tick every bundle in this list"></th>{% endif %}<th>Bundle</th><th>Owner</th><th>Last activity</th><th>Last nudge</th></tr></thead>
+    <tbody>
+    {% for row in rows %}
+    <tr>
+        {% if can.work %}<td><input type="checkbox" class="form-check-input" name="bundle" value="{{ row.bundle.pk }}" aria-label="Nudge the owner of {{ row.bundle.name }}"></td>{% endif %}
+        <td><a href="{% url 'staff:bundle' row.bundle.pk %}">{{ row.bundle.name }}</a><div class="staff-muted">{{ row.bundle.bundle_type }}</div></td>
+        <td><a href="{% url 'staff:user' row.bundle.user.pk %}">{{ row.bundle.user.username }}</a></td>
+        <td class="text-nowrap">{% if row.last %}{{ row.last|ago }}{% else %}<span class="staff-muted">Unknown</span>{% endif %}</td>
+        <td class="text-nowrap">{% if row.nudged %}{{ row.nudged|ago }}{% else %}<span class="staff-muted">Never</span>{% endif %}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+{% else %}<p class="staff-muted mb-0">None.</p>{% endif %}

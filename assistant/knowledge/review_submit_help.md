@@ -7,7 +7,7 @@
      submit/views.py#upload_external       = 1f663bead378
      tutorial/urls.py                      = 7fdbf2eaa074
 -->
-<!-- reviewed: 2026-09-24 -->
+<!-- reviewed: 2026-11-05 -->
 <!-- baseline: ab6b3482d9893d5e8b7e506fadff1e8125905f6a -->
 # Review, Submission, and Getting Help
 
@@ -19,8 +19,8 @@ NetCDF files, as an inventory). If the bundle changed since its last validation
 check, opening the window runs the check first and shows its progress at the
 top; this takes a few seconds for a typical bundle. Once nothing is left to fix,
 including Modification History, Citation Information and at least one Target
-(and, for an External bundle, at least one author on the citation and at least
-one processed NetCDF file), the Submit button activates. Submitting
+(and, for an External bundle, at least one author on the citation, at least one
+document and at least one processed NetCDF file), the Submit button activates. Submitting
 notifies the Atmospheres node staff by email; they review the bundle for PDS4
 compliance and archive readiness. You can keep editing after submission and
 resubmit, the bundle page shows when it was last submitted.
@@ -39,13 +39,17 @@ back from review days later. The button is disabled when any of these is true:
   starts one by itself when the bundle has changed or was never checked.
 - Items still need attention. Each has a Fix button that opens the right panel.
 - The bundle changed after the last check and no new check has finished yet.
+- On an External bundle, PDS still reports errors ELSA could not repair. ELSA
+  repairs its own older labels before each check, so this is rare. Nothing on the
+  page fixes it: the item asks you to contact the ELSA team through the Contact
+  page, and they can look at it and let the bundle through.
 
-Things that do NOT block submission: items under "Worth reviewing", which are
-advisory and say so in as many words, since anything shown to a user has to state
-either what to do or that there is nothing to do; problems caused by ELSA itself
-rather than by anything you entered, which are sent to the ELSA team instead and
-never shown; and a check that could not run at all, since being unable to check
-is not evidence of a problem.
+Things that do NOT block submission: items under "Worth reviewing" that come from
+PDS warnings, which are advisory and say so in as many words, since anything shown
+to a user has to state either what to do or that there is nothing to do; on an
+Archive bundle, problems caused by ELSA itself rather than by anything you entered;
+and a check that could not run at all, since being unable to check is not evidence
+of a problem.
 
 Context product names are one of the ELSA-side ones. validate compares the name
 in a label to the title of the registered PDS context product, which PDS forms as

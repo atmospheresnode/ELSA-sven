@@ -1,0 +1,87 @@
+{% extends 'staff/base.html' %}
+{% load account_tags staff_tags %}
+
+{% block console %}
+<p class="mb-2"><a href="{% url 'staff:broadcasts' %}" class="staff-muted"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Email users</a></p>
+<h1 class="staff-title">{% if item %}{{ item.subject }}{% else %}New email to users{% endif %}</h1>
+{% if dev_limited %}<p class="staff-warning">This is a development server: whatever group you choose, the email only goes to Admin Console members.</p>{% endif %}
+
+<div class="staff-detail">
+    <section class="staff-card">
+        {% if item and item.status != 'draft' %}
+        <div class="staff-card-head" id="broadcast-progress" data-status="{% if item.stalled %}stalled{% else %}{{ item.status }}{% endif %}">
+            {% if item.status == 'sent' %}
+            <h2>Sent</h2><p>{{ item.get_segment_display }}, {{ item.recipient_count }} delivered{% if item.failed_count %}, {{ item.failed_count }} failed{% endif %}{% if item.sent_at %}, {{ item.sent_at|ago }}{% endif %}</p>
+            {% elif item.stalled %}
+            <h2>Sending stopped</h2><p>{{ item.handled }} of {{ item.total }} handled ({{ item.recipient_count }} delivered{% if item.failed_count %}, {{ item.failed_count }} failed{% endif %}). The sending process ended before it finished.</p>
+            {% else %}
+            <h2>Sending</h2><p>{{ item.handled }} of {{ item.total }} so far ({{ item.get_segment_display|lower }}). It carries on if you leave this page; <a href="{% url 'staff:broadcast' item.pk %}">refresh</a> to see how far it has got.</p>
+            {% endif %}
+        </div>
+        <pre class="staff-request">{{ item.body }}</pre>
+        {% else %}
+        <form method="post" data-once>
+            {% csrf_token %}
+            <label class="form-label fw-semibold" for="b-seg">To</label>
+            <select class="form-select" id="b-seg" name="segment" required>
+                {% for key, label in segments %}<option value="{{ key }}" {% if item.segment == key %}selected{% endif %}>{{ label }} ({{ counts|get_item:key }})</option>{% endfor %}
+            </select>
+            <label class="form-label fw-semibold mt-3" for="b-subject">Subject</label>
+            <input class="form-control" id="b-subject" data-draft="broadcast{{ item.pk|default:'new' }}-subject" name="subject" maxlength="150" required value="{{ item.subject|default:'' }}">
+            <label class="form-label fw-semibold mt-3" for="b-body">Message</label>
+            <textarea class="form-control" id="b-body" data-draft="broadcast{{ item.pk|default:'new' }}-body" name="body" rows="10" maxlength="10000" required>{{ item.body|default:'' }}</textarea>
+            <div class="staff-muted mt-1">Each person is greeted by name. Plain text; line breaks are kept. Every email carries an unsubscribe link.</div>
+            {% if opted_out %}<div class="staff-muted mt-1">{{ opted_out }} {{ opted_out|pluralize:"person has,people have" }} turned news and updates off; the counts above leave them out.</div>{% endif %}
+            <button type="submit" class="btn btn-sm staff-btn mt-3">Save draft</button>
+        </form>
+        {% endif %}
+    </section>
+    {% if item and item.status == 'draft' and can.accounts %}
+    <section class="staff-card">
+        <div class="staff-card-head"><h2>Send</h2></div>
+        <form method="post" data-once>{% csrf_token %}<input type="hidden" name="action" value="test">
+            <button type="submit" class="btn btn-sm staff-btn w-100">Send a test to me ({{ user.email }})</button>
+        </form>
+        <button type="button" class="btn btn-sm staff-btn-primary w-100 mt-2" data-bs-toggle="modal" data-bs-target="#sendModal"><i class="bi bi-fingerprint me-1" aria-hidden="true" title="Asks for a passkey tap"></i>Send to {{ counts|get_item:item.segment }} people</button>
+    </section>
+    {% endif %}
+    {% if item and item.stalled and can.accounts %}
+    <section class="staff-card">
+        <div class="staff-card-head"><h2>Resume</h2><p>Sends to the {{ item.remaining }} {{ item.remaining|pluralize:"person,people" }} still waiting. Nobody who already has it gets it twice.</p></div>
+        <button type="button" class="btn btn-sm staff-btn-primary w-100" data-bs-toggle="modal" data-bs-target="#resumeModal"><i class="bi bi-fingerprint me-1" aria-hidden="true" title="Asks for a passkey tap"></i>Resume sending</button>
+    </section>
+    {% endif %}
+</div>
+
+{% if item and item.stalled and can.accounts %}
+<div class="modal fade" id="resumeModal" tabindex="-1" aria-labelledby="resumeLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form class="modal-content" method="post" data-passkey-confirm>
+            {% csrf_token %}<input type="hidden" name="action" value="resume">
+            <div class="modal-header"><h5 class="modal-title" id="resumeLabel">Resume sending "{{ item.subject }}"?</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+            <div class="modal-body">
+                <p>It carries on after the {{ item.handled }} people already handled. If the group has changed since it was sent, the rest of the group as it is now receives it.</p>
+                <p class="staff-error d-none mt-2 staff-confirm-error" role="alert"></p>
+            </div>
+            <div class="modal-footer"><button type="button" class="btn staff-btn-ghost" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn staff-btn-primary"><i class="bi bi-fingerprint me-1" aria-hidden="true"></i>Confirm with passkey and resume</button></div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+{% if item and item.status == 'draft' and can.accounts %}
+<div class="modal fade" id="sendModal" tabindex="-1" aria-labelledby="sendLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form class="modal-content" method="post" data-passkey-confirm>
+            {% csrf_token %}<input type="hidden" name="action" value="send">
+            <div class="modal-header"><h5 class="modal-title" id="sendLabel">Send "{{ item.subject }}"?</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+            <div class="modal-body">
+                <p>It goes to {{ counts|get_item:item.segment }} people ({{ item.get_segment_display|lower }}) and cannot be recalled.</p>
+                <p class="staff-error d-none mt-2 staff-confirm-error" role="alert"></p>
+            </div>
+            <div class="modal-footer"><button type="button" class="btn staff-btn-ghost" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn staff-btn-primary"><i class="bi bi-fingerprint me-1" aria-hidden="true"></i>Confirm with passkey and send</button></div>
+        </form>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

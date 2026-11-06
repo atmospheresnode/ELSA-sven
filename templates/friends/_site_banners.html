@@ -1,0 +1,24 @@
+{% load tz %}
+{% if viewing_as %}
+<div class="alert alert-warning d-flex flex-wrap align-items-center gap-2 mb-0 rounded-0 border-0 py-2" role="status">
+    <strong><i class="bi bi-eye me-1" aria-hidden="true"></i>Viewing ELSA as {{ viewing_as.target.username }}</strong>
+    <span>Read-only, until {{ viewing_as.until|localtime|date:"g:i A" }}.</span>
+    <form method="post" action="{% url 'staff_public:view_as_stop' %}" class="ms-auto">
+        <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+        <button type="submit" class="btn btn-sm btn-dark btn-keep-bg">Stop viewing</button>
+    </form>
+</div>
+{% endif %}
+{% for item in announcements %}
+<div class="alert {% if item.level == 'warning' %}alert-warning{% else %}alert-info{% endif %} d-flex align-items-start gap-2 mb-0 rounded-0 border-0 py-2" role="status">
+    <i class="bi {% if item.level == 'warning' %}bi-exclamation-triangle{% else %}bi-megaphone{% endif %} mt-1" aria-hidden="true"></i>
+    <div class="flex-grow-1"><strong>{{ item.title }}</strong>{% if item.body %}<div style="white-space: pre-wrap;">{{ item.body }}</div>{% endif %}</div>
+    {% if request.user.is_authenticated and not viewing_as %}
+    <form method="post" action="{% url 'staff_public:dismiss_announcement' item.pk %}">
+        <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+        <button type="submit" class="btn-close" aria-label="Dismiss this announcement"></button>
+    </form>
+    {% endif %}
+</div>
+{% endfor %}

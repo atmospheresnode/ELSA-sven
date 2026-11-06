@@ -6,13 +6,9 @@ USER = 'user'
 ADVISORY = 'advisory'
 ELSA = 'elsa'
 
-# The cards on the bundle page, and the modal each one opens. Used to group findings
-# by where they are fixed and to point the Fix button at the right place.
-# (name, modal to open, element to scroll to). Most things a user has to fix live
-# behind a modal on the bundle page. The NetCDF files and the AMA panel do not:
-# they are reached from the Collections card. Those used to carry no destination at
-# all, so the panel told someone their file name was wrong and gave them no way to
-# get to the file.
+# Cards on the bundle page, as (name, modal to open, element to scroll to).
+# Used to group findings and aim the Fix button. NetCDF files and the AMA panel are
+# reached from the Collections card.
 CARD_CITATION = ('Citation Information', 'citation_information_modal', None)
 CARD_MOD_HISTORY = ('Modification History', 'mod_history_modal', None)
 CARD_ALIAS = ('Alias', 'alias_modal', None)
@@ -20,25 +16,19 @@ CARD_CONTEXT = ('Context Products', 'context_modal', None)
 CARD_DOCUMENT = ('Documents', 'document_modal', None)
 CARD_DATA = ('Data Products', 'data_product_modal', None)
 CARD_NETCDF = ('NetCDF Files', None, 'collections_card')
-# An existing document is fixed from its own edit page, reached from the document list
-# in the Collections card; the Documents window only adds new ones.
+# An existing document is fixed from its edit page, through the Collections card.
 CARD_DOCUMENT_FILES = ('Documents', None, 'collections_card')
 CARD_AMA = ('Model Metadata', None, 'collections_card')
 CARD_NONE = (None, None, None)
+# For what only the team can act on: no form to open, so no Fix button.
+CARD_SUPPORT = ('ELSA team', None, None)
 
 
 class Rule(object):
-    """One translation. Matched on the finding's type, where it is, and what it says.
+    """One translation, matched on the finding's type, path and message.
 
-    `collapse` is what makes several findings read as one problem, and it defaults
-    to one item per rule for the whole bundle. PDS reports an empty collection four
-    times over, and missing Citation Information once per label - four times on an
-    Archive bundle. In both cases the person reading has exactly one thing to do, and
-    a list that says it four times is a list they stop reading. Which labels were
-    affected is kept on the item as detail rather than as repetition.
-
-    'label' is available for a problem that genuinely differs from one label to the
-    next, and 'finding' for unmapped findings, where the message is all we have.
+    `collapse` defaults to one item per rule for the whole bundle, since PDS repeats itself.
+    Use 'label' if it differs per label, and 'finding' for unmapped ones.
     """
 
     def __init__(self, key, audience, title, detail, card=CARD_NONE,
@@ -53,13 +43,9 @@ class Rule(object):
         self.path = path
         self.message = message
         self.collapse = collapse
-        # 'path' means the finding is about a named thing on disk rather than about
-        # a place in a label, so the item has to say which thing. Without it a rule
-        # like bad-filename can only say "a file name", which is not actionable.
+        # 'path' means the finding is about something on disk, so the item names it.
         self.subject = subject
-        # An extra predicate for the cases the type/path/message triple cannot
-        # separate. Used where the same PDS message means two different things
-        # depending on what it is reported against.
+        # Extra check for when the same PDS message means different things.
         self.when = when
 
     def matches(self, finding):
@@ -84,24 +70,18 @@ def is_warning(finding):
     return (finding.get('severity') or '').upper() == 'WARNING'
 
 
-def in_document_collection(finding):
-    """Whether the label sits directly in the bundle's document collection.
+def _is_error(finding):
+    """True for ERROR or FATAL_ERROR. validate uses FATAL_ERROR for schematron failures."""
+    return (finding.get('severity') or 'ERROR').upper() in ('ERROR', 'FATAL_ERROR')
 
-    Compared on the directory's name rather than searched for in the path, which
-    also matched a bundle or user whose name merely contains "document".
-    """
+
+def in_document_collection(finding):
+    """Whether the label is directly in the document collection, by directory name."""
     return os.path.basename(os.path.dirname(reported_path(finding))) == 'document'
 
 
 def is_directory_finding(finding):
-    """Whether validate reported this against a directory rather than a file.
-
-    It appends a separator to directory paths, so the reported path ends in one and
-    its final segment is empty. That empty segment is itself an invalid PDS name,
-    which is why validate then reports a bad name for directories whose names are
-    perfectly legal: it fires on 8 of 25 sample reports, always on a collection
-    directory nobody named by hand.
-    """
+    """Whether validate reported this against a directory (the path ends in a separator)."""
     return reported_path(finding).endswith('/')
 
 
@@ -110,23 +90,13 @@ _QUOTED_VALUE = re.compile(r"Value '([^']*)'")
 
 
 def offending_value(finding):
-    """The value PDS rejected, pulled out of its own message.
-
-    Some rules are about a value rather than a place, and the value is the only
-    thing that identifies which of several authors needs editing.
-    """
+    """The value PDS rejected, from its message."""
     match = _QUOTED_VALUE.search(finding.get('message') or '')
     return match.group(1) if match else ''
 
 
 def subject_name(finding):
-    """The thing on disk a finding is about, as short a name as still identifies it.
-
-    PDS reports a bad name with the offending name nowhere in the message, so the
-    only handle on it is the path validate was looking at. That path is absolute and
-    can end in a separator when it is a directory, which is why it is stripped before
-    the basename is taken.
-    """
+    """The file or folder a finding is about, from the path validate was checking."""
     raw = reported_path(finding).rstrip('/')
     if not raw:
         return ''
@@ -145,12 +115,7 @@ RULES = [
          card=CARD_CITATION,
          message=(r'Citation_Information and its description are required',)),
 
-    # The document collection is created for every bundle and, unlike the ones the
-    # user adds, cannot be deleted: delete_collection only handles
-    # AdditionalCollections. Offering to remove it, as the general rule below does,
-    # is advice nobody can follow. Measured on a bundle built from real EPIC model
-    # output, this is the only thing left standing between an AMA delivery and a
-    # clean validation: every other finding was ELSA's and is fixed.
+    # The document collection can't be deleted, so don't suggest removing it.
     Rule('document-collection-empty', USER,
          'The document collection has nothing in it',
          'Every bundle gets a document collection, and PDS will not accept one that '
@@ -171,12 +136,7 @@ RULES = [
          message=(r"Value '0' is not facet-valid", r"value '0' of element",
                   r"must have no element")),
 
-    # Everything about a context product's label is written by ELSA from the row the
-    # crawler stored. The person reading the panel chose a target from a list; they
-    # did not type its type, its reference_type, or its identifier, and no amount of
-    # choosing differently in the UI will change what ELSA writes. These used to be
-    # USER rules telling them to "choose one from the list rather than typing a
-    # value" for a value they had never been offered, let alone typed.
+    # ELSA writes all of a context product's label from the crawler's row, so these aren't the user's to fix.
     Rule('context-reference-type', ELSA,
          'ELSA wrote a reference type PDS does not accept',
          'The kind of link between this label and a context product is written by '
@@ -230,10 +190,7 @@ RULES = [
          path=('Citation_Information',),
          message=(r"Value '' ", r"The value '' of element", r"length = '0'")),
 
-    # Reported against a directory, which means validate's own trailing separator
-    # rather than anything in the bundle. Never shown to the user: it appears on
-    # essentially every bundle and names a folder ELSA created, so the old wording
-    # told people to rename and re-upload a file that does not exist.
+    # Reported against a directory ELSA made, from validate's trailing separator. Not shown to the user.
     Rule('directory-name-artifact', ELSA,
          'PDS reported a bad name against a directory',
          'validate appends a separator to directory paths and then reads the empty '
@@ -254,11 +211,7 @@ RULES = [
          # One row per bad name, because two badly named documents are two edits.
          subject='path'),
 
-    # The bundle label's member list is written by ELSA alone: creating a collection
-    # adds its entry, deleting one removes it. Nobody can edit it from the bundle
-    # page. So a member listed twice, or listed but gone, is ELSA's bookkeeping, not
-    # two documents with the same name, which is what the rule below used to tell
-    # people when a recreated collection was listed three times.
+    # Only ELSA writes the member list, so a repeat or missing member is ours.
     Rule('elsa-bundle-members', ELSA,
          'The bundle label lists a collection twice, or one that no longer exists',
          'Deleting a collection used to leave its entry in the bundle label, and '
@@ -281,15 +234,10 @@ RULES = [
          'Rename this file and upload it again; a space is the usual culprit.',
          card=CARD_NETCDF,
          types=('name_has_invalid_characters',),
-         # PDS puts the name nowhere in the message and leaves the element path
-         # empty, so the only handle on it is the path validate was looking at.
-         # Without showing it the row said "a file name" and nothing more.
+         # PDS doesn't give the name, so get it from the path validate was checking.
          subject='path'),
 
-    # A document whose label names a file that is not in the bundle. Until uploads
-    # existed this was ELSA's gap, since there was no way to attach a file; now the
-    # document's edit page takes one, so it is the user's to fix, and documents saved
-    # before uploads existed are exactly the ones that show it.
+    # Label names a file that isn't in the bundle. Fixed from the document's edit page.
     Rule('document-file-missing', USER,
          'Attach the file for this document',
          'The document is described, but its file is not in the bundle yet. In the '
@@ -300,9 +248,7 @@ RULES = [
          when=in_document_collection,
          subject='path'),
 
-    # validate runs veraPDF over a document declared PDF/A (Archive documents) and
-    # only accepts PDF/A-1. Upload already refuses a PDF that does not claim PDF/A-1,
-    # so this is a file that claims it without conforming, or one from before uploads.
+    # validate runs veraPDF on PDF/A documents and only takes PDF/A-1.
     Rule('document-not-pdfa', USER,
          "A document's PDF is not PDF/A-1",
          'PDS archives documents as PDF/A-1, and the validation tool found this PDF does '
@@ -356,15 +302,7 @@ RULES = [
          path=('File_Area_Inventory/File',),
          message=(r"Value '' ", r"'' is not a valid value", r"The value '' of element")),
 
-    # Every logical identifier in an ELSA bundle is composed by ELSA, never typed.
-    # The one a user could influence, through the bundle name or bundle ID, is run
-    # through models.pds_lid_segment before it reaches a LID, as are the collection
-    # and file name segments. So this firing means ELSA wrote an identifier PDS4 does
-    # not permit, which is a bug here and not something to hand to a data provider.
-    #
-    # It was reaching people as "No plain-language wording yet" attached to a raw
-    # cvc-pattern-valid dump quoting \p{Ll} and \p{Nd}, on a label whose only sin was
-    # that the file had been copied on Windows and arrived called "- Copy".
+    # ELSA builds every LID, and names go through models.pds_lid_segment, so this one is our bug.
     Rule('elsa-lid-pattern', ELSA,
          'ELSA built an identifier PDS does not allow',
          'A PDS4 identifier may contain only lowercase letters, digits, hyphen, dot '
@@ -396,13 +334,7 @@ RULES = [
 
     # ---- worth seeing, never blocking ------------------------------------------
 
-    # Every context product in a label is written by ELSA from a row its crawler
-    # stored, so a name that disagrees with what PDS publishes is our data being
-    # wrong, never the user's. It used to be shown to them as "PDS records a longer
-    # official name than the one shown here", which named no action because there is
-    # none they can take. ELSA now writes the published title, so this should not
-    # occur for investigations at all; it stays as a net for the other context
-    # products, counted against us rather than shown to them.
+    # ELSA writes context products from the crawler's row, so a wrong name is ours.
     Rule('context-name-mismatch', ELSA,
          'ELSA wrote a context name PDS does not publish',
          'Context names come from the PDS registry through ELSA, not from anything '
@@ -415,8 +347,7 @@ RULES = [
          'it as a warning rather than an error, which means your bundle is '
          'acceptable as it stands; node staff will decide during review whether it '
          'needs anything. The Validation output tab has the exact wording.',
-         # On severity: validate's warning types all start with "warning." and none
-         # ends with it, so matching the type never fired.
+         # Match on severity. validate's warning types start with "warning.".
          when=is_warning),
 ]
 
@@ -432,11 +363,8 @@ UNMAPPED = Rule('unmapped', ADVISORY,
 
 def classify(finding):
     """The rule that covers this finding. Never returns None."""
-    # Only an error can be the user's to fix before submitting. PDS raises some
-    # schema and schematron findings as warnings, whose message and path can look
-    # exactly like a user rule's, and a warning does not stop PDS accepting a bundle.
-    # A finding recorded without a severity is treated as an error.
-    warning = (finding.get('severity') or 'ERROR').upper() != 'ERROR'
+    # Only errors can be the user's to fix. No severity counts as an error.
+    warning = not _is_error(finding)
     for rule in RULES:
         if warning and rule.audience == USER:
             continue
@@ -446,12 +374,10 @@ def classify(finding):
 
 
 def translate(findings):
-    """Group findings into the items a person should see, plus what to hide.
+    """Group findings into what a person should see.
 
-    Returns {'user': [...], 'advisory': [...], 'elsa': [...], 'unmapped': [...]}.
-    Each item carries the plain-language wording, the card that fixes it, and the
-    raw findings behind it so the technical detail is always one click away rather
-    than gone.
+    Returns {'user': [...], 'advisory': [...], 'elsa': [...], 'unmapped': [...]}. Each item
+    has the wording, the card that fixes it and the raw findings.
     """
     buckets = {USER: {}, ADVISORY: {}, ELSA: {}}
     unmapped = []
@@ -469,8 +395,7 @@ def translate(findings):
             named = ''
 
         if rule.subject:
-            # One item per offending thing: two badly named files are two things to
-            # rename, and collapsing them into one row hides the second.
+            # One item per thing, so two badly named files are two rows.
             key = (rule.key, named)
         elif rule.collapse == 'rule':
             key = rule.key
@@ -511,20 +436,10 @@ def translate(findings):
 
 
 def raw_groups(findings):
-    """PDS's own output, grouped by the thing each finding is about.
+    """PDS's output, grouped by what each finding is about.
 
-    The raw tab exists so nobody has to take the translation on trust. Printed one
-    finding per line it does not serve that: PDS reports most defects twice, once as
-    a pattern failure and once as a type failure, on the same element and the same
-    line, so a bundle with four problems reads as eight errors and looks twice as
-    bad as it is.
-
-    Grouped by (label, element, line) instead, with every message PDS produced kept
-    underneath, and each group labelled with the plain-language item it became. That
-    is what makes the tab worth opening: it shows the translation is honest, and it
-    shows what was folded into what.
-
-    Returns [(label, [group, ...]), ...] with labels in a stable order.
+    PDS reports most defects twice, so group by (label, element, line) and keep every message.
+    Returns [(label, [group, ...]), ...].
     """
     grouped = {}
 
@@ -549,7 +464,7 @@ def raw_groups(findings):
         if finding.get('message') and finding['message'] not in group['messages']:
             group['messages'].append(finding['message'])
         # An ERROR anywhere in the group outranks a WARNING for the badge.
-        if finding.get('severity') == 'ERROR':
+        if _is_error(finding):
             group['severity'] = 'ERROR'
 
     by_label = {}
@@ -563,32 +478,65 @@ def raw_groups(findings):
 
 
 def merge_user(user_items, extra):
-    """Fold ELSA's own requirement items in with the ones PDS reported.
+    """Merge ELSA's requirements with what PDS reported.
 
-    Deduplicated on key: an unfilled citation reaches the validator as blank elements
-    *and* is absent from the database, so without this it would be listed twice, once
-    from each source, saying the same thing. Requirements sort first because they are
-    the coarser problem: telling someone their citation has a blank author is noise
-    while they have no citation at all.
+    De-duped on key, since a blank citation shows up in both. Requirements go first.
     """
     seen = set(item['key'] for item in user_items)
     requirements = [item for item in extra if item['key'] not in seen]
     return requirements + list(user_items)
 
 
-def summarise(findings, extra=()):
-    """Counts for the panel: what blocks submission, what to review, what passed.
+def unresolved_items(findings, bundle):
+    """Errors the user can't fix, as one blocking item.
 
-    `extra` is build.preflight's requirement items. They count as blocking, because
-    they are: the Review & Submit button has always refused a bundle without them.
-    Leaving them out is what let the panel say "passed" on a bundle ELSA would not
-    accept.
+    External only, since Archive can't pass validation yet. Staff can still get past this
+    if a rule turns out to be wrong.
+    """
+    if bundle is None or bundle.bundle_type != 'External':
+        return []
+    errors = [finding for finding in findings or []
+              if _is_error(finding) and classify(finding).audience != USER]
+    if not errors:
+        return []
+    return [{
+        'key': 'unresolved-errors',
+        'title': 'PDS reports {} problem{} ELSA could not repair'.format(
+            len(errors), '' if len(errors) == 1 else 's'),
+        'detail': 'This is not something you entered and there is nothing to change on '
+                  'this page. Please contact the ELSA team through the Contact page and '
+                  'name this bundle. The Validation output tab has the details.',
+        'card': CARD_SUPPORT[0],
+        'anchor': CARD_SUPPORT[1],
+        'scroll_to': CARD_SUPPORT[2],
+        'audience': USER,
+        'subject': '',
+        'labels': sorted({finding['label'] for finding in errors if finding.get('label')}),
+        'findings': errors,
+    }]
+
+
+def without_unresolved(findings, extra):
+    """Findings not already counted by an unresolved-errors item.
+
+    Those block the bundle, so they shouldn't also show under "Other notes".
+    """
+    counted = [finding for item in extra if item['key'] == 'unresolved-errors'
+               for finding in item['findings']]
+    return [finding for finding in findings or []
+            if not any(finding is other for other in counted)]
+
+
+def summarise(findings, extra=()):
+    """Counts for the panel: what blocks, what to review, what passed.
+
+    `extra` is the requirement items from build.preflight, which count as blocking.
     """
     translated = translate(findings)
     user = merge_user(translated['user'], extra)
     return {
         'blocking': len(user),
-        'advisory': len(translated['advisory']),
+        'advisory': len(translate(without_unresolved(findings, extra))['advisory']),
         'hidden': len(translated['elsa']),
         'unmapped': len(translated['unmapped']),
         'can_submit': not user,
@@ -599,7 +547,7 @@ def cards(findings, extra=()):
     """User-facing items grouped by the card that fixes them, in page order."""
     order = [CARD_CITATION[0], CARD_MOD_HISTORY[0], CARD_CONTEXT[0],
              CARD_DOCUMENT[0], CARD_NETCDF[0], CARD_AMA[0], CARD_DATA[0],
-             CARD_ALIAS[0], None]
+             CARD_ALIAS[0], CARD_SUPPORT[0], None]
 
     grouped = {}
     for item in merge_user(translate(findings)['user'], extra):

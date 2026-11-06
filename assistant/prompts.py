@@ -1,13 +1,9 @@
-"""System prompt construction for the ELSA Assistant.
+"""System prompt for the ELSA Assistant, in four layers:
 
-The prompt has four layers:
-1. A static persona section (who the assistant is, style, boundaries).
-2. Retrieved knowledge chunks relevant to the user's question (see retriever.py)
-   — this is where detailed ELSA/PDS4 facts live, sourced from the PDS4
-   Information Model v1.24 and ELSA's actual behavior.
-3. Per-user context (their bundles, current page), rebuilt every request.
-4. An injection guard: all user-controlled strings (bundle names, page paths)
-   are wrapped in <user_data> tags the model is told to treat as data only.
+1. Persona: who the assistant is, style, boundaries.
+2. Knowledge chunks relevant to the question (see retriever.py).
+3. User context: their bundles and current page, rebuilt every request.
+4. Injection guard: user strings are wrapped in <user_data> tags and treated as data only.
 """
 import re
 
@@ -91,11 +87,9 @@ def _user_data(value):
 
 
 def _netcdf_contents(nc_file):
-    """Compact, cached description of what is inside an uploaded NetCDF file.
+    """Short cached description of what's in an uploaded NetCDF file. Only reads the header.
 
-    Reads only the file header (lazy open), so this is cheap; results are
-    cached because chat requests recur far more often than files change.
-    Returns '' when the file cannot be read.
+    Returns '' if the file can't be read.
     """
     from django.core.cache import cache
     key = f'assistant-nc-contents-{nc_file.pk}'
@@ -109,8 +103,7 @@ def _netcdf_contents(nc_file):
 
         import xarray as xr
 
-        # Processing moves the file from uploads/ into the bundle directory
-        # without updating the FileField, so resolve the real location.
+        # Processing moves the file without updating the FileField, so find the real location.
         path = nc_file.file.path
         if not os.path.exists(path) and nc_file.bundle_id:
             moved = os.path.join(nc_file.bundle.directory(), os.path.basename(path))
@@ -168,8 +161,7 @@ def _page_context(user, page_path):
                     f'({bundle.bundle_type} bundle, status: {bundle.get_status().replace("_", " ")}). '
                     'Questions like "this bundle" or "why can\'t I submit?" refer to this bundle.'
                 )
-                # Since the user is looking at this bundle, include what their
-                # uploaded data files actually contain.
+                # User is looking at this bundle, so include what their data files contain.
                 try:
                     for nc in bundle.netcdf_files.all()[:3]:
                         contents = _netcdf_contents(nc)
@@ -188,11 +180,9 @@ def _page_context(user, page_path):
 
 
 def build_system_prompt(user, page_path=None, query='', chunks=None):
-    """Assemble the full system prompt: persona + retrieved knowledge + user context.
+    """Build the full system prompt: persona + knowledge + user context.
 
-    Pass `chunks` when the caller has already retrieved them (the chat view
-    does, to record which ones a reply was built from); otherwise they are
-    retrieved from `query`.
+    Pass `chunks` if already retrieved, otherwise they come from `query`.
     """
     lines = [BASE_PROMPT]
 
@@ -230,9 +220,7 @@ def build_system_prompt(user, page_path=None, query='', chunks=None):
 
 
 def _bundle_summary(b):
-    """One prompt line per bundle: complete identity, status, components, and
-    contents. Everything a user can see about their bundle in ELSA should be
-    answerable from this line; absence of a thing is stated, never omitted."""
+    """One prompt line per bundle: identity, status, components and contents. Say when something's missing."""
     try:
         status = b.get_status().replace('_', ' ')
     except Exception:

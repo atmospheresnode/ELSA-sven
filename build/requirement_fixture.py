@@ -17,7 +17,7 @@ problems are the findings it puts there itself.
 """
 from __future__ import unicode_literals
 
-from build.models import (Citation_Information, Modification_History, NetCDFFile,
+from build.models import (Product_Document, Citation_Information, Modification_History, NetCDFFile,
                           Target)
 
 
@@ -67,5 +67,10 @@ def satisfy_requirements(bundle, skip=(), target_name='Mars'):
             # labels. Tests that need a real NetCDF upload one through the view.
             NetCDFFile.objects.create(
                 bundle=bundle, title='fixture.nc', file='fixture.nc', processed=True)
+
+    if ('document-collection-empty' not in skip and bundle.bundle_type == 'External'
+            and not bundle.product_document_set.exists()):
+        Product_Document.objects.create(bundle=bundle, document_name='readme',
+                                        document_id='readme')
 
     return bundle

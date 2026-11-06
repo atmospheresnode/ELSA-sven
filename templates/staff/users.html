@@ -1,0 +1,51 @@
+{% extends 'staff/base.html' %}
+{% load tz account_tags %}
+
+{% block console %}
+<h1 class="staff-title">Users</h1>
+<p class="staff-subtitle">Every ELSA account. Open one to see its bundles, sign-ins and requests.</p>
+
+<div class="staff-card">
+    {% include 'staff/_saved_views.html' %}
+    <form method="get" class="staff-filters" role="search" data-live-filter="users-results">
+        <input type="search" name="q" value="{{ query }}" class="form-control form-control-sm" placeholder="Username, name or email" aria-label="Search users">
+        <select name="state" class="form-select form-select-sm" aria-label="Show">
+            <option value="">Everyone</option>
+            <option value="open_request" {% if state == 'open_request' %}selected{% endif %}>Has an open request</option>
+            <option value="unconfirmed" {% if state == 'unconfirmed' %}selected{% endif %}>Never confirmed their email</option>
+            <option value="locked" {% if state == 'locked' %}selected{% endif %}>Locked out of sign-in codes</option>
+            <option value="disabled" {% if state == 'disabled' %}selected{% endif %}>Disabled</option>
+            <option value="staff" {% if state == 'staff' %}selected{% endif %}>Staff</option>
+        </select>
+        <button type="submit" class="btn btn-sm staff-btn" data-live-hide>Search</button>
+        {% if query or state %}<a href="{% url 'staff:users' %}" class="btn btn-sm staff-btn-ghost">Clear</a>{% endif %}
+    </form>
+    <div id="users-results">
+    {% if page.object_list %}
+    <div class="table-responsive">
+        <table class="staff-table">
+            <thead><tr><th>Account</th><th>Agency</th><th>Bundles</th><th>Last sign-in</th><th>State</th></tr></thead>
+            <tbody>
+            {% for person in page %}
+            <tr>
+                <td><a href="{% url 'staff:user' person.pk %}">{{ person.username }}</a><div class="staff-muted">{{ person.get_full_name|default:"No name" }} &middot; {{ person.email|default:"no email" }}</div></td>
+                <td class="staff-mono">{{ person.userprofile.agency|default:"" }}</td>
+                <td>{{ person.bundle_count }}</td>
+                <td class="text-nowrap">{% if person.last_login %}<span title="{{ person.last_login|localtime|date:'M j, Y g:i A T' }}">{{ person.last_login|ago }}</span>{% else %}<span class="staff-muted">Never</span>{% endif %}</td>
+                <td>
+                    {% if person.userprofile.closed_at %}<span class="badge rounded-pill bg-secondary">Closed</span>
+                    {% elif not person.is_active %}<span class="badge rounded-pill bg-danger">Disabled</span>
+                    {% else %}<span class="badge rounded-pill bg-success">Active</span>{% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% include 'staff/_pagination.html' %}
+    {% else %}
+    <p class="staff-empty">Nobody matches.</p>
+    {% endif %}
+    </div>
+</div>
+{% endblock %}

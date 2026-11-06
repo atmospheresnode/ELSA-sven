@@ -39,9 +39,7 @@ class Command(BaseCommand):
             # # For Testing/Demo-ing Purposes
             # id_list = fetch_ids(limit=5000)
 
-            # Was fetch_ids(limit=100) for demo purposes, which quietly capped
-            # every refresh at the first 100 context products. The default limit
-            # covers the whole registry.
+            # The default limit covers the whole registry.
             id_list = fetch_ids()
 
             global problem_products

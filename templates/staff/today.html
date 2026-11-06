@@ -1,0 +1,69 @@
+{% extends 'staff/base.html' %}
+{% load tz account_tags staff_tags %}
+
+{% block console %}
+<h1 class="staff-title">{{ greeting }}, {{ user.first_name|default:user.username }}</h1>
+<p class="staff-subtitle">{% now "l, F j" %}. What needs you now, oldest first.</p>
+
+{% if first_visit %}
+<div class="staff-card staff-next">
+    <div class="staff-card-head"><h2>New to the Admin Console?</h2></div>
+    <p class="mb-2">A five-minute tour explains requests, reviews, liens and what each button does.</p>
+    <a class="btn btn-sm staff-btn-primary" href="{% url 'staff:help' %}">Getting started</a>
+</div>
+{% endif %}
+
+<div class="staff-stats">
+    <a class="staff-stat text-decoration-none" href="{% url 'staff:home' %}?show=attention"><div class="staff-stat-value">{{ needs_you|length|add:needs_you_more }}</div><div class="staff-stat-label">Requests for you</div></a>
+    <a class="staff-stat text-decoration-none" href="{% url 'staff:home' %}?show=due"><div class="staff-stat-value {% if late_count %}staff-age-danger{% endif %}">{{ late_count }}</div><div class="staff-stat-label">First replies overdue, whole team</div></a>
+    {% if can.review %}<a class="staff-stat text-decoration-none" href="{% url 'staff:pipeline' %}"><div class="staff-stat-value">{{ review_count }}</div><div class="staff-stat-label">Reviews you could pick up</div></a>{% endif %}
+</div>
+
+<section class="staff-card" aria-labelledby="today-requests">
+    <div class="staff-card-head"><h2 id="today-requests">Requests</h2><p>New ones nobody has taken, yours you have not opened, and any where the user answered.</p></div>
+    {% for item in needs_you %}
+    <div class="staff-today-item">
+        <span class="staff-muted">#{{ item.case.pk }}</span>
+        <div class="staff-today-what">
+            <a href="{% url 'staff:case' item.case.pk %}">{{ item.case.title }}</a>
+            <div class="staff-muted small">{{ item.why }}{% if item.due == 'late' %} &middot; <span class="staff-age-danger">first reply overdue</span>{% elif item.due == 'soon' %} &middot; <span class="staff-age-warning">first reply due today</span>{% endif %}</div>
+        </div>
+        <span class="staff-muted small text-nowrap">{{ item.case.created_at|ago }}</span>
+    </div>
+    {% empty %}
+    <p class="staff-empty mb-0">Nothing needs you right now. New requests from users appear here and under the bell.</p>
+    {% endfor %}
+    {% if needs_you_more %}<p class="mt-2 mb-0"><a href="{% url 'staff:home' %}?show=attention">{{ needs_you_more }} more in Requests</a></p>{% endif %}
+</section>
+
+{% if can.review %}
+<section class="staff-card" aria-labelledby="today-reviews">
+    <div class="staff-card-head"><h2 id="today-reviews">Bundle reviews and releases</h2><p>Submissions waiting for a reviewer, fixes to check, and releases part way through.</p></div>
+    {% for item in reviews %}
+    <div class="staff-today-item">
+        {% if item.release %}
+        <span class="staff-muted"><i class="bi bi-box-arrow-up" aria-hidden="true"></i></span>
+        <div class="staff-today-what"><a href="{% url 'staff:release' item.release.pk %}">{{ item.release.bundle.name }}: {{ item.release.label }}</a><div class="staff-muted small">{{ item.why }}</div></div>
+        <span class="staff-muted small text-nowrap">{{ item.release.created_at|ago }}</span>
+        {% else %}
+        <span class="staff-muted">#{{ item.case.pk }}</span>
+        <div class="staff-today-what"><a href="{% url 'staff:case' item.case.pk %}">{{ item.case.title }}</a><div class="staff-muted small">{{ item.why }}{% if item.due == 'late' %} &middot; <span class="staff-age-danger">first reply overdue</span>{% endif %}</div></div>
+        <span class="staff-muted small text-nowrap">{{ item.case.created_at|ago }}</span>
+        {% endif %}
+    </div>
+    {% empty %}
+    <p class="staff-empty mb-0">No reviews waiting. Submitted bundles appear here and on the <a href="{% url 'staff:pipeline' %}">Pipeline</a>.</p>
+    {% endfor %}
+    {% if reviews_more %}<p class="mt-2 mb-0"><a href="{% url 'staff:pipeline' %}">{{ reviews_more }} more on the Pipeline</a></p>{% endif %}
+</section>
+{% endif %}
+
+<section class="staff-card" aria-labelledby="today-around">
+    <div class="staff-card-head"><h2 id="today-around">Around the node</h2></div>
+    <ul class="mb-0">
+        <li>You have {{ mine_open }} open request{{ mine_open|pluralize }} assigned to you. <a href="{% url 'staff:home' %}?show=mine">See them</a></li>
+        {% if ready_count %}<li>{{ ready_count }} bundle{{ ready_count|pluralize:" is,s are" }} ready but never submitted; the owner may only need a nudge. <a href="{% url 'staff:stalled' %}">Stalled bundles</a></li>{% endif %}
+        <li>Common validate problems across all bundles: <a href="{% url 'staff:insights' %}">Validation insights</a></li>
+    </ul>
+</section>
+{% endblock %}

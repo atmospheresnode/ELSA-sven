@@ -1,24 +1,16 @@
-"""Removes sign-ups that never confirmed their email address.
+"""Remove sign-ups that never confirmed their email address.
 
     python3 manage.py purge_unverified_accounts              # dry run, 7-day cutoff
     python3 manage.py purge_unverified_accounts --days 14    # dry run, custom cutoff
     python3 manage.py purge_unverified_accounts --delete     # actually delete
 
-An unconfirmed account holds its username and address, so anyone who abandons
-sign-up at the code screen, or mistypes their own address, blocks a real
-registration until it goes.  Signing in with the right password resumes
-verification, so this only clears accounts nobody came back for.
+Only accounts that are inactive, never signed in, have no email_verified_at and own no bundles.
+Their archive folder is removed only if empty.
 
-Only accounts that are inactive, have never signed in, have no
-email_verified_at and own no bundles are touched.  An admin-deactivated
-account, or one its owner closed, is never one of these.  The user's archive folder is removed only if
-it is empty; anything in it is left for a person to look at.
+Also deletes expired rate-limit counters, old remembered devices, account activity over a
+year old, and device rows for expired sessions.
 
-Also deletes rate-limit counters whose window has closed, remembered devices
-past their date, account activity older than a year, and device-list rows
-for sessions that have expired.
-
-Suggested cron line (daily, 03:30), for a user that can write ARCHIVE_DIR:
+Cron (daily, 03:30), as a user that can write ARCHIVE_DIR:
     30 3 * * * cd /export/atmos1/htdocs/elsa && /usr/local/venvs/ELSA_3.11/bin/python manage.py purge_unverified_accounts --delete
 """
 import os

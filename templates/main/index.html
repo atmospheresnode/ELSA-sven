@@ -319,8 +319,7 @@
     };
     var csrf = '{{ csrf_token }}';
 
-    // Arm autofill-driven sign-in.  Silent when there is nothing to offer,
-    // which is what makes it safe on page load.
+    // Turn on autofill sign-in. Does nothing if there's nothing to offer, so it's safe on page load.
     window.ElsaPasskeys.autofillSupported().then(function (available) {
         if (!available) {
             return;
@@ -329,8 +328,7 @@
             window.location.href = data.redirect;
         });
     }).catch(function (error) {
-        // Nobody asked for this prompt, so a cancelled one, or a browser that
-        // cannot offer passkeys in autofill, is routine; only report a genuine failure.
+        // A cancelled prompt or no autofill support is normal, so only report a real failure.
         if (error && ['NotAllowedError', 'AbortError', 'NotSupportedError'].indexOf(error.name) === -1) {
             alertBox.className = 'alert alert-danger py-2 px-3 mb-3';
             alertBox.textContent = window.ElsaPasskeys.describe(error);

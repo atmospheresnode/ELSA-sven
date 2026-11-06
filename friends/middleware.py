@@ -1,14 +1,10 @@
 # -*- coding: utf-8 -*-
-"""
-Per-request account housekeeping, after AuthenticationMiddleware:
+"""Account housekeeping on each request, after AuthenticationMiddleware:
 
-- ends a session that "sign out everywhere else" has retired;
-- keeps the session's row in the device list current;
-- renders times in the browser's own time zone, which base-derk.html puts in
-  the elsa_tz cookie, and keeps the account's copy current for emails sent
-  when no browser is involved.
-
-One small query per signed-in request (the profile's generation and zone).
+- ends sessions retired by "sign out everywhere else"
+- keeps the session's row in the device list current
+- shows times in the browser's time zone (elsa_tz cookie from base-derk.html)
+- adds the security headers (security_headers)
 """
 from __future__ import unicode_literals
 
@@ -19,7 +15,7 @@ from django.contrib import messages
 from django.contrib.auth import logout
 from django.utils import timezone
 
-from . import devices
+from . import devices, security_headers
 from .models import UserProfile
 
 
@@ -42,6 +38,8 @@ class AccountSessionMiddleware(object):
         self.get_response = get_response
 
     def __call__(self, request):
+        # Inline <script> blocks carry this; see security_headers.
+        request.csp_nonce = security_headers.new_nonce()
         browser_zone = unquote(request.COOKIES.get(BROWSER_ZONE_COOKIE, ''))
         if zone_for(browser_zone) is None:
             browser_zone = ''
@@ -64,7 +62,13 @@ class AccountSessionMiddleware(object):
                 zone = zone_for(browser_zone or profile.get('timezone'))
                 if zone is not None:
                     timezone.activate(zone)
+        # Staff "view as user". Applied last and skipped if the staff app isn't installed.
+        from staff.hooks import view_as
+        refusal = view_as(request)
+        if refusal is not None:
+            timezone.deactivate()
+            return security_headers.apply(request, refusal)
         try:
-            return self.get_response(request)
+            return security_headers.apply(request, self.get_response(request))
         finally:
             timezone.deactivate()

@@ -18,8 +18,7 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 
 
-# One-time code policy.  These are the only knobs for the email code flow, so
-# keep them here rather than scattering literals through the views.
+# One-time code settings for the email code flow.
 OTP_LENGTH = 6
 OTP_TTL = timedelta(minutes=5)          # How long an issued code stays valid.
 OTP_MAX_ATTEMPTS = 5                    # Wrong guesses before the account locks.
@@ -37,10 +36,7 @@ class UserProfile(models.Model):
         # We could be super cool and add more agencies.
     )
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    # 'nasa:pds', not 'NASA': the default has to be one of the choice VALUES, not a
-    # display label. Bundle.lid() interpolates this straight into the LID, so a
-    # profile carrying 'NASA' produced urn:NASA:<bundle>, which fails PDS4 on both
-    # the lowercase pattern and the segment count.
+    # 'nasa:pds', not 'NASA'. This has to be a choice value since it goes straight into the LID.
     agency = models.CharField(max_length=10, choices=AGENCY_CHOICES, default='nasa:pds')
     directory = models.CharField(max_length=1000)
     #picture = models.ImageField(upload_to='profile_images', blank=True)
@@ -52,13 +48,10 @@ class UserProfile(models.Model):
     otp_attempts = models.PositiveSmallIntegerField(default=0)
     otp_locked_until = models.DateTimeField(blank=True, null=True)
 
-    # Set when the user proves they own the address, by the code emailed at
-    # sign-up.  An inactive account without it never finished registering and
-    # may resume; one with it was switched off by an administrator and may not.
+    # Set when the user confirms the emailed code. Inactive without it can resume, with it was switched off by an admin.
     email_verified_at = models.DateTimeField(blank=True, null=True)
 
-    # A change of address waiting for the code sent to the new one.  Only the
-    # code's hash is kept, as for sign-in codes.
+    # Pending address change. Only the code's hash is kept.
     pending_email = models.EmailField(blank=True, null=True)
     pending_email_hash = models.CharField(max_length=128, blank=True, null=True)
     pending_email_created_at = models.DateTimeField(blank=True, null=True)
@@ -67,8 +60,7 @@ class UserProfile(models.Model):
     # Null for accounts whose password has not changed since this was added.
     password_changed_at = models.DateTimeField(blank=True, null=True)
 
-    # Set when the owner closes the account.  The row stays so their bundles
-    # keep an owner; see friends/closure.py.
+    # Set when the owner closes the account. See friends/closure.py.
     closed_at = models.DateTimeField(blank=True, null=True)
 
     # Researcher details, offered as "Add me as an author" in citations.
@@ -78,9 +70,7 @@ class UserProfile(models.Model):
     # An IANA name such as "Europe/Madrid"; blank means ELSA's own (TIME_ZONE).
     timezone = models.CharField(max_length=64, blank=True, default='')
 
-    # Every session is stamped with this at sign-in.  "Sign out everywhere
-    # else" raises it, and friends.middleware ends any session still carrying
-    # an older number, including ones from before sessions were tracked.
+    # Sessions get this at sign-in. "Sign out everywhere else" raises it, and the middleware ends older ones.
     session_generation = models.PositiveIntegerField(default=0)
 
 
@@ -94,11 +84,7 @@ class UserProfile(models.Model):
         return reverse('friends:bundle_hub')
 
     def generate_otp(self):
-        """
-        Issues a new one-time code.  Only the hash is kept, so this is the one
-        and only chance to read the plain code -- it is returned for emailing
-        and is not recoverable afterwards.
-        """
+        """Issue a new one-time code. Returned once for emailing, only the hash is kept."""
         code = '{0:0{1}d}'.format(secrets.randbelow(10 ** OTP_LENGTH), OTP_LENGTH)
         self.otp_hash = make_password(code)
         self.otp_created_at = timezone.now()
@@ -106,8 +92,7 @@ class UserProfile(models.Model):
         self.save(update_fields=self.OTP_FIELDS)
         return code
 
-    # update_fields everywhere, so saving the code never rewrites the rest of
-    # the profile from whatever stale copy this request happens to hold.
+    # update_fields so this doesn't overwrite the rest of the profile with a stale copy.
     OTP_FIELDS = ['otp_hash', 'otp_created_at', 'otp_attempts']
 
     def clear_otp(self):
@@ -118,8 +103,7 @@ class UserProfile(models.Model):
         self.save(update_fields=self.OTP_FIELDS)
 
     def _lock_otp(self, now):
-        # Burn the code as well as locking, so waiting out the lockout does
-        # not hand back a still-live code.
+        # Clear the code too, so waiting out the lockout doesn't bring it back.
         self.otp_locked_until = now + OTP_LOCKOUT
         self.otp_hash = None
         self.otp_created_at = None
@@ -127,14 +111,9 @@ class UserProfile(models.Model):
         self.save(update_fields=self.OTP_FIELDS + ['otp_locked_until'])
 
     def _spend_code(self, code, hash_field, created_field, attempts_field, ttl):
-        """
-        Checks a one-time code and books the attempt against it.  Returns
-        'ok', 'invalid', 'expired' or 'exhausted'.
+        """Check a one-time code. Returns 'ok', 'invalid', 'expired' or 'exhausted'.
 
-        The attempt is booked in the database before the code is compared, as
-        a single conditional UPDATE.  Reading the count, checking, then saving
-        count + 1 let parallel requests all read the same count, so a script
-        firing guesses concurrently got far more than OTP_MAX_ATTEMPTS.
+        Counts the attempt first, in one conditional UPDATE, so parallel guesses can't beat OTP_MAX_ATTEMPTS.
         """
         issued = getattr(self, hash_field)
         created = getattr(self, created_field)
@@ -150,8 +129,7 @@ class UserProfile(models.Model):
             self.save(update_fields=fields)
             return 'expired'
 
-        # Scoped to the code being checked, so a guess cannot be booked against
-        # (or retire) a newer code issued while this request was in flight.
+        # Scoped to this code, so a guess can't count against a newer one.
         live = UserProfile.objects.filter(pk=self.pk, **{hash_field: issued})
 
         booked = live.filter(**{attempts_field + '__lt': OTP_MAX_ATTEMPTS}).update(
@@ -163,8 +141,7 @@ class UserProfile(models.Model):
 
         # check_password compares in constant time.
         if check_password(str(code or ''), issued):
-            # Retiring the code is the claim: of two requests carrying the right
-            # code, only the one whose UPDATE lands gets in.
+            # Clearing the code is the claim. Only one of two right requests gets in.
             if live.update(**cleared):
                 for name, value in cleared.items():
                     setattr(self, name, value)
@@ -176,10 +153,7 @@ class UserProfile(models.Model):
         return 'invalid'
 
     def verify_otp(self, code):
-        """
-        Checks a submitted sign-in code.  Returns (ok, reason), where reason is
-        None on success or one of 'locked', 'expired', 'invalid'.
-        """
+        """Check a sign-in code. Returns (ok, reason). Reason is None, 'locked', 'expired' or 'invalid'."""
         if self.otp_lock_remaining():
             return False, 'locked'
 
@@ -223,12 +197,9 @@ class UserProfile(models.Model):
         self.save(update_fields=self.PENDING_EMAIL_FIELDS)
 
     def verify_email_change(self, code):
-        """
-        Returns (new_email, None) when the code is right, else (None, reason)
-        with reason one of 'expired', 'invalid', 'exhausted'.  Running out of
-        guesses drops the pending change rather than locking the account: the
-        person here is already signed in, and a lock would let anyone holding
-        their session lock them out.
+        """Returns (new_email, None) if the code is right, else (None, reason).
+
+        Running out of guesses drops the pending change instead of locking the account.
         """
         new_email = self.pending_email
         result = self._spend_code(code, 'pending_email_hash', 'pending_email_created_at',
@@ -280,31 +251,20 @@ class UserProfile(models.Model):
 
 
 class Passkey(models.Model):
-    """
-    A WebAuthn credential registered by a user.
-
-    Only the public key is stored.  The private key never leaves the
-    authenticator, which is what makes a passkey phishing resistant: the
-    credential is bound to ELSA's origin, so a lookalike site cannot get the
-    authenticator to sign for it.
-    """
+    """A WebAuthn credential. Only the public key is stored."""
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='passkeys')
 
-    # Base64url text rather than raw bytes, so lookups stay simple and the
-    # value survives a MariaDB dump unchanged.
+    # Base64url text so lookups are simple and it survives a MariaDB dump.
     credential_id = models.CharField(max_length=512, unique=True)
     public_key = models.BinaryField()
 
-    # Replay defence: an authenticator that has been cloned will eventually
-    # present a counter that failed to advance.  Some authenticators never
-    # implement it and always report 0, which is legitimate.
+    # A cloned authenticator eventually sends a counter that didn't advance. Some always send 0.
     sign_count = models.PositiveBigIntegerField(default=0)
 
     transports = models.CharField(max_length=255, blank=True, default='')
     name = models.CharField(max_length=100, default='Passkey')
 
-    # A backed-up credential is synced through something like iCloud Keychain,
-    # so losing one device does not lose the passkey.
+    # Backed up means synced (e.g. iCloud Keychain), so losing a device doesn't lose the passkey.
     backed_up = models.BooleanField(default=False)
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -385,11 +345,7 @@ class AccountEvent(models.Model):
 
 
 class TrustedDevice(models.Model):
-    """
-    A browser that may skip the emailed code after a correct password, for a
-    while.  The browser holds a random token; only its SHA-256 is kept, so a
-    database leak does not hand out working cookies.
-    """
+    """A browser that can skip the emailed code for a while. Only the token's SHA-256 is kept."""
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='trusted_devices')
     token_hash = models.CharField(max_length=64, unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -405,16 +361,7 @@ class TrustedDevice(models.Model):
 
 
 class AuthThrottle(models.Model):
-    """
-    One rate-limit counter: failed passwords for an account, sign-ups from an
-    address, and so on.
-
-    These used to live in the cache, but ELSA's cache is the database backend,
-    whose incr() is a read followed by a write.  Parallel requests all read the
-    same value and the counter barely moved, so the limits held against a
-    patient attacker and not against a fast one.  Here every hit is a single
-    UPDATE, which the database serialises.  See friends/throttle.py.
-    """
+    """One rate-limit counter. Every hit is a single UPDATE (see friends/throttle.py)."""
     # 191 characters keeps a unique utf8mb4 index inside MariaDB's limit.
     key = models.CharField(max_length=191, unique=True)
     count = models.PositiveIntegerField(default=0)
@@ -426,12 +373,7 @@ class AuthThrottle(models.Model):
 
 @receiver(post_save, sender=User)
 def create_user_profile(sender, instance, created, **kwargs):
-    """
-    Every user gets a profile.  Only creates one: this used to re-save the
-    whole profile on every User save, including the last_login stamp inside
-    login(), which wrote back whatever stale copy of the one-time code fields
-    the request held.
-    """
+    """Every user gets a profile. Only creates one, so it doesn't overwrite code fields on login."""
     if created or not UserProfile.objects.filter(user=instance).exists():
         UserProfile.objects.get_or_create(
             user=instance,

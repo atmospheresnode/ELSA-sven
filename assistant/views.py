@@ -29,23 +29,18 @@ MAX_MESSAGE_CHARS = 4000
 # Per-user rate limits (shared free-tier quota protection)
 RATE_LIMIT_PER_MINUTE = 20
 RATE_LIMIT_PER_DAY = 200
-# Global cap across ALL users: per-user limits don't compose, and this is the
-# actual spend/quota guard. Override with ASSISTANT_GLOBAL_DAILY_CAP.
+# Daily cap across all users. Override with ASSISTANT_GLOBAL_DAILY_CAP.
 GLOBAL_LIMIT_PER_DAY = 2000
 
-# The active thread lives in the login session: Django starts a new session on
-# every login, so the widget opens on a fresh chat after each login.
+# Active thread is in the login session, so each login opens a fresh chat.
 ACTIVE_SESSION_KEY = 'assistant_conversation_id'
 MAX_LISTED_CONVERSATIONS = 50
 MAX_SEARCH_CHARS = 100
 
-# Bundle pages, for the widget's "Looking at" line (same pattern prompts.py
-# uses to put that bundle in the model's context).
+# Bundle pages, for the widget's "Looking at" line (same pattern as prompts.py).
 BUNDLE_PAGE = re.compile(r'/build/(\d+)/')
 
-# Follow-up suggestions ride along at the end of the answer itself, so they
-# cost no extra model call. The server strips the line out before anything is
-# saved and hands the questions to the widget as chips.
+# Follow-up suggestions come at the end of the answer. The server strips them and sends them as chips.
 MAX_FOLLOWUPS = 3
 FOLLOWUPS_INSTRUCTION = """
 
@@ -60,8 +55,7 @@ talk, after confirming that feedback was sent, or when you have just asked the
 user a question yourself."""
 _FOLLOWUPS_BLOCK = re.compile(r'<followups>(.*?)(?:</followups>|$)', re.DOTALL)
 
-# Thread titles: a light model is plenty for a few words, and keeps the
-# stronger models' free-tier quota for answers.
+# Thread titles use a light model to save the free-tier quota for answers.
 TITLE_MODELS = ['gemini-2.5-flash-lite', 'gemini-flash-lite-latest', 'gemini-2.5-flash']
 TITLE_LAST_ATTEMPT_TURN = 3   # stop trying if three exchanges were all small talk
 TITLE_REFRESH_TURN = 4        # re-read the thread once it has had time to settle
@@ -111,11 +105,7 @@ SUBMIT_FEEDBACK_TOOL = {
 
 
 def _assistant_enabled():
-    """Kill switch: settings flag (needs a restart) or cache flag (instant).
-
-    The cache flag is set/cleared with `manage.py assistant_toggle off|on`, so
-    the assistant can be disabled in seconds without touching prod config.
-    """
+    """Kill switch: settings flag (needs a restart) or cache flag (`manage.py assistant_toggle off|on`)."""
     if not getattr(settings, 'ASSISTANT_ENABLED', True):
         return False
     try:
@@ -161,8 +151,7 @@ def chat(request):
         conversation = Conversation.objects.create(
             user=request.user, title=_question_title(message_text), title_source='question')
 
-    # A retry after a failed reply resends the same question; it is already
-    # saved, so saving it again would show the model the question twice.
+    # A retry resends the same question, which is already saved.
     last_question = (conversation.messages.filter(role='user')
                      .order_by('-created_at', '-pk').first())
     is_retry = (payload.get('retry') and last_question is not None
@@ -180,8 +169,7 @@ def chat(request):
     ]
 
     page_path = str(payload.get('page', ''))[:300]
-    # Retrieval sees the previous user turn too, so follow-ups like "how do I
-    # add one?" still pull the knowledge chunk of the topic being discussed.
+    # Include the previous user turn so follow-ups still find the right chunk.
     prev_turn = list(conversation.messages.filter(role='user')
                      .order_by('-created_at')
                      .values_list('text', flat=True)[1:2])
@@ -191,23 +179,19 @@ def chat(request):
     system_prompt += FOLLOWUPS_INSTRUCTION
     knowledge_used = ','.join(chunk['name'] for chunk in chunks)
 
-    # Remember the active thread in the login session. Saved here, while the DB
-    # connection is still open, so the session middleware has nothing left to
-    # write (and no reason to reopen a connection) once the stream starts.
+    # Save the active thread now, while the DB connection is still open.
     if request.session.get(ACTIVE_SESSION_KEY) != conversation.pk:
         request.session[ACTIVE_SESSION_KEY] = conversation.pk
         request.session.save()
         request.session.modified = False
 
-    # All DB work is done (auth + history + prompt). Release the connection now
-    # so a slow upstream call or long stream never holds a MariaDB slot hostage.
+    # DB work is done, so release the connection before the slow model call.
     connections.close_all()
 
     client = GeminiClient(api_key)
     started = time.monotonic()
 
-    # Return the SSE response immediately — the model connection happens inside
-    # the stream so the widget can show progress (and fallback status) live.
+    # Return the SSE response right away. The model connects inside the stream so the widget shows progress.
     response = StreamingHttpResponse(
         _sse_stream(client, request.user, conversation, system_prompt, contents, started,
                     knowledge_used),
@@ -220,11 +204,9 @@ def chat(request):
 
 @login_required
 def history(request):
-    """Return the active conversation so the widget can restore it.
+    """Return the active conversation for the widget.
 
-    With ?conversation_id= the widget is opening a past thread from the chat
-    list, which also makes it the active one. Without it, the active thread
-    comes from the login session, so a fresh login lands on a new chat.
+    With ?conversation_id= it opens a past thread and makes it active.
     """
     if not _assistant_enabled():
         return JsonResponse({'enabled': False, 'conversation_id': None, 'messages': []})
@@ -250,8 +232,7 @@ def history(request):
 
 
 def _page_bundle_label(user, page_path):
-    """Name the bundle the user is looking at, so the widget can show that the
-    assistant sees it. Only the user's own bundles, as in the system prompt."""
+    """Name the bundle the user is looking at. Only the user's own bundles."""
     match = BUNDLE_PAGE.search(str(page_path)[:300])
     if not match:
         return ''
@@ -262,11 +243,7 @@ def _page_bundle_label(user, page_path):
 
 @login_required
 def conversations(request):
-    """The user's past threads for the widget's chat list, newest first.
-
-    ?q= narrows the list to threads whose title or any message mentions it,
-    so an old answer can be found by what was said, not only by its name.
-    """
+    """The user's past threads, newest first. ?q= searches titles and messages."""
     active = request.session.get(ACTIVE_SESSION_KEY)
     now = localtime(timezone.now())
     threads = Conversation.objects.filter(user=request.user)
@@ -336,15 +313,10 @@ def delete_conversation(request):
 
 @login_required
 def auto_title(request):
-    """Name the thread after what the user is asking about.
+    """Name the thread after what the user is asking.
 
-    The widget calls this after every reply, and it is a cheap no-op unless a
-    title is due. The AI reads the question and the answer together, which is
-    what tells it the kind of help wanted ("Bug report: NetCDF upload" rather
-    than a copy of the first sentence). If the thread has no real topic yet
-    (just a greeting), the model says so and the next exchange tries again,
-    up to TITLE_LAST_ATTEMPT_TURN. One refresh at TITLE_REFRESH_TURN lets the
-    title follow a thread that has settled on a different topic.
+    The widget calls this after every reply and it does nothing unless a title is due.
+    Retries up to TITLE_LAST_ATTEMPT_TURN if there's no topic yet, and refreshes once at TITLE_REFRESH_TURN.
     """
     if request.method != 'POST':
         return JsonResponse({'success': False, 'error': 'POST required.'}, status=405)
@@ -368,8 +340,7 @@ def auto_title(request):
     last = conversation.messages.order_by('-created_at', '-pk').first()
     if not due or last is None or last.role != 'model' or not last.text.strip():
         return JsonResponse(current)
-    # One attempt per exchange, however often the widget asks, and every
-    # attempt counts against the shared daily cap like a chat message does.
+    # One attempt per exchange, and it counts against the daily cap.
     if not cache.add(f'assistant-title-{conversation.pk}-{turns}', 1, timeout=60 * 60 * 24):
         return JsonResponse(current)
     global_cap = getattr(settings, 'ASSISTANT_GLOBAL_DAILY_CAP', GLOBAL_LIMIT_PER_DAY)
@@ -411,7 +382,7 @@ def _owned_conversation(user, conversation_id):
 
 
 def _question_title(text):
-    """Placeholder title from the first question, shown until the AI names the thread."""
+    """Placeholder title from the first question."""
     text = ' '.join(text.split())
     if len(text) > 50:
         text = text[:50].rsplit(' ', 1)[0] + '…'
@@ -437,8 +408,7 @@ def _tidy_title(raw):
     if not lines:
         return ''
     title = re.sub(r'^\s*title\s*:\s*', '', lines[0], flags=re.IGNORECASE)
-    # Markdown emphasis and quotes go, underscores stay (PDS4 names like
-    # Citation_Information use them).
+    # Remove markdown emphasis and quotes but keep underscores (Citation_Information).
     title = re.sub(r'[*`#]', '', title).strip().strip('"\' ').rstrip('.:;!,')
     title = _clean_text(title)
     title = ' '.join(title.split())
@@ -455,12 +425,10 @@ RATING_REASONS = {key for key, _ in Message.REASON_CHOICES if key}
 
 @login_required
 def rate(request):
-    """Record a thumbs up/down on one of the user's assistant messages.
+    """Save a thumbs up/down on one of the user's assistant messages.
 
-    A thumbs-down may carry a reason and a comment. The widget records the
-    vote on click and sends the reason in a second request, so a vote that
-    arrives without them leaves any reason already stored alone: the two
-    requests can land in either order. Any other rating clears them.
+    The reason comes in a second request and they can arrive in either order, so a vote
+    with no reason keeps any stored reason. Any other rating clears it.
     """
     if request.method != 'POST':
         return JsonResponse({'success': False, 'error': 'POST required.'}, status=405)
@@ -499,9 +467,7 @@ def _clean_text(text):
 
 
 def _final_text(accumulated):
-    """Scrub for persistence: internal markup out, house style enforced once
-    more (an em dash split across two stream deltas escapes the per-delta
-    pass)."""
+    """Clean up for saving: remove internal markup and apply house style once more."""
     return re.sub(r'</?user_data>', '', _clean_text(_strip_followups(accumulated))).strip()
 
 
@@ -531,11 +497,8 @@ STREAM_SILENCE_BUDGET_SECONDS = 60
 def _pumped_events(client, upstream):
     """Relay client.iter_events through a reader thread.
 
-    The socket read happens off-thread so this generator regains control every
-    STREAM_HEARTBEAT_SECONDS even when the model sends nothing, letting the
-    view emit "still working" updates instead of freezing the chat. Yields
-    ('event', ev), ('heartbeat', None) on silence, and ('stalled', None) when
-    the silence budget is exhausted. Reader exceptions re-raise here.
+    Yields ('event', ev), ('heartbeat', None) on silence and ('stalled', None) when it's been
+    silent too long. Reader exceptions re-raise here.
     """
     import queue
     import threading
@@ -576,13 +539,10 @@ def _sse_stream(client, user, conversation, system_prompt, contents, started,
                 knowledge_used=''):
     """Connect to a model and relay its stream as delta events.
 
-    Emits status events while falling back between models so the widget never
-    sits silent. A submit_feedback call pauses text delivery, emails the
-    feedback, then runs a second model turn (with the tool result) so the model
-    can confirm to the user in its own words.
+    Sends status events while falling back between models. A submit_feedback call emails the
+    feedback, then runs a second turn so the model can confirm it.
     """
-    # First, which thread this is: if the reply then fails, the widget's retry
-    # still lands in the same conversation (a first message has no id yet).
+    # Thread id first, so a retry lands in the same conversation.
     yield _sse_event({'type': 'start', 'conversation_id': conversation.pk})
     model = ''
     upstream = None
@@ -669,8 +629,7 @@ def _stream_reply(client, user, conversation, system_prompt, contents, started, 
                     accumulated += delta
                     yield _sse_event({'type': 'delta', 'text': delta})
     except GeneratorExit:
-        # Client disconnected mid-stream (tab closed, stop button): keep what
-        # the model already said so the conversation history stays complete.
+        # Client disconnected, so keep what the model already said.
         if accumulated.strip():
             _save_reply(conversation, _final_text(accumulated), model, started,
                         feedback_sent, 'client_disconnected', knowledge_used)
@@ -696,15 +655,13 @@ def _stream_reply(client, user, conversation, system_prompt, contents, started, 
         return
 
     if finish_reason == 'MAX_TOKENS':
-        # The reply was cut off at the output limit; tell the user rather than
-        # ending mid-sentence as if nothing happened.
+        # Cut off at the output limit, so tell the user.
         note = '\n\n*(This reply hit the length limit and was cut short. Ask me to continue for the rest.)*'
         accumulated += note
         yield _sse_event({'type': 'delta', 'text': note})
         error_note = error_note or 'truncated:MAX_TOKENS'
 
-    # The model occasionally echoes the internal <user_data> markup; scrub it,
-    # and enforce house style once more for anything split across deltas.
+    # Remove any <user_data> markup the model echoes and apply house style again.
     final_text = _final_text(accumulated)
     reply = _save_reply(conversation, final_text, model, started, feedback_sent, error_note, knowledge_used)
     yield _sse_event({
@@ -746,11 +703,9 @@ def _bump(key, timeout):
 
 
 def _rate_limited(user):
-    """Cache-based throttle: per-user minute/day caps plus a global daily cap.
+    """Throttle: per-user minute/day caps plus a global daily cap.
 
-    Checked in escalating order so a blocked request doesn't burn the larger
-    buckets: minute-limited spam never consumes the user's daily allowance,
-    and user-limited requests never consume the global one.
+    Checked smallest first so a blocked request doesn't use up the larger ones.
     """
     if _bump(f'assistant-rl-minute-{user.pk}', 60) > RATE_LIMIT_PER_MINUTE:
         return True, "You're sending messages a little too fast. Please wait a minute and try again."
@@ -768,7 +723,9 @@ def _rate_limited(user):
 
 def _send_feedback_email(user, category, context, description):
     """Email feedback to staff, mirroring the retired Beta Feedback form."""
-    description = escape(description.strip())
+    # The queue shows text as text; only the HTML email needs it escaped.
+    raw_description = description.strip()
+    description = escape(raw_description)
     if not description:
         return False
     if category not in FEEDBACK_CATEGORIES:
@@ -834,6 +791,11 @@ def _send_feedback_email(user, category, context, description):
 </body>
 </html>
 """
+    from staff import hooks as staff_hooks
+    staff_hooks.open_case('feedback', '{0} feedback via the Assistant'.format(category),
+                          requester=user, body=raw_description,
+                          data={'category': category, 'context': context})
+
     email = EmailMessage(
         subject=subject,
         body=email_body,

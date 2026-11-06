@@ -1,11 +1,7 @@
 # -*- coding: utf-8 -*-
-"""
-Fixed-window rate limits for the account flows, counted in the database.
+"""Fixed-window rate limits for the account flows, counted in the database.
 
-Each hit is one UPDATE that either advances a live window or starts a fresh
-one, so concurrent requests cannot read the same count and each write back
-count + 1.  That read-then-write is what the DB cache backend's incr() does,
-and it is why these counters moved out of the cache.
+Each hit is one UPDATE, so parallel requests can't read the same count.
 """
 from __future__ import unicode_literals
 
@@ -28,8 +24,7 @@ def hit(key, window_seconds):
     now = timezone.now()
     fresh_expiry = now + timedelta(seconds=window_seconds)
 
-    # count is assigned first.  MariaDB evaluates SET clauses left to right, so
-    # both CASEs must read the old expires_at, which they do while it is last.
+    # count first. MariaDB does SET left to right, and both CASEs need the old expires_at.
     advanced = AuthThrottle.objects.filter(key=key).update(
         count=Case(When(expires_at__lte=now, then=Value(1)),
                    default=F('count') + 1),
@@ -39,8 +34,7 @@ def hit(key, window_seconds):
 
     if not advanced:
         try:
-            # Savepoint, so losing the race to create the row does not poison
-            # a surrounding transaction.
+            # Savepoint so losing the race to create the row doesn't break the outer transaction.
             with transaction.atomic():
                 AuthThrottle.objects.create(key=key, count=1, expires_at=fresh_expiry)
             return 1

@@ -30,12 +30,7 @@ class OwnerStatusFilter(admin.SimpleListFilter):
 
 @admin.register(Bundle)
 class BundleAdmin(admin.ModelAdmin):
-    """
-    Read-only.  Bundles are built and deleted through ELSA, which keeps the
-    files on disk and the labels in step; an admin edit or delete here would
-    change the database alone.  This exists so the team can find bundles,
-    including those of closed accounts, which nobody else can open.
-    """
+    """Read-only. Editing here would change the database but not the files or labels."""
     list_display = ('name', 'user', 'bundle_type', 'owner_status', 'archive_path', 'updated_at')
     list_filter = (OwnerStatusFilter, 'bundle_type', 'status')
     search_fields = ('name', 'bundleID', 'user__username')

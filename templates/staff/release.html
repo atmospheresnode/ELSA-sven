@@ -1,0 +1,114 @@
+{% extends 'staff/base.html' %}
+{% load tz account_tags staff_tags %}
+
+{% block console %}
+<p class="mb-2"><a href="{% if release.case %}{% url 'staff:case' release.case.pk %}{% else %}{% url 'staff:bundle' release.bundle.pk %}{% endif %}" class="staff-muted"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>{{ release.bundle.name }}</a></p>
+<h1 class="staff-title">{{ release.label }}: {{ release.bundle.name }}</h1>
+<p class="staff-subtitle">{{ release.bundle.bundle_type }} bundle by {{ release.bundle.user.username }} &middot; started {{ release.created_at|ago }}{% if release.created_by %} by {{ release.created_by.username }}{% endif %}{% if release.released_at %} &middot; <span class="badge rounded-pill bg-success">Released {{ release.released_at|localtime|date:"M j, Y" }}</span>{% endif %}</p>
+{% if own %}<p class="staff-warning">This is your own bundle, so a colleague has to release it.</p>{% endif %}
+
+<div class="staff-detail">
+    <div>
+        <section class="staff-card" aria-labelledby="s1">
+            <div class="staff-card-head"><h2 id="s1">1. Final full validate</h2></div>
+            {% if release.final_run %}
+            <p class="mb-2"><a href="{% url 'staff:validation_report' release.final_run.pk %}">Run #{{ release.final_run.pk }}</a>: {{ release.final_run.get_status_display }}{% if release.final_run.status == 'd' %}, {{ release.final_run.error_count }} error{{ release.final_run.error_count|pluralize }}, {{ release.final_run.warning_count }} warning{{ release.final_run.warning_count|pluralize }}{% endif %}{% if release.final_run.is_stale %} <span class="badge rounded-pill bg-warning text-dark">Out of date</span>{% endif %}</p>
+            {% else %}<p class="staff-muted">Not run yet.</p>{% endif %}
+            {% if can_act %}<form method="post" data-once>{% csrf_token %}<input type="hidden" name="action" value="validate"><button class="btn btn-sm staff-btn">{% if release.final_run %}Run it again{% else %}Run the final validate{% endif %}</button></form>{% endif %}
+        </section>
+
+        <section class="staff-card" aria-labelledby="s2">
+            <div class="staff-card-head"><h2 id="s2">2. Delivery package</h2><p>The bundle as .tar.gz with an MD5 checksum manifest and a LID::VID transfer manifest inside.</p></div>
+            {% if release.package_built_at %}
+            <dl class="staff-rows">
+                <dt>Built</dt><dd>{{ release.package_built_at|localtime|date:"M j, Y g:i A T" }}</dd>
+                <dt>Files</dt><dd>{{ release.package_files }}</dd>
+                <dt>Size</dt><dd>{{ release.package_size|filesizeformat }}</dd>
+                <dt>SHA-256</dt><dd class="staff-mono">{{ release.package_sha256 }}</dd>
+            </dl>
+            {% if package_available %}<a class="btn btn-sm staff-btn mt-2" href="{% url 'staff:release_package' release.pk %}">Download the package</a>{% endif %}
+            {% endif %}
+            {% if can_act %}<form method="post" class="mt-2" data-once>{% csrf_token %}<input type="hidden" name="action" value="package"><button class="btn btn-sm staff-btn">{% if release.package_built_at %}Build it again{% else %}Build the package{% endif %}</button>
+                <div class="staff-muted small mt-1">Needs a clean final validate on the current files. Bundles over {{ web_limit_gb }} GB are built on the server with <span class="staff-mono">manage.py build_release {{ release.pk }}</span>.</div></form>{% endif %}
+        </section>
+
+        <section class="staff-card" aria-labelledby="s3">
+            <div class="staff-card-head"><h2 id="s3">3. DOI</h2></div>
+            {% if release.doi %}<p class="mb-2"><a href="https://doi.org/{{ release.doi }}" rel="noopener" target="_blank">{{ release.doi }}</a> <span class="badge rounded-pill {% if release.doi_status == 'registered' %}bg-success{% else %}bg-info text-dark{% endif %}">{{ release.get_doi_status_display }}</span></p>{% endif %}
+            {% if can_act %}
+            <form method="post" class="d-flex flex-wrap gap-2" data-once>{% csrf_token %}<input type="hidden" name="action" value="doi">
+                <input class="form-control form-control-sm staff-mono" name="doi" maxlength="200" required value="{{ release.doi }}" placeholder="10.17189/1234567" style="max-width: 18rem;" aria-label="DOI">
+                <select class="form-select form-select-sm w-auto" name="doi_status" aria-label="DOI status">
+                    <option value="reserved" {% if release.doi_status == 'reserved' %}selected{% endif %}>Reserved</option>
+                    <option value="registered" {% if release.doi_status == 'registered' %}selected{% endif %}>Registered</option>
+                </select>
+                <button class="btn btn-sm staff-btn">Save DOI</button>
+            </form>
+            {% endif %}
+        </section>
+
+        <section class="staff-card" aria-labelledby="s4">
+            <div class="staff-card-head"><h2 id="s4">4. Delivery to the Engineering Node</h2></div>
+            {% if release.delivered_at %}<p class="mb-1">Recorded {{ release.delivered_at|localtime|date:"M j, Y g:i A T" }}.</p><div class="staff-note-body staff-muted">{{ release.delivery_note }}</div>{% endif %}
+            {% if can_act and not release.delivered_at and not release.package_built_at %}
+            <p class="staff-muted mb-0">Available once the delivery package is built.</p>
+            {% elif can_act and not release.delivered_at %}
+            <form method="post" data-once>{% csrf_token %}<input type="hidden" name="action" value="delivered">
+                <textarea class="form-control form-control-sm" name="note" rows="2" maxlength="2000" required placeholder="How and where it went, e.g. uploaded to the EN delivery area, ticket number"></textarea>
+                <button class="btn btn-sm staff-btn mt-2">Record the delivery</button>
+            </form>
+            {% endif %}
+            <div class="mt-3">
+                <span class="fw-semibold">Registry:</span> {{ release.get_registry_status_display }}
+                {% if can_act and release.delivered_at %}
+                <form method="post" class="d-inline-flex gap-1 ms-2" data-once>{% csrf_token %}<input type="hidden" name="action" value="registry">
+                    <select class="form-select form-select-sm w-auto" name="registry" aria-label="Registry status">{% for key, label in registry_choices %}<option value="{{ key }}" {% if release.registry_status == key %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+                    <button class="btn btn-sm staff-btn-ghost">Save</button>
+                </form>
+                {% endif %}
+            </div>
+        </section>
+
+        <section class="staff-card" aria-labelledby="s5">
+            <div class="staff-card-head"><h2 id="s5">5. Release</h2><p>The owner is told, with the DOI to cite, and the review closes as Released.</p></div>
+            {% if release.released_at %}<p class="mb-0">Released {{ release.released_at|localtime|date:"M j, Y" }}.{% if release.release_note %}</p><div class="staff-note-body">{{ release.release_note }}</div>{% else %}</p>{% endif %}
+            {% elif can_act %}
+                {% if release.delivered_at and release.doi_status == 'registered' %}
+                <button type="button" class="btn btn-sm staff-btn-primary" data-bs-toggle="modal" data-bs-target="#releaseModal">Release</button>
+                {% else %}
+                <p class="staff-muted mb-0">Available once the delivery is recorded{% if release.doi_status != 'registered' %} and the DOI is registered{% endif %}.</p>
+                {% endif %}
+            {% endif %}
+        </section>
+    </div>
+    <div>
+        <section class="staff-card" aria-labelledby="steps-heading">
+            <div class="staff-card-head"><h2 id="steps-heading">Steps</h2></div>
+            {% for key, label, done in steps %}
+            <div class="staff-check"><span class="badge rounded-pill {% if done %}bg-success{% else %}bg-light text-dark border{% endif %}">{% if done %}Done{% else %}To do{% endif %}</span> <span>{{ label }}</span></div>
+            {% endfor %}
+        </section>
+    </div>
+</div>
+
+{% if can_act and not release.released_at and release.delivered_at and release.doi_status == 'registered' %}
+<div class="modal fade" id="releaseModal" tabindex="-1" aria-labelledby="releaseLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form class="modal-content" method="post" data-once>
+            {% csrf_token %}<input type="hidden" name="action" value="released">
+            <div class="modal-header"><h5 class="modal-title" id="releaseLabel">Release {{ release.bundle.name }}?</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+            <div class="modal-body">
+                <label for="release-note" class="form-label">Message to {{ release.bundle.user.get_full_name|default:release.bundle.user.username }} <span class="staff-muted">(optional; the DOI is added for them)</span></label>
+                <textarea id="release-note" data-draft="release{{ release.pk }}-note" name="note" class="form-control" rows="4" maxlength="4000"></textarea>
+                {% if can.accounts %}
+                <div class="form-check mt-3"><input class="form-check-input" type="checkbox" name="announce" value="1" id="release-announce"><label class="form-check-label" for="release-announce">Also show a site-wide announcement for 7 days</label></div>
+                {% else %}
+                <p class="staff-muted small mt-3 mb-0">A site-wide announcement of the release can be posted by an account admin under Team, Announcements.</p>
+                {% endif %}
+            </div>
+            <div class="modal-footer"><button type="button" class="btn staff-btn-ghost" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn staff-btn-primary">Release and tell the owner</button></div>
+        </form>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,39 @@
+{% extends 'staff/base.html' %}
+
+{% block console %}
+<h1 class="staff-title">Workload</h1>
+<p class="staff-subtitle">Who has what. The target is a first reply within {{ target_days }} working day{{ target_days|pluralize }}{% if can.accounts %} (<a href="{% url 'staff:settings' %}">change</a>){% endif %}.</p>
+<section class="staff-card">
+    <div class="table-responsive">
+    <table class="staff-table">
+        <thead><tr><th>Person</th><th>Open</th><th>Waiting on user</th><th>First reply late</th><th>Typical first reply (30 days)</th><th>Away</th></tr></thead>
+        <tbody>
+        {% for row in rows %}
+        <tr>
+            <td><a href="{% url 'staff:home' %}?show=all&amp;q={{ row.person.username|urlencode }}">{{ row.person.get_full_name|default:row.person.username }}</a>{% if row.person.pk == user.pk %} <span class="staff-muted">(you)</span>{% endif %}</td>
+            <td>{{ row.open }}</td>
+            <td>{{ row.waiting }}</td>
+            <td>{% if row.late %}<span class="badge rounded-pill bg-danger">{{ row.late }}</span>{% else %}0{% endif %}</td>
+            <td>{% if row.median is not None %}{{ row.median }} h{% else %}<span class="staff-muted">None</span>{% endif %}</td>
+            <td>{% if row.away %}until {{ row.away|date:"M j" }}{% endif %}</td>
+        </tr>
+        {% endfor %}
+        <tr><td><a href="{% url 'staff:home' %}?show=active">Nobody yet</a></td><td>{{ unassigned }}</td><td></td><td>{% if unassigned_late %}<span class="badge rounded-pill bg-danger">{{ unassigned_late }}</span>{% else %}0{% endif %}</td><td></td><td></td></tr>
+        </tbody>
+    </table>
+    </div>
+</section>
+{% if can.work %}
+<section class="staff-card" style="max-width: 40rem;">
+    <div class="staff-card-head"><h2>Going away?</h2><p>Hand every open request assigned to you to a colleague. Set your dates under <a href="{% url 'staff:preferences' %}">My preferences</a>.</p></div>
+    <form method="post" class="d-flex gap-2" data-once>
+        {% csrf_token %}<input type="hidden" name="action" value="hand_over">
+        <select class="form-select form-select-sm" name="to" required aria-label="Hand them to">
+            <option value="">Choose a colleague</option>
+            {% for person in workers %}{% if person.pk != user.pk %}<option value="{{ person.pk }}">{{ person.get_full_name|default:person.username }}</option>{% endif %}{% endfor %}
+        </select>
+        <button class="btn btn-sm staff-btn">Hand over my requests</button>
+    </form>
+</section>
+{% endif %}
+{% endblock %}

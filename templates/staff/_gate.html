@@ -1,0 +1,27 @@
+{% extends 'base-derk.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/staff.css' %}">
+{% endblock %}
+
+{% block body_block %}
+<div class="staff-gate">
+    <div id="staff-config" class="d-none"
+         data-csrf="{{ csrf_token }}"
+         data-options="{% url 'staff:passkey_options' %}"
+         data-verify="{% url 'staff:passkey_verify' %}"
+         data-home="{% url 'staff:today' %}"></div>
+    {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags|default:'info' }}{% endif %} py-2 px-3" role="alert">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+    {% block gate %}{% endblock %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/passkeys.js' %}"></script>
+<script src="{% static 'js/staff.js' %}"></script>
+{% endblock %}

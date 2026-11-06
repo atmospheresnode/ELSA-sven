@@ -70,8 +70,7 @@ You can always set this up later from your account page.
         alertBox.textContent = text;
     }
 
-    // Nothing to offer on a browser that cannot do this, so say so plainly
-    // rather than presenting a button that will fail.
+    // This browser can't do passkeys, so say so instead of showing a button that fails.
     if (!window.ElsaPasskeys || !window.ElsaPasskeys.supported()) {
         button.disabled = true;
         show('warning', 'This browser does not support passkeys. You can set one up '

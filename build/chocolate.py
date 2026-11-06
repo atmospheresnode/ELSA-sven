@@ -55,10 +55,8 @@ def is_netcdf_file(file_obj):
     return False
 
 
-# make_directory makes a directory at the given path (including any missing parent
-# directories). If the path already exists, it does nothing. Real failures (disk full,
-# permissions) must raise: swallowing them used to let bundle creation continue without
-# a directory, which produced half-created bundles that 500 on every later page load.
+# make_directory makes a directory and any missing parents. Does nothing if it exists.
+# Real failures (disk full, permissions) have to raise.
 def make_directory(path):
     os.makedirs(path, exist_ok=True)
 
@@ -235,9 +233,7 @@ class MediaObject(object):
 """
 
 
-# ------------------------------------------------------------------------------------------------ #
-#                                     Collection inventories
-# ------------------------------------------------------------------------------------------------ #
+# --- Collection inventories ---
 
 PDS_NS = "{http://pds.nasa.gov/pds4/pds/v1}"
 
@@ -254,31 +250,18 @@ def inventory_path_for(label_path):
 def write_collection_inventory(label_path, member_lidvids):
     """Write a collection's inventory table and point its label at it.
 
-    Every PDS4 collection is required to carry an inventory: a delimited table naming
-    each member product, one row per member. ELSA never wrote one, so collection labels
-    described a file that did not exist and declared a hardcoded three records.
-
-    member_lidvids is the LIDVID of each member, in the order they should appear.
-    Returns the path of the table written, or None if the label has no inventory area.
-
-    A collection with no members produces a zero-row table. That does not validate --
-    PDS requires records to be 1 or greater -- but writing the true count is the honest
-    result: the collection really is empty, and that is a thing its owner needs to fix
-    rather than something this function can paper over.
+    member_lidvids is the LIDVID of each member, in order. Returns the path of the table,
+    or None if the label has no inventory area. An empty collection gets a zero-row table,
+    which fails validation since PDS requires at least one record.
     """
-    # A collection row can exist before its label has been written: the label is built
-    # in a later step, and a bulk delete can run against a collection whose label was
-    # never created. Writing a table beside a label that is not there would leave an
-    # orphan file and then fail on the parse, so there is nothing useful to do yet.
-    # The next label build calls this again.
+    # The label may not exist yet. The next label build calls this again.
     if not os.path.exists(label_path):
         print('write_collection_inventory: no label at {} yet, skipping.'.format(label_path))
         return None
 
     inventory_path = inventory_path_for(label_path)
 
-    # PDS DSV 1, exactly as the label declares it: comma between fields, CRLF between
-    # records, and 'P' for a product being archived here for the first time.
+    # PDS DSV 1: comma between fields, CRLF between records, 'P' for a new product.
     rows = ['P,{}'.format(lidvid) for lidvid in member_lidvids]
     with open(inventory_path, 'w', newline='', encoding='utf-8') as inventory:
         for row in rows:
@@ -294,8 +277,7 @@ def write_collection_inventory(label_path, member_lidvids):
         _set_text(File, 'file_name', os.path.basename(inventory_path))
         _set_text(File, 'creation_date_time',
                   datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'))
-        # Optional, and ELSA has nothing meaningful to put in it. An empty element is
-        # a validation error, so drop it rather than ship it blank.
+        # Optional and we have nothing to put in it, so drop it.
         _drop_if_empty(File, 'local_identifier')
 
     Inventory = File_Area.find('{}Inventory'.format(PDS_NS))
@@ -304,8 +286,7 @@ def write_collection_inventory(label_path, member_lidvids):
         _drop_if_empty(Inventory, 'local_identifier')
         Record_Delimited = Inventory.find('{}Record_Delimited'.format(PDS_NS))
         if Record_Delimited is not None:
-            # The declared maximum has to cover the longest row actually written,
-            # counting the CRLF that terminates it.
+            # Maximum has to cover the longest row, counting the CRLF.
             longest = max((len(row) + 2 for row in rows), default=0)
             _set_text(Record_Delimited, 'maximum_record_length', str(longest))
 

@@ -1,0 +1,42 @@
+{% extends 'staff/base.html' %}
+
+{% block console %}
+<h1 class="staff-title">Projects</h1>
+<p class="staff-subtitle">Archiving projects with providers: their bundles, who is involved, and the dates agreed.</p>
+
+<div class="staff-detail">
+    <section class="staff-card">
+        {% if rows %}
+        <table class="staff-table">
+            <thead><tr><th>Project</th><th>Bundles</th><th>Next milestone</th><th>Status</th></tr></thead>
+            <tbody>
+            {% for row in rows %}
+            <tr>
+                <td><a href="{% url 'staff:project' row.project.pk %}">{{ row.project.name }}</a><div class="staff-muted">{{ row.project.mission }}</div></td>
+                <td>{{ row.project.bundles.all|length }}</td>
+                <td>{% if row.next %}{{ row.next.title }} <span class="staff-muted">{{ row.next.due_date|date:"M j, Y" }}</span>{% else %}<span class="staff-muted">None</span>{% endif %}{% if row.overdue %} <span class="badge rounded-pill bg-danger">{{ row.overdue }} overdue</span>{% endif %}</td>
+                <td><span class="badge rounded-pill {% if row.project.status == 'active' %}bg-primary{% elif row.project.status == 'done' %}bg-secondary{% else %}bg-light text-dark border{% endif %}">{{ row.project.get_status_display }}</span></td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        {% else %}<p class="staff-empty">No projects yet.</p>{% endif %}
+    </section>
+    {% if can.review %}
+    <section class="staff-card">
+        <div class="staff-card-head"><h2>New project</h2></div>
+        <form method="post" data-once>
+            {% csrf_token %}
+            <label class="form-label fw-semibold" for="p-name">Name</label>
+            <input class="form-control" id="p-name" name="name" maxlength="150" required placeholder="e.g. Mars GCM 2026 delivery">
+            <label class="form-label fw-semibold mt-3" for="p-mission">Mission or source</label>
+            <input class="form-control" id="p-mission" name="mission" maxlength="150">
+            <div class="form-label fw-semibold mt-3">Team members on it</div>
+            {% for person in workers %}<div class="form-check"><input class="form-check-input" type="checkbox" name="staff" value="{{ person.pk }}" id="p-staff-{{ person.pk }}" {% if person.pk == user.pk %}checked{% endif %}><label class="form-check-label" for="p-staff-{{ person.pk }}">{{ person.get_full_name|default:person.username }}</label></div>{% endfor %}
+            <input type="hidden" name="status" value="active">
+            <button type="submit" class="btn btn-sm staff-btn-primary mt-3">Create project</button>
+        </form>
+    </section>
+    {% endif %}
+</div>
+{% endblock %}

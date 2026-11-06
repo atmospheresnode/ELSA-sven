@@ -1,0 +1,10 @@
+{% extends 'staff/_gate.html' %}
+
+{% block gate %}
+<div class="staff-card">
+    <div class="staff-card-head"><h2>Please slow down</h2></div>
+    <p>{{ message }}</p>
+    <p class="text-muted small mb-3">The Admin Console limits how much one person can download or look up in a short time, so a stolen session cannot copy everything at once.</p>
+    <a class="btn staff-btn" href="{% url 'staff:today' %}">Back to the Admin Console</a>
+</div>
+{% endblock %}

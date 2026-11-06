@@ -1,8 +1,6 @@
-"""RAG-lite: keyword retrieval over the markdown knowledge base.
+"""Keyword retrieval over the markdown knowledge base.
 
-The corpus is small (a dozen curated chunks), so plain term-frequency scoring
-beats the operational cost of an embedding store. Swap this module for a vector
-retriever later without touching the prompt builder.
+The corpus is small, so plain term-frequency scoring is enough.
 """
 import re
 from pathlib import Path
@@ -27,8 +25,7 @@ _COMMENT = re.compile(r'<!--.*?-->', re.DOTALL)
 
 
 def _make_chunk(name, text):
-    # Strip HTML comments (the "watches:" drift-check declarations) so they
-    # never reach the prompt or pollute retrieval tokens.
+    # Strip HTML comments (the "watches:" declarations) so they don't reach the prompt.
     text = _COMMENT.sub('', text).strip()
     lines = [l for l in text.splitlines() if l.strip()]
     title = lines[0].lstrip('# ').strip() if lines else name
@@ -42,10 +39,8 @@ def _make_chunk(name, text):
 
 
 def _load_chunks():
-    # UTF-8 explicitly. Without it read_text() uses the locale's encoding, which is
-    # UTF-8 under runserver and ASCII under Apache/mod_wsgi, so one non-ASCII
-    # character in a chunk stopped ELSA starting in production (every page 500) while
-    # every local test passed. This runs at import time, from the URL configuration.
+    # UTF-8 explicitly. read_text() uses the locale, which is ASCII under mod_wsgi, and a
+    # non-ASCII character here would stop ELSA starting since this runs at import time.
     return [_make_chunk(path.stem, path.read_text(encoding='utf-8'))
             for path in sorted(KNOWLEDGE_DIR.glob('*.md'))]
 
@@ -57,12 +52,10 @@ def _refresh_release_notes():
     """Fetch and cache the release notes; runs in a background thread."""
     try:
         from django.core.cache import cache
-        # Same source as the About page. These notes used to be scraped out of README.md; they now
-        # come from GitHub Releases, which is where they are written.
+        # Same source as the About page: GitHub Releases.
         from main.views import fetch_releases
         releases = fetch_releases()
-        # Data kept for a day (stale is better than absent); freshness marker
-        # controls how often the background refresh actually runs.
+        # Data kept for a day. The freshness marker controls how often it refreshes.
         cache.set('elsa_release_notes', releases, 60 * 60 * 24)
         cache.set('elsa_release_notes_fresh', 1, 60 * 60)
     except Exception:
@@ -76,11 +69,10 @@ def _refresh_release_notes():
 
 
 def _release_notes_chunk():
-    """Live chunk built from the GitHub Releases notes.
+    """Live chunk from the GitHub Releases notes.
 
-    Never blocks the chat request: cached notes are used even when stale, and
-    a background thread refreshes them at most once an hour. Returns None
-    quietly until the first fetch completes.
+    Never blocks the chat. Uses cached notes and refreshes in a background thread at most
+    once an hour. Returns None until the first fetch finishes.
     """
     try:
         from django.core.cache import cache
@@ -104,8 +96,7 @@ def _release_notes_chunk():
 
 
 def _score(chunk, q_tokens):
-    """Unique matched terms, title matches weighted: a short chunk that covers
-    the query beats a long chunk that merely repeats one query word often."""
+    """Unique matched terms, with title matches weighted higher."""
     body_hits = len(chunk['body_tokens'] & q_tokens)
     title_hits = len(q_tokens & chunk['title_tokens'])
     return body_hits + 5 * title_hits

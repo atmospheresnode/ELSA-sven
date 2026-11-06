@@ -1,10 +1,8 @@
 # -*- coding: utf-8 -*-
-"""
-WebAuthn ceremony helpers.
+"""WebAuthn helpers.
 
-Registration and authentication each run in two halves: issue options carrying
-a challenge, then verify what the authenticator signed.  The challenge lives in
-the session between the halves and must be single use.
+Registration and sign-in each issue options with a challenge, then verify the response.
+The challenge stays in the session and is single use.
 """
 from __future__ import unicode_literals
 
@@ -40,13 +38,7 @@ AUTH_CHALLENGE_KEY = 'webauthn_auth_challenge'
 
 
 def relying_party_id(request):
-    """
-    The domain the credential is bound to, without port or path.
-
-    Taken from the request so dev and production need no configuration.  Safe
-    because ALLOWED_HOSTS has already rejected anything else by the time a view
-    runs.  A setting wins if ELSA ever sits behind a differing host.
-    """
+    """The domain the credential is bound to. From the request unless a setting overrides it."""
     configured = getattr(settings, 'WEBAUTHN_RP_ID', None)
     if configured:
         return configured
@@ -54,17 +46,10 @@ def relying_party_id(request):
 
 
 def expected_origin(request):
-    """
-    Scheme and host exactly as the browser saw it, port included.
+    """Scheme and host as the browser saw it, port included.
 
-    request.scheme reports http whenever TLS terminates upstream and
-    SECURE_PROXY_SSL_HEADER is unset, which breaks every verification in a way
-    that looks identical to a forged credential: the browser signs https into
-    the client data and the server sits there expecting http.
-
-    A passkey cannot work over plain http anyway, localhost aside, so outside
-    DEBUG the scheme is pinned rather than trusted.  WEBAUTHN_ORIGIN still wins
-    if a deployment needs something else.
+    request.scheme says http when TLS ends upstream, so outside DEBUG the scheme is pinned to
+    https. WEBAUTHN_ORIGIN overrides this.
     """
     configured = getattr(settings, 'WEBAUTHN_ORIGIN', None)
     if configured:
@@ -92,13 +77,7 @@ def take_challenge(request, key):
 
 
 def registration_options(request, user):
-    """
-    Options for enrolling a new passkey.
-
-    Resident keys are required so the credential is discoverable, which is what
-    allows sign-in without a username.  Baked in at creation: changing it later
-    forces everyone to re-enroll.
-    """
+    """Options for adding a passkey. Resident keys are required so sign-in works with no username."""
     options = generate_registration_options(
         rp_id=relying_party_id(request),
         rp_name=RP_NAME,
@@ -134,9 +113,7 @@ def verify_registration(request, user, credential, label):
             expected_origin=expected_origin(request),
         )
     except Exception:
-        # The reason is withheld from the user deliberately, but it has to go
-        # somewhere or a misconfigured origin looks identical to a forged
-        # credential and neither can be diagnosed.
+        # Don't show the user the reason, but log it so a bad origin can be diagnosed.
         logger.warning('passkey registration rejected (rp_id=%s origin=%s)',
                        relying_party_id(request), expected_origin(request),
                        exc_info=True)
@@ -162,35 +139,35 @@ def verify_registration(request, user, credential, label):
     return passkey, None
 
 
-def authentication_options(request):
-    """
-    Options for signing in.
+def authentication_options(request, user=None, challenge_key=AUTH_CHALLENGE_KEY):
+    """Options for signing in.
 
-    The credential list is deliberately left empty rather than scoped to the
-    account: options are issued before anyone has proved who they are, so
-    naming credentials would tell a stranger which usernames own passkeys.
-    The account binding happens in verify_authentication instead.
+    Credential list is left empty on purpose. Nobody has proved who they are yet, so naming
+    credentials would show which usernames have passkeys. verify_authentication checks the account.
 
-    User verification is required, so a passkey proves possession plus a
-    biometric or PIN, which is what lets one stand in for two factors.
+    Only callers already signed in pass ``user`` (the Admin Console re-check). They also pass
+    their own ``challenge_key`` so a re-check can't use up a sign-in challenge in another tab.
+
+    User verification is required so a passkey can count as two factors.
     """
+    allow = None
+    if user is not None:
+        allow = [PublicKeyCredentialDescriptor(id=base64url_to_bytes(passkey.credential_id))
+                 for passkey in user.passkeys.all()]
+
     options = generate_authentication_options(
         rp_id=relying_party_id(request),
+        allow_credentials=allow,
         user_verification=UserVerificationRequirement.REQUIRED,
     )
 
-    stash_challenge(request, AUTH_CHALLENGE_KEY, options.challenge)
+    stash_challenge(request, challenge_key, options.challenge)
     return json.loads(options_to_json(options))
 
 
-def verify_authentication(request, credential, user=None):
-    """
-    Checks a sign-in response.
-
-    When ``user`` is given the credential must belong to them, which stops a
-    valid passkey for one account satisfying a challenge staged for another.
-    """
-    challenge = take_challenge(request, AUTH_CHALLENGE_KEY)
+def verify_authentication(request, credential, user=None, challenge_key=AUTH_CHALLENGE_KEY):
+    """Check a sign-in response. If ``user`` is given the credential has to be theirs."""
+    challenge = take_challenge(request, challenge_key)
     if not challenge:
         return None, 'Your sign-in session expired. Please try again.'
 
@@ -222,8 +199,7 @@ def verify_authentication(request, credential, user=None):
                        raw_id[:16], exc_info=True)
         return None, 'That passkey could not be verified. Please try again.'
 
-    # A counter that fails to advance suggests a cloned authenticator.  Plenty
-    # never implement it and always send 0, so only act on a non-zero one.
+    # A counter that doesn't advance could mean a cloned authenticator. Ignore 0, plenty always send it.
     if verified.new_sign_count and verified.new_sign_count <= passkey.sign_count:
         return None, 'That passkey could not be verified. Please try again.'
 

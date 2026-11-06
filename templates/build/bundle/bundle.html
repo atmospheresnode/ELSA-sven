@@ -809,9 +809,7 @@
          
          <!-- Only works here, idk why it doesnt work when moved to elsa.js - deric -->
          <script>
-            // Label selection, filtering and on-demand loading live in
-            // build/bundle/_file_tree.html, which owns the Files card and defines
-            // window.showFileContent.
+            // Label selection and loading are in build/bundle/_file_tree.html, which defines window.showFileContent.
             
             // Enable Bootstrap tooltips (info icons)
             document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (el) {
@@ -895,8 +893,7 @@
       {% endif %}
 
       <script>
-         // Creating a collection redirects here with the new collection's tab in the fragment;
-         // open it rather than leaving the page on the document tab it renders with.
+         // A new collection redirects here with its tab in the fragment, so open that tab.
          document.addEventListener('DOMContentLoaded', function () {
             var card = document.getElementById('collectionsCard');
             var target = window.location.hash;
@@ -1465,8 +1462,7 @@
 </div>
 {% if form_document.errors and request.POST.form_name == 'document_form' %}
 <script>
-   // The document was not created. Reopen the window so its reasons are seen,
-   // rather than reloading the page with them hidden in a closed modal.
+   // The document wasn't created. Reopen the window so the errors show.
    document.addEventListener('DOMContentLoaded', function () {
       var el = document.getElementById('document_modal');
       if (el && window.bootstrap) { bootstrap.Modal.getOrCreateInstance(el).show(); }
@@ -2059,6 +2055,32 @@
                   Last submitted: {{ bundle.submitted_at|date:"M d, Y \a\t g:i A" }}
                   <br>You can still edit your bundle and resubmit.
                </p>
+               {% if review_state %}
+               <div class="border rounded mt-2 p-2 small" data-review-stage="{{ review_state.stage }}">
+                  <div class="text-center">
+                     Review:
+                     <span class="badge rounded-pill {% if review_state.stage == 'changes_requested' %}bg-warning text-dark{% elif review_state.stage == 'accepted' or review_state.stage == 'released' %}bg-success{% else %}bg-primary{% endif %}">{{ review_state.stage_label }}</span>
+                  </div>
+                  {% if review_state.reply %}
+                  <div class="text-muted mt-2">Latest from the ELSA team{% if review_state.replied_at %}, {{ review_state.replied_at|date:"M d" }}{% endif %}:</div>
+                  <div style="white-space: pre-wrap; overflow-wrap: anywhere;">{{ review_state.reply }}</div>
+                  {% endif %}
+                  {% if review_state.liens %}
+                  <div class="text-muted mt-2">To fix before it can be accepted:</div>
+                  {% for lien in review_state.liens %}
+                  <form method="post" action="{% url 'staff_public:lien_fixed' lien.pk %}" class="d-flex align-items-start gap-2 mt-1">
+                     {% csrf_token %}
+                     <input type="hidden" name="back" value="bundle">
+                     <input type="hidden" name="fixed" value="{% if lien.owner_fixed_at %}0{% else %}1{% endif %}">
+                     <span class="flex-grow-1" style="white-space: pre-wrap; overflow-wrap: anywhere;">{% if lien.owner_fixed_at %}<i class="bi bi-check2 text-success me-1"></i>{% endif %}{{ lien.description }}{% if lien.file_path %} <code>{{ lien.file_path }}{% if lien.line %}, line {{ lien.line }}{% endif %}</code>{% endif %}</span>
+                     <button type="submit" class="btn btn-sm btn-outline-secondary py-0">{% if lien.owner_fixed_at %}Undo{% else %}Fixed{% endif %}</button>
+                  </form>
+                  {% endfor %}
+                  {% endif %}
+                  {% if review_state.doi %}<div class="text-center mt-2">Cite it as <a href="https://doi.org/{{ review_state.doi }}" target="_blank" rel="noopener">https://doi.org/{{ review_state.doi }}</a></div>{% endif %}
+                  {% if review_state.url %}<div class="text-center mt-2"><a href="{{ review_state.url }}">Open the conversation</a></div>{% endif %}
+               </div>
+               {% endif %}
                {% endif %}
                
             </div>
@@ -2618,8 +2640,7 @@ also follows the project's own rule: modals go outside the card structure they b
 </div>
 
 <script>
-   // Label selection, filtering and on-demand loading live in build/bundle/_file_tree.html,
-   // which owns the Files card and defines window.showFileContent.
+   // Label selection and loading are in build/bundle/_file_tree.html, which defines window.showFileContent.
    
    window.onload = function() {
       // Tooltip on the Review & Submit button — programmatic init avoids data-bs-toggle conflict with "modal".
@@ -2645,10 +2666,7 @@ also follows the project's own rule: modals go outside the card structure they b
    });
    
    // Bootstrap tooltips (External bundle block)
-   // Isolated in try/catch: if the Bootstrap bundle isn't available (or its
-   // global collides with MDB), tooltip init must NOT halt the rest of this
-   // script — otherwise the NetCDF delete wiring and upload progress bar below
-   // never attach.
+   // In a try/catch so a Bootstrap problem doesn't stop the NetCDF delete and upload code below.
    try {
       const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
       tooltipTriggerList.forEach(function (tooltipTriggerEl) {
@@ -2662,9 +2680,7 @@ also follows the project's own rule: modals go outside the card structure they b
    
    
    
-   // Scoped to the form the button lives in. The NetCDF card renders once per collection, so a
-   // document-wide selector would tick every collection's files and the delete that follows would
-   // remove files the user cannot even see from this tab.
+   // Only this form. The NetCDF card shows once per collection, so don't tick other collections' files.
    function toggleSelectAll(button) {
       var form = button && button.closest ? button.closest('form') : null;
       var scope = form || document;
@@ -2673,13 +2689,10 @@ also follows the project's own rule: modals go outside the card structure they b
       boxes.forEach(function(cb) { cb.checked = !allChecked; });
    }
    
-   // When the delete modal is about to show, copy checked IDs into its own form.
-   // If nothing is selected, block the modal from opening.
+   // Copy checked IDs into the delete modal's form when it opens. Block it if nothing is selected.
    document.addEventListener('show.bs.modal', function(e) {
       if (e.target.id !== 'bulkDeleteNetCDFModal') return;
-      // relatedTarget is the button that opened the modal, which tells us which collection's list
-      // to read. Without it the modal collects checked boxes from every collection and deletes
-      // files the user cannot even see from this tab.
+      // relatedTarget is the button that opened the modal, which says which collection's list to read.
       var opener = e.relatedTarget;
       var openerForm = opener && opener.closest ? opener.closest('form') : null;
       var checked = (openerForm || document).querySelectorAll('.netcdf-checkbox:checked');
@@ -2698,19 +2711,11 @@ also follows the project's own rule: modals go outside the card structure they b
    
    
    // Drag and drop onto the upload area.
-   //
-   // Pure addition: the input stays the source of truth, so a drop writes into it and fires the
-   // same change event the file picker does, and the summary, the validation and the submit path
-   // never learn where the files came from. Clicking still works with no JS at all, because the
-   // drop area is a <label for> pointing at the input.
-   //
-   // Delegated, like everything else here, because the upload area renders once per collection
-   // tab pane and its ids are therefore not unique.
+   // A drop writes into the input and fires the same change event as the file picker.
+   // Delegated since the upload area shows once per collection tab, so ids aren't unique.
    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(function (name) {
       document.addEventListener(name, function (e) {
-         // Cancelled document-wide, not only over the drop area: a file dropped anywhere else
-         // would otherwise make the browser navigate away and open it, taking the page and
-         // anything half-filled in on it with it.
+         // Cancel everywhere, or dropping a file outside the area makes the browser open it.
          if (name === 'dragover' || name === 'drop') e.preventDefault();
 
          var zone = e.target.closest ? e.target.closest('.ecu-drop') : null;
@@ -2728,11 +2733,8 @@ also follows the project's own rule: modals go outside the card structure they b
       });
    });
 
-   // NetCDF upload progress: event delegation handles duplicate form IDs across
-   // multiple collection tab panes. Progress elements are resolved relative to the
-   // form that was actually submitted.
-   // What the drop well shows once files are picked. The input is visually hidden, so without
-   // this the well would go on inviting a drag over a selection it has already taken.
+   // NetCDF upload progress. Delegated since form IDs repeat across collection tabs.
+   // Also shows what was picked in the drop area, since the input is hidden.
    function renderPicked(input) {
       var zone = document.querySelector('.ecu-drop[for="' + input.id + '"]');
       if (!zone) return;
@@ -2785,9 +2787,7 @@ also follows the project's own rule: modals go outside the card structure they b
       if (actions) actions.classList.remove('d-none');
    }
 
-   // Upload pressed with nothing picked: said at the well rather than sent. It used to go to the
-   // server empty and come back as the whole page, which the submit handler read as success, so
-   // the bar ran, "Upload complete!" showed and the page reloaded having added nothing.
+   // Nothing picked, so say so here instead of sending an empty upload.
    function setNoFilesWarning(input, show) {
       var zone = document.querySelector('.ecu-drop[for="' + input.id + '"]');
       var note = zone ? zone.parentNode.querySelector('.ecu-drop-required') : null;
@@ -2807,8 +2807,7 @@ also follows the project's own rule: modals go outside the card structure they b
       if (input.files && input.files.length) setNoFilesWarning(input, false);
    });
 
-   // Clear puts the well back to its invitation. Delegated, because the upload area renders once
-   // per collection tab pane.
+   // Clear puts the drop area back. Delegated, one per collection tab.
    document.addEventListener('click', function (e) {
       var clear = e.target.closest ? e.target.closest('.ecu-clear') : null;
       if (!clear) return;
@@ -2833,10 +2832,8 @@ also follows the project's own rule: modals go outside the card structure they b
       var uploadSuccessMsg = form.querySelector('.upload-success-msg');
       var cancelBtn      = form.querySelector('.upload-cancel-btn');
 
-      // Ask the server whether it has room before sending a single byte. Refusing afterwards is
-      // too late: the whole file has crossed the network and been buffered to disk by then, which
-      // on a nearly full disk is exactly what fails. If the check itself cannot be made, upload
-      // anyway; the view repeats it once the files arrive.
+      // Ask the server if it has room before sending anything. If the check fails, upload anyway,
+      // the view checks again.
       var fileInput = form.querySelector('input[name="netcdf_files"]');
       var picked = fileInput && fileInput.files ? Array.prototype.slice.call(fileInput.files) : [];
       var collectionInput = form.querySelector('input[name="collection"]');
@@ -2880,8 +2877,7 @@ also follows the project's own rule: modals go outside the card structure they b
       var formData = new FormData(form);
       var xhr = new XMLHttpRequest();
       
-      // Held on the form, not in a shared variable: this form is duplicated across the
-      // collection tab panes, so two panes must not fight over one xhr reference.
+      // Kept on the form since it repeats across collection tabs.
       form._netcdfUploadXhr = xhr;
       
       function resetUploadUI() {
@@ -2914,9 +2910,7 @@ also follows the project's own rule: modals go outside the card structure they b
                progressBar.classList.remove('bg-success');
                progressBar.classList.add('bg-info');
                if (uploadBtn) uploadBtn.textContent = 'Processing...';
-               // The bytes are all sent and the view is now saving records and harvesting
-               // metadata. Aborting here would close the connection without stopping any of
-               // that, so the offer is withdrawn instead of silently lying.
+               // All bytes sent and the view is working. Aborting wouldn't stop that, so remove the cancel option.
                if (cancelBtn) cancelBtn.style.display = 'none';
             }
          }
@@ -2943,8 +2937,7 @@ also follows the project's own rule: modals go outside the card structure they b
             try { reply = JSON.parse(xhr.responseText); errorMsg = reply.error; } catch (err) {}
             if (progressWrapper) progressWrapper.style.display = 'none';
             if (uploadBtn) { uploadBtn.disabled = false; uploadBtn.textContent = 'Upload'; }
-            // The view's own storage check refused the files after they arrived (the disk filled
-            // up after the preflight, or the preflight could not run). Same dialog, same offer.
+            // The view's storage check refused the files after they arrived. Same dialog.
             if (reply && reply.code === 'insufficient_storage' && window.elsaOpenStorageDialog) {
                storageCtx.needed = reply.needed;
                storageCtx.available = reply.available;
@@ -2972,11 +2965,8 @@ also follows the project's own rule: modals go outside the card structure they b
          if (uploadSuccessMsg) uploadSuccessMsg.style.display = 'block';
          if (uploadBtn) uploadBtn.textContent = 'Upload';
 
-         // The reload that follows wipes this card, the green message on it and the tab the user
-         // was standing on. Hand what just happened to the reloaded page instead of letting it
-         // scroll away: it reopens this collection's tab and says what the new files still need.
-         // Nothing here is load-bearing - a browser with sessionStorage disabled, or a reply that
-         // is not the JSON we expect, simply reloads the way it always did.
+         // The reload wipes this card, so save what happened for the reloaded page. If sessionStorage
+         // is off or the reply isn't JSON, it just reloads.
          try {
             var uploaded = JSON.parse(xhr.responseText);
             if (uploaded && uploaded.files) {
@@ -3001,15 +2991,13 @@ also follows the project's own rule: modals go outside the card structure they b
       });
       
       xhr.open('POST', form.action || window.location.href);
-      // Without this the view cannot tell a scripted upload from a plain form post, and answers
-      // with a redirect that carries nothing the post-upload notice can be built from.
+      // Lets the view tell this apart from a plain form post, which gets a redirect.
       xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
       xhr.send(formData);
       }
    });
    
-   // Cancel an in-flight upload. Delegated for the same reason the submit handler is: the
-   // upload form is repeated once per collection tab pane, so IDs are not unique.
+   // Cancel an upload. Delegated, the form repeats per collection tab.
    document.addEventListener('click', function(e) {
       var btn = e.target.closest ? e.target.closest('.upload-cancel-btn') : null;
       if (!btn) return;
@@ -3857,8 +3845,7 @@ also follows the project's own rule: modals go outside the card structure they b
    those buttons threw "switchToModal is not defined" and did nothing.
 {% endcomment %}
 <script>
-   // Close one Bootstrap modal, then open another once the first is fully hidden. Bootstrap
-   // 5.0 cannot show two at once: both stay up, with two backdrops.
+   // Close one modal, then open another once it's hidden. Bootstrap 5.0 can't show two at once.
    function switchToModal(fromId, toId) {
       var fromEl = document.getElementById(fromId);
       var toEl   = document.getElementById(toId);
@@ -3990,9 +3977,7 @@ Has its own form; JS populates hidden inputs with the selected IDs on show. -->
 
 <script>
 (function () {
-   // AMA editor. The Files card is the master, this modal is the detail. The panel is fetched on
-   // demand rather than server-rendered per file, which keeps a collection with many NetCDF files
-   // from carrying hundreds of hidden inputs in the page.
+   // AMA editor. The panel is fetched on demand to keep hidden inputs out of the page.
    var wrapper = document.getElementById('amaMetadataPanel');
    if (!wrapper) return;
 
@@ -4001,8 +3986,7 @@ Has its own form; JS populates hidden inputs with the selected IDs on show. -->
    var activeKey = null;
    var dirty = false;
    var unsavedModal = null;
-   // Set while the unsaved-changes modal is deciding, so hide.bs.modal knows the close was
-   // sanctioned and does not re-open the guard in a loop.
+   // Set while the unsaved-changes modal decides, so hide.bs.modal doesn't re-open the guard.
    var closeConfirmed = false;
 
    function csrfToken() {
@@ -4014,9 +3998,7 @@ Has its own form; JS populates hidden inputs with the selected IDs on show. -->
       return window.bootstrap ? bootstrap.Modal.getOrCreateInstance(editorEl) : null;
    }
 
-   // A save reloads the page so the tree's "n of 28 described" readings and the Collections card
-   // badges resync against the labels just rewritten on disk. Remember which file was open so the
-   // user lands back on it instead of on an empty viewer after every save.
+   // A save reloads the page to update the readings and badges. Remember the open file.
    var PLACE_KEY = 'elsaAmaPlace';
 
    function rememberPlace(netcdfId) {
@@ -4032,13 +4014,7 @@ Has its own form; JS populates hidden inputs with the selected IDs on show. -->
       } catch (err) { return; }
       if (!stored) return;
 
-      // Reselect the label so the viewer still shows what the user was working on and the
-      // refreshed "n of 28 described" reading is in front of them.
-      //
-      // Deliberately does NOT reopen the editor. A save is finished business: reopening it made
-      // pressing Save look like the dialog had merely reloaded itself, with no sign the save had
-      // worked and an extra click needed to get out. Closing is the confirmation - the success
-      // message is at the top of the page and the reading in the tree has gone up.
+      // Reselect the label so the viewer shows the updated reading. Don't reopen the editor after a save.
       var row = document.querySelector('.eft-item[data-netcdf-id="' + stored + '"]');
       if (row) row.click();
    }
@@ -4100,8 +4076,7 @@ Has its own form; JS populates hidden inputs with the selected IDs on show. -->
       var trigger = e.target.closest ? e.target.closest('#editMetadataBtn') : null;
       if (trigger && !trigger.disabled && trigger.dataset.amaUrl) {
          e.preventDefault();
-         // Re-opening the drawer on the file already loaded is a no-op rather than a discard, so
-         // the guard only fires when the user is actually switching to a different file.
+         // Reopening on the same file does nothing, so only guard when switching files.
          if (dirty && trigger.dataset.amaKey !== activeKey && guard()) return;
          var nameEl = document.getElementById('fileName');
          loadPanel(trigger.dataset.amaUrl, trigger.dataset.amaKey,
@@ -4111,8 +4086,7 @@ Has its own form; JS populates hidden inputs with the selected IDs on show. -->
       if (e.target.closest && e.target.closest('#amaDiscardConfirm')) {
          if (unsavedModal) unsavedModal.hide();
          dirty = false;
-         // The only thing the guard ever interrupts now is a close, since switching files means
-         // clicking a tree row first and that cannot happen behind the open drawer.
+         // The guard only interrupts a close now.
          closeConfirmed = true;
          var dialog = editor();
          if (dialog) dialog.hide();
@@ -4120,8 +4094,7 @@ Has its own form; JS populates hidden inputs with the selected IDs on show. -->
       }
    });
 
-   // Closing the editor with unsaved edits is the one place the guard fires. Bootstrap's hide is
-   // cancellable, so preventDefault keeps the editor open until the user answers the guard.
+   // Closing with unsaved edits fires the guard. preventDefault keeps the editor open until they answer.
    if (editorEl) {
       editorEl.addEventListener('hide.bs.modal', function (e) {
          if (closeConfirmed) { closeConfirmed = false; return; }
@@ -4129,8 +4102,7 @@ Has its own form; JS populates hidden inputs with the selected IDs on show. -->
          e.preventDefault();
          guard();
       });
-      // Nothing is retained between openings: the next open refetches, so a stale panel can never
-      // be shown against the wrong file.
+      // Nothing kept between openings. The next open fetches again.
       editorEl.addEventListener('hidden.bs.modal', function () {
          ui.content.innerHTML = '';
          if (ui.error) ui.error.style.display = 'none';
@@ -4174,19 +4146,13 @@ Has its own form; JS populates hidden inputs with the selected IDs on show. -->
             ui.content.innerHTML = html;
 
             var inner = ui.content.querySelector('#amaPanelInner');
-            // Only a successful save clears the dirty flag. A rejected save comes back with the
-            // user's values and the validation errors still in the form, so closing would
-            // otherwise discard them without warning.
+            // Only a successful save clears the dirty flag. A rejected save still has the user's values.
             dirty = !(inner && inner.dataset.saved === 'true');
 
             if (inner && inner.dataset.saved === 'true') {
-               // Labels on disk have been rewritten, so the tree's "n of 28 described" readings
-               // and the Collections card badges are now stale. Reloading is the honest way to
-               // resync them; rememberPlace reselects the label afterwards.
+               // Labels were rewritten, so reload to update the readings and badges. rememberPlace reselects the label.
                rememberPlace(inner.dataset.netcdfId);
-               // Close first, or the dialog sits over the page for the length of the reload and
-               // the save looks like it did nothing. closeConfirmed skips the unsaved-changes
-               // guard, which has nothing left to protect once the save has succeeded.
+               // Close first or the dialog sits over the page during the reload. closeConfirmed skips the guard.
                closeConfirmed = true;
                var dialog = editor();
                if (dialog) dialog.hide();
@@ -4412,9 +4378,8 @@ Kept outside every card for the same reason as the dialog above.{% endcomment %}
    var closeBtn = q('.ess-close'), errorBox = q('.ess-error');
 
    var ctx = null;
-   // Bootstrap only displays the dialog once its backdrop has faded in, so a draft that arrives
-   // before then (the template is instant) cannot take focus yet. Whichever comes second, the
-   // draft or the dialog being shown, puts the user at the start of the message.
+   // Bootstrap shows the dialog after its backdrop fades in. Whichever comes second, the draft
+   // or the dialog, puts the cursor at the start of the message.
    var shown = false;
 
    function focusDraft() {
@@ -4426,8 +4391,7 @@ Kept outside every card for the same reason as the dialog above.{% endcomment %}
 
    modalEl.addEventListener('shown.bs.modal', function () { shown = true; focusDraft(); });
    modalEl.addEventListener('hidden.bs.modal', function () { shown = false; });
-   // Bumped on every open, so a draft that arrives after the dialog was closed and reopened for
-   // a different selection cannot overwrite the newer one.
+   // Bumped each open, so a late draft can't overwrite a newer one.
    var generation = 0;
 
    function post(url, body) {
@@ -4442,9 +4406,8 @@ Kept outside every card for the same reason as the dialog above.{% endcomment %}
          },
          body: JSON.stringify(body)
       }).then(function (r) {
-         // An expired session does not fail: login_required redirects, fetch follows it, and the
-         // login page comes back as a 200. Anything that is not this view's JSON is treated as
-         // that, so a report is never shown as sent when it was not.
+         // An expired session redirects to the login page with a 200. Anything that isn't this view's
+         // JSON counts as not sent.
          var isJson = (r.headers.get('Content-Type') || '').indexOf('application/json') !== -1;
          if (r.redirected || !isJson) {
             throw new Error('Your session may have expired. Please sign in again in another tab, '
@@ -4518,8 +4481,7 @@ Kept outside every card for the same reason as the dialog above.{% endcomment %}
          .then(function () {
             if (mine !== generation) return;
             setDrafting(false);
-            // Setting the value leaves the caret at the end, and focus scrolls to the caret, so
-            // the user would land on the sign-off. focusDraft starts them at the greeting.
+            // Setting the value puts the caret at the end. focusDraft moves it to the start.
             focusDraft();
          });
    }
@@ -4556,8 +4518,7 @@ Kept outside every card for the same reason as the dialog above.{% endcomment %}
          })
          .catch(function (err) {
             showError(err.message);
-            // Send was disabled while it worked, which drops focus out of the dialog, and
-            // Bootstrap only hears Escape from inside it. Hand focus back to the message.
+            // Disabling Send drops focus out of the dialog, so Escape stops working. Put focus back on the message.
             setSending(false);
             textarea.focus();
          })
@@ -4581,9 +4542,8 @@ Kept outside every card for the same reason as the dialog above.{% endcomment %}
       } catch (err) { return null; }
    }
 
-   // ---- Collection tab ----------------------------------------------------------------------
-   // Kept for the session rather than consumed once: an AMA save reloads the page too, and coming
-   // back on the document tab is just as wrong there.
+   // ---- Collection tab ----
+   // Kept for the session since an AMA save reloads the page too.
    var card = document.getElementById('collections_card');
 
    function rememberTab(target) {
@@ -4605,11 +4565,9 @@ Kept outside every card for the same reason as the dialog above.{% endcomment %}
    }
 
    function restoreTab() {
-      // Creating a collection redirects here with the new collection's tab in the fragment. It
-      // wins over the remembered tab, which is the Add New Collection form it was made from.
+      // A new collection's tab in the fragment wins over the remembered tab.
       var fresh = tabButton(window.location.hash);
-      // A collection deleted since the tab was remembered leaves a target that matches nothing,
-      // in which case the page keeps the document tab it rendered with.
+      // The remembered collection may be deleted, then the page stays on the document tab.
       var button = fresh || tabButton(readStore(TAB_KEY, false));
       if (button && window.bootstrap && bootstrap.Tab) {
          bootstrap.Tab.getOrCreateInstance(button).show();
@@ -4624,18 +4582,14 @@ Kept outside every card for the same reason as the dialog above.{% endcomment %}
 
    // ---- Post-upload notice ------------------------------------------------------------------
 
-   // How described a file is, in the tree's own words. The numbers come from the upload reply,
-   // not from the tree: the tree is a view of the labels on disk, and a file whose label it cannot
-   // place has no row there at all, which used to leave the notice with nothing to say about it.
+   // How described a file is. Numbers come from the upload reply, not the tree.
    function statusText(file) {
       return file.ama_filled
          ? file.ama_filled + ' of ' + file.ama_total + ' described'
          : 'No AMA metadata yet';
    }
 
-   // Matches the Files tree exactly: amber runs the whole way from an empty label to one field
-   // short of the full set, because every field is optional and none of those states is an error.
-   // Green is reserved for the one state with nothing left to add.
+   // Same as the Files tree: amber until complete, green only with nothing left to add.
    function isComplete(file) {
       return file.ama_total && file.ama_filled >= file.ama_total;
    }
@@ -4647,9 +4601,7 @@ Kept outside every card for the same reason as the dialog above.{% endcomment %}
          ? bootstrap.Modal.getOrCreateInstance(modalEl) : null;
    }
 
-   // Open the editor on a file. Two dialogs must never be up at once: Bootstrap stacks a second
-   // backdrop and the first one is left behind, so this one is closed and the editor opened only
-   // once it is fully gone, the same handoff switchToModal() does elsewhere on this page.
+   // Open the editor on a file. Close this dialog first since Bootstrap can't show two, same as switchToModal().
    function openEditor(file) {
       var instance = dialog();
       if (!instance) { reveal(file); return; }
@@ -4660,10 +4612,7 @@ Kept outside every card for the same reason as the dialog above.{% endcomment %}
       instance.hide();
    }
 
-   // The label's row in the Files tree is the preferred way in, because it opens the drawer in
-   // place and leaves the user standing at the label afterwards, with its refreshed reading in
-   // front of them. Where there is no row to open it from, the standalone editor page renders the
-   // same three forms, so the offer still leads somewhere.
+   // Use the label's row in the Files tree if there is one, otherwise the standalone editor page.
    function reveal(file) {
       var row = document.querySelector('.eft-item[data-netcdf-id="' + file.id + '"]');
       if (!row) {
@@ -4700,8 +4649,7 @@ Kept outside every card for the same reason as the dialog above.{% endcomment %}
    function fillNotice(payload) {
       var files = payload.files || [];
       var collection = payload.collection_name || 'this collection';
-      // What the dialog says happened turns on whether anything was inherited at all; what it
-      // offers, per file below, turns on whether the label is complete.
+      // The message depends on whether anything was inherited. The per-file options depend on if the label is complete.
       var blank = files.filter(function (file) { return !file.ama_filled; });
 
       // One file is named; several are counted, and listed in the body.
@@ -4722,16 +4670,14 @@ Kept outside every card for the same reason as the dialog above.{% endcomment %}
             + 'empty.';
       }
 
-      // Rebuilt every time rather than appended to, so a second upload cannot show the first
-      // upload's files underneath its own.
+      // Rebuilt each time so a second upload doesn't show the first one's files.
       var list = modalEl.querySelector('.enu-list');
       list.innerHTML = '';
       var actions = modalEl.querySelector('.enu-actions');
       actions.querySelectorAll('.enu-open').forEach(function (node) { node.remove(); });
 
       if (files.length === 1) {
-         // A list of one row says nothing the title has not already said, so the single file
-         // carries its reading on a line of its own and its action in the footer.
+         // One file gets its reading on its own line and its action in the footer.
          var only = files[0];
          list.appendChild(el('div', 'enu-status ' + (isComplete(only) ? 'enu-done' : 'enu-pending'),
             statusText(only)));
@@ -4752,8 +4698,7 @@ Kept outside every card for the same reason as the dialog above.{% endcomment %}
             } else {
                row.appendChild(el('span', 'enu-status enu-pending flex-shrink-0',
                   statusText(file)));
-               // Per file, and no aggregate button: an aggregate would have to pick one of them,
-               // and which one it picked would not be visible.
+               // Per file, no aggregate button.
                row.appendChild(actionButton('Describe', file, 'btn btn-sm flex-shrink-0'));
             }
             list.appendChild(row);
@@ -4776,8 +4721,7 @@ Kept outside every card for the same reason as the dialog above.{% endcomment %}
       fillNotice(payload);
 
       var instance = dialog();
-      // Without Bootstrap the dialog cannot be opened, and a half-shown modal is worse than none:
-      // the page behind it still works and the Files tree still says what each file needs.
+      // Can't open the dialog without Bootstrap, so don't half-show it.
       if (instance) instance.show();
    }
 
@@ -4786,8 +4730,7 @@ Kept outside every card for the same reason as the dialog above.{% endcomment %}
       showNotice();
    }
 
-   // After the Files tree, whose own DOMContentLoaded handler is registered earlier in the page:
-   // the readings this notice quotes are on rows the tree has to have wired up first.
+   // After the Files tree, whose handler is registered earlier and has to run first.
    if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', init);
    } else {
@@ -5208,4 +5151,6 @@ Kept outside every card for the same reason as the dialog above.{% endcomment %}
 {% include 'build/document/_document_preview_modal.html' %}
 <!-- NetCDF inspector: one window for every NetCDF file's name -->
 {% include 'build/bundle/_netcdf_inspect_modal.html' %}
+<!-- Lets the create page know a bundle was made if the user goes Back -->
+{% include 'build/_just_created.html' %}
    {% endblock %}

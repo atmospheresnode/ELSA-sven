@@ -1,0 +1,136 @@
+{% extends 'base-derk.html' %}
+{% load static tz %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/staff.css' %}">
+{% endblock %}
+
+{% block title %}{% if page_title %}{{ page_title }} &middot; {% endif %}Admin Console{% endblock %}
+
+{% block body_block %}
+<div class="staff-page">
+    <div id="staff-config" class="d-none"
+         data-csrf="{{ csrf_token }}"
+         data-options="{% url 'staff:passkey_options' %}"
+         data-verify="{% url 'staff:passkey_verify' %}"
+         data-home="{% url 'staff:today' %}"></div>
+
+    <div class="staff-bar" role="region" aria-label="Admin mode" id="staff-bar"
+         data-seconds-left="{{ console_expiry.0|floatformat:0 }}" data-hard-limit="{% if console_expiry.1 %}1{% else %}0{% endif %}"
+         data-stay="{% url 'staff:stay' %}" data-verify="{% url 'staff:verify' %}">
+        <span class="staff-bar-title"><i class="bi bi-shield-lock me-1" aria-hidden="true"></i>Admin Console</span>
+        <span class="staff-bar-meta">{{ user.username }} &middot; {{ console_role }}</span>
+        {% if console_expires_at %}
+        <span class="staff-bar-meta" id="staff-bar-until" title="Admin mode ends after 30 quiet minutes, or 8 hours in all.">
+            Admin mode until {{ console_expires_at|localtime|date:"g:i A T" }}
+        </span>
+        {% endif %}
+        <form method="get" action="{% url 'staff:search' %}" class="staff-bar-search" role="search">
+            <i class="bi bi-search" aria-hidden="true"></i>
+            <input type="search" name="q" value="{{ search_query }}" class="form-control form-control-sm" id="staff-jump-input"
+                   placeholder="Jump to request, user, bundle (Ctrl+K)" aria-label="Search the Admin Console" autocomplete="off"
+                   data-jump="{% url 'staff:jump' %}" role="combobox" aria-expanded="false" aria-controls="staff-jump-list">
+            <div class="staff-jump-list d-none" id="staff-jump-list" role="listbox"></div>
+        </form>
+        <div class="staff-bar-actions">
+            <a class="btn btn-sm staff-btn-ghost" href="{% url 'friends:bundle_hub' %}">Back to my bundles</a>
+            <form method="post" action="{% url 'staff:leave' %}" class="d-inline" id="staff-leave-form">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm staff-btn">Leave admin</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="staff-expiry" class="alert alert-warning d-none d-flex flex-wrap align-items-center gap-2 py-2 px-3" role="alert" aria-live="polite">
+        <span class="flex-grow-1" id="staff-expiry-text"></span>
+        <button type="button" class="btn btn-sm staff-btn-primary" id="staff-expiry-stay">Stay in admin mode</button>
+        <a class="btn btn-sm staff-btn d-none" id="staff-expiry-verify" href="#">Confirm with passkey</a>
+    </div>
+
+    {% if messages %}
+    <div class="mb-3" id="staff-messages">
+        {% for message in messages %}
+        {% with level=message.tags|default:'info' %}
+        {# Confirmations close on their own (staff.js). Warnings and errors stay until closed. #}
+        <div class="alert alert-{% if level == 'error' %}danger{% else %}{{ level }}{% endif %} alert-dismissible fade show py-2 px-3 mb-2 staff-message" role="alert"{% if level == 'success' or level == 'info' %} data-autoclose{% endif %}>{{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>
+        {% endwith %}
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="staff-layout">
+        <nav class="staff-card staff-nav" aria-label="Admin Console sections">
+            {% for place in nav.places %}
+            <a href="{{ place.url }}" class="{% if place.active %}active{% endif %}"{% if place.active %} aria-current="page"{% endif %}>
+                <i class="bi {{ place.icon }}" aria-hidden="true"></i> {{ place.label }}
+                {% if place.key == 'requests' and open_case_count %}<span class="badge rounded-pill bg-light text-dark border staff-count" title="Open requests">{{ open_case_count }}</span>{% endif %}
+            </a>
+            {% endfor %}
+            <hr>
+            <a href="{% url 'staff:help' %}" class="{% if section == 'help' %}active{% endif %}">
+                <i class="bi bi-question-circle" aria-hidden="true"></i> Getting started
+            </a>
+            <a href="{% url 'staff:preferences' %}" class="{% if section == 'preferences' %}active{% endif %}">
+                <i class="bi bi-sliders" aria-hidden="true"></i> My preferences
+            </a>
+        </nav>
+
+        <div class="staff-main">
+            {% if nav.tabs or page_help %}
+            <div class="staff-topline">
+                {% if nav.tabs %}
+                <nav class="staff-pagetabs" aria-label="{{ nav.title }} pages">
+                    {% for tab in nav.tabs %}<a href="{{ tab.url }}" class="{% if tab.active %}active{% endif %}"{% if tab.active %} aria-current="page"{% endif %}>{{ tab.label }}</a>{% endfor %}
+                </nav>
+                {% endif %}
+                {% if page_help %}
+                <button type="button" class="btn btn-sm btn-link staff-help-toggle text-decoration-none ms-auto" data-bs-toggle="collapse"
+                        data-bs-target="#staff-help-panel" aria-expanded="false" aria-controls="staff-help-panel">
+                    <i class="bi bi-question-circle" aria-hidden="true"></i> Help for this page
+                </button>
+                {% endif %}
+            </div>
+            {% if page_help %}
+            <div class="collapse" id="staff-help-panel">
+                <div class="staff-help">
+                    <h2>{{ page_help.title }}</h2>
+                    <ul>{% for line in page_help.lines %}<li>{{ line }}</li>{% endfor %}</ul>
+                    <p class="mb-0 mt-2 small"><a href="{% url 'staff:help' %}">Getting started with the Admin Console</a>, including what the words mean.</p>
+                </div>
+            </div>
+            {% endif %}
+            {% endif %}
+            {% block console %}{% endblock %}
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="staffShortcuts" tabindex="-1" aria-labelledby="staffShortcutsLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title" id="staffShortcutsLabel">Keyboard shortcuts</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+            <div class="modal-body">
+                <dl class="staff-rows">
+                    <dt><span class="staff-kbd">Ctrl</span> <span class="staff-kbd">K</span> or <span class="staff-kbd">/</span></dt><dd>Jump to a request, user or bundle</dd>
+                    <dt><span class="staff-kbd">g</span> then <span class="staff-kbd">t</span></dt><dd>Today</dd>
+                    <dt><span class="staff-kbd">g</span> then <span class="staff-kbd">q</span></dt><dd>Requests</dd>
+                    <dt><span class="staff-kbd">g</span> then <span class="staff-kbd">p</span></dt><dd>Pipeline</dd>
+                    <dt><span class="staff-kbd">g</span> then <span class="staff-kbd">u</span></dt><dd>Users</dd>
+                    <dt><span class="staff-kbd">g</span> then <span class="staff-kbd">b</span></dt><dd>Bundles</dd>
+                    <dt><span class="staff-kbd">r</span></dt><dd>On a request: write a reply</dd>
+                    <dt><span class="staff-kbd">n</span></dt><dd>On a request: write an internal note</dd>
+                    <dt><span class="staff-kbd">?</span></dt><dd>This list</dd>
+                </dl>
+                <p class="staff-muted small mb-0">Shortcuts do nothing while you are typing in a box.</p>
+            </div>
+        </div>
+    </div>
+</div>
+<div id="staff-routes" class="d-none" data-uid="{{ request.user.pk }}" data-today="{% url 'staff:today' %}" data-queue="{% url 'staff:home' %}" data-pipeline="{% url 'staff:pipeline' %}"
+     data-users="{% url 'staff:users' %}" data-bundles="{% url 'staff:bundles' %}"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/passkeys.js' %}"></script>
+<script src="{% static 'js/staff.js' %}"></script>
+{% block console_js %}{% endblock %}
+{% endblock %}

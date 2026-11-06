@@ -1,0 +1,546 @@
+{% extends 'staff/base.html' %}
+{% load tz account_tags staff_tags %}
+
+{% block console %}
+<p class="mb-2"><a href="{% url 'staff:home' %}" class="staff-muted"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Requests</a></p>
+<h1 class="staff-title">{{ case.title }}</h1>
+<p class="staff-subtitle">
+    #{{ case.pk }} &middot; {{ case.get_kind_display }} &middot;
+    {% if case.kind == 'submission' and case.stage %}<span class="badge rounded-pill bg-light text-dark border" title="Review stage">{{ case.get_stage_display }}</span>
+    {% else %}<span class="badge rounded-pill {{ case.status_badge }}">{{ case.get_status_display }}</span>{% endif %}
+    {% if case.is_spam %}<span class="badge rounded-pill bg-dark">Spam</span>{% endif %}
+    &middot; opened <span class="{% if case.is_active %}{{ case.created_at|age_class }}{% endif %}">{{ case.created_at|ago }}</span>
+    {% if case.assignee %}&middot; with {{ case.assignee.username }}{% endif %}
+    &middot; <a href="{% url 'staff:case_dossier' case.pk %}" class="staff-muted">Dossier PDF</a>
+    <span id="staff-presence" class="staff-muted" aria-live="polite"></span>
+</p>
+<div id="staff-live" class="alert alert-info d-none d-flex align-items-center gap-2 py-2" role="status" aria-live="polite"
+     data-pulse="{% url 'staff:case_pulse' case.pk %}" data-since="{{ seen_version }}">
+    <span class="flex-grow-1" id="staff-live-text">Something new on this request.</span>
+    <a class="btn btn-sm staff-btn-primary" href="{% url 'staff:case' case.pk %}">Show it</a>
+</div>
+
+{% if requester_closed %}
+<div class="staff-warning mb-3">The account that sent this is closed or disabled{% if not case.requester_email %}, so nothing you write can reach them{% endif %}.</div>
+{% endif %}
+
+<section class="staff-card staff-next" id="next-step" aria-labelledby="next-heading">
+    <div class="staff-card-head"><h2 id="next-heading">Next step: {{ next_step.headline }}</h2>{% if next_step.detail %}<p>{{ next_step.detail }}</p>{% endif %}</div>
+    {% if next_step.actions %}
+    <div class="staff-next-actions">
+        {% for item in next_step.actions %}
+        {% if item.post %}
+        <form method="post" action="{% url 'staff:case_action' case.pk %}" data-once>{% csrf_token %}<input type="hidden" name="seen_version" value="{{ seen_version }}">{% for key, value in item.post.items %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endfor %}<button type="submit" class="btn btn-sm {% if item.style == 'primary' %}staff-btn-primary{% else %}staff-btn{% endif %}">{{ item.label }}</button></form>
+        {% elif item.release %}
+        <form method="post" action="{% url 'staff:release_start' case.pk %}" data-once>{% csrf_token %}<button type="submit" class="btn btn-sm staff-btn-primary">{{ item.label }}</button></form>
+        {% elif item.modal %}
+        <button type="button" class="btn btn-sm {% if item.style == 'primary' %}staff-btn-primary{% else %}staff-btn{% endif %}" data-bs-toggle="modal" data-bs-target="#{{ item.modal }}">{{ item.label }}</button>
+        {% elif item.stage %}
+        <button type="button" class="btn btn-sm {% if item.style == 'primary' %}staff-btn-primary{% else %}staff-btn{% endif %}" data-bs-toggle="modal" data-bs-target="#stageModal-{{ item.stage }}">{{ item.label }}</button>
+        {% elif item.href %}
+        <a class="btn btn-sm {% if item.style == 'primary' %}staff-btn-primary{% else %}staff-btn{% endif %}" href="{{ item.href }}" data-focus="{{ item.href }}">{{ item.label }}</a>
+        {% endif %}
+        {% endfor %}
+    </div>
+    {% endif %}
+</section>
+<div class="staff-detail">
+    <div>
+        <section class="staff-card" aria-labelledby="request-heading">
+            <div class="staff-card-head">
+                <h2 id="request-heading">Request</h2>
+                <p>From {% if case.requester %}<a href="{% url 'staff:user' case.requester.pk %}">{{ case.requester_label }}</a>{% else %}{{ case.requester_label }}{% endif %}{% if case.requester_email %} &lt;{{ case.requester_email }}&gt;{% endif %}</p>
+            </div>
+            {% if case.body %}<pre class="staff-request">{{ case.body }}</pre>{% else %}<p class="staff-muted mb-0">{% if data_rows %}No message; the details are below.{% else %}No message.{% endif %}</p>{% endif %}
+            {% if data_rows %}
+            <dl class="staff-rows mt-3">
+                {% for label, value in data_rows %}<dt>{{ label }}</dt><dd>{{ value }}</dd>{% endfor %}
+            </dl>
+            {% endif %}
+        </section>
+
+        <section class="staff-card" aria-labelledby="timeline-heading">
+            <div class="staff-card-head">
+                <h2 id="timeline-heading">Conversation</h2>
+                <p>Replies and messages are what the user sees. <i class="bi bi-lock" aria-hidden="true"></i> Notes stay inside the team.</p>
+            </div>
+            {% if notes %}
+            <ul class="staff-timeline">
+                {% for note in notes %}
+                <li class="staff-note-{{ note.kind }}{% if seen_before and note.created_at > seen_before and note.kind == 'message' %} staff-new-note{% endif %}">
+                    <div class="staff-note-meta">
+                        {% if note.kind == 'reply' %}<i class="bi bi-envelope me-1" aria-hidden="true"></i>{% elif note.kind == 'note' %}<i class="bi bi-lock me-1" aria-hidden="true"></i>{% elif note.kind == 'message' %}<i class="bi bi-person me-1" aria-hidden="true"></i>{% endif %}
+                        {% if note.kind == 'message' %}{{ case.requester_label }} &middot;{% elif note.kind != 'event' %}{{ note.get_kind_display }}{% if note.author %} by {{ note.author.username }}{% endif %} &middot;{% endif %}
+                        <span title="{{ note.created_at|localtime|date:'M j, Y g:i A T' }}">{{ note.created_at|ago }}</span>
+                        {% if seen_before and note.created_at > seen_before and note.kind == 'message' %}<span class="badge rounded-pill bg-info text-dark ms-1">New</span>{% endif %}
+                    </div>
+                    <div class="staff-note-body">{% if note.kind == 'note' %}{{ note.body|mentions }}{% else %}{{ note.body }}{% endif %}</div>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="staff-muted mb-0">Nothing yet.</p>
+            {% endif %}
+            <span id="conversation-end"></span>
+        </section>
+
+        {% if can.work %}
+        <section class="staff-card" aria-labelledby="respond-heading">
+            <h2 id="respond-heading" class="visually-hidden">Respond</h2>
+            <div class="staff-tabs" role="tablist" aria-label="Respond">
+                {% if case.kind != 'update' %}<button type="button" class="staff-tab active" role="tab" aria-selected="true" data-tab-target="#pane-reply"><i class="bi bi-envelope me-1" aria-hidden="true"></i>Reply to {{ case.requester_label|truncatechars:30 }}</button>{% endif %}
+                <button type="button" class="staff-tab" role="tab" aria-selected="false" data-tab-target="#pane-note"><i class="bi bi-lock me-1" aria-hidden="true"></i>Internal note</button>
+            </div>
+            {% if case.kind != 'update' %}
+            <div id="pane-reply" role="tabpanel" class="staff-pane">
+            {% if reachable %}
+            <form method="post" action="{% url 'staff:case_action' case.pk %}" data-once>
+                {% csrf_token %}<input type="hidden" name="seen_version" value="{{ seen_version }}">
+                <input type="hidden" name="action" value="reply">
+                <div class="d-flex flex-wrap align-items-end gap-2 mb-2">
+                    <label for="reply-body" class="form-label fw-semibold mb-0 me-auto">To {{ case.requester_label }}{% if case.requester_email %} &lt;{{ case.requester_email }}&gt;{% endif %}</label>
+                    {% if saved_replies %}
+                    <select class="form-select form-select-sm w-auto" aria-label="Insert a saved reply" data-insert-into="#reply-body">
+                        <option value="">Insert a saved reply</option>
+                        {% for title, body in saved_replies %}<option value="1" data-body="{{ body }}">{{ title }}</option>{% endfor %}
+                    </select>
+                    {% endif %}
+                </div>
+                <textarea id="reply-body" data-draft="case{{ case.pk }}-reply" name="body" class="form-control" rows="6" maxlength="10000" required></textarea>
+                <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
+                    <label for="reply-then" class="staff-muted mb-0">Then</label>
+                    <select id="reply-then" name="then" class="form-select form-select-sm w-auto">
+                        <option value="open">keep it open</option>
+                        <option value="waiting">wait for their answer</option>
+                        {% if case.kind != 'agency' and case.kind != 'submission' %}<option value="resolve">resolve it (no second email)</option>{% endif %}
+                    </select>
+                    <button type="submit" class="btn btn-sm staff-btn-primary ms-auto"><i class="bi bi-envelope me-1" aria-hidden="true"></i>Send to {{ case.requester_label|truncatechars:24 }}</button>
+                </div>
+                <div class="staff-muted mt-1">
+                    {% if has_account %}They are notified in ELSA and by email, with a link to answer{% if inbound %}, or they can reply to the email{% endif %}. Their answer appears here.
+                    {% elif inbound %}They have no ELSA account; their emailed answer appears here.
+                    {% else %}They have no ELSA account, so their answer comes to your own address.{% endif %}
+                    <a href="{% url 'staff:saved_replies' %}">Manage saved replies</a>
+                </div>
+            </form>
+            {% else %}
+            <p class="staff-muted mb-0">There is no way to reach the person who sent this, so only team notes are possible.</p>
+            {% endif %}
+            </div>
+            {% endif %}
+            <div id="pane-note" role="tabpanel" class="staff-pane staff-pane-note">
+            <form method="post" action="{% url 'staff:case_action' case.pk %}" data-once>
+                {% csrf_token %}<input type="hidden" name="seen_version" value="{{ seen_version }}">
+                <input type="hidden" name="action" value="note">
+                <label for="note-body" class="form-label fw-semibold"><i class="bi bi-lock me-1" aria-hidden="true"></i>Note for the team. The user never sees this. Type @username to tell a colleague.</label>
+                <textarea id="note-body" data-draft="case{{ case.pk }}-note" name="body" class="form-control" rows="3" maxlength="10000" required></textarea>
+                <div class="d-flex mt-2"><button type="submit" class="btn btn-sm staff-btn-ghost ms-auto"><i class="bi bi-lock me-1" aria-hidden="true"></i>Save note, team only</button></div>
+            </form>
+            </div>
+        </section>
+        {% endif %}
+    </div>
+
+    <div>
+        <section class="staff-card" aria-labelledby="handling-heading">
+            <div class="staff-card-head"><h2 id="handling-heading">Handling</h2></div>
+            <dl class="staff-rows">
+                <dt>Taken by</dt>
+                <dd>{% if case.assignee %}{{ case.assignee.username }}{% else %}<span class="staff-muted">Nobody yet</span>{% endif %}</dd>
+                <dt>First reply</dt>
+                <dd>{% if case.first_response_at %}{{ case.first_response_at|ago }}{% else %}<span class="staff-muted">Not yet</span>{% endif %}</dd>
+                <dt>Last change</dt>
+                <dd>{{ case.updated_at|ago }}</dd>
+                {% if case.closed_at %}<dt>Closed</dt><dd>{{ case.closed_at|ago }}{% if case.closed_by %} by {{ case.closed_by.username }}{% endif %}</dd>{% endif %}
+            </dl>
+            {% if can.work or can.review %}
+            <button type="button" class="btn btn-sm btn-link px-0 mt-2 text-decoration-none" data-bs-toggle="collapse" data-bs-target="#more-actions"
+                    aria-expanded="false" aria-controls="more-actions"><i class="bi bi-three-dots me-1" aria-hidden="true"></i>More actions</button>
+            <div class="collapse" id="more-actions">
+            {% if can.work %}
+            <div class="staff-quick mt-2">
+                {% if case.assignee_id != user.pk and 'claim' not in offered %}
+                <form method="post" action="{% url 'staff:case_action' case.pk %}" data-once>{% csrf_token %}<input type="hidden" name="seen_version" value="{{ seen_version }}"><input type="hidden" name="action" value="claim"><button type="submit" class="btn btn-sm staff-btn">Take it</button></form>
+                {% endif %}
+                {% if case.is_active %}
+                    {% if case.status != 'waiting' %}
+                    <button type="button" class="btn btn-sm staff-btn-ghost" data-bs-toggle="modal" data-bs-target="#statusWaitingModal">Waiting on user</button>
+                    {% endif %}
+                    {% if case.kind != 'agency' and case.kind != 'submission' and 'statusResolvedModal' not in offered %}
+                    <button type="button" class="btn btn-sm staff-btn" data-bs-toggle="modal" data-bs-target="#statusResolvedModal">Resolve</button>
+                    {% endif %}
+                    {% if case.kind != 'submission' and 'declineAgencyModal' not in offered %}{% if case.kind != 'agency' or case.requester_id != user.pk %}
+                    <button type="button" class="btn btn-sm staff-btn-ghost" data-bs-toggle="modal" data-bs-target="{% if case.kind == 'agency' %}#declineAgencyModal{% else %}#statusDeclinedModal{% endif %}">Decline</button>
+                    {% endif %}{% endif %}
+                {% elif 'status' not in offered and 'not_spam' not in offered %}
+                    <form method="post" action="{% url 'staff:case_action' case.pk %}" data-once>{% csrf_token %}<input type="hidden" name="seen_version" value="{{ seen_version }}"><input type="hidden" name="action" value="{% if case.is_spam %}not_spam{% else %}status{% endif %}"><input type="hidden" name="status" value="open"><button type="submit" class="btn btn-sm staff-btn">Reopen</button></form>
+                {% endif %}
+                {% if case.assignee %}
+                <form method="post" action="{% url 'staff:case_action' case.pk %}" data-once>{% csrf_token %}<input type="hidden" name="seen_version" value="{{ seen_version }}"><input type="hidden" name="action" value="unassign"><button type="submit" class="btn btn-sm staff-btn-ghost">Unassign</button></form>
+                {% endif %}
+            </div>
+            <form method="post" action="{% url 'staff:case_action' case.pk %}" class="d-flex gap-2 mt-3" data-once>
+                {% csrf_token %}<input type="hidden" name="seen_version" value="{{ seen_version }}">
+                <input type="hidden" name="action" value="assign">
+                <select name="assignee" class="form-select form-select-sm" aria-label="Assign to" required>
+                    <option value="" {% if not case.assignee_id %}selected{% endif %} disabled>Choose someone</option>
+                    {% for person in workers %}{% if person.pk == user.pk %}<option value="{{ person.pk }}" {% if case.assignee_id == person.pk %}selected{% endif %}>Me ({{ person.get_full_name|default:person.username }})</option>{% endif %}{% endfor %}
+                    {% for person in workers %}{% if person.pk != user.pk %}<option value="{{ person.pk }}" {% if case.assignee_id == person.pk %}selected{% endif %}>{{ person.get_full_name|default:person.username }}{% with away=person|away_until %}{% if away %} (away until {{ away|date:"M j" }}){% endif %}{% endwith %}</option>{% endif %}{% endfor %}
+                </select>
+                <button type="submit" class="btn btn-sm staff-btn">Assign</button>
+            </form>
+            {% if case.kind == 'contact' or case.kind == 'feedback' %}
+                {% if not case.is_spam %}
+                <button type="button" class="btn btn-sm btn-link text-muted px-0 mt-2" data-bs-toggle="modal" data-bs-target="#spamModal">Mark as spam</button>
+                {% endif %}
+            {% endif %}
+            {% endif %}
+            {% if case.kind == 'submission' and can.review and case.requester_id != user.pk %}
+            <div class="staff-quick mt-2">
+                {% for item in next_step.less_common %}
+                <button type="button" class="btn btn-sm staff-btn-ghost" data-bs-toggle="modal" data-bs-target="#stageModal-{{ item.stage }}">{{ item.label }}</button>
+                {% endfor %}
+                {% if final_stage %}
+                <button type="button" class="btn btn-sm staff-btn-ghost" data-bs-toggle="modal" data-bs-target="#stageModal-move_back">Move the review back</button>
+                {% endif %}
+            </div>
+            {% endif %}
+            </div>
+            {% endif %}
+        </section>
+
+        {% if case.kind == 'agency' %}
+        <section class="staff-card" aria-labelledby="agency-heading">
+            <div class="staff-card-head"><h2 id="agency-heading">Decision: agency change</h2></div>
+            {% if case.requester %}
+            <dl class="staff-rows">
+                <dt>Now</dt><dd>{{ facts.current_label }} <span class="staff-mono">({{ facts.current }})</span></dd>
+                <dt>Asked for</dt><dd>{{ facts.requested_label }} <span class="staff-mono">({{ facts.requested }})</span></dd>
+                <dt>Bundles</dt><dd>{{ facts.bundle_count }}</dd>
+            </dl>
+            {% if case.requester_id == user.pk %}
+                <p class="staff-warning mt-3 mb-0">This is your own request, so a colleague has to decide it.</p>
+            {% elif case.is_active and can.agency %}
+                {% if facts.already %}
+                <p class="staff-warning mt-3 mb-2">{{ case.requester.username }} is already with {{ facts.requested_label }}. Close this with a reply instead.</p>
+                {% else %}
+                {% if 'approveAgencyModal' not in offered %}
+                <div class="d-flex gap-2 mt-3">
+                    <button type="button" class="btn btn-sm staff-btn-primary" data-bs-toggle="modal" data-bs-target="#approveAgencyModal">Approve</button>
+                    <button type="button" class="btn btn-sm staff-btn-ghost" data-bs-toggle="modal" data-bs-target="#declineAgencyModal">Decline</button>
+                </div>
+                {% else %}<p class="staff-muted small mt-3 mb-0">Approve or decline in the Next step box above.</p>{% endif %}
+                {% endif %}
+            {% endif %}
+            {% else %}
+            <p class="staff-muted mb-0">The account that asked no longer exists.</p>
+            {% endif %}
+        </section>
+        {% endif %}
+
+        {% if case.kind == 'submission' %}
+        <section class="staff-card" aria-labelledby="review-heading">
+            <div class="staff-card-head"><h2 id="review-heading">Review</h2></div>
+            {% if releases %}
+            <div class="mb-2">{% for item in releases %}<div><a href="{% url 'staff:release' item.pk %}">{{ item.label }}</a> <span class="staff-muted">{% if item.released_at %}released{% elif item.delivered_at %}delivered{% elif item.package_built_at %}package built{% else %}in progress{% endif %}</span></div>{% endfor %}</div>
+            {% endif %}
+            <dl class="staff-rows">
+                <dt>Stage</dt><dd>{{ case.get_stage_display|default:"Submitted" }}{% if case.stage_changed_at %} <span class="staff-muted">since {{ case.stage_changed_at|ago }}</span>{% endif %}</dd>
+            </dl>
+            {% if case.requester_id == user.pk %}
+            <p class="staff-warning mb-0">This is your own bundle, so a colleague has to review it.</p>
+            {% elif can.review %}
+            <p class="staff-muted small mb-0">Move it on from the Next step box; the owner is emailed each time.</p>
+            {% endif %}
+
+            {% if case.data.acceptance_proposed_by %}<p class="staff-warning mt-3 mb-0">Acceptance was proposed; a second reviewer confirms it with Accept in the Next step box.</p>{% endif %}
+            {% if checklist %}
+            <form method="post" action="{% url 'staff:case_action' case.pk %}" class="mt-3 pt-3 border-top" data-once>
+                {% csrf_token %}<input type="hidden" name="seen_version" value="{{ seen_version }}">
+                <input type="hidden" name="action" value="checklist">
+                <div class="fw-semibold mb-1">Review checklist</div>
+                {% for item in checklist %}
+                <label class="staff-check"><input type="checkbox" class="form-check-input mt-1" name="done" value="{{ item.key }}" {% if item.done %}checked{% endif %} {% if not can.review %}disabled{% endif %}> <span>{{ item.label }}</span></label>
+                {% endfor %}
+                {% if can.review %}<div class="d-flex mt-1"><button type="submit" class="btn btn-sm staff-btn ms-auto">Save checklist</button></div>{% endif %}
+            </form>
+            {% endif %}
+        </section>
+        {% endif %}
+
+        {% if case.kind == 'update' and rollout_items %}
+        <section class="staff-card" aria-labelledby="rollout-heading">
+            <div class="staff-card-head"><h2 id="rollout-heading">Rollout</h2><p>From "it is out" to "it is live and users know". Ticks marked "checked by ELSA" follow what this server can see.</p></div>
+            <form method="post" action="{% url 'staff:case_action' case.pk %}" data-once>
+                {% csrf_token %}<input type="hidden" name="seen_version" value="{{ seen_version }}">
+                <input type="hidden" name="action" value="checklist">
+                {% for item in rollout_items %}
+                <label class="staff-check"><input type="checkbox" class="form-check-input mt-1" name="done" value="{{ item.key }}" {% if item.done %}checked{% endif %} {% if item.auto or not can.work %}disabled{% endif %}> <span>{{ item.label }}{% if item.auto %} <span class="staff-muted small">(checked by ELSA)</span>{% endif %}</span></label>
+                {% endfor %}
+                {% if can.work %}<div class="d-flex mt-1"><button type="submit" class="btn btn-sm staff-btn ms-auto">Save checklist</button></div>{% endif %}
+            </form>
+            {% if rollout_notice %}
+            <div class="mt-3 pt-3 border-top" id="tell-users">
+                <div class="fw-semibold mb-1">Tell users</div>
+                {% if rollout_draft %}
+                <p class="mb-2">A draft email is ready: <a href="{% url 'staff:broadcast' rollout_draft.pk %}">"{{ rollout_draft.subject }}"</a> ({{ rollout_draft.get_status_display|lower }}).</p>
+                {% elif rollout_live %}
+                <p class="staff-muted small mb-2">It is live, so the users it affects can hear about it: {{ rollout_notice.audience }}. ELSA prepares the words; you read, change and send them. People who turned news off are left out.</p>
+                {% if can.work %}
+                <form method="post" action="{% url 'staff:case_action' case.pk %}" class="d-inline" data-once>{% csrf_token %}<input type="hidden" name="action" value="prepare_notice"><button type="submit" class="btn btn-sm staff-btn-primary">Prepare the email</button></form>
+                {% endif %}
+                {% else %}
+                <p class="staff-muted small mb-2">Once "Live on the production site" is ticked, ELSA can prepare an email and a banner for the users it affects.</p>
+                {% endif %}
+                {% if rollout_live and can.accounts %}<a class="btn btn-sm staff-btn ms-1" href="{{ rollout_banner_url }}">Post a banner</a>{% endif %}
+            </div>
+            {% endif %}
+        </section>
+        {% endif %}
+
+        {% if case.campaign %}
+        <section class="staff-card">
+            <div class="staff-card-head"><h2>Peer review campaign</h2></div>
+            <p class="mb-0"><a href="{% url 'staff:campaign' case.campaign.pk %}">Open "{{ case.campaign.title }}"</a> to invite reviewers and read their answers.</p>
+        </section>
+        {% endif %}
+
+
+        {% if case.kind == 'submission' or case.kind == 'peer_review' %}
+        <section class="staff-card" aria-labelledby="liens-heading">
+            <div class="staff-card-head"><h2 id="liens-heading">Liens</h2><p>A lien is the PDS term for one problem that must be fixed before the data is accepted.{% if case.kind == 'submission' %} The owner sees open ones on their bundle page and can mark them fixed; you check and close them.{% endif %}</p></div>
+            {% if liens %}
+            <ul class="list-unstyled mb-0">
+                {% for lien in liens %}
+                <li class="py-2 border-bottom">
+                    <span class="badge rounded-pill {% if lien.status == 'open' %}bg-danger{% elif lien.status == 'resolved' %}bg-success{% else %}bg-secondary{% endif %}">{{ lien.get_status_display }}</span>
+                    {% if lien.status == 'open' and lien.owner_fixed_at %}<span class="badge rounded-pill bg-info text-dark">Owner says fixed</span>{% endif %}
+                    <span class="staff-note-body">{{ lien.description }}</span>
+                    {% if lien.file_path and case.bundle %}<div><a class="staff-mono" href="{% url 'staff:bundle_files' case.bundle.pk %}?path={{ lien.file_path|urlencode }}{% if lien.line %}#L{{ lien.line }}{% endif %}">{{ lien.file_path }}{% if lien.line %}, line {{ lien.line }}{% endif %}</a></div>{% endif %}
+                    <div class="staff-muted">Raised by {{ lien.created_by.username|default:"someone" }} {{ lien.created_at|ago }}{% if lien.closed_by %}; {{ lien.get_status_display|lower }} by {{ lien.closed_by.username }}{% endif %}</div>
+                    {% if can.review %}
+                    <form method="post" action="{% url 'staff:case_action' case.pk %}" class="d-flex gap-1 mt-1" data-once>
+                        {% csrf_token %}<input type="hidden" name="seen_version" value="{{ seen_version }}">
+                        <input type="hidden" name="action" value="lien_status">
+                        <input type="hidden" name="lien" value="{{ lien.pk }}">
+                        {% if lien.status == 'open' %}
+                        <button type="submit" name="status" value="resolved" class="btn btn-sm staff-btn">Resolved</button>
+                        <button type="submit" name="status" value="waived" class="btn btn-sm staff-btn-ghost">Waive</button>
+                        {% else %}
+                        <button type="submit" name="status" value="open" class="btn btn-sm staff-btn-ghost">Reopen</button>
+                        {% endif %}
+                    </form>
+                    {% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="staff-muted">None.</p>
+            {% endif %}
+            {% if can.review %}
+            <form method="post" action="{% url 'staff:case_action' case.pk %}" class="mt-2" data-once>
+                {% csrf_token %}<input type="hidden" name="seen_version" value="{{ seen_version }}">
+                <input type="hidden" name="action" value="add_lien">
+                <textarea name="description" data-draft="case{{ case.pk }}-lien" class="form-control form-control-sm" rows="2" maxlength="10000" required placeholder="Describe the problem"></textarea>
+                {% if case.bundle %}<input type="text" name="file_path" class="form-control form-control-sm mt-2 staff-mono" maxlength="500" placeholder="File it concerns, e.g. data/model_output.xml (optional)">{% endif %}
+                <div class="d-flex mt-2"><button type="submit" class="btn btn-sm staff-btn ms-auto">Add lien</button></div>
+            </form>
+            {% endif %}
+        </section>
+        {% endif %}
+
+        {% if facts.bundle %}
+        <section class="staff-card" aria-labelledby="bundle-heading">
+            <div class="staff-card-head"><h2 id="bundle-heading">Bundle</h2></div>
+            <dl class="staff-rows">
+                <dt>Name</dt><dd><a href="{% url 'staff:bundle' facts.bundle.pk %}">{{ facts.bundle.name }}</a></dd>
+                <dt>Type</dt><dd>{{ facts.bundle.bundle_type }}</dd>
+                <dt>ELSA checks</dt><dd>{% if facts.requirements %}<span class="badge rounded-pill bg-warning text-dark">{{ facts.requirements|length }} outstanding</span>{% else %}<span class="badge rounded-pill bg-success">All met</span>{% endif %}</dd>
+                <dt>Validation</dt>
+                <dd>{% for run in facts.runs %}<div><a href="{% url 'staff:validation_report' run.pk %}">{{ run.get_status_display }}</a> <span class="staff-muted">{{ run.error_count }} errors, {{ run.warning_count }} warnings, {{ run.requested_at|ago }}</span></div>{% empty %}<span class="staff-muted">Never run</span>{% endfor %}</dd>
+            </dl>
+            {% if changes %}
+            <div class="mt-3 pt-3 border-top">
+                <div class="fw-semibold">Changed since the previous submission ({{ changes.since|ago }})</div>
+                {% if changes.added or changes.changed or changes.removed %}
+                <ul class="list-unstyled small mb-0 mt-1">
+                    {% for path in changes.changed|slice:":12" %}<li><span class="badge bg-warning text-dark">changed</span> <a class="staff-mono" href="{% url 'staff:bundle_files' facts.bundle.pk %}?path={{ path|urlencode }}">{{ path }}</a></li>{% endfor %}
+                    {% for path in changes.added|slice:":12" %}<li><span class="badge bg-success">added</span> <a class="staff-mono" href="{% url 'staff:bundle_files' facts.bundle.pk %}?path={{ path|urlencode }}">{{ path }}</a></li>{% endfor %}
+                    {% for path in changes.removed|slice:":12" %}<li><span class="badge bg-secondary">removed</span> <span class="staff-mono">{{ path }}</span></li>{% endfor %}
+                </ul>
+                {% else %}<p class="staff-muted mb-0">No file changed.</p>{% endif %}
+            </div>
+            {% endif %}
+            <div class="d-flex flex-wrap gap-2 mt-3">
+                <a class="btn btn-sm staff-btn" href="{% url 'staff:bundle_files' facts.bundle.pk %}">Browse files</a>
+                <a class="btn btn-sm staff-btn-ghost" href="{% url 'staff:bundle_download' facts.bundle.pk %}">Download .tar.gz</a>
+            </div>
+        </section>
+        {% endif %}
+
+        {% if other_cases %}
+        <section class="staff-card" aria-labelledby="other-heading">
+            <div class="staff-card-head"><h2 id="other-heading">Other requests from them</h2></div>
+            <ul class="list-unstyled mb-0">
+                {% for other in other_cases %}
+                <li class="py-1"><a href="{% url 'staff:case' other.pk %}">#{{ other.pk }} {{ other.title }}</a> <span class="badge rounded-pill {{ other.status_badge }}">{{ other.get_status_display }}</span></li>
+                {% endfor %}
+            </ul>
+        </section>
+        {% endif %}
+    </div>
+</div>
+
+{% comment %} Modals sit outside every card, per the codebase's rule. {% endcomment %}
+{% if case.kind == 'agency' and case.requester and case.is_active and can.agency and not facts.already and case.requester_id != user.pk %}
+<div class="modal fade" id="approveAgencyModal" tabindex="-1" aria-labelledby="approveAgencyLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form class="modal-content" method="post" action="{% url 'staff:case_action' case.pk %}" data-once>
+            {% csrf_token %}<input type="hidden" name="seen_version" value="{{ seen_version }}">
+            <input type="hidden" name="action" value="approve_agency">
+            <div class="modal-header">
+                <h5 class="modal-title" id="approveAgencyLabel">Change {{ case.requester.username }} to {{ facts.requested_label }}?</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                {% if facts.bundle_count %}
+                <p class="staff-warning">ELSA writes the agency into every identifier when it writes a label. Labels in {{ case.requester.username }}'s {{ facts.bundle_count }} existing bundle{{ facts.bundle_count|pluralize }} will use <span class="staff-mono">urn:{{ facts.requested }}</span> from the next time they are written, so a bundle that is part done may end up with both.</p>
+                {% endif %}
+                <label for="approve-message" class="form-label">Message to {{ case.requester_label }} <span class="staff-muted">(optional, included in their notice)</span></label>
+                {% if saved_replies %}<select class="form-select form-select-sm mb-2" aria-label="Insert a saved reply" data-insert-into="#approve-message">
+                    <option value="">Insert a saved reply</option>
+                    {% for reply_title, reply_body in saved_replies %}<option value="1" data-body="{{ reply_body }}">{{ reply_title }}</option>{% endfor %}
+                </select>{% endif %}
+                <textarea id="approve-message" data-draft="case{{ case.pk }}-approve" name="message" class="form-control mb-3" rows="3" maxlength="10000"></textarea>
+                <label for="approve-reason" class="form-label">Note for the audit log (optional, team only)</label>
+                <input type="text" id="approve-reason" name="reason" class="form-control" maxlength="1000">
+                <p class="staff-muted mt-2 mb-0">{{ case.requester.username }} is emailed that the change is done.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn staff-btn-ghost" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn staff-btn-primary">Approve and change</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal fade" id="declineAgencyModal" tabindex="-1" aria-labelledby="declineAgencyLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form class="modal-content" method="post" action="{% url 'staff:case_action' case.pk %}" data-once>
+            {% csrf_token %}<input type="hidden" name="seen_version" value="{{ seen_version }}">
+            <input type="hidden" name="action" value="decline_agency">
+            <div class="modal-header">
+                <h5 class="modal-title" id="declineAgencyLabel">Decline this request</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <label for="decline-body" class="form-label">Tell {{ case.requester_label }} why</label>
+                {% if saved_replies %}<select class="form-select form-select-sm mb-2" aria-label="Insert a saved reply" data-insert-into="#decline-body">
+                    <option value="">Insert a saved reply</option>
+                    {% for reply_title, reply_body in saved_replies %}<option value="1" data-body="{{ reply_body }}">{{ reply_title }}</option>{% endfor %}
+                </select>{% endif %}
+                <textarea id="decline-body" data-draft="case{{ case.pk }}-decline" name="body" class="form-control" rows="5" maxlength="10000" required></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn staff-btn-ghost" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-danger btn-keep-bg">Send and decline</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+{% if can.work and not case.is_spam %}{% if case.kind == 'contact' or case.kind == 'feedback' %}
+<div class="modal fade" id="spamModal" tabindex="-1" aria-labelledby="spamLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form class="modal-content" method="post" action="{% url 'staff:case_action' case.pk %}" data-once>
+            {% csrf_token %}<input type="hidden" name="seen_version" value="{{ seen_version }}">
+            <input type="hidden" name="action" value="spam">
+            <div class="modal-header">
+                <h5 class="modal-title" id="spamLabel">Mark as spam?</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>The request is closed and moved to the Spam view. Nothing is sent to the sender.</p>
+                {% if not case.requester and case.requester_email %}
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="block" value="1" id="spam-block" checked>
+                    <label class="form-check-label" for="spam-block">Also file future messages from {{ case.requester_email }} as spam</label>
+                </div>
+                {% endif %}
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn staff-btn-ghost" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-danger btn-keep-bg">Mark as spam</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}{% endif %}
+
+{% if can.work and case.is_active %}
+{% with reachable=case.requester_email %}
+{% for status, title, label, required, button, hint in status_modals %}
+<div class="modal fade" id="status{{ status|capfirst }}Modal" tabindex="-1" aria-labelledby="status{{ status }}Label" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form class="modal-content" method="post" action="{% url 'staff:case_action' case.pk %}" data-once>
+            {% csrf_token %}<input type="hidden" name="seen_version" value="{{ seen_version }}">
+            <input type="hidden" name="action" value="status">
+            <input type="hidden" name="status" value="{{ status }}">
+            <div class="modal-header"><h5 class="modal-title" id="status{{ status }}Label">{{ title }}</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+            <div class="modal-body">
+                {% if case.requester_id or case.requester_email %}
+                <label for="status-{{ status }}-message" class="form-label">{{ label }}{% if not required %} <span class="staff-muted">(optional)</span>{% endif %}</label>
+                {% if saved_replies %}<select class="form-select form-select-sm mb-2" aria-label="Insert a saved reply" data-insert-into="#status-{{ status }}-message">
+                    <option value="">Insert a saved reply</option>
+                    {% for reply_title, reply_body in saved_replies %}<option value="1" data-body="{{ reply_body }}">{{ reply_title }}</option>{% endfor %}
+                </select>{% endif %}
+                <textarea id="status-{{ status }}-message" data-draft="case{{ case.pk }}-{{ status }}" name="message" class="form-control" rows="5" maxlength="10000" {% if required %}required{% endif %}></textarea>
+                <p class="staff-muted mt-2 mb-0">{{ hint }}</p>
+                {% else %}
+                <p class="mb-0">This request has no way to reach the person who sent it, so nothing is sent.</p>
+                {% endif %}
+                <label for="status-{{ status }}-reason" class="form-label mt-3">Note for the team <span class="staff-muted">(optional, not sent)</span></label>
+                <input type="text" id="status-{{ status }}-reason" name="reason" class="form-control" maxlength="1000">
+            </div>
+            <div class="modal-footer"><button type="button" class="btn staff-btn-ghost" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn {% if status == 'declined' %}btn-danger btn-keep-bg{% else %}staff-btn-primary{% endif %}">{{ button }}</button></div>
+        </form>
+    </div>
+</div>
+{% endfor %}
+{% endwith %}
+{% endif %}
+{% if can.review and case.kind == 'submission' and case.requester_id != user.pk %}
+{% for key, window in stage_windows %}
+<div class="modal fade" id="stageModal-{{ key }}" tabindex="-1" aria-labelledby="stageLabel-{{ key }}" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form class="modal-content" method="post" action="{% url 'staff:case_action' case.pk %}" data-once>
+            {% csrf_token %}<input type="hidden" name="seen_version" value="{{ seen_version }}">
+            <input type="hidden" name="action" value="stage">
+            {% if key == 'move_back' %}<input type="hidden" name="stage" value="under_review"><input type="hidden" name="move_back" value="1">
+            {% else %}<input type="hidden" name="stage" value="{{ key }}">{% endif %}
+            <div class="modal-header"><h5 class="modal-title" id="stageLabel-{{ key }}">{{ window.0 }}</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+            <div class="modal-body">
+                <label for="stage-{{ key }}-body" class="form-label">{{ window.1 }}</label>
+                {% if saved_replies %}<select class="form-select form-select-sm mb-2" aria-label="Insert a saved reply" data-insert-into="#stage-{{ key }}-body">
+                    <option value="">Insert a saved reply</option>
+                    {% for reply_title, reply_body in saved_replies %}<option value="1" data-body="{{ reply_body }}">{{ reply_title }}</option>{% endfor %}
+                </select>{% endif %}
+                <textarea id="stage-{{ key }}-body" data-draft="case{{ case.pk }}-stage-{{ key }}" name="body" class="form-control" rows="5" maxlength="10000" {% if window.2 %}required{% endif %}></textarea>
+                <p class="staff-muted mt-2 mb-0">{{ window.4 }}</p>
+                {% if key == 'accepted' and checklist_open %}
+                <div class="staff-warning mt-3 mb-0">
+                    <div class="mb-1">{{ checklist_open|length }} checklist item{{ checklist_open|pluralize }} not ticked:</div>
+                    <ul class="mb-2">{% for item in checklist_open %}<li>{{ item.label }}</li>{% endfor %}</ul>
+                    <div class="form-check"><input class="form-check-input" type="checkbox" name="accept_anyway" value="1" id="accept-anyway">
+                        <label class="form-check-label" for="accept-anyway">Accept anyway (noted in the audit log)</label></div>
+                </div>
+                {% endif %}
+            </div>
+            <div class="modal-footer"><button type="button" class="btn staff-btn-ghost" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn {% if key == 'not_accepted' %}btn-danger btn-keep-bg{% else %}staff-btn-primary{% endif %}">{{ window.3 }}</button></div>
+        </form>
+    </div>
+</div>
+{% endfor %}
+{% endif %}
+{% endblock %}

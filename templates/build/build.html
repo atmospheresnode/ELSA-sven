@@ -56,8 +56,20 @@
 
                     <h4 class="mb-4">Provide Bundle Information</h4>
 
+                    <!-- Shown instead of the form if the user comes Back after creating a bundle -->
+                    <style>#createdNotice:focus { outline: none; box-shadow: 0 0 0 .2rem rgba(0, 128, 128, .3); }</style>
+                    <div id="createdNotice" class="alert alert-success d-none" role="status" tabindex="-1">
+                        <p class="mb-2"><i class="bi bi-check-circle-fill me-1" aria-hidden="true"></i><strong>You created "<span data-created-name></span>" a moment ago.</strong> It is saved in your Bundle Hub.</p>
+                        <div class="d-flex flex-wrap gap-2">
+                            <a class="btn btn-sm btn-keep-bg text-white" style="background-color: teal;" href="#" data-created-link>Continue with this bundle</a>
+                            <button type="button" class="btn btn-sm border bg-white text-dark" data-create-another>Create a different bundle</button>
+                        </div>
+                    </div>
+
                     <form id="form_bundle" method="post" action="{% url 'build:build' %}">
                         {% csrf_token %}
+                        {# One-time key so sending this form twice doesn't make two bundles (build/creation.py). #}
+                        <input type="hidden" name="create_token" value="{{ create_token }}">
                         {% if form_bundle.non_field_errors %}
                         <div class="alert alert-danger py-2" role="alert">{% for error in form_bundle.non_field_errors %}{{ error }} {% endfor %}</div>
                         {% endif %}
@@ -67,6 +79,7 @@
                             <label for="bundle_name" class="form-label fw-medium">Bundle Name <span class="text-danger">*</span></label>
                             {{ form_bundle.name }}
                             {% for error in form_bundle.name.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                            {% if own_existing %}<div class="small mt-1"><a href="{{ own_existing_url }}">Continue with "{{ own_existing.name }}"<i class="bi bi-arrow-right ms-1" aria-hidden="true"></i></a></div>{% endif %}
                             <div class="form-text">Use a unique, descriptive name. Spaces will be converted to underscores automatically.</div>
                         </div>
 
@@ -131,8 +144,10 @@
                             </div>
                         </div>
 
-                        <!-- Submit -->
-                        <button type="submit" class="btn btn-light text-light">Start Building</button>
+                        <!-- Submit button -->
+                        <button type="submit" class="btn btn-light text-light" id="createBundleButton"
+                                data-with-setup="Create bundle and start setup" data-without-setup="Create bundle">Create bundle and start setup</button>
+                        <p class="form-text mt-2 mb-0">ELSA creates the bundle as soon as you press this. It is saved in your Bundle Hub, so you can leave and come back to it at any time.</p>
 
                     </form>
                 </div>
@@ -163,6 +178,58 @@
             document.getElementById('bundle-type-group').classList.remove('bundle-type-invalid');
         });
     });
+
+    // Button text depends on whether the walkthrough is on.
+    (function () {
+        var toggle = document.getElementById('enableWalkthrough');
+        var button = document.getElementById('createBundleButton');
+        if (!toggle || !button) return;
+        function label() {
+            button.textContent = button.getAttribute(toggle.checked ? 'data-with-setup' : 'data-without-setup');
+        }
+        toggle.addEventListener('change', label);
+        label();
+    })();
+
+    // Back to this page after creating a bundle: show that it exists instead of the filled-in form.
+    // The new bundle's page leaves a note in this tab (build/_just_created.html). Covers both the
+    // back/forward cache and a normal reload.
+    (function () {
+        var KEY = 'elsa-bundle-created';
+        var FRESH_FOR = 30 * 60 * 1000;
+        var notice = document.getElementById('createdNotice');
+        var form = document.getElementById('form_bundle');
+        if (!notice || !form) return;
+        {% if discarded %}try { window.sessionStorage.removeItem(KEY); } catch (e) {}{% endif %}
+
+        function read() {
+            try { return JSON.parse(window.sessionStorage.getItem(KEY) || 'null'); } catch (e) { return null; }
+        }
+        function cameBack(event) {
+            if (event && event.persisted) return true;
+            var nav = window.performance && performance.getEntriesByType && performance.getEntriesByType('navigation')[0];
+            return !!(nav && nav.type === 'back_forward');
+        }
+        function update(event) {
+            var entry = read();
+            var show = !!(entry && entry.url && cameBack(event) && Date.now() - entry.at < FRESH_FOR);
+            notice.classList.toggle('d-none', !show);
+            form.hidden = show;
+            if (!show) return;
+            notice.querySelector('[data-created-name]').textContent = entry.name;
+            notice.querySelector('[data-created-link]').setAttribute('href', entry.url);
+            notice.focus();
+        }
+        window.addEventListener('pageshow', update);
+
+        notice.querySelector('[data-create-another]').addEventListener('click', function () {
+            try { window.sessionStorage.removeItem(KEY); } catch (e) {}
+            // A fresh, empty form with a new one-time key.
+            window.location.replace(form.getAttribute('action'));
+        });
+    })();
 </script>
+
+{% include "includes/_toasts.html" %}
 
 {% endblock %}

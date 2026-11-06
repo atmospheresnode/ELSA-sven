@@ -1,25 +1,13 @@
-"""Report AMA values that the PDS4 Schematron will reject.
+"""Report AMA values the PDS4 Schematron will reject.
 
     python3 manage.py ama_vocabulary_check
     python3 manage.py ama_vocabulary_check --fix
     python3 manage.py ama_vocabulary_check --strict     # non-zero exit if anything is found
 
-Three AMA attributes are closed vocabularies, and the constraint lives only in the dictionary's
-Schematron - PDS4_AMA_1O00_1300.xsd carries no xs:enumeration at all. Until these fields became
-selects they were free-text boxes whose placeholders suggested values the Schematron rejects
-("General Circulation Model" for a field that wants GCM, "lat/lon" for one that wants lat-lon,
-"sigma" for one that wants Sigma), so rows written before that change may hold values that pass
-XSD validation and fail at submission.
+Three AMA attributes are closed lists, only enforced in the Schematron. Older rows may have bad values.
 
-The forms now flag such a value as "... (not a valid PDS4 value)" when the panel is next opened,
-but nobody sees that until they open it. This command says how far the problem spreads without
-waiting for someone to look.
-
---fix applies ONLY unambiguous normalisations: a value that matches an allowed one once case and
-separators are ignored ("lat/lon" -> "lat-lon", "sigma" -> "Sigma"). Anything needing a judgement
-call ("General Circulation Model" -> GCM) is reported with a suggestion and left alone, because
-guessing at a user's meaning is not this command's job. Labels for affected files are rebuilt
-afterwards, since a fixed database and a stale label on disk is worse than either alone.
+--fix only changes a value that matches once case and separators are ignored ("lat/lon" -> "lat-lon").
+Anything else is reported with a suggestion. Affected labels are rebuilt afterwards.
 """
 from django.core.management.base import BaseCommand, CommandError
 
@@ -34,8 +22,7 @@ ENUMERATED_ATTRIBUTES = (
     (SimulationConfiguration, 'vertical_grid_type'),
 )
 
-# Values the LDD's own documentation suggests but its Schematron refuses. Reported as hints only;
-# each is a change of meaning rather than of spelling, so a person decides.
+# Values the LDD docs suggest but the Schematron refuses. Hints only.
 SUGGESTIONS = {
     'general circulation model': 'GCM',
     'mesoscale model': 'MESOSCALE',
@@ -160,8 +147,7 @@ class Command(BaseCommand):
             record.save(update_fields=[row['attribute']])
             fixed += 1
 
-            # A collection default reaches every file in that collection, so all of their labels
-            # are now stale, not just the one row that changed.
+            # A collection default reaches every file, so all those labels need rebuilding.
             if record.netcdf_file_id is not None:
                 touched_files.add(record.netcdf_file_id)
             elif record.collection_id is not None:

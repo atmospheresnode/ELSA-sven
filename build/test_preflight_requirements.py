@@ -26,12 +26,20 @@ from django.urls import reverse
 
 from build import preflight, validate_rules, validate_runner
 from build.models import (Bundle, Citation_Information, Investigation,
-                          Modification_History, NetCDFFile, Target, ValidationRun)
+                          Modification_History, NetCDFFile, Product_Document, Target,
+                          ValidationRun)
 
 
 def with_data(bundle):
     """The External-only requirement unrelated to what these tests are about."""
     NetCDFFile.objects.create(bundle=bundle, title='out.nc', file='out.nc', processed=True)
+    return with_document(bundle)
+
+
+def with_document(bundle):
+    """The other External-only requirement, which these tests are not about either."""
+    Product_Document.objects.get_or_create(bundle=bundle, document_name='readme',
+                                           document_id='readme')
     return bundle
 
 
@@ -75,7 +83,8 @@ class RequirementsTests(TestCase):
         # No author item: until there is a citation, adding one is the thing to do.
         self.assertEqual(self.keys(), ['citation-missing',
                                        'modification-history-missing',
-                                       'target-missing', 'netcdf-missing'])
+                                       'target-missing', 'netcdf-missing',
+                                       'document-collection-empty'])
 
     def test_a_missing_target_is_reported_on_its_own(self):
         self.satisfy_citation()
@@ -157,8 +166,8 @@ class SummaryTests(TestCase):
         keys = [i['key'] for i in validate_rules.merge_user(
             validate_rules.translate([CITATION_FINDING])['user'], outstanding)]
         self.assertEqual(keys.count('citation-missing'), 1)
-        # citation, modification history, target, NetCDF: four, not five.
-        self.assertEqual(merged['blocking'], 4)
+        # citation, modification history, target, NetCDF, document: five, not six.
+        self.assertEqual(merged['blocking'], 5)
 
     def test_requirements_are_grouped_under_the_card_that_fixes_them(self):
         outstanding = preflight.requirements(self.bundle)
@@ -343,6 +352,8 @@ class ExternalOnlyRequirementsTests(TestCase):
         bundle.targets.add(target)
         if data:
             with_data(bundle)
+        else:
+            with_document(bundle)
         return bundle
 
     def keys(self, bundle):

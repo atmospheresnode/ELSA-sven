@@ -127,16 +127,12 @@ VERSION_CHOICES = (
     ('1D00', '1D00'),
 )
 
-# PDS4 caps a logical identifier at 255 characters. A bundle's name becomes the
-# bundle_id segment of every LID ELSA generates, and collection and product
-# segments are appended after it:
-#
-#     urn:<agency>:<bundle_id>:<collection>:<product>
-#
-# so the name cannot spend the whole budget. These bound it.
+# PDS4 caps a logical identifier at 255 characters. The bundle name becomes the bundle_id
+# in every LID, with the collection and product added after it:
+# 
+# urn:<agency>:<bundle_id>:<collection>:<product>
 MAX_LID_LENGTH = 255
-# Longest prefix in use: External bundles use 'urn:nasa:pds-ama:' (17), Archive
-# uses 'urn:' plus the agency ('nasa:pds', 'esa:psa', 'jaxa:darts') plus ':'.
+# Longest prefix: External uses 'urn:nasa:pds-ama:' (17), Archive uses 'urn:' + agency + ':'.
 LONGEST_LID_PREFIX = len('urn:nasa:pds-ama:')
 # Left over for ':<collection>:<product>' on the deepest products.
 LID_SEGMENT_RESERVE = 64
@@ -145,8 +141,7 @@ MAX_BUNDLE_NAME = 150
 
 
 class BundleForm(forms.ModelForm):
-    # The name becomes a folder under the owner's archive, so it must be one
-    # path segment: "../someone/x" used to land in another user's archive.
+    # The name becomes a folder, so it has to be one path segment.
     name = forms.CharField(required=True, max_length=MAX_BUNDLE_NAME,
                            validators=[validate_path_component], widget = forms.TextInput(attrs={
             'class': 'form-control',
@@ -194,19 +189,13 @@ class BundleForm(forms.ModelForm):
         cleaned_data = self.cleaned_data
         name = cleaned_data.get('name')
 
-        # The field's own max_length already rejected an over-long name, and a
-        # missing name is reported by the required check, so there is nothing
-        # left to validate here.
+        # max_length and required already cover these, so nothing left to check.
         if not name:
             return cleaned_data
 
         name_edit = replace_all(name.lower(), ' ', '_')
 
-        # Check for the colon before trimming anything. This test used to run
-        # after the trailing "bundle" was stripped, so "my:bundle" lost its
-        # colon along with the suffix and was accepted, even though
-        # Bundle.save() derives bundleID from the raw name and the colon then
-        # became a stray delimiter in the LID.
+        # Check for the colon before trimming, since bundleID comes from the raw name.
         if name_edit.find(':') != -1:
             raise forms.ValidationError(
                 "The colon (:) is used to delimit segments of a urn and thus is not permitted within a bundle name.")
@@ -215,10 +204,7 @@ class BundleForm(forms.ModelForm):
             # seven because there is probably an underscore by now
             name_edit = name_edit[:-7]
 
-        # Guard the assembled identifier, not just the raw name. This used to
-        # compare the name against 255 directly, which both ignored the LID
-        # prefix and the appended collection/product segments, and could never
-        # fire anyway because the field was capped at 50.
+        # Check the whole identifier, not just the name.
         bundle_id = (cleaned_data.get('bundleID') or '').strip().lower().replace(' ', '_')
         if not bundle_id:
             bundle_id = name_edit
@@ -237,6 +223,25 @@ class BundleForm(forms.ModelForm):
 """
     Citation_Information
 """
+
+
+_ROR_ID = re.compile(r'^(?:(?:https?://)?(?:www\.)?ror\.org/)?(0[a-hj-km-np-tv-z0-9]{6}[0-9]{2})/?$', re.I)
+
+
+def clean_ror_id(value):
+    """Returns the ROR ID as a full URI, or '' if blank.
+
+    PDS4 has no pattern for organization_rorid so validate won't catch a bad one. Check it here.
+    """
+    value = (value or '').strip()
+    if not value:
+        return ''
+    match = _ROR_ID.match(value)
+    if match is None:
+        raise forms.ValidationError(
+            'This does not look like a ROR ID, which reads like https://ror.org/027k65916. '
+            'Look the organization up at ror.org/search, or leave this blank.')
+    return 'https://ror.org/{}'.format(match.group(1).lower())
 
 
 class CitationInformationForm(forms.ModelForm):
@@ -293,8 +298,7 @@ class CitationInformationForm(forms.ModelForm):
         exclude = ('bundle',)
 
     def __init__(self, *args, **kwargs):
-        # The bundle the citation is for, when the caller knows it. Only used to
-        # decide whether an author is required (External bundles, for now).
+        # The bundle, if the caller knows it. Used to decide if an author is required.
         self.bundle = kwargs.pop('bundle', None)
         super().__init__(*args, **kwargs)
 
@@ -346,16 +350,13 @@ class CitationInformationForm(forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
-        # Editor counts are optional inputs; treat blank as 0 so the NOT NULL
-        # model columns always receive a value.
+        # Treat blank as 0 since the model columns are NOT NULL.
         for f in ('number_of_editors_people', 'number_of_editors_organization'):
             if cleaned_data.get(f) is None:
                 cleaned_data[f] = 0
 
-        # An External bundle needs an author (build.preflight), and this is the only
-        # moment one can be added: the edit form fills in names but cannot change
-        # how many there are. A citation created with none could only be fixed by
-        # deleting it and starting again, so it is refused here instead.
+        # External bundles need an author (build.preflight). Check here since the edit form can't
+        # change how many there are.
         if self.bundle is not None and self.bundle.bundle_type == 'External':
             people = cleaned_data.get('number_of_authors_people') or 0
             organizations = cleaned_data.get('number_of_authors_organization') or 0
@@ -382,24 +383,22 @@ class EditCitationInformationForm(forms.Form):
         # Add fields for authors (organizations)
         self._add_organization_fields('author', self.citation_information.number_of_authors_organization)
 
-        # Add fields for user-added editors. The two fixed ATM editors (Lynn
-        # Neakrase, Lyle Huber) are never editable and get no form fields.
+        # Fields for user-added editors. The two fixed ATM editors aren't editable.
         self._add_person_fields('editor', self.citation_information.number_of_editors_people)
         self._add_organization_fields('editor', self.citation_information.number_of_editors_organization)
 
     def clean(self):
-        """Names PDS cannot store, caught here rather than by the validator.
-
-        PDS4 holds author and editor names in ASCII_* types, all of which are
-        restricted to Basic Latin, so an accented name is refused however correctly
-        it is spelled. Catching it on the form means the user is told while they are
-        looking at the field, and told what spelling does work, rather than finding
-        out later from a validation report about a label they cannot see.
-        """
+        """Catch names PDS can't store. PDS4 names are Basic Latin only, so accents are refused."""
         cleaned = super(EditCitationInformationForm, self).clean()
 
         for name, value in list(cleaned.items()):
             if not isinstance(value, str) or not value:
+                continue
+            if name.endswith('_rorid'):
+                try:
+                    cleaned[name] = clean_ror_id(value)
+                except forms.ValidationError as error:
+                    self.add_error(name, error)
                 continue
             if name.endswith('_given_name'):
                 label = 'given name'
@@ -819,11 +818,8 @@ class TargetForm(forms.Form):
                 required=True
             )
         else:
-            # This list used to be restricted to the investigation's own targets,
-            # which made an observation of anything the mission is not formally
-            # listed against impossible to record. PDS4 does not tie a target to
-            # an investigation, so the list is grouped rather than filtered:
-            # related targets first, everything else still selectable underneath.
+            # Grouped, not filtered: related targets first, everything else below. PDS4 doesn't tie a
+            # target to an investigation.
             investigation = Investigation.objects.filter(pk=self.pk_ins).first()
             if investigation is not None:
                 self.related_investigation_names = [
@@ -856,13 +852,7 @@ class TargetForm(forms.Form):
         return json.dumps(sorted(self.related_pks))
     
 def investigation_display_name(investigation):
-    """Best available label for an investigation.
-
-    Nine context investigations came out of the crawl with a blank name (DART
-    among them), which would render as an empty optgroup heading. Fall back to
-    the LID's trailing segment, so 'mission.double_asteroid_redirection_test'
-    reads as 'Double Asteroid Redirection Test'.
-    """
+    """Best label for an investigation. Some have a blank name, so fall back to the LID's last segment."""
     if investigation is None:
         return 'this investigation'
 
@@ -884,17 +874,10 @@ def investigation_display_name(investigation):
 
 
 class GroupedTargetIterator(forms.models.ModelChoiceIterator):
-    """Groups the target list by investigation, then lists everything else.
+    """Group the target list by investigation, then list everything else.
 
-    One optgroup per investigation rather than a single merged "related" group,
-    because merging cannot say which investigation a target came from, and a
-    target may legitimately be listed for several of them (the Moon is listed
-    for both Apollo 11 and Apollo 17, so it appears under each).
-
-    PDS4 does not tie a target to an investigation: Target is a standalone
-    context product, and Target_Identification sits alongside Investigation_Area
-    in a label with no link between them. So this grouping is a navigation aid,
-    never a restriction. Every target stays selectable.
+    One optgroup per investigation, so a target can show under several. It's only for
+    navigation, every target stays selectable.
     """
 
     def __iter__(self):
@@ -908,8 +891,7 @@ class GroupedTargetIterator(forms.models.ModelChoiceIterator):
 
         for label, pks in field.related_groups:
             if not pks:
-                # An investigation PDS publishes no targets for gets no empty
-                # heading, which would read as "this mission has no targets".
+                # No heading for an investigation with no published targets.
                 continue
             members = [self.choice(o) for o in objects if o.pk in pks]
             if members:
@@ -921,8 +903,7 @@ class GroupedTargetIterator(forms.models.ModelChoiceIterator):
         if grouped:
             yield ('All other targets', others)
         else:
-            # Nothing published for this bundle's investigations, so a flat list
-            # is more honest than an empty "related" group.
+            # Nothing published for these investigations, so use a flat list.
             for choice in others:
                 yield choice
 
@@ -963,8 +944,7 @@ class TargetFormAll(forms.Form):
                 investigation_display_name(i) for i in investigations
             ]
 
-            # One group per investigation, so the menu says which investigation
-            # each target is listed for instead of merging them into one heading.
+            # One group per investigation.
             related_groups = []
             for investigation in investigations:
                 pks = set(
@@ -998,12 +978,7 @@ class TargetFormAll(forms.Form):
 
     @property
     def related_pks_json(self):
-        """Target pks PDS lists for this bundle's investigations.
-
-        Consumed by the template so it can raise a caution when the user picks
-        something outside the list. Empty means we have nothing to compare
-        against and no caution should fire.
-        """
+        """Target pks PDS lists for this bundle's investigations, for the template's caution."""
         return json.dumps(sorted(self.related_pks))
 
 
@@ -1125,9 +1100,7 @@ PE_STD_ID = [
 def clean_unique_document_name(form, value):
     """Refuse a document name already used in this bundle.
 
-    The name becomes the product identifier, which the collection inventory lists,
-    and a collection cannot list the same identifier twice. Two documents called
-    "11" is not a duplicate row in a table somewhere; it is a bundle PDS refuses.
+    The name becomes the product identifier, and an inventory can't list one twice.
     """
     value = (value or '').strip()
     bundle = getattr(form, 'bundle', None)
@@ -1136,10 +1109,7 @@ def clean_unique_document_name(form, value):
 
     clash = Product_Document.objects.filter(bundle=bundle, document_name=value)
 
-    # The document being edited is not a clash with itself. The edit views build
-    # these forms with initial= rather than instance=, so form.instance has no pk to
-    # exclude and `editing` is how they say which document this is. Without it,
-    # opening a document and saving it unchanged would be refused as a duplicate.
+    # Don't clash with itself. The edit views use initial= so `editing` says which document this is.
     editing = getattr(form, 'editing', None)
     exclude_pk = getattr(editing, 'pk', None) or (
         form.instance.pk if form.instance is not None else None)
@@ -1154,10 +1124,7 @@ def clean_unique_document_name(form, value):
     return value
 
 
-# PDS4 stores author and editor names in ASCII_* types, every one of which is
-# restricted to '\p{IsBasicLatin}*'. An accented name is refused however correctly
-# it is spelled, which is a limitation of the archive format rather than anything
-# the user did wrong, so the message says so and offers the spelling that works.
+# PDS4 names are Basic Latin only, so say so and offer a spelling that works.
 PDS_BASIC_LATIN = re.compile(r'^[\x00-\x7F]*$')
 
 
@@ -1189,8 +1156,7 @@ def clean_pds_person_name(value, label):
 
 
 def document_file_field():
-    """The file a document is. Declared on each document form, not on a mixin, because
-    Django's form metaclass ignores fields declared on a plain mixin."""
+    """The document's file. Declared on each form since Django ignores fields on a plain mixin."""
     return forms.FileField(
         required=False,
         label='Document File',
@@ -1206,11 +1172,10 @@ def document_file_field():
 
 
 def clean_document_upload(form):
-    """Check the uploaded document file for either document form.
+    """Check the uploaded file for either document form.
 
-    A new document must come with its file. An edit may leave it out and keep the file
-    it has, or upload a replacement. What is accepted, and why, is in document_files.
-    The checked upload is kept on form.prepared_file for the view to store.
+    A new document needs a file. An edit can keep the old one or replace it.
+    The checked upload goes on form.prepared_file.
     """
     from build import document_files
 
@@ -1266,8 +1231,7 @@ class AnnexProductDocumentForm(forms.ModelForm):
         })
     )
 
-    # The file itself. Its name and format (PDF/A or plain text) are taken from the
-    # upload, so there is no typed file name to disagree with it any more.
+    # The file itself. Its name and format come from the upload.
     document_file = document_file_field()
 
     class Meta:
@@ -1279,12 +1243,9 @@ class AnnexProductDocumentForm(forms.ModelForm):
         ]
 
     def __init__(self, *args, **kwargs):
-        # The bundle is needed to tell whether a document name is already taken in
-        # it. Optional, so existing callers that do not pass one keep working and
-        # simply skip that one check.
+        # Needed to check if a document name is taken. Optional.
         self.bundle = kwargs.pop('bundle', None)
-        # The Product_Document being edited, when this form is an edit rather than an
-        # add, so the duplicate-name check can tell it apart from a real clash.
+        # The Product_Document being edited, for the duplicate name check.
         self.editing = kwargs.pop('editing', None)
         super(AnnexProductDocumentForm, self).__init__(*args, **kwargs)
         self.prepared_file = None
@@ -1389,8 +1350,7 @@ class ProductDocumentForm(forms.ModelForm):
             #'placeholder': 'Language'
         })
     )
-    # The file itself. Its name, its format and the edition's file count (always one:
-    # the label has one Document_File) are taken from the upload.
+    # The file itself. Name, format and file count come from the upload.
     document_file = document_file_field()
     local_id = forms.CharField(
         required=False,
@@ -1420,8 +1380,7 @@ class ProductDocumentForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         self.bundle = kwargs.pop('bundle', None)
-        # The Product_Document being edited, when this form is an edit rather than an
-        # add, so the duplicate-name check can tell it apart from a real clash.
+        # The Product_Document being edited, for the duplicate name check.
         self.editing = kwargs.pop('editing', None)
         super(ProductDocumentForm, self).__init__(*args, **kwargs)
         self.prepared_file = None
@@ -1430,8 +1389,7 @@ class ProductDocumentForm(forms.ModelForm):
         return clean_document_upload(self)
 
     def clean_document_editions(self):
-        # Optional on the form but NOT NULL in the table, so a blank field was a 500.
-        # ELSA writes exactly one Document_Edition, so one is the true count.
+        # Optional on the form but NOT NULL in the table. ELSA writes one Document_Edition.
         value = self.cleaned_data.get('document_editions')
         return 1 if value is None else value
 
@@ -2135,9 +2093,8 @@ class DictionaryForm(forms.Form):
 #         fields = ['title', 'file']
 
 
-# Several files in one input.  Django 4.2.1+ refuses 'multiple' on a plain
-# ClearableFileInput (CVE-2023-31047: only the last file was validated), so
-# this is Django's documented pattern: every file goes through FileField.clean.
+# Multiple files in one input. Django 4.2.1+ blocks 'multiple' on ClearableFileInput
+# (CVE-2023-31047), so this follows the Django docs and cleans every file.
 class MultipleFileInput(forms.ClearableFileInput):
     allow_multiple_selected = True
 
@@ -2161,8 +2118,7 @@ class MultipleNetCDFUploadForm(forms.Form):
     collection = forms.CharField(widget=forms.HiddenInput)
     netcdf_files = MultipleFileField(
         widget=MultipleFileInput(attrs={
-            # Explicit too, so the picker allows several files on Django 4.2.0,
-            # which predates allow_multiple_selected; clean_netcdf_files reads them all.
+            # Set explicitly so the picker still allows multiple files on Django 4.2.0.
             'multiple': True,
             'class': 'form-control'
         }),
@@ -2203,12 +2159,8 @@ def _ama_text_widget(placeholder=''):
     return forms.TextInput(attrs=attrs)
 
 
-# Three AMA attributes are closed vocabularies. The constraint lives ONLY in the Schematron
-# (PDS4_AMA_1O00_1300.sch); the XSD carries no xs:enumeration at all, so a free-text value passes
-# XSD validation and fails later, during Schematron validation at submission. These used to be text
-# inputs whose placeholders suggested values the Schematron rejects - "General Circulation Model"
-# for a field that wants GCM, "lat/lon" for one that wants lat-lon, "sigma" for one that wants
-# Sigma - so following the hint produced an invalid archive.
+# Three AMA attributes are closed lists. The limit is only in the Schematron
+# (PDS4_AMA_1O00_1300.sch), so free text would pass the XSD and fail at submission.
 AMA_ENUMERATIONS = {
     'type': ('ASSIMILATION', 'GCM', 'MESOSCALE'),
     'horizontal_grid_type': ('cube-sphere', 'icosahedral', 'lat-lon'),
@@ -2232,44 +2184,25 @@ def _ama_number_widget(placeholder=''):
 
 
 class AMAFormGroupsMixin(object):
-    """Lets a template render an AMA form in labelled sections instead of one long field wall.
-
-    Simulation Configuration alone has 17 attributes; presented flat they are hard to scan. The
-    grouping lives on the form rather than in the template so the bundle-page modal and the
-    per-file page cannot drift apart.
-    """
+    """Lets a template show an AMA form in sections. Grouping is here so both pages match."""
 
     FIELD_GROUPS = ()
 
     def groups(self):
         for title, field_names in self.FIELD_GROUPS:
-            # Fields removed for this scope (apply_to_all on per-file forms) are skipped, and an
-            # entirely empty group is dropped rather than rendering a bare heading.
+            # Skip fields removed for this scope, and drop empty groups.
             bound_fields = [self[name] for name in field_names if name in self.fields]
             if bound_fields:
                 yield {'title': title, 'fields': bound_fields}
 
 
 class AMAScopedFormMixin(AMAFormGroupsMixin):
-    """Shared behaviour for all three AMA classes.
+    """Shared behaviour for the three AMA classes.
 
-    `scope` is 'collection' for the collection-wide default row and 'file' for one file's override.
+    `scope` is 'collection' for the default row and 'file' for one file's override.
 
-    Two scope controls, only ever one of them present, because the question genuinely differs by
-    scope:
-
-    * File scope gets `apply_scope`, a radio reading "same for every file in this collection" or
-      "just this file". It replaced a checkbox that rendered unchecked on every load whatever the
-      values actually were, so it never showed where they lived. Being a radio it always posts an
-      explicit answer, which is what lets the view tell "leave this file following the default"
-      apart from "give this file its own copy of values that happen to match the default" - see
-      `_save_ama_section`.
-    * Collection scope keeps `apply_to_collection`, unchanged in meaning: the row being edited is
-      already the shared value, so the only extra question is whether to discard the per-file
-      overrides as well.
-
-    One control per section either way, so a user can hold Model Metadata at collection level while
-    giving this file its own File Description.
+    * File scope has `apply_scope`, a radio for every file or just this file (see `_save_ama_section`).
+    * Collection scope has `apply_to_collection`, which also discards per-file overrides.
     """
 
     APPLY_COLLECTION = 'collection'
@@ -2280,23 +2213,18 @@ class AMAScopedFormMixin(AMAFormGroupsMixin):
         (APPLY_FILE, 'Just this file'),
     )
 
-    # Declared on each concrete form rather than here: Django's form metaclass only collects
-    # Field attributes from the class being defined and from bases that already have
-    # `declared_fields`, which a plain mixin does not.
+    # Declared on each form since Django doesn't collect fields from a plain mixin.
     CONTROL_FIELDS = ('apply_scope', 'apply_to_collection')
 
     def __init__(self, *args, **kwargs):
         self.scope = kwargs.pop('scope', 'collection')
-        # Whether this file currently holds its own values for this section. Only meaningful in
-        # file scope, where it decides which radio starts selected.
+        # Whether this file has its own values for this section. Sets the starting radio.
         has_override = kwargs.pop('has_override', False)
         super().__init__(*args, **kwargs)
         for field in self.fields.values():
             field.required = False
 
-        # A value stored while these were free-text boxes is kept and flagged rather than
-        # quietly discarded: an unrecognised value would otherwise leave the select blank, and the
-        # next save would erase what the user had without ever saying so.
+        # Keep and flag an old free-text value, otherwise the next save would erase it.
         for enum_name in AMA_ENUMERATIONS:
             field = self.fields.get(enum_name)
             if field is None or not hasattr(field, 'choices'):
@@ -2306,8 +2234,7 @@ class AMAScopedFormMixin(AMAFormGroupsMixin):
                 field.choices = list(field.choices) + [
                     (current, '{} (not a valid PDS4 value)'.format(current))]
 
-        # Drop whichever control does not belong in this scope, so neither can be posted into a
-        # scope that would not know what to do with it.
+        # Drop the control that doesn't belong in this scope.
         if self.scope == 'file':
             self.fields.pop('apply_to_collection', None)
             radio = self.fields.get('apply_scope')
@@ -2329,18 +2256,10 @@ class AMAScopedFormMixin(AMAFormGroupsMixin):
                     'default.'.format(self.SECTION_LABEL))
 
     def clean(self):
-        """Enforce the two text rules the PDS4 base types impose, which Django cannot see.
+        """Enforce the PDS4 text rules Django can't see.
 
-        Both ASCII_Short_String_Collapsed and ASCII_Text_Collapsed derive from xs:token and carry
-        the pattern \\p{IsBasicLatin}*:
-
-        * xs:token collapses whitespace, so a value stored with newlines or runs of spaces would
-          be silently rewritten when the archive is read back. Collapsing here keeps what is
-          stored identical to what is archived.
-        * Basic Latin means ASCII only. An institution such as "Universite de Paris" is fine but
-          "Université" is not, and the resulting label fails PDS4 validation. Users would
-          otherwise only discover that at submission time, so it is rejected at entry with an
-          explanation instead.
+        These types come from xs:token and have the pattern \p{IsBasicLatin}*, so collapse whitespace
+        and refuse anything that isn't ASCII.
         """
         cleaned_data = super().clean()
 
@@ -2376,11 +2295,7 @@ class AMAScopedFormMixin(AMAFormGroupsMixin):
         return False
 
     def wants_apply_to_collection(self):
-        """True when this save should reach the whole collection rather than one file.
-
-        Both scopes answer the same question through their own control: the file form's radio set
-        to 'collection', or the collection form's reset checkbox.
-        """
+        """True if this save should apply to the whole collection."""
         if not self.is_valid():
             return False
         if self.scope == 'file':
@@ -2388,24 +2303,14 @@ class AMAScopedFormMixin(AMAFormGroupsMixin):
         return bool(self.cleaned_data.get('apply_to_collection'))
 
     def wants_file_scope(self):
-        """True when the user explicitly asked for this file to hold its own values.
-
-        Distinct from "did not tick anything": the radio always posts, so this is a positive
-        instruction and `_save_ama_section` may store an override even where the values match the
-        collection default.
-        """
+        """True if the user asked for this file to have its own values."""
         if self.scope != 'file' or not self.is_valid():
             return False
         return self.cleaned_data.get('apply_scope') == self.APPLY_FILE
 
 
 class ModelMetadataForm(AMAScopedFormMixin, forms.ModelForm):
-    """ama:Model_Metadata.
-
-    Usually identical for every file in a collection, so it is normally filled in once and pushed
-    out with the apply-to-collection checkbox. The per-file override exists so a single mislabelled
-    file can be corrected without disturbing the rest.
-    """
+    """ama:Model_Metadata. Usually the same for every file in a collection."""
 
     SECTION_LABEL = 'Model Metadata'
 
@@ -2502,8 +2407,7 @@ class SimulationConfigurationForm(AMAScopedFormMixin, forms.ModelForm):
             'southern_boundary': _ama_number_widget('-90 to 90'),
             'eastern_boundary': _ama_number_widget('-180 to 360'),
             'western_boundary': _ama_number_widget('-180 to 360'),
-            # start_time / end_time are ASCII_Short_String_Collapsed in the LDD, not dates, so they
-            # stay free text - a date picker here would be wrong for model time (e.g. sol 120).
+            # Free text in the LDD, not dates. Model time can be something like sol 120.
             'start_time': _ama_text_widget('free text, e.g. sol 0'),
             'end_time': _ama_text_widget('free text, e.g. sol 668'),
             'time_unit': _ama_text_widget('e.g. sols'),

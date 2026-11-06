@@ -1,20 +1,12 @@
 # -*- coding: utf-8 -*-
-"""
-Closing an account at its owner's request.
+"""Closing an account at its owner's request.
 
-The User row is kept, deactivated and stripped of personal details, rather than
-deleted.  Bundle.user cascades, so deleting the row would delete every bundle,
-and the archive keeps bundles the team still needs.  Nothing is moved on disk
-either: ARCHIVE_DIR/<username>/ is assumed by bundle paths, downloads, label
-regeneration and stored file names, so moving it would break the bundles for
-the team as well.
+The User row stays, deactivated with personal details removed, since deleting it would
+cascade to the bundles. Nothing moves on disk either. To find closed accounts:
 
-Instead the account is made easy to find:
-
-- UserProfile.closed_at, with an admin filter on both profiles and bundles;
-- ARCHIVE_DIR/_closed_accounts/<username>, a relative symlink to the folder,
-  so one directory lists every closed account's data;
-- ACCOUNT_CLOSED.txt inside the folder, for anyone browsing the server.
+- UserProfile.closed_at, with an admin filter
+- ARCHIVE_DIR/_closed_accounts/<username>, a symlink to the folder
+- ACCOUNT_CLOSED.txt inside the folder
 """
 from __future__ import unicode_literals
 
@@ -37,11 +29,7 @@ MARKER_FILENAME = 'ACCOUNT_CLOSED.txt'
 
 
 def close_account(user):
-    """
-    Closes ``user``.  Returns a dict describing what was closed, for the
-    notices.  The database part is atomic; the disk markers are best effort
-    and never undo a closure.
-    """
+    """Close ``user``. Returns a dict for the notices. The database part is atomic."""
     now = timezone.now()
     record = {
         'username': user.username,

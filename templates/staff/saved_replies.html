@@ -1,0 +1,47 @@
+{% extends 'staff/base.html' %}
+{% load account_tags %}
+
+{% block console %}
+<h1 class="staff-title">Saved replies</h1>
+<p class="staff-subtitle">Answers the team sends often. Pick one on any request page and it drops into the reply box, ready to edit.</p>
+
+<div class="staff-detail">
+    <section class="staff-card" aria-labelledby="list-heading">
+        <div class="staff-card-head"><h2 id="list-heading">All saved replies</h2><p>{{ replies|length }}</p></div>
+        {% for reply in replies %}
+        <div class="py-2 border-bottom">
+            <div class="d-flex align-items-center gap-2">
+                <strong class="flex-grow-1">{{ reply.title }}</strong>
+                {% if can.work %}<a class="btn btn-sm staff-btn-ghost" href="?edit={{ reply.pk }}">Edit</a>{% endif %}
+            </div>
+            <div class="staff-note-body staff-muted mt-1">{{ reply.body|truncatechars:240 }}</div>
+        </div>
+        {% empty %}<p class="staff-empty">None yet. Add the first one on the right.</p>{% endfor %}
+    </section>
+
+    {% if can.work %}
+    <section class="staff-card" aria-labelledby="edit-heading">
+        <div class="staff-card-head"><h2 id="edit-heading">{% if editing %}Edit "{{ editing.title }}"{% else %}New saved reply{% endif %}</h2></div>
+        <form method="post" data-once>
+            {% csrf_token %}
+            {% if editing %}<input type="hidden" name="id" value="{{ editing.pk }}">{% endif %}
+            <label for="reply-title" class="form-label fw-semibold">Name</label>
+            <input type="text" id="reply-title" data-draft="reply{{ editing.pk|default:'new' }}-title" name="title" class="form-control" maxlength="120" required value="{{ editing.title|default:'' }}" placeholder="e.g. Missing target">
+            <label for="reply-text" class="form-label fw-semibold mt-3">Text</label>
+            <textarea id="reply-text" data-draft="reply{{ editing.pk|default:'new' }}-text" name="body" class="form-control" rows="9" maxlength="10000" required>{{ editing.body|default:'' }}</textarea>
+            <div class="staff-muted mt-1">These fill in for each request: <span class="staff-mono">{name} {username} {bundle} {case} {staff}</span></div>
+            <div class="d-flex gap-2 mt-3">
+                {% if editing %}<a class="btn btn-sm staff-btn-ghost" href="{% url 'staff:saved_replies' %}">Cancel</a>{% endif %}
+                <button type="submit" class="btn btn-sm staff-btn-primary ms-auto">Save</button>
+            </div>
+        </form>
+        {% if editing %}
+        <form method="post" class="mt-3 pt-3 border-top" data-once>
+            {% csrf_token %}<input type="hidden" name="id" value="{{ editing.pk }}"><input type="hidden" name="action" value="delete">
+            <button type="submit" class="btn btn-sm btn-link text-danger px-0">Delete this saved reply</button>
+        </form>
+        {% endif %}
+    </section>
+    {% endif %}
+</div>
+{% endblock %}

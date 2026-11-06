@@ -1,14 +1,9 @@
-"""Disk-space checks for NetCDF uploads, and the report a user can send when one is refused.
+"""Disk space checks for NetCDF uploads, and the report a user can send when one is refused.
 
-The upload page asks check_space() before it sends a single byte, because a refusal after the
-upload has arrived is too late: Django has already buffered the whole file into the temp
-directory, and on a nearly full disk that buffering is itself what fails. The bundle view repeats
-the check once the files are in, as a backstop for a browser without the script or a disk that
-filled up in between.
+The page calls check_space() before sending, since Django buffers the whole file to temp.
+The bundle view checks again as a backstop.
 
-When there is no room the page offers to tell Team ELSA. draft_message() writes that message for
-the user with Gemini, and falls back to a plain template whenever Gemini is not configured,
-switched off, over quota or slow, so the offer never depends on the model being up.
+draft_message() writes the message with Gemini, and uses a plain template if Gemini isn't available.
 """
 import logging
 import os
@@ -27,8 +22,7 @@ from django.utils.timezone import localtime
 
 logger = logging.getLogger(__name__)
 
-# Headroom kept free after an upload, for the labels written next and for everyone else on the
-# shared server. Same figure the bundle view has always used.
+# Space kept free after an upload, for labels and the rest of the shared server.
 STORAGE_MARGIN = 2 * 1024 ** 3
 
 STAFF_RECIPIENTS = ['lneakras@nmsu.edu', 'rupakdey@nmsu.edu']
@@ -37,17 +31,13 @@ STAFF_RECIPIENTS = ['lneakras@nmsu.edu', 'rupakdey@nmsu.edu']
 DRAFT_LIMIT_PER_HOUR = 10
 SEND_LIMIT_PER_HOUR = 3
 
-# Only the file list the page shows goes into a draft or an email; a selection of hundreds of
-# files is summarised by count past this point.
+# Max files listed in a draft or email. Past this it's just a count.
 MAX_LISTED_FILES = 20
 
 GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models'
-# Non-streaming and fast: the user is watching a spinner in the report dialog. Thinking is off
-# because 2.5-flash otherwise spends the output budget on it before writing a word.
+# Non-streaming since the user is watching a spinner. Thinking off or 2.5-flash uses up the output budget.
 GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-2.5-flash-lite']
-# A typical draft takes one to two seconds. A model that hangs must not keep the user watching a
-# spinner: each attempt gets at most GEMINI_READ_TIMEOUT, and the chain as a whole GEMINI_BUDGET,
-# after which the template is used.
+# Each attempt gets GEMINI_READ_TIMEOUT and the chain GEMINI_BUDGET, then we use the template.
 GEMINI_CONNECT_TIMEOUT = 3
 GEMINI_READ_TIMEOUT = 6
 GEMINI_BUDGET = 8
@@ -55,22 +45,18 @@ GEMINI_CONFIG = {'maxOutputTokens': 600, 'temperature': 0.3, 'thinkingConfig': {
 
 
 def _upload_paths():
-    """Every place an upload's bytes land on the way into the archive.
+    """Every place an upload lands on the way to the archive: temp, MEDIA_ROOT, ARCHIVE_DIR.
 
-    Django buffers anything larger than FILE_UPLOAD_MAX_MEMORY_SIZE into the temp directory,
-    storage then copies it into MEDIA_ROOT, and the view moves it into the collection under
-    ARCHIVE_DIR. Here /tmp and /home are separate filesystems, so both have to hold the upload.
+    /tmp and /home are separate filesystems here, so both have to hold the upload.
     """
     temp_dir = getattr(settings, 'FILE_UPLOAD_TEMP_DIR', None) or tempfile.gettempdir()
     return [settings.ARCHIVE_DIR, settings.MEDIA_ROOT, temp_dir]
 
 
 def check_space(total_bytes):
-    """Whether every filesystem an upload passes through can take total_bytes plus the margin.
+    """Whether every filesystem can take total_bytes plus the margin.
 
-    Returns ok, needed and available, where available is the largest upload that would be
-    accepted right now (free space less the margin, on the tightest filesystem). A path that
-    cannot be inspected is skipped rather than blocking uploads on a monitoring hiccup.
+    Returns ok, needed and available. A path we can't inspect is skipped.
     """
     tightest = None
     seen_devices = set()
@@ -105,11 +91,7 @@ def human_size(num_bytes):
 
 
 def clean_files(raw):
-    """The page's file list, reduced to names and sizes that are safe to quote.
-
-    These come from the browser before anything is uploaded, so they are only ever used as
-    descriptive text: never as paths, and never trusted for the space figures in the email.
-    """
+    """The page's file list as names and sizes. Comes from the browser, so it's only used as text."""
     files = []
     for item in raw if isinstance(raw, list) else []:
         if not isinstance(item, dict):
@@ -214,8 +196,7 @@ def _tidy(text):
 
 
 def _missing_facts(d, text):
-    """The exact identifiers a draft must carry. Models like to turn model_output into
-    "model output", which reads nicely and matches nothing on disk."""
+    """Identifiers the draft has to keep exactly. Models like to turn model_output into "model output"."""
     names = d['file_names'] if len(d['file_names']) <= 5 else d['file_names'][:1]
     return [fact for fact in [d['bundle'], d['collection'], d['signature']] + names if fact not in text]
 
@@ -243,8 +224,7 @@ def _gemini_message(d):
             logger.warning('storage report draft: out of time, using the template')
             break
         try:
-            # Shares the assistant's cooldown marks: a model it found over quota or hanging is
-            # skipped here too rather than making the user wait on it again.
+            # Uses the assistant's cooldowns, so a model over quota gets skipped here too.
             if cache.get('assistant-model-cooldown-{}'.format(model)):
                 continue
         except Exception:
@@ -270,8 +250,7 @@ def _gemini_message(d):
         if candidate.get('finishReason') not in (None, 'STOP'):
             continue
         text = _tidy(''.join(p.get('text', '') for p in parts))
-        # Something far too short or long is not a usable email, and nor is one that lost the
-        # names staff need to find the upload. The template always has them exactly.
+        # Too short, too long or missing the names staff need, so use the template instead.
         if 60 <= len(text) <= 3000 and not _missing_facts(d, text):
             return text
         logger.warning('storage report draft: %s draft rejected, missing %s', model, _missing_facts(d, text))
@@ -290,14 +269,20 @@ def draft_message(user, bundle, collection_name, files):
 
 
 def send_report(user, bundle, collection_name, files, message):
-    """Email the user's report to staff, with technical details the user cannot edit.
+    """Email the user's report to staff, with technical details the user can't edit.
 
-    The space figures are measured again here rather than taken from the page, so the team sees
-    the server's state at the moment of sending. The user gets a short confirmation.
+    Space figures are measured again here. The user gets a short confirmation.
     """
     d = _details(user, bundle, collection_name, files)
     total = sum(f['size'] for f in files)
     space = check_space(total)
+
+    from staff import hooks as staff_hooks
+    staff_hooks.open_case(
+        'storage', 'Upload refused for lack of space ({0})'.format(d['total']), requester=user,
+        bundle=bundle, body=message,
+        data={'collection': d['collection'], 'upload_size': d['total'], 'files': len(files),
+              'largest_upload_accepted_now': human_size(space['available'])})
 
     rows = [
         ('User', '{} ({})'.format(d['name'], d['username'])),

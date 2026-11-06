@@ -1,0 +1,72 @@
+{% extends 'staff/base.html' %}
+{% load account_tags staff_tags %}
+
+{% block console %}
+<p class="mb-2"><a href="{% url 'staff:campaigns' %}" class="staff-muted"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Peer reviews</a></p>
+<h1 class="staff-title">{{ campaign.title }}</h1>
+<p class="staff-subtitle">{{ campaign.data_set }} &middot; <span class="badge rounded-pill {% if campaign.status == 'open' %}bg-primary{% else %}bg-secondary{% endif %}">{{ campaign.get_status_display }}</span>{% if campaign.deadline %} &middot; by {{ campaign.deadline|date:"M j, Y" }}{% endif %}</p>
+
+<div class="staff-detail">
+    <div>
+        <section class="staff-card" aria-labelledby="rev-heading">
+            <div class="staff-card-head">
+                <h2 id="rev-heading">Reviewers</h2>
+                <div class="staff-card-tools"><a class="btn btn-sm staff-btn-ghost" href="{% url 'staff:campaign_pdf' campaign.pk %}"><i class="bi bi-file-earmark-pdf me-1" aria-hidden="true"></i>Report PDF</a></div>
+            </div>
+            {% for invite in invites %}
+            <div class="py-2 border-bottom">
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    <strong class="flex-grow-1">{{ invite.name }} <span class="staff-muted fw-normal">&lt;{{ invite.email }}&gt;</span></strong>
+                    <span class="badge rounded-pill {% if invite.status == 'submitted' %}bg-success{% elif invite.status == 'revoked' %}bg-secondary{% elif invite.status == 'opened' %}bg-info text-dark{% else %}bg-light text-dark border{% endif %}">{{ invite.get_status_display }}</span>
+                    {% if can.review and invite.status != 'submitted' and invite.status != 'revoked' %}
+                    <form method="post" action="{% url 'staff:campaign_action' campaign.pk %}" class="d-flex gap-1" data-once>
+                        {% csrf_token %}<input type="hidden" name="invite" value="{{ invite.pk }}">
+                        <button type="submit" name="action" value="resend" class="btn btn-sm staff-btn-ghost">Send a new link</button>
+                        <button type="submit" name="action" value="revoke" class="btn btn-sm staff-btn-ghost">Withdraw</button>
+                    </form>
+                    {% endif %}
+                </div>
+                <div class="staff-muted small">{% if invite.sent_at %}Invited {{ invite.sent_at|ago }}{% endif %}{% if invite.opened_at %}, opened {{ invite.opened_at|ago }}{% endif %}{% if invite.submitted_at %}, submitted {{ invite.submitted_at|ago }}{% endif %}</div>
+                {% if invite.status == 'submitted' %}
+                <details class="mt-2"><summary>Read the review</summary>
+                    {% for key, label in questions %}
+                    <p class="fw-semibold mt-2 mb-1">{{ label }}</p>
+                    <div class="staff-note-body">{{ invite.answers|get_item:key|default:"(no answer)" }}</div>
+                    {% endfor %}
+                </details>
+                {% endif %}
+            </div>
+            {% empty %}<p class="staff-muted mb-0">Nobody invited yet.</p>{% endfor %}
+        </section>
+        {% if campaign.description %}
+        <section class="staff-card"><div class="staff-card-head"><h2>What reviewers were told</h2></div><pre class="staff-request">{{ campaign.description }}</pre></section>
+        {% endif %}
+    </div>
+    <div>
+        {% if can.review and campaign.status == 'open' %}
+        <section class="staff-card" aria-labelledby="inv-heading">
+            <div class="staff-card-head"><h2 id="inv-heading">Invite a reviewer</h2></div>
+            <form method="post" action="{% url 'staff:campaign_action' campaign.pk %}" data-once>
+                {% csrf_token %}<input type="hidden" name="action" value="invite">
+                <label class="form-label fw-semibold" for="i-name">Name</label>
+                <input class="form-control" id="i-name" name="name" maxlength="150" required>
+                <label class="form-label fw-semibold mt-3" for="i-email">Email</label>
+                <input type="email" class="form-control" id="i-email" name="email" maxlength="254" required>
+                <div class="staff-muted mt-1">They get a private link. No ELSA account needed; the link stops working after the deadline plus two weeks, or 60 days.</div>
+                <button type="submit" class="btn btn-sm staff-btn-primary mt-3">Send invitation</button>
+            </form>
+        </section>
+        {% endif %}
+        <section class="staff-card">
+            <div class="staff-card-head"><h2>Liens and discussion</h2></div>
+            {% if campaign.case %}<p class="mb-2">Reviews arrive on <a href="{% url 'staff:case' campaign.case.pk %}">request #{{ campaign.case.pk }}</a>, where liens are raised and resolved.</p>{% endif %}
+            {% if can.review and campaign.status == 'open' %}
+            <form method="post" action="{% url 'staff:campaign_action' campaign.pk %}" data-once>
+                {% csrf_token %}<input type="hidden" name="action" value="close">
+                <button type="submit" class="btn btn-sm staff-btn-ghost">Close this review</button>
+            </form>
+            {% endif %}
+        </section>
+    </div>
+</div>
+{% endblock %}

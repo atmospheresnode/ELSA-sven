@@ -167,8 +167,7 @@ many times this is included or swapped in. Adding or removing a row fires a bubb
       return row.querySelector('input[name$="_' + suffix + '"]');
    }
 
-   // "Add me as an author": the signed-in user's name, ORCID iD and affiliation
-   // from their account, into the first empty person row or a new one.
+   // "Add me as an author": the user's name, ORCID iD and affiliation, into the first empty row or a new one.
    function addMe(button) {
       var scope = button.closest('.elsa-citation');
       var note = scope.querySelector('[data-add-me-note]');
@@ -258,8 +257,7 @@ many times this is included or swapped in. Adding or removing a row fires a bubb
          if (value(row, 'orcid')) {
             add('bi-person-badge', value(row, 'orcid'), 'https://orcid.org/' + value(row, 'orcid'));
          } else {
-            // The iD is what lets a citation credit the right person, so its absence
-            // is a shortcut to adding it rather than a note.
+            // No iD yet, so offer a shortcut to add it.
             var shortcut = document.createElement('button');
             shortcut.type = 'button';
             shortcut.className = 'cite-add-orcid';
@@ -278,18 +276,14 @@ many times this is included or swapped in. Adding or removing a row fires a bubb
       var first = (focusOn && field(row, focusOn)) || row.querySelector('.cite-edit input:not([type="hidden"])');
       if (first) first.focus();
    }
-   // The same rule the server applies (bundle_setup.clean_orcid), so Done does not
-   // close an entry the save would only refuse.
-   // Written the standard way (0000-0002-1825-0097) however it was typed: the link,
-   // the sixteen digits without dashes, spaces, a lower-case x. bundle_setup.tidy_orcid
-   // does the same on the server.
+   // Same rule as the server (bundle_setup.clean_orcid), so Done doesn't close what the save would refuse.
+   // Written in the standard form (0000-0002-1825-0097). bundle_setup.tidy_orcid does the same.
    function tidyOrcid(raw) {
       var value = (raw || '').trim().replace(/^(https?:\/\/)?(www\.)?orcid\.org\//i, '').replace(/^orcid:?\s*/i, '').replace(/\/$/, '');
       var characters = value.replace(/[^0-9Xx]/g, '').toUpperCase();
       return characters.length === 16 ? characters.match(/.{4}/g).join('-') : characters;
    }
-   // The same rule the server applies (bundle_setup.clean_orcid), so Done does not
-   // close an entry the save would only refuse.
+   // Same rule as the server (bundle_setup.clean_orcid), so Done doesn't close what the save would refuse.
    function orcidProblem(raw) {
       if (!(raw || '').trim()) return '';
       var digits = tidyOrcid(raw).replace(/-/g, '');
@@ -305,9 +299,7 @@ many times this is included or swapped in. Adding or removing a row fires a bubb
       }
       return '';
    }
-   // What the server said about a field, once the field has been changed, is out of
-   // date. Left in place it also held a closed entry open (its fields stay visible
-   // while one is marked invalid), so Done looked as if it did nothing.
+   // Clear the server's error once the field changes, otherwise it holds a closed entry open.
    function clearMark(input) {
       input.classList.remove('is-invalid');
       input.removeAttribute('aria-invalid');
@@ -349,9 +341,7 @@ many times this is included or swapped in. Adding or removing a row fires a bubb
       void row.offsetWidth;
       row.classList.add('is-flash');
    }
-   // "Add me as an author" is only offered while the signed-in user is not already an
-   // author: offering it and then saying "You are already listed" was a dead end.
-   // Matched as the button itself matches: the same ORCID iD, or the same name.
+   // Only offer "Add me as an author" if they aren't listed yet. Matches on ORCID iD or name.
    function refreshAddMe(scope) {
       var button = scope.querySelector('[data-add-me]');
       if (!button) return;
@@ -364,8 +354,7 @@ many times this is included or swapped in. Adding or removing a row fires a bubb
                 (same(value(row, 'given_name'), me.given) && same(value(row, 'family_name'), me.family));
       });
       button.hidden = listed;
-      // The note is about the user being on the list ("Added you as an author", "You
-      // are already listed"); once they are not, it is no longer true and goes.
+      // The note is about the user being listed, so remove it once they aren't.
       if (!listed) {
          var note = scope.querySelector('[data-add-me-note]');
          if (note) note.textContent = '';
@@ -392,9 +381,8 @@ many times this is included or swapped in. Adding or removing a row fires a bubb
    // The walkthrough swaps in fresh panels after a save, without running their scripts.
    document.addEventListener('elsa:setup-refreshed', setUp);
 
-   // -- ORCID iD -----------------------------------------------------------------------------
-   // Leaving the box writes the iD the standard way, so the person sees what will be
-   // saved; the server tidies it the same way and checks the check digit.
+   // -- ORCID iD --
+   // Leaving the box writes the iD in the standard form. The server does the same and checks the check digit.
    document.addEventListener('change', function (e) {
       var input = e.target;
       if (!input.matches || !input.matches('.elsa-citation input[name$="_orcid"]')) return;
