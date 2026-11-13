@@ -235,9 +235,10 @@ class SubmissionTierTests(TestCase):
         """The gate has just accepted a check matching these exact files, and that
         check already reads inside data files, so another would only repeat it."""
         from unittest import mock
-        self.passing_check()
         with mock.patch.object(validate_runner.subprocess, 'Popen') as popen:
             with override_settings(VALIDATE_HOME='', VALIDATE_WORK_DIR=self.archive):
+                # Checked with the same validate setup, or the result is out of date.
+                self.passing_check()
                 self.submit()
         self.bundle.refresh_from_db()
         self.assertIsNotNone(self.bundle.submitted_at)

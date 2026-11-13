@@ -884,6 +884,34 @@ def run_validation(request, bundle, tier):
     return run
 
 
+def apply_label_upgrades(request, bundle):
+    """Bring a bundle's labels up to date, submitted or not."""
+    from build import label_upgrades
+    _require(request, roles.REVIEW_BUNDLES)
+    try:
+        rows = label_upgrades.upgrade_bundle(bundle, source=label_upgrades.SOURCE_STAFF,
+                                             include_submitted=True, wait_seconds=30)
+    except label_upgrades.UpgradeBusy:
+        raise ActionError('This bundle is already being updated. Try again in a minute.')
+    audit.record(request, 'bundle.label_upgrade', bundle,
+                 changes={'upgrades': [row.pk for row in rows], 'revision': bundle.label_revision})
+    return rows
+
+
+def undo_label_upgrade(request, row):
+    from build import label_upgrades
+    _require(request, roles.REVIEW_BUNDLES)
+    try:
+        label_upgrades.undo(row)
+    except ValueError as error:
+        raise ActionError(str(error))
+    except label_upgrades.UpgradeBusy:
+        raise ActionError('This bundle is being updated right now. Try again in a minute.')
+    audit.record(request, 'bundle.label_upgrade_undo', row.bundle,
+                 changes={'upgrade': row.pk, 'migration': row.number})
+    return row
+
+
 ASSISTANT_FLAG = 'assistant-disabled'
 
 

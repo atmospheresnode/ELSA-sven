@@ -90,8 +90,11 @@ class AMATestCaseMixin(object):
         self.media_root = tempfile.mkdtemp(prefix='elsa-ama-media-')
         self.addCleanup(shutil.rmtree, self.media_root, True)
 
+        self.staging_dir = tempfile.mkdtemp(prefix='elsa-ama-staging-')
+        self.addCleanup(shutil.rmtree, self.staging_dir, True)
         self.settings_patcher = override_settings(
-            ARCHIVE_DIR=self.archive_dir, MEDIA_ROOT=self.media_root)
+            ARCHIVE_DIR=self.archive_dir, MEDIA_ROOT=self.media_root,
+            NETCDF_UPLOAD_STAGING_DIR=self.staging_dir)
         self.settings_patcher.enable()
         self.addCleanup(self.settings_patcher.disable)
 

@@ -9,7 +9,7 @@
     {{ run.requested_at|localtime|date:"M j, Y g:i A T" }}{% if run.products_total %} &middot; {{ run.products_total }} label{{ run.products_total|pluralize }}{% endif %}{% if run.tool_version %} &middot; validate {{ run.tool_version }}{% endif %}
 </p>
 
-{% if run.is_stale %}<div class="staff-warning mb-3"><strong>Out of date.</strong> The bundle changed after this run, so some findings may already be fixed and new ones may be missing.</div>{% endif %}
+{% if run.is_stale %}<div class="staff-warning mb-3"><strong>Out of date.</strong> {% if run.stale_because_of_checks %}ELSA's checks (validate release, schemas or rules) changed after this run, so the current checks may find more.{% else %}The bundle changed after this run, so some findings may already be fixed and new ones may be missing.{% endif %}</div>{% endif %}
 {% if run.failure_reason %}<div class="alert alert-danger py-2">This run did not complete. {{ run.failure_reason }}</div>{% endif %}
 
 <div class="staff-stats">

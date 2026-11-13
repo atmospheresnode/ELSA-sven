@@ -18,7 +18,8 @@ from django.views.decorators.http import require_POST
 
 from build import document_files, netcdf_header, preflight, validate_report, validate_rules, validate_runner
 from staff import hooks as staff_hooks
-from build import bundle_setup, creation, walkthrough
+from build.downloads import bundle_tarball_response
+from build import bundle_setup, creation, label_upgrades, netcdf_uploads, walkthrough
 from build.label_repair import AMA_LID
 from django.shortcuts import render, redirect, get_object_or_404
 from django.template import RequestContext
@@ -40,9 +41,13 @@ from lxml.etree import XMLSyntaxError as LxmlSyntaxError
 import io
 from urllib.parse import quote
 from django.core.mail import EmailMessage
+from friends.mail import build_branded
 from django.core.cache import cache
 from django.utils import timezone
 from django.utils.timezone import localtime
+import logging
+
+logger = logging.getLogger(__name__)
 
 from datetime import timezone as datetime_timezone
 from django.utils import timezone
@@ -76,13 +81,15 @@ def _submission_status(bundle):
     return preflight.status(bundle)
 
 
-def validation_summary_for_email(bundle):
-    """Plain text summary of a submitted bundle for the node.
+def validation_summary(bundle):
+    """What the node is told about validation when a bundle is submitted.
 
     Advisory items are listed since the gate already blocks anything serious. ELSA's own
-    findings are only counted.
+    findings are only counted. ``tone`` is ok, attention, info or muted, for the HTML email.
     """
     from build import validate_rules
+
+    summary = {'headline': '', 'tone': 'muted', 'groups': [], 'notes': []}
 
     # Use the latest finished run. Submitting queues a new one, which has no results yet.
     run = ValidationRun.objects.filter(
@@ -91,48 +98,67 @@ def validation_summary_for_email(bundle):
     ).order_by('-finished_at', '-requested_at').first()
 
     if run is None:
-        in_flight = validate_runner.latest_run_for(bundle)
-        if in_flight is not None:
-            return 'PDS validation: still running when this was submitted.'
-        return 'PDS validation: not run for this bundle.'
+        if validate_runner.latest_run_for(bundle) is not None:
+            summary['headline'] = 'still running when this was submitted.'
+        else:
+            summary['headline'] = 'not run for this bundle.'
+        return summary
 
     if run.status == ValidationRun.STATUS_FAILED:
-        return ('PDS validation: could not run ({}). The bundle was accepted anyway; '
-                'being unable to check is not evidence of a problem.'.format(
-                    run.failure_reason or 'no reason recorded'))
+        summary['headline'] = ('could not run ({}). The bundle was accepted anyway; being '
+                               'unable to check is not evidence of a problem.'.format(
+                                   run.failure_reason or 'no reason recorded'))
+        return summary
 
     findings = run.findings or []
-    translated = validate_rules.translate(findings)
-    lines = ['PDS validation: {} label(s) checked{}.'.format(
-        run.products_total, ', results out of date' if run.is_stale() else '')]
+    summary['headline'] = '{} label(s) checked{}.'.format(
+        run.products_total, ', results out of date' if run.is_stale() else '')
 
     if not findings:
-        lines.append('  Nothing reported.')
-        return '\n'.join(lines)
+        summary['tone'] = 'ok'
+        summary['notes'].append('Nothing reported.')
+        return summary
+
+    translated = validate_rules.translate(findings)
 
     if translated['user']:
-        lines.append('  Still outstanding for the submitter:')
+        items = []
         for item in translated['user']:
             # Some items name what they're about, otherwise bad file names look like identical lines.
             subject = item.get('subject')
-            lines.append('    - {}{}'.format(
-                item['title'], ' ({})'.format(subject) if subject else ''))
+            items.append('{}{}'.format(item['title'], ' ({})'.format(subject) if subject else ''))
+        summary['groups'].append({'title': 'Still outstanding for the submitter', 'items': items})
 
     if translated['advisory']:
-        lines.append('  Worth a look during review:')
-        for item in translated['advisory']:
-            lines.append('    - {} ({} finding{})'.format(
-                item['title'], len(item['findings']),
-                '' if len(item['findings']) == 1 else 's'))
+        items = ['{} ({} finding{})'.format(item['title'], len(item['findings']),
+                                            '' if len(item['findings']) == 1 else 's')
+                 for item in translated['advisory']]
+        summary['groups'].append({'title': 'Worth a look during review', 'items': items})
 
     hidden = sum(len(item['findings']) for item in translated['elsa'])
     if hidden:
-        lines.append('  {} finding(s) caused by ELSA rather than the submitter, '
-                     'hidden from them.'.format(hidden))
+        summary['notes'].append('{} finding(s) caused by ELSA rather than the submitter, '
+                                'hidden from them.'.format(hidden))
 
-    if not translated['user'] and not translated['advisory']:
-        lines.append('  Nothing outstanding for the submitter.')
+    if translated['user']:
+        summary['tone'] = 'attention'
+    elif translated['advisory']:
+        summary['tone'] = 'info'
+    else:
+        summary['tone'] = 'ok'
+        summary['notes'].append('Nothing outstanding for the submitter.')
 
+    return summary
+
+
+def validation_summary_for_email(bundle, summary=None):
+    """The validation summary as plain text."""
+    summary = summary or validation_summary(bundle)
+    lines = ['PDS validation: ' + summary['headline']]
+    for group in summary['groups']:
+        lines.append('  {}:'.format(group['title']))
+        lines.extend('    - ' + item for item in group['items'])
+    lines.extend('  ' + note for note in summary['notes'])
     return '\n'.join(lines)
 
 
@@ -849,6 +875,7 @@ def setup(request, pk_bundle):
     except Product_Bundle.DoesNotExist:
         # Creation crashed partway; the bundle page sends these back to the hub too.
         return HttpResponseRedirect(reverse('friends:bundle_hub'))
+    label_upgrades.safe_upgrade(bundle, source=label_upgrades.SOURCE_PAGE)
     context = bundle_setup.context(bundle)
     context['just_created'] = creation.pop_just_created(request, bundle)
     context['can_discard'] = walkthrough.is_untouched(bundle)
@@ -1064,6 +1091,8 @@ def bundle(request, pk_bundle):
         except Product_Bundle.DoesNotExist:
             print('Bundle {} has no Product_Bundle (creation likely failed); redirecting.'.format(bundle.pk))
             return HttpResponseRedirect(reverse('friends:bundle_hub'))
+        # Bring old labels up to date before anything reads them.
+        label_upgrades.safe_upgrade(bundle, source=label_upgrades.SOURCE_PAGE)
         # Bad or missing bundle label shouldn't break the page. Fall back to the DB values.
         citation_xml = None
         try:
@@ -1441,6 +1470,11 @@ def bundle(request, pk_bundle):
                                                            netcdf_collection.collection_name)},
                             status=400
                         )
+                    # Also refuses a name that would overwrite a label or inventory in the folder.
+                    conflict = netcdf_uploads.name_conflict(
+                        netcdf_collection, os.path.basename(f.name), incoming)
+                    if conflict:
+                        return JsonResponse({'error': conflict}, status=400)
                     seen_in_this_upload.add(incoming)
 
                 try:
@@ -1488,22 +1522,7 @@ def bundle(request, pk_bundle):
                 # Upload is XHR and the page reloads itself, so the reply says which collection and files
                 # to show. The plain form path without JS keeps its redirect.
                 if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                    # AMA reading goes in the reply since the Files tree might not have a row for the file.
-                    # ama_url is the standalone editor.
-                    ama_filled = _ama_completeness_by_file(bundle)
-                    return JsonResponse({
-                        'collection_id': netcdf_collection.id,
-                        'collection_name': netcdf_collection.collection_name,
-                        'tab_target': '#additional_collection_{}'.format(netcdf_collection.id),
-                        'files': [{
-                            'id': obj.id,
-                            'title': obj.title,
-                            'ama_filled': ama_filled.get(obj.id, 0),
-                            'ama_total': AMA_TOTAL_FIELDS,
-                            'ama_url': reverse('build:netcdf_ama', kwargs={
-                                'pk_bundle': bundle.id, 'pk_netcdf': obj.id}),
-                        } for obj in created_objs],
-                    })
+                    return JsonResponse(_netcdf_upload_reply(bundle, netcdf_collection, created_objs))
 
                 return HttpResponseRedirect('/elsa/build/' + str(bundle.pk) + '/')
             elif (request.headers.get('X-Requested-With') == 'XMLHttpRequest'
@@ -1867,6 +1886,12 @@ def bundle(request, pk_bundle):
         # The Citation Information window is the setup page's list of people too.
         context_dict['citation'] = bundle_setup.citation_rows(bundle)
         context_dict['fixed_editors'] = bundle_setup.fixed_editor_names()
+        # Changes ELSA made to the labels by itself, see build/label_upgrades.py.
+        context_dict['label_updates'] = list(label_upgrades.history_for(bundle)[:50])
+        context_dict['label_updates_unseen'] = list(label_upgrades.unseen_for(bundle))
+        context_dict['label_updates_unseen_files'] = label_upgrades.files_phrase(
+            label_upgrades.touched(context_dict['label_updates_unseen']))
+        context_dict['label_update_failed'] = label_upgrades.failed_update(bundle)
         return render(request, 'build/bundle/bundle.html', context_dict)
     else:
             print('unauthorized user attempting to access a restricted area.')
@@ -1962,6 +1987,28 @@ def _storage_request(request, pk_bundle):
     return bundle, payload, None
 
 
+def _netcdf_upload_reply(bundle, collection, netcdf_files):
+    """What the page needs after an upload: which collection and files to show once it reloads.
+
+    The AMA reading goes in too, since the Files tree might not have a row for the file yet.
+    ama_url is the standalone editor.
+    """
+    ama_filled = _ama_completeness_by_file(bundle)
+    return {
+        'collection_id': collection.id,
+        'collection_name': collection.collection_name,
+        'tab_target': '#additional_collection_{}'.format(collection.id),
+        'files': [{
+            'id': obj.id,
+            'title': obj.title,
+            'ama_filled': ama_filled.get(obj.id, 0),
+            'ama_total': AMA_TOTAL_FIELDS,
+            'ama_url': reverse('build:netcdf_ama', kwargs={
+                'pk_bundle': bundle.id, 'pk_netcdf': obj.id}),
+        } for obj in netcdf_files],
+    }
+
+
 @login_required
 def netcdf_storage_check(request, pk_bundle):
     from build import storage_report
@@ -2014,6 +2061,107 @@ def netcdf_storage_report(request, pk_bundle):
         return JsonResponse({'error': 'The report could not be sent just now. Please email '
                                       'atm-elsa@nmsu.edu directly.'}, status=502)
     return JsonResponse({'sent': True, 'email': request.user.email})
+
+
+# --- Resumable NetCDF uploads (tus) ---
+# The protocol lives in build/netcdf_uploads.py. These views only find the bundle and upload,
+# apply the owner check, and turn refusals into tus responses.
+
+def _tus_bundle(request, pk_bundle):
+    """The bundle, after the usual owner check. JSON refusals, not redirects: the caller is a script."""
+    if not request.user.is_authenticated:
+        raise netcdf_uploads.UploadError(401, 'Your session has ended. Please sign in again and '
+                                              'pick the same files to carry on where you left off.')
+    bundle = Bundle.objects.filter(pk=pk_bundle).first()
+    if bundle is None:
+        raise netcdf_uploads.UploadError(404, 'That bundle no longer exists.')
+    if request.user != bundle.user:
+        raise netcdf_uploads.UploadError(403, 'Not your bundle.')
+    return bundle
+
+
+def _tus_upload(request, bundle, upload_id):
+    # Someone else's upload looks exactly like a missing one.
+    upload = (NetCDFUpload.objects.select_related('collection', 'bundle', 'netcdf_file')
+              .filter(pk=upload_id, bundle=bundle, user=request.user).first())
+    if upload is None:
+        raise netcdf_uploads.UploadError(404, 'This upload is no longer on the server. Please start it again.')
+    return upload
+
+
+def netcdf_upload_create(request, pk_bundle):
+    try:
+        bundle = _tus_bundle(request, pk_bundle)
+        if request.method == 'OPTIONS':
+            return netcdf_uploads.options_response()
+        if request.method != 'POST':
+            raise netcdf_uploads.UploadError(405, 'Method not allowed.', headers={'Allow': 'OPTIONS, POST'})
+        netcdf_uploads.check_tus_version(request)
+        return netcdf_uploads.create(request, bundle, lambda upload: reverse(
+            'build:netcdf_upload', kwargs={'pk_bundle': bundle.pk, 'upload_id': upload.pk}))
+    except netcdf_uploads.UploadError as exc:
+        return netcdf_uploads.error_response(exc)
+
+
+def netcdf_upload(request, pk_bundle, upload_id):
+    try:
+        bundle = _tus_bundle(request, pk_bundle)
+        if request.method == 'OPTIONS':
+            return netcdf_uploads.options_response()
+        netcdf_uploads.check_tus_version(request)
+        upload = _tus_upload(request, bundle, upload_id)
+        if request.method == 'HEAD':
+            return netcdf_uploads.head(upload)
+        if request.method == 'PATCH':
+            return netcdf_uploads.patch(request, upload)
+        if request.method == 'DELETE':
+            return netcdf_uploads.terminate(upload)
+        raise netcdf_uploads.UploadError(
+            405, 'Method not allowed.', headers={'Allow': 'OPTIONS, HEAD, PATCH, DELETE'})
+    except netcdf_uploads.UploadError as exc:
+        return netcdf_uploads.error_response(exc)
+
+
+@require_POST
+def netcdf_upload_check(request, pk_bundle):
+    """Right after files are picked: which ones the upload would refuse, and why."""
+    try:
+        bundle = _tus_bundle(request, pk_bundle)
+        if len(request.body) > 256 * 1024:
+            raise netcdf_uploads.UploadError(413, 'Too many files picked at once.')
+        try:
+            payload = json.loads(request.body or b'{}')
+        except ValueError:
+            raise netcdf_uploads.UploadError(400, 'Malformed request.')
+        if not isinstance(payload, dict):
+            raise netcdf_uploads.UploadError(400, 'Malformed request.')
+        results = netcdf_uploads.check_files(
+            request.user, bundle, payload.get('collection'), payload.get('files'))
+    except netcdf_uploads.UploadError as exc:
+        return JsonResponse({'error': exc.message}, status=exc.status)
+    return JsonResponse({'files': results, 'max_bytes': netcdf_uploads.max_file_bytes()})
+
+
+@require_POST
+def netcdf_upload_finish(request, pk_bundle, upload_id):
+    """After the last byte: add the file to the bundle and build its label, like a form upload."""
+    try:
+        bundle = _tus_bundle(request, pk_bundle)
+        upload = _tus_upload(request, bundle, upload_id)
+        collection = upload.collection
+
+        def process(netcdf_file):
+            directory = collection.directory()
+            os.makedirs(directory, exist_ok=True)
+            return variable_coord_to_product(bundle, [netcdf_file], directory)
+
+        netcdf_file, errors = netcdf_uploads.finish(upload, process)
+    except netcdf_uploads.UploadError as exc:
+        return netcdf_uploads.error_response(exc)
+    if errors:
+        return JsonResponse({'error': 'Uploaded, but metadata could not be extracted from: '
+                                      + '; '.join(errors)}, status=400)
+    return JsonResponse(_netcdf_upload_reply(bundle, collection, [netcdf_file]))
 
 
 # --- AMA discipline metadata views ---
@@ -2977,6 +3125,19 @@ def netcdf_ama_copy(request, pk_bundle, pk_netcdf):
         reverse('build:netcdf_ama', kwargs={'pk_bundle': bundle.pk, 'pk_netcdf': netcdf_file.pk}))
 
 
+@login_required
+@require_POST
+def label_updates_seen(request, pk_bundle):
+    """Dismiss the notice about changes ELSA made to this bundle's labels."""
+    bundle = get_object_or_404(Bundle, pk=pk_bundle)
+    if request.user != bundle.user:
+        return redirect('main:restricted_access')
+    label_upgrades.mark_seen(bundle)
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return JsonResponse({'ok': True})
+    return HttpResponseRedirect(reverse('build:bundle', kwargs={'pk_bundle': bundle.pk}))
+
+
 # This view is for when a user clicks the submit bundle for review button on the bundle detail page (Currently implemented for External Bundles- Rupak).  This view marks the bundle as submitted by adding a timestamp to the submitted_at field in the Bundle model, and then sends an email to ATM with the details of the submission.
 @login_required
 def submit_bundle_internal(request, pk_bundle):
@@ -2993,6 +3154,9 @@ def submit_bundle_internal(request, pk_bundle):
             # 
             # Repair first so staff who pass the gate still send clean labels. If the repair changes
             # anything, the last check is out of date and the gate asks for a new one.
+            # Submitting again is the owner sending it, so a submitted bundle gets upgraded too.
+            label_upgrades.safe_upgrade(bundle, source=label_upgrades.SOURCE_SUBMIT,
+                                        include_submitted=True, wait_seconds=60)
             validate_runner.repair_before_check(bundle)
             blocked = validate_runner.submission_block(bundle, request.user)
             if blocked is not None:
@@ -3015,56 +3179,41 @@ def submit_bundle_internal(request, pk_bundle):
 
             # No second check here, the gate just confirmed one that matches these files.
 
-            # Build email
-            archive_path = bundle.directory()
-            download_url = request.build_absolute_uri(
-                reverse('build:bundle_download', args=[bundle.pk])
-            )
-
+            submitter = bundle.user.get_full_name() or bundle.user.username
             subject = '{} Bundle "{}" by {}'.format(
                 'Resubmission:' if is_resubmission else 'New Submission:',
                 bundle.name,
                 bundle.user.username
             )
-
-            body = (
-                'A bundle has been {} for review.\n\n'
-                'Bundle: {}\n'
-                'User: {} ({})\n'
-                'Bundle Type: {}\n'
-                'Submitted: {}\n\n'
-                'Archive Path:\n{}\n\n'
-                'Download URL:\n{}\n\n'
-                '{}\n'
-                '{}'
-            ).format(
-                'resubmitted' if is_resubmission else 'submitted',
-                bundle.name,
-                bundle.user.get_full_name() or bundle.user.username,
-                bundle.user.email,
-                bundle.bundle_type,
-                localtime(bundle.submitted_at).strftime('%B %d, %Y at %I:%M %p %Z'),
-                archive_path,
-                download_url,
-                validation_summary_for_email(bundle),
-                '\nReview in the Admin Console:\n{}\n'.format(staff_hooks.case_url(request, case)) if case else '',
-            )
+            summary = validation_summary(bundle)
+            context = {
+                'is_resubmission': is_resubmission,
+                'headline': 'Bundle resubmitted' if is_resubmission else 'New bundle submission',
+                'lead': '{} {} the bundle "{}" for review.'.format(
+                    submitter, 'resubmitted' if is_resubmission else 'submitted', bundle.name),
+                'bundle': bundle,
+                'submitter': submitter,
+                'submitter_email': bundle.user.email,
+                'submitted': localtime(bundle.submitted_at).strftime('%B %d, %Y at %I:%M %p %Z'),
+                'archive_path': bundle.directory(),
+                # Staff review on the case page, so no download link here.
+                'case_url': staff_hooks.case_url(request, case),
+                'validation': summary,
+                'validation_text': validation_summary_for_email(bundle, summary),
+            }
 
             try:
-                email = EmailMessage(
-                    subject=subject,
-                    body=body,
-                    from_email='atm-elsa@nmsu.edu',
-                    #to=['rupakdey@nmsu.edu'], # For testing 
-                    to=['lneakras@nmsu.edu', 'rupakdey@nmsu.edu'], # Add pds-atm@nmsu.edu if it needs to be sent to all
-                    headers={'Reply-To': bundle.user.email}
-                )
+                email = build_branded(
+                    # Add pds-atm@nmsu.edu if it needs to be sent to all
+                    ['lneakras@nmsu.edu', 'rupakdey@nmsu.edu'],
+                    subject, 'build/email/bundle_submitted', context)
+                if bundle.user.email:
+                    email.reply_to = [bundle.user.email]
                 email.send()
                 messages.success(request, 'Bundle submitted for review! A notification has been sent to ATM.')
-                print('Email sent to atm-elsa@nmsu.edu')
-            except Exception as e:
+            except Exception:
+                logger.exception('submission email for bundle %s failed', bundle.pk)
                 messages.warning(request, 'Bundle marked as submitted, but the email notification could not be sent. Please contact ATM directly.')
-                print('Email failed: {}'.format(e))
 
             return HttpResponseRedirect('/elsa/build/' + str(pk_bundle) + '/')
 
@@ -3073,53 +3222,26 @@ def submit_bundle_internal(request, pk_bundle):
         return redirect('main:restricted_access')
 
 
-# The bundle_download view is not a page.  When a user chooses to download a bundle, this 'view' manifests and begins the downloading process.
 @login_required
 def bundle_download(request, pk_bundle):
-    # Get Bundle
-    bundle = Bundle.objects.get(pk=pk_bundle)
+    """The bundle folder as a .tar.gz for its owner."""
+    bundle = get_object_or_404(Bundle, pk=pk_bundle)
 
-    # Secure ELSA by seeing if the user logged in is the same user associated with the Bundle
-    if request.user == bundle.user:
-        print('authorized user: {}'.format(request.user))
-
-        # ELSA's current user is the bundle user so begin view logic
-        print('----------------------------------------------------------------------------------\n')
-        print('------------------------------ START BUNDLE DOWNLOAD -----------------------------\n')
-        print('----------------------------------------------------------------------------------\n')
-
-        print('\n\n------------------------------- BUNDLE INFO -------------------------------')
-        print('Bundle User: {}'.format(bundle.user))
-        print('Bundle Directory: {}'.format(bundle.directory()))
-        print('Current Working Directory: {}'.format(os.getcwd()))
-        print('Temporary Directory: {}'.format(settings.TEMPORARY_DIR))
-        print('Archive Directory: {}'.format(settings.ARCHIVE_DIR))
-
-        # Make tarfile
-        #    Note: This does not run in build directory, it runs in the elsa project directory, where manage.py lives.
-        tar_bundle_dir = '{}.tar.gz'.format(bundle.directory())
-        temp_dir = os.path.join(settings.TEMPORARY_DIR, tar_bundle_dir)
-        source_dir = os.path.join(settings.ARCHIVE_DIR, bundle.user.username)
-        source_dir = os.path.join(source_dir, bundle.directory())
-        make_tarfile(temp_dir, source_dir)
-
-        # Testing.  See if simply bundle directory will download.
-        # Once finished, make directory a tarfile and then download.
-        file_path = os.path.join(settings.TEMPORARY_DIR, tar_bundle_dir)
-
-        if os.path.exists(file_path):
-            with open(file_path, 'rb') as fh:
-                response = HttpResponse(
-                    fh.read(), content_type="application/x-tar")
-                response['Content-Disposition'] = 'inline; filename=' + \
-                    os.path.basename(file_path)
-                return response
-
-        return HttpResponse("Download did not work.")
-
-    else:
-        print('unauthorized user attempting to access a restricted area.')
+    if request.user != bundle.user:
+        # Older submission emails link here. Staff get the console download, which checks
+        # their role and admin mode and logs it.
+        console = staff_hooks.staff_download_path(request.user, bundle)
+        if console:
+            return HttpResponseRedirect(console)
         return redirect('main:restricted_access')
+
+    directory = bundle.directory()
+    if not bundle.directory_is_contained() or not os.path.isdir(directory):
+        messages.error(request, 'The files for this bundle could not be found on the server. '
+                                'Please contact the ELSA team.')
+        return HttpResponseRedirect(reverse('build:bundle', kwargs={'pk_bundle': bundle.pk}))
+
+    return bundle_tarball_response(directory)
 
 
 # The bundle_delete view is the page a user sees once they select the delete bundle button.  This view gives the user an option to confirm or take back their choice.  This view could be improved upon.
@@ -3290,6 +3412,8 @@ def citation_information(request, pk_bundle):
             write_into_label(citation_information, product_bundle, product_collections_list)
             # A NetCDF uploaded before the citation existed has no citation in its label.
             mirror_citation_into_data_products(bundle)
+            # Keep the people in the database, then write every label from there.
+            bundle_setup.rewrite_from_label(citation_information)
 
             print('------------- End Build Citation Information -------------------')
 
@@ -3333,30 +3457,10 @@ def edit_citation_information(request, pk_bundle, pk_citation_information):
             print('form_citation_information is valid')
             cleaned_form = form_edit_citation_information.cleaned_data
 
-            all_labels = []
-
-            product_bundle = Product_Bundle.objects.get(bundle=bundle)
-            product_collections_list = bundle_label_targets(bundle)
-
-            all_labels.append(product_bundle)
-            all_labels.extend(product_collections_list)
-
-            for label in all_labels:
-            # Open appropriate label(s).  
-                print('- Label: {}'.format(label))
-                print(' ... Opening Label ... ')
-                label_list = open_label_with_tree(label.label())
-                label_root = label_list[1]
-                print(' ... Building Label ... ')
-                label_root = citation_information.fill_label_values(label_root, cleaned_form)
-
-                # Close appropriate label(s)
-                print(' ... Closing Label ... ')
-                close_label(label.label(), label_root, label_list[2])
-
-            # Data labels have the citation too, so copy it from the bundle label. Can't fill from the
-            # form since the label may have been written with a different number of authors.
-            mirror_citation_into_data_products(bundle)
+            # Save the people, then write the citation into every label from the database.
+            bundle_setup.store_rows(citation_information,
+                                    bundle_setup.rows_from_edit_form(citation_information, cleaned_form))
+            bundle_setup.write_citation(citation_information)
 
             # Back to the bundle if opened from there, otherwise the next walkthrough step.
             if walkthrough.returning_to_bundle(request):

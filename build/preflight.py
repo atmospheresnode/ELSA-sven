@@ -16,7 +16,7 @@ from __future__ import unicode_literals
 from django.db import models
 
 from build.validate_rules import (CARD_CITATION, CARD_CONTEXT, CARD_DOCUMENT, CARD_MOD_HISTORY,
-                                  CARD_NETCDF, USER)
+                                  CARD_NETCDF, CARD_SUPPORT, USER)
 
 
 class Requirement(object):
@@ -26,7 +26,7 @@ class Requirement(object):
     """
 
     def __init__(self, key, field, title, detail, card, check=None, bundle_types=None,
-                 applies=None):
+                 applies=None, source='elsa'):
         self.key = key
         self.field = field
         self.title = title
@@ -38,6 +38,8 @@ class Requirement(object):
         self.bundle_types = bundle_types
         # Whether to ask yet. An author is only asked for once there's a citation.
         self.applies = applies
+        # 'elsa' for what ELSA requires of the owner, 'support' for what the team has to do.
+        self.source = source
 
     def relevant(self, bundle):
         if self.bundle_types is not None and bundle.bundle_type not in self.bundle_types:
@@ -65,7 +67,7 @@ class Requirement(object):
             'labels': [],
             'findings': [],
             # Marks this as ELSA's own check, not something PDS said.
-            'source': 'elsa',
+            'source': self.source,
         }
 
 
@@ -91,6 +93,12 @@ def _has_processed_netcdf(bundle):
 def _has_document(bundle):
     """At least one document. Checked here so it shows up before validate has run."""
     return bundle.product_document_set.exists()
+
+
+def _labels_up_to_date(bundle):
+    """No label update has failed on this bundle since it last went through."""
+    from build import label_upgrades
+    return label_upgrades.failed_update(bundle) is None
 
 
 REQUIREMENTS = [
@@ -147,6 +155,15 @@ REQUIREMENTS = [
         'empty. Add a document describing the data: how it was produced, what the '
         'variables mean, or how to read it. A README or user guide is enough.',
         CARD_DOCUMENT, check=_has_document, bundle_types=('External',)),
+
+    # Otherwise a bundle could go for review with the very labels the update was meant to fix.
+    Requirement(
+        'label-update-failed', None,
+        "Wait for the ELSA team to finish updating this bundle's labels",
+        'ELSA tried to bring the labels in this bundle up to date with how it writes them now, '
+        'and could not finish. Nothing was changed, and the ELSA team has been told. You can '
+        'keep working on the bundle. It can be submitted once the update has gone through.',
+        CARD_SUPPORT, check=_labels_up_to_date, source='support'),
 ]
 
 

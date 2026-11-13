@@ -20,10 +20,10 @@ bundle ready that the gate would refuse.
          <span class="setup-mark" aria-hidden="true">{% if item.ok %}<i class="bi bi-check-lg"></i>{% else %}<i class="bi bi-exclamation-lg"></i>{% endif %}</span>
          <span class="setup-check-text">
             <span class="setup-check-title">{{ item.title }}</span>
-            <span class="setup-check-state">{% if item.ok %}Done{% else %}Still needed{% endif %}</span>
+            <span class="setup-check-state">{% if item.ok %}Done{% elif item.source == 'support' %}The ELSA team has been told{% else %}Still needed{% endif %}</span>
          </span>
          {% if not item.ok and item.step %}<a class="btn setup-btn-ghost btn-sm" href="#{{ item.step }}">Go to step</a>
-         {% elif not item.ok %}<a class="btn setup-btn-ghost btn-sm" href="{% url 'build:bundle' bundle.pk %}">Add on the bundle page</a>{% endif %}
+         {% elif not item.ok and item.source != 'support' %}<a class="btn setup-btn-ghost btn-sm" href="{% url 'build:bundle' bundle.pk %}">Add on the bundle page</a>{% endif %}
       </li>
       {% endfor %}
    </ul>

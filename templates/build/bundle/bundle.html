@@ -268,12 +268,14 @@
    </style>
    
    <div class="container-fluid pt-3">
+      {% include 'build/bundle/_label_updates_notice.html' %}
       <!-- Info Card + Bundle Components -->
       <div class="row align-items-stretch">
          <div class="col-md-6">
             <div class="card d-flex p-2 h-100">
                <h2 class="card-title text-center mt-3" style="font-family: 'Outfit', sans-serif; font-size: 2rem; font-weight: 600;">{{ bundle.name }}</h2>
                <p class="text-center text-muted small font-monospace mb-0">{{ bundle.lid }}</p>
+               {% include 'build/bundle/_label_updates_link.html' %}
                <p class="card-body text-left z-depth-2">
                   Welcome to your Bundle View. Here you have the ability to edit and adjust parts of your bundle.
                   In this section you have the ability to Delete your bundle should you need to and Download the entire bundle template set as a zip file.
@@ -1908,6 +1910,39 @@
       }
       .external-theme .ecu-picked-size { flex-shrink: 0; color: #6c757d; }
       .external-theme .ecu-picked-more { font-size: .8rem; color: #6c757d; }
+      .external-theme .ecu-picked-list {
+         display: flex;
+         flex-direction: column;
+         gap: .25rem;
+         max-height: 16rem;
+         overflow-y: auto;
+      }
+      .external-theme .ecu-picked-list .ecu-picked-row { flex-wrap: wrap; flex-shrink: 0; }
+      /* A zero basis lets a long name shrink before anything wraps, so the state stays on the
+         file's own line even on a phone. Only the note below takes a line of its own. */
+      .external-theme .ecu-picked-list .ecu-picked-name { flex: 1 1 0%; }
+      /* Empty until there is something to say, so a fresh pick looks as it always did. */
+      .external-theme .ecu-picked-state { flex-shrink: 0; font-size: .75rem; color: #6c757d; }
+      .external-theme .ecu-picked-state:empty { display: none; }
+      .external-theme .ecu-state-uploading { color: var(--external); font-weight: 600; }
+      .external-theme .ecu-state-added { color: #198754; font-weight: 600; }
+      .external-theme .ecu-state-failed { color: #b02a37; font-weight: 600; }
+      .external-theme .ecu-picked-note {
+         flex-basis: 100%;
+         padding-left: 1.4rem;
+         font-size: .75rem;
+         white-space: normal;
+      }
+      .external-theme .ecu-note-problem { color: #b02a37; }
+      .external-theme .ecu-note-resume { color: #6c757d; }
+      .external-theme .ecu-picked-row-problem { border-color: #f1c2c7; }
+      /* Mid-upload the well is a status list, not a drop target, so it stops inviting a click. */
+      .external-theme .ecu-drop.ecu-drop-busy,
+      .external-theme .ecu-drop.ecu-drop-busy:hover {
+         cursor: default;
+         border-color: #d3dce3;
+         background-color: #f8fafc;
+      }
 
       .external-theme .ecu-drop-actions {
          display: flex;
@@ -1961,12 +1996,14 @@
    
    
    <div class="container-fluid pt-3">
+      {% include 'build/bundle/_label_updates_notice.html' %}
       <!-- Info Card + Bundle Components -->
       <div class="row align-items-stretch">
          <div class="col-md-6">
             <div class="card d-flex p-2 h-100">
                <h2 class="card-title text-center mt-3" style="font-family: 'Outfit', sans-serif; font-size: 2rem; font-weight: 600;">{{ bundle.name }}</h2>
                <p class="text-center text-muted small font-monospace mb-0">{{ bundle.lid }}</p>
+               {% include 'build/bundle/_label_updates_link.html' %}
                <p class="card-body text-left z-depth-2">
                   Welcome to your Bundle View. Here you have the ability to edit and adjust parts of your bundle.
                   In this section you have the ability to Delete your bundle should you need to and Download the entire bundle template set as a zip file.
@@ -2226,7 +2263,10 @@
                            <div class="ecu-head">
                               <span class="text-muted fw-semibold text-nowrap ecu-eyebrow">Add NetCDF files</span>
                            </div>
-                           <form id="netcdfUploadForm_{{ add_collection.id }}" class="netcdf-upload-form" method="post" enctype="multipart/form-data">
+                           <form id="netcdfUploadForm_{{ add_collection.id }}" class="netcdf-upload-form" method="post" enctype="multipart/form-data"
+                              data-collection-id="{{ add_collection.id }}"
+                              data-tus-create="{% url 'build:netcdf_upload_create' pk_bundle=bundle.id %}"
+                              data-tus-check="{% url 'build:netcdf_upload_check' pk_bundle=bundle.id %}">
                               {% csrf_token %}
                               <input type="hidden" class="form-control" name="collection" value="{{ add_collection }}">
                               {% if form_netcdf.errors %}
@@ -2639,6 +2679,8 @@ also follows the project's own rule: modals go outside the card structure they b
    </div>
 </div>
 
+{# Resumable NetCDF uploads. The upload handler below falls back to a form post without it. #}
+<script src="{% static 'js/netcdf_upload.js' %}?v=20261112"></script>
 <script>
    // Label selection and loading are in build/bundle/_file_tree.html, which defines window.showFileContent.
    
@@ -2720,6 +2762,8 @@ also follows the project's own rule: modals go outside the card structure they b
 
          var zone = e.target.closest ? e.target.closest('.ecu-drop') : null;
          if (!zone) return;
+         // Mid-upload the well shows what is going up and takes nothing new.
+         if (zone.classList.contains('ecu-drop-busy')) return;
 
          zone.classList.toggle('ecu-drop-over', name === 'dragenter' || name === 'dragover');
          if (name !== 'drop') return;
@@ -2768,19 +2812,21 @@ also follows the project's own rule: modals go outside the card structure they b
          files.length === 1 ? '1 file ready to upload'
                             : files.length + ' files ready to upload, ' + mb(total)));
 
-      // Enough to check the right things were picked, without the well growing without limit.
-      [].slice.call(files, 0, 5).forEach(function (file) {
+      // Every file gets a row, since each one reports its own state during the upload. A long
+      // list scrolls inside the well instead of stretching the card.
+      var list = span('ecu-picked-list');
+      [].forEach.call(files, function (file, index) {
          var row = span('ecu-picked-row');
+         row.setAttribute('data-index', index);
          var icon = document.createElement('i');
          icon.className = 'bi bi-file-earmark-code flex-shrink-0';
          row.appendChild(icon);
          row.appendChild(span('ecu-picked-name', file.name));
          row.appendChild(span('ecu-picked-size', mb(file.size)));
-         picked.appendChild(row);
+         row.appendChild(span('ecu-picked-state'));
+         list.appendChild(row);
       });
-      if (files.length > 5) {
-         picked.appendChild(span('ecu-picked-more', 'and ' + (files.length - 5) + ' more'));
-      }
+      picked.appendChild(list);
 
       idle.classList.add('d-none');
       picked.classList.remove('d-none');
@@ -2800,10 +2846,60 @@ also follows the project's own rule: modals go outside the card structure they b
       }
    }
 
+   // Checks picked files straight away, so a problem shows now and not after an hour of
+   // uploading. The promise is kept on the input and the upload waits for it.
+   function checkPicked(input) {
+      var Up = window.ElsaNetcdfUpload;
+      var form = input.closest ? input.closest('form') : null;
+      input._precheck = null;
+      var zone = document.querySelector('.ecu-drop[for="' + input.id + '"]');
+      var uploadBtn = form ? form.querySelector('.upload-btn') : null;
+      if (uploadBtn) uploadBtn.disabled = false;
+      if (!Up || !Up.supported() || !form || !form.dataset.tusCheck || !input.files || !input.files.length) return;
+      var files = Array.prototype.slice.call(input.files);
+      var head = zone ? zone.querySelector('.ecu-picked-head') : null;
+      var ready = head ? head.textContent : '';
+      if (head) head.textContent = files.length === 1 ? 'Checking the file...' : 'Checking ' + files.length + ' files...';
+      var mine = {};
+      input._precheckToken = mine;
+      input._precheck = Up.precheck(files, {
+         checkUrl: form.dataset.tusCheck,
+         bundleId: '{{ bundle.id }}',
+         collectionId: form.dataset.collectionId,
+         csrfToken: (form.querySelector('input[name="csrfmiddlewaretoken"]') || {}).value || ''
+      }).then(function (results) {
+         // Picked again while this was running: the newer check owns the well.
+         if (input._precheckToken !== mine || !zone) return results;
+         var good = 0, goodBytes = 0;
+         results.forEach(function (result, index) {
+            var row = zone.querySelector('.ecu-picked-row[data-index="' + index + '"]');
+            if (!result.problem) { good++; goodBytes += files[index].size; }
+            if (!row) return;
+            var text = result.problem ||
+               (result.resume ? 'Picks up where it stopped, at ' + Math.floor(result.resume * 100) + '%.' : '');
+            if (!text) return;
+            var noteEl = document.createElement('span');
+            noteEl.className = 'ecu-picked-note ' + (result.problem ? 'ecu-note-problem' : 'ecu-note-resume');
+            noteEl.textContent = text;
+            row.appendChild(noteEl);
+            if (result.problem) row.classList.add('ecu-picked-row-problem');
+         });
+         if (head) {
+            head.textContent = good === files.length ? ready
+               : !good ? (files.length === 1 ? 'This file can\'t be uploaded'
+                                             : 'None of these files can be uploaded')
+               : good + ' of ' + files.length + ' files can be uploaded, ' + (goodBytes / 1048576).toFixed(2) + ' MB';
+         }
+         if (uploadBtn && !good) uploadBtn.disabled = true;
+         return results;
+      });
+   }
+
    document.addEventListener('change', function(e) {
       var input = e.target;
       if (!input || input.name !== 'netcdf_files') return;
       renderPicked(input);
+      checkPicked(input);
       if (input.files && input.files.length) setNoFilesWarning(input, false);
    });
 
@@ -2817,6 +2913,7 @@ also follows the project's own rule: modals go outside the card structure they b
       if (!input) return;
       input.value = '';
       renderPicked(input);
+      checkPicked(input);
    });
    
    document.addEventListener('submit', function(e) {
@@ -2874,6 +2971,10 @@ also follows the project's own rule: modals go outside the card structure they b
          });
 
       function startUpload() {
+      if (window.ElsaNetcdfUpload && window.ElsaNetcdfUpload.supported() && form.dataset.tusCreate) {
+         startResumable();
+         return;
+      }
       var formData = new FormData(form);
       var xhr = new XMLHttpRequest();
       
@@ -2995,6 +3096,227 @@ also follows the project's own rule: modals go outside the card structure they b
       xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
       xhr.send(formData);
       }
+
+      // Uploads in pieces that survive a dropped connection (static/js/netcdf_upload.js).
+      // Same bar, buttons and reload as the form post.
+      function startResumable() {
+         var Up = window.ElsaNetcdfUpload;
+         var statusNote = null;
+         var last = null;
+         var baseTitle = document.title;
+         var zone = fileInput ? document.querySelector('.ecu-drop[for="' + fileInput.id + '"]') : null;
+         var dropActions = zone ? zone.parentNode.querySelector('.ecu-drop-actions') : null;
+
+         ['.netcdf-upload-error', '.netcdf-upload-cancelled'].forEach(function (sel) {
+            var old = form.parentNode.querySelector(sel);
+            if (old) old.remove();
+         });
+         if (progressWrapper) progressWrapper.style.display = 'block';
+         if (progressBar) {
+            progressBar.style.width = '0%';
+            progressBar.setAttribute('aria-valuenow', 0);
+            progressBar.classList.remove('bg-info', 'bg-danger');
+            progressBar.classList.add('bg-success', 'progress-bar-animated');
+         }
+         if (uploadPercent) uploadPercent.textContent = '0%';
+         if (uploadSuccessMsg) uploadSuccessMsg.style.display = 'none';
+         if (uploadBtn) { uploadBtn.disabled = true; uploadBtn.textContent = 'Uploading...'; }
+         if (cancelBtn) { cancelBtn.style.display = 'inline-block'; cancelBtn.disabled = false; }
+         if (uploadStatusText) uploadStatusText.textContent = 'Starting...';
+         // The list is what is being uploaded now, so it can't be swapped out mid-way.
+         if (zone) zone.classList.add('ecu-drop-busy');
+         if (fileInput) fileInput.disabled = true;
+         if (dropActions) dropActions.classList.add('d-none');
+
+         var STATE_TEXT = { waiting: 'Waiting', processing: 'Processing', added: 'Added', failed: 'Not added' };
+
+         function setRow(index, state, detail) {
+            var row = zone ? zone.querySelector('.ecu-picked-row[data-index="' + index + '"]') : null;
+            if (!row) return;
+            var badge = row.querySelector('.ecu-picked-state');
+            if (badge) {
+               badge.className = 'ecu-picked-state ecu-state-' + state;
+               badge.textContent = state === 'uploading' ? (detail || 0) + '%' : STATE_TEXT[state];
+            }
+            var noteEl = row.querySelector('.ecu-picked-note');
+            if (state === 'failed') {
+               if (!noteEl) {
+                  noteEl = document.createElement('span');
+                  row.appendChild(noteEl);
+               }
+               noteEl.className = 'ecu-picked-note ecu-note-problem';
+               noteEl.textContent = detail || '';
+            } else if (noteEl && state !== 'waiting') {
+               noteEl.remove();
+            }
+            // Keep the file being sent in view when the list scrolls.
+            var list = row.parentNode;
+            if (state === 'uploading' && list && list.scrollHeight > list.clientHeight) {
+               list.scrollTop = row.offsetTop - list.offsetTop - list.clientHeight / 3;
+            }
+         }
+
+         function render() {
+            if (!last) return;
+            var pct = last.total ? Math.floor(last.sent / last.total * 100) : 0;
+            if (progressBar) {
+               progressBar.style.width = pct + '%';
+               progressBar.setAttribute('aria-valuenow', pct);
+            }
+            if (uploadPercent) uploadPercent.textContent = pct + '%';
+            // Visible from another tab, where people wait out a long upload.
+            document.title = '(' + pct + '%) ' + baseTitle;
+            if (!uploadStatusText) return;
+            if (statusNote) { uploadStatusText.textContent = statusNote; return; }
+            var parts = [];
+            if (last.count > 1) parts.push('File ' + last.n + ' of ' + last.count);
+            if (last.rate > 0) {
+               parts.push(Up.humanSize(last.rate) + '/s');
+               var eta = Up.humanDuration(last.eta);
+               if (eta) parts.push(eta + ' left');
+            }
+            uploadStatusText.textContent = parts.length ? parts.join(', ') : 'Uploading...';
+         }
+
+         function note(className, kind, text) {
+            var box = document.createElement('div');
+            box.className = className + ' alert alert-' + kind + ' alert-dismissible fade show py-2 small mt-2';
+            box.setAttribute('role', kind === 'danger' ? 'alert' : 'status');
+            box.appendChild(document.createTextNode(text));
+            var close = document.createElement('button');
+            close.type = 'button';
+            close.className = 'btn-close float-end';
+            close.setAttribute('data-bs-dismiss', 'alert');
+            close.setAttribute('aria-label', 'Close');
+            box.appendChild(close);
+            form.insertAdjacentElement('beforebegin', box);
+         }
+
+         // After a cancel or a stop, the list goes back to being a fresh pick, checked again: files
+         // that made it in now read as already in the collection.
+         function refreshList() {
+            if (!fileInput) return;
+            renderPicked(fileInput);
+            checkPicked(fileInput);
+         }
+
+         function stopped() {
+            form._netcdfUpload = null;
+            document.title = baseTitle;
+            if (progressWrapper) progressWrapper.style.display = 'none';
+            if (cancelBtn) { cancelBtn.style.display = 'none'; cancelBtn.disabled = false; }
+            if (uploadBtn) { uploadBtn.disabled = false; uploadBtn.textContent = 'Upload'; }
+            if (zone) zone.classList.remove('ecu-drop-busy');
+            if (fileInput) fileInput.disabled = false;
+            if (dropActions) dropActions.classList.remove('d-none');
+         }
+
+         // Files the check found a problem with are left out, with their reason on their row.
+         var checked = fileInput && fileInput._precheck ? fileInput._precheck : Promise.resolve(null);
+         checked.catch(function () { return null; }).then(function (results) {
+            var skip = {};
+            var sendable = picked.length;
+            (results || []).forEach(function (r, i) {
+               if (r && r.problem) { skip[i] = r.problem; sendable--; }
+            });
+            if (!sendable) {
+               stopped();
+               note('netcdf-upload-error', 'danger', picked.length === 1
+                  ? 'This file can\'t be uploaded. The reason is next to it above.'
+                  : 'None of these files can be uploaded. The reason is next to each one above.');
+               return;
+            }
+            picked.forEach(function (f, i) { if (!skip[i]) setRow(i, 'waiting'); });
+            startBatch(skip);
+         });
+
+         function startBatch(skip) {
+         form._netcdfUpload = Up.start(picked, {
+            createUrl: form.dataset.tusCreate,
+            bundleId: '{{ bundle.id }}',
+            collectionId: form.dataset.collectionId,
+            csrfToken: (form.querySelector('input[name="csrfmiddlewaretoken"]') || {}).value || '',
+            // 50 MB pieces, about 20 seconds each on a 20 Mbit/s line.
+            chunkSize: parseInt(form.dataset.tusChunk, 10) || 50 * 1024 * 1024,
+            compress: form.dataset.tusCompress !== 'off',
+            skip: skip,
+            onFileState: function (index, state, detail) { setRow(index, state, detail); },
+            onStatus: function (text) {
+               statusNote = text;
+               if (last) render();
+               else if (uploadStatusText) uploadStatusText.textContent = text || 'Uploading...';
+            },
+            onProgress: function (p) {
+               last = p;
+               statusNote = null;
+               if (progressBar) { progressBar.classList.remove('bg-info'); progressBar.classList.add('bg-success'); }
+               if (cancelBtn) cancelBtn.style.display = 'inline-block';
+               if (uploadBtn) uploadBtn.textContent = 'Uploading...';
+               if (p.fileSize && p.fileSent < p.fileSize) {
+                  setRow(p.index, 'uploading', Math.floor(p.fileSent / p.fileSize * 100));
+               }
+               render();
+            },
+            onFinishing: function (index, name) {
+               // The server is building the label now; cancelling can't stop that.
+               statusNote = 'Processing ' + name + '...';
+               if (cancelBtn) cancelBtn.style.display = 'none';
+               if (progressBar) { progressBar.classList.remove('bg-success'); progressBar.classList.add('bg-info'); }
+               if (uploadBtn) uploadBtn.textContent = 'Processing...';
+               render();
+               if (uploadStatusText) uploadStatusText.textContent = statusNote;
+            },
+            onDone: function (reply) {
+               if (cancelBtn) cancelBtn.style.display = 'none';
+               if (progressBar) {
+                  progressBar.style.width = '100%';
+                  progressBar.classList.remove('progress-bar-animated', 'bg-info');
+                  progressBar.classList.add('bg-success');
+               }
+               document.title = baseTitle;
+               if (uploadPercent) uploadPercent.textContent = '100%';
+               var missed = (reply.not_added || []).length;
+               if (uploadStatusText) {
+                  uploadStatusText.textContent = missed
+                     ? reply.files.length + ' added, ' + missed + ' not added.'
+                     : 'Done!';
+               }
+               if (uploadSuccessMsg) uploadSuccessMsg.style.display = 'block';
+               if (uploadBtn) uploadBtn.textContent = 'Upload';
+               // Same hand-off to the reloaded page as the form post, which also says what wasn't added.
+               try {
+                  sessionStorage.setItem('elsaNetcdfUpload:{{ bundle.id }}', JSON.stringify(reply));
+                  if (reply.tab_target) sessionStorage.setItem('elsaCollectionTab:{{ bundle.id }}', reply.tab_target);
+               } catch (err) {}
+               setTimeout(function () { window.location.reload(); }, missed ? 2500 : 1500);
+            },
+            onError: function (message, reply, added, failures) {
+               stopped();
+               // Every file failed: their reasons stay on their rows. Otherwise it was cut short.
+               if (!failures || failures.length < picked.length) refreshList();
+               if (reply && reply.code === 'insufficient_storage' && window.elsaOpenStorageDialog) {
+                  storageCtx.needed = reply.needed;
+                  storageCtx.available = reply.available;
+                  storageCtx.availableBytes = reply.available_bytes;
+                  storageCtx.stage = 'after';
+                  window.elsaOpenStorageDialog(storageCtx);
+                  return;
+               }
+               if (added) message += ' The ' + (added === 1 ? 'file' : added + ' files') + ' that finished before this ' +
+                  (added === 1 ? 'is' : 'are') + ' in the bundle. Reload the page to see ' + (added === 1 ? 'it.' : 'them.');
+               note('netcdf-upload-error', 'danger', message);
+            },
+            onCancelled: function (added) {
+               stopped();
+               refreshList();
+               note('netcdf-upload-cancelled', 'secondary', added
+                  ? 'Upload cancelled. The ' + (added === 1 ? 'file' : added + ' files') + ' that had already finished ' +
+                    (added === 1 ? 'was' : 'were') + ' added to this bundle. Reload the page to see them.'
+                  : 'Upload cancelled. Nothing was added to this bundle.');
+            }
+         });
+         }
+      }
    });
    
    // Cancel an upload. Delegated, the form repeats per collection tab.
@@ -3002,6 +3324,13 @@ also follows the project's own rule: modals go outside the card structure they b
       var btn = e.target.closest ? e.target.closest('.upload-cancel-btn') : null;
       if (!btn) return;
       var form = btn.closest('form');
+      if (form && form._netcdfUpload) {
+         // Stops after the piece in flight and removes the unfinished upload from the server.
+         e.preventDefault();
+         btn.disabled = true;
+         form._netcdfUpload.cancel();
+         return;
+      }
       if (!form || !form._netcdfUploadXhr) return;
       e.preventDefault();
       btn.disabled = true;
@@ -3011,6 +3340,56 @@ also follows the project's own rule: modals go outside the card structure they b
       form._netcdfUploadXhr.abort();
       form._netcdfUploadXhr = null;
    });
+
+   // An upload cut off by a closed tab or lost connection is still on the server. Say so, so
+   // picking the same file again carries on instead of starting over. Browsers don't let a page
+   // reopen a file by itself, so the user has to pick it.
+   (function offerResumable() {
+      var Up = window.ElsaNetcdfUpload;
+      if (!Up || !Up.supported()) return;
+      var forms = document.querySelectorAll('.netcdf-upload-form[data-tus-create]');
+      Array.prototype.forEach.call(forms, function (form) {
+         Up.findResumable({ bundleId: '{{ bundle.id }}', collectionId: form.dataset.collectionId })
+            .then(function (entries) {
+               entries.forEach(function (entry) {
+                  if (!(entry.length > 0) || entry.offset >= entry.length) return;
+                  var box = document.createElement('div');
+                  box.className = 'netcdf-upload-resume alert alert-info py-2 small mt-2 d-flex align-items-start gap-2';
+                  box.setAttribute('role', 'status');
+                  var icon = document.createElement('i');
+                  icon.className = 'bi bi-arrow-repeat mt-1';
+                  var text = document.createElement('div');
+                  text.className = 'flex-grow-1';
+                  var pct = Math.floor(entry.offset / entry.length * 100);
+                  text.appendChild(document.createTextNode(
+                     'The upload of "' + entry.name + '" stopped at ' + pct + '% (' + Up.humanSize(entry.offset) +
+                     ' of ' + Up.humanSize(entry.length) + '). Choose the same file again to carry on from there.'));
+                  var drop = document.createElement('button');
+                  drop.type = 'button';
+                  drop.className = 'btn btn-sm btn-link btn-keep-bg p-0 text-decoration-none';
+                  drop.textContent = 'Discard';
+                  drop.addEventListener('click', function () {
+                     drop.disabled = true;
+                     Up.discard(entry, {
+                        csrfToken: (form.querySelector('input[name="csrfmiddlewaretoken"]') || {}).value || ''
+                     }).then(function () { box.remove(); });
+                  });
+                  box.appendChild(icon);
+                  box.appendChild(text);
+                  box.appendChild(drop);
+                  form.insertAdjacentElement('beforebegin', box);
+               });
+            })
+            .catch(function () {});
+      });
+      // Once an upload starts, its notice has done its job.
+      document.addEventListener('submit', function (e) {
+         var form = e.target;
+         if (!form || !form.classList || !form.classList.contains('netcdf-upload-form')) return;
+         var notes = form.parentNode.querySelectorAll('.netcdf-upload-resume');
+         Array.prototype.forEach.call(notes, function (n) { n.remove(); });
+      });
+   })();
    
 </script>
 </div>
@@ -4708,6 +5087,25 @@ Kept outside every card for the same reason as the dialog above.{% endcomment %}
                'and ' + (files.length - 6) + ' more, each with its own label in Files below.'));
          }
       }
+
+      // Files from the same upload that didn't make it, each with its reason, so nothing goes
+      // missing quietly behind the reload.
+      var missed = Array.isArray(payload.not_added) ? payload.not_added : [];
+      if (missed.length) {
+         var box = el('div', 'enu-missed mt-3');
+         box.appendChild(el('div', 'small fw-semibold text-danger mb-1',
+            missed.length === 1 ? '1 file was not added' : missed.length + ' files were not added'));
+         missed.forEach(function (item) {
+            var row = el('div', 'enu-file small');
+            row.appendChild(el('i', 'bi bi-x-circle text-danger flex-shrink-0'));
+            var text = el('span', 'flex-grow-1 enu-file-name');
+            text.appendChild(el('span', 'd-block', String(item.name || '')));
+            text.appendChild(el('span', 'd-block text-muted', String(item.reason || '')));
+            row.appendChild(text);
+            box.appendChild(row);
+         });
+         list.appendChild(box);
+      }
    }
 
    function showNotice() {
@@ -5153,4 +5551,6 @@ Kept outside every card for the same reason as the dialog above.{% endcomment %}
 {% include 'build/bundle/_netcdf_inspect_modal.html' %}
 <!-- Lets the create page know a bundle was made if the user goes Back -->
 {% include 'build/_just_created.html' %}
+<!-- Changes ELSA made to old labels -->
+{% include 'build/bundle/_label_updates_modal.html' %}
    {% endblock %}

@@ -4,8 +4,8 @@ Every step but one saves through the same view as the bundle page (X-Elsa-Inplac
 _inplace_form in views.py).
 
 The citation is the exception. The user lists the people and the counts come from the list.
-A save writes the whole Citation_Information into the bundle label and copies it to the others
-(Citation_Information.sync_into_label and mirror_citation_into_data_products).
+A save stores the people in Citation_Contributor, then writes the whole Citation_Information into
+the bundle label and copies it to the others (write_citation).
 """
 
 import copy
@@ -192,6 +192,11 @@ def citation_rows(bundle):
             'editor_orgs': [],
         }
 
+    if citation.contributors_saved:
+        rows = stored_rows(citation)
+        return dict(rows, exists=True, publication_year=citation.publication_year,
+                    description=citation.description, keyword=citation.keyword)
+
     recorded = citation._recorded_people()
 
     def person(values):
@@ -275,22 +280,96 @@ def citation_element(citation, rows):
     return root
 
 
-def save_citation(bundle, form):
-    """Create or replace the bundle's citation from a valid CitationListForm."""
-    from build.views import bundle_label_targets  # views imports this module
+def stored_rows(citation):
+    """The citation's people from the database, in the CitationListForm.rows shape."""
+    rows = {group: [] for group in GROUPS}
+    for contributor in citation.contributors.all():
+        rows[contributor.group()].append(contributor.as_row())
+    return rows
 
-    rows = form.rows
-    citation = bundle.citation_information_set.first() or Citation_Information(bundle=bundle)
-    citation.number_of_authors_people = len(rows['author_people'])
-    citation.number_of_authors_organization = len(rows['author_orgs'])
-    citation.number_of_editors_people = len(rows['editor_people'])
-    citation.number_of_editors_organization = len(rows['editor_orgs'])
-    citation.publication_year = form.cleaned_data['publication_year']
-    citation.description = form.cleaned_data['description'].strip()
-    citation.keyword = (form.cleaned_data.get('keyword') or '').strip()
+
+def store_rows(citation, rows):
+    """Replace the citation's people with these rows, and keep the counts in step."""
+    from build.models import Citation_Contributor
+
+    citation.contributors.all().delete()
+    made = []
+    for group, (_prefix, fields) in GROUPS.items():
+        role, plural = group.split('_')
+        kind = 'person' if plural == 'people' else 'organization'
+        for position, row in enumerate(rows.get(group) or []):
+            made.append(Citation_Contributor(
+                citation=citation, role=role, kind=kind, position=position,
+                **{field: (row.get(field) or '').strip() for field in fields}))
+    Citation_Contributor.objects.bulk_create(made)
+    citation.number_of_authors_people = len(rows.get('author_people') or [])
+    citation.number_of_authors_organization = len(rows.get('author_orgs') or [])
+    citation.number_of_editors_people = len(rows.get('editor_people') or [])
+    citation.number_of_editors_organization = len(rows.get('editor_orgs') or [])
+    citation.contributors_saved = True
     citation.save()
 
-    # The bundle label first: it is the source every other label is copied from.
+
+def rows_from_label(citation):
+    """The people in the bundle label's citation, as rows. For citations saved before
+    Citation_Contributor existed. The fixed ATM editors are left out, they're always added."""
+    rows = {group: [] for group in GROUPS}
+    try:
+        path = Product_Bundle.objects.get(bundle=citation.bundle).label()
+        root = etree.parse(path).getroot()
+    except (Product_Bundle.DoesNotExist, AttributeError, TypeError, OSError, etree.XMLSyntaxError):
+        return rows
+    element = root.find('{0}Identification_Area/{0}Citation_Information'.format(NAMESPACE))
+    if element is None:
+        return rows
+
+    def text(parent, path):
+        return (parent.findtext(path.format(NAMESPACE)) or '').strip()
+
+    fixed = {(given, family) for given, family, _orcid in FIXED_EDITORS}
+    for role, tag in (('author', 'List_Author'), ('editor', 'List_Editor')):
+        container = element.find(NAMESPACE + tag)
+        if container is None:
+            continue
+        for organization in container.findall(NAMESPACE + 'Organization'):
+            rows[role + '_orgs'].append({
+                'name': text(organization, '{0}organization_name'),
+                'rorid': text(organization, '{0}organization_rorid'),
+                'sequence_number': text(organization, '{0}sequence_number'),
+                'parent_org_name': text(organization, '{0}Parent_Organization/{0}parent_organization_name')})
+        for person in container.findall(NAMESPACE + 'Person'):
+            row = {'given_name': text(person, '{0}given_name'),
+                   'family_name': text(person, '{0}family_name'),
+                   'orcid': text(person, '{0}person_orcid'),
+                   'affiliation': text(person, '{0}Affiliation/{0}organization_name')}
+            if role == 'editor' and (row['given_name'], row['family_name']) in fixed:
+                continue
+            rows[role + '_people'].append(row)
+    return rows
+
+
+def rows_from_edit_form(citation, cleaned):
+    """Rows from the older edit page, which has one set of fields per counted person."""
+    counts = {'author_people': citation.number_of_authors_people,
+              'author_orgs': citation.number_of_authors_organization,
+              'editor_people': citation.number_of_editors_people,
+              'editor_orgs': citation.number_of_editors_organization}
+    rows = {}
+    for group, (prefix, fields) in GROUPS.items():
+        rows[group] = [{field: str(cleaned.get('{}_{}_{}'.format(prefix, index, field)) or '').strip()
+                        for field in fields}
+                       for index in range(counts[group] or 0)]
+    return rows
+
+
+def write_citation(citation):
+    """Write the citation, from the database, into every label of the bundle."""
+    from build.views import bundle_label_targets  # views imports this module
+
+    bundle = citation.bundle
+    rows = stored_rows(citation)
+
+    # The bundle label first: the other labels are copied from it.
     product_bundle = Product_Bundle.objects.get(bundle=bundle)
     label_list = open_label_with_tree(product_bundle.label())
     label_root = label_list[1]
@@ -311,6 +390,24 @@ def save_citation(bundle, form):
     for collection in bundle_label_targets(bundle):
         citation.sync_into_label(collection.label())
     mirror_citation_into_data_products(bundle)
+
+
+def rewrite_from_label(citation):
+    """For the older citation pages that still edit the labels directly: save what they
+    wrote to the database, then write every label from that."""
+    store_rows(citation, rows_from_label(citation))
+    write_citation(citation)
+
+
+def save_citation(bundle, form):
+    """Create or replace the bundle's citation from a valid CitationListForm."""
+    citation = bundle.citation_information_set.first() or Citation_Information(bundle=bundle)
+    citation.publication_year = form.cleaned_data['publication_year']
+    citation.description = form.cleaned_data['description'].strip()
+    citation.keyword = (form.cleaned_data.get('keyword') or '').strip()
+    citation.save()
+    store_rows(citation, form.rows)
+    write_citation(citation)
     return citation
 
 
@@ -325,7 +422,8 @@ def finish(bundle):
         # ELSA does this one itself (the first modification history), so only list it if it's missing.
         if ok and not step:
             continue
-        items.append({'key': requirement.key, 'title': requirement.title, 'ok': ok, 'step': step})
+        items.append({'key': requirement.key, 'title': requirement.title, 'ok': ok, 'step': step,
+                      'source': requirement.source})
     left = sum(1 for item in items if not item['ok'])
     return {'items': items, 'ready': not left, 'left': left}
 

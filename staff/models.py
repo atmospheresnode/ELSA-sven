@@ -579,8 +579,9 @@ class Notification(models.Model):
     LIEN = 'lien'
     MESSAGE = 'message'
     ACCOUNT = 'account'
+    UPDATE = 'update'
     KIND_CHOICES = ((REPLY, 'Reply'), (OUTCOME, 'Outcome'), (REVIEW, 'Review'), (LIEN, 'Item to fix'),
-                    (MESSAGE, 'Message'), (ACCOUNT, 'Account'))
+                    (MESSAGE, 'Message'), (ACCOUNT, 'Account'), (UPDATE, 'Label update'))
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='elsa_notifications')
     kind = models.CharField(max_length=10, choices=KIND_CHOICES)

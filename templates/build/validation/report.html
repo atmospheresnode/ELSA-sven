@@ -24,8 +24,9 @@ message type does not.
   {% if run.is_stale %}
   <div class="alert alert-warning">
     <strong>These results are out of date.</strong>
-    The bundle has changed since this run finished, so some findings may already be
-    fixed and new ones may not appear here.
+    {% if run.stale_because_of_checks %}ELSA's checks were updated after this run, so it may
+    have missed things the current checks find.{% else %}The bundle has changed since this run
+    finished, so some findings may already be fixed and new ones may not appear here.{% endif %}
   </div>
   {% endif %}
 

@@ -82,8 +82,11 @@ class AMABrowserTestCase(StaticLiveServerTestCase):
         self.addCleanup(shutil.rmtree, self.archive_dir, True)
         self.media_root = tempfile.mkdtemp(prefix='elsa-ama-browser-media-')
         self.addCleanup(shutil.rmtree, self.media_root, True)
+        self.staging_dir = tempfile.mkdtemp(prefix='elsa-ama-browser-staging-')
+        self.addCleanup(shutil.rmtree, self.staging_dir, True)
         self.settings_patcher = override_settings(
-            ARCHIVE_DIR=self.archive_dir, MEDIA_ROOT=self.media_root)
+            ARCHIVE_DIR=self.archive_dir, MEDIA_ROOT=self.media_root,
+            NETCDF_UPLOAD_STAGING_DIR=self.staging_dir)
         self.settings_patcher.enable()
         self.addCleanup(self.settings_patcher.disable)
 
@@ -1270,11 +1273,20 @@ class AMABrowserTestCase(StaticLiveServerTestCase):
         self.notice().locator('button', has_text='Not now').click()
         self.page.locator('#netcdfUploadModal').wait_for(state='hidden', timeout=10000)
 
-        self.upload_through_the_form(self.beta, [name], expect_notice=False)
-
-        error = self.pane(self.beta).locator('.netcdf-upload-error')
-        error.wait_for(state='visible', timeout=20000)
-        self.assertIn('already in', error.inner_text())
+        # Picking it again is refused on the spot, before a byte goes up, and Upload stays off.
+        import shutil
+        import tempfile
+        from build.test_ama_audit import real_netcdf_bytes
+        folder = tempfile.mkdtemp(prefix='elsa-e2e-')
+        self.addCleanup(shutil.rmtree, folder, True)
+        with open(os.path.join(folder, name), 'wb') as handle:
+            handle.write(real_netcdf_bytes())
+        pane = self.pane(self.beta)
+        pane.locator('input[name="netcdf_files"]').set_input_files([os.path.join(folder, name)])
+        note = pane.locator('.ecu-picked-row .ecu-picked-note')
+        note.wait_for(state='visible', timeout=20000)
+        self.assertIn('Already in this collection', note.inner_text())
+        self.assertTrue(pane.locator('.upload-btn').is_disabled())
         # Refused means refused: no second row, and the first file is untouched.
         self.assertEqual(NetCDFFile.objects.filter(title=name).count(), 1)
         self.assertFalse(self.page.locator('#netcdfUploadModal').is_visible(),

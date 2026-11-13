@@ -664,6 +664,26 @@ renders per request, so the script below owns the wiring for both.
          button.addEventListener('click', function () { load(this); });
       });
 
+      // Open a file by its path in the bundle, e.g. from the Changes made by ELSA window.
+      // An inventory table opens on its collection label's Inventory tab.
+      function rowFor(path) {
+         var quoted = '"' + CSS.escape(path) + '"';
+         var row = tree.querySelector('.eft-item[data-path=' + quoted + ']');
+         if (row) return {row: row, inventory: false};
+         row = tree.querySelector('.eft-item[data-inventory-path=' + quoted + ']');
+         return row ? {row: row, inventory: true} : null;
+      }
+      window.openBundleFile = function (path) {
+         var found = rowFor(path);
+         if (!found) return false;
+         preferredTab = found.inventory ? 'inventory' : 'label';
+         load(found.row);
+         var card = nameEl.closest('.card');
+         if (card && card.scrollIntoView) card.scrollIntoView({block: 'start'});
+         return true;
+      };
+      window.openBundleFile.has = function (path) { return !!rowFor(path); };
+
       // navigator.clipboard is undefined on plain http, so hide the button.
       if (copyBtn && !(navigator.clipboard && navigator.clipboard.writeText)) {
          copyBtn.classList.add('d-none');

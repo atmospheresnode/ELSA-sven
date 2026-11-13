@@ -111,6 +111,18 @@ Users upload NetCDF (.nc) files to External bundles; ELSA validates the
 extension, processes the file, and generates a PDS4 XML label for each. Multiple
 NetCDF files can be deleted at once with the bulk delete option.
 
+NetCDF files go up in pieces, so large files (up to 40 GB each) are safe to upload.
+The progress line shows the file name, the speed and the time left. If the
+connection drops, ELSA waits and carries on by itself. If the tab is closed, the
+browser crashes or the computer goes to sleep, reopening the bundle page shows how
+far the upload got in that collection; choosing the same file again continues from
+there instead of starting over (a browser cannot reopen a file by itself, so the
+user has to pick it). Unfinished uploads are kept for 7 days after the last piece
+arrived. Cancel stops the upload and removes what was sent; files that had already
+finished stay in the bundle. Pieces are compressed on the way when that makes them
+smaller, which saves time, and the stored file is the original, byte for byte. There is no need
+to zip files first: ELSA only accepts NetCDF files.
+
 Before an upload starts, ELSA checks that the server has enough free disk space
 for the selected files. If it does not, nothing is sent and a dialog shows the
 upload size and the largest upload the server can take right now, so uploading

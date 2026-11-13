@@ -9,8 +9,6 @@ import json
 import logging
 import os
 import shutil
-import tarfile
-import tempfile
 from datetime import timedelta
 
 from django.apps import apps as django_apps
@@ -27,7 +25,8 @@ from django.utils.dateparse import parse_date
 from django.utils.http import url_has_allowed_host_and_scheme, urlencode
 from django.views.decorators.http import require_POST
 
-from build import preflight, validate_report
+from build import label_migrations, label_upgrades, preflight, validate_report
+from build.downloads import bundle_tarball_response
 from build.models import Bundle, ValidationRun
 from friends import passkeys, throttle
 from friends.models import AccountEvent, UserProfile, UserSession
@@ -801,8 +800,21 @@ def bundles(request):
         found = found.filter(submitted_at__isnull=False)
     else:
         submitted = ''
+    labels = request.GET.get('labels', '')
+    if labels == 'failed':
+        found = label_upgrades.failed_bundles(found)
+    elif labels == 'behind':
+        found = found.filter(label_revision__lt=label_migrations.head())
+    else:
+        labels = ''
+    page = _page(request, found)
+    failed_here = set(label_upgrades.failed_bundles(
+        Bundle.objects.filter(pk__in=[b.pk for b in page.object_list])).values_list('pk', flat=True))
+    for item in page.object_list:
+        item.label_update_failed = item.pk in failed_here
     return render(request, 'staff/bundles.html', _console_context(
-        request, section='bundles', page=_page(request, found), query=query,
+        request, section='bundles', page=page, query=query, labels=labels,
+        failed_count=label_upgrades.failed_bundles().count(),
         bundle_type=bundle_type, submitted=submitted,
         saved_views=_saved_views(request, 'staff:bundles'), view_page='staff:bundles'))
 
@@ -825,7 +837,32 @@ def bundle_detail(request, pk):
         on_disk=os.path.isdir(directory),
         directory=directory,
         history=AuditEntry.objects.filter(target_type='bundle', target_id=str(bundle.pk))[:10],
+        label_pending=[m for m in label_migrations.pending(bundle) if m.applies_to(bundle)],
+        label_failed=label_upgrades.failed_update(bundle),
+        label_upgrades=bundle.upgrades.all()[:20],
+        label_undo=bundle.upgrades.filter(status='applied').first(),
     ))
+
+
+@console_view(roles.REVIEW_BUNDLES)
+def bundle_label_preview(request, pk):
+    """What the pending label updates would change, worked out on a copy."""
+    bundle = get_object_or_404(Bundle.objects.select_related('user'), pk=pk)
+    results = label_upgrades.preview_bundle(bundle)
+    for result in results:
+        result['notes'] = label_upgrades.describe(result['notes'])
+        result['lines'] = [(line, _diff_class(line)) for line in result['diff'].splitlines()]
+    return render(request, 'staff/label_preview.html', _console_context(
+        request, section='bundles', page_title='Label updates for {}'.format(bundle.name),
+        bundle=bundle, results=results))
+
+
+def _diff_class(line):
+    if line.startswith(('+++', '---')):
+        return 'file'
+    if line.startswith('@@'):
+        return 'hunk'
+    return {'+': 'add', '-': 'del'}.get(line[:1], '')
 
 
 def _inside_archive(path):
@@ -843,15 +880,9 @@ def bundle_download(request, pk):
     if not _inside_archive(directory) or not os.path.isdir(directory):
         raise Http404('The bundle folder is missing.')
 
-    scratch = getattr(settings, 'TEMPORARY_DIR', '')
-    spool = tempfile.TemporaryFile(dir=scratch if scratch and os.path.isdir(scratch) else None)
-    with tarfile.open(fileobj=spool, mode='w:gz') as archive:
-        # Store symlinks as links so nothing outside the bundle ends up in the download.
-        archive.add(directory, arcname=os.path.basename(directory))
-    spool.seek(0)
+    response = bundle_tarball_response(directory)
     audit.record(request, 'bundle.download', bundle)
-    return FileResponse(spool, as_attachment=True, content_type='application/gzip',
-                        filename='{0}.tar.gz'.format(os.path.basename(directory)))
+    return response
 
 
 def _raw_report(run):

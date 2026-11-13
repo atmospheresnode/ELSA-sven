@@ -1,7 +1,7 @@
 # Stdlib imports
 
 # Core Django imports
-from django.urls import re_path, include
+from django.urls import path, re_path, include
 
 # Third-party app imports
 
@@ -132,6 +132,12 @@ urlpatterns = [
     re_path(r'^(?P<pk_bundle>\d+)/netcdf/storage/check/$', views.netcdf_storage_check, name='netcdf_storage_check'),
     re_path(r'^(?P<pk_bundle>\d+)/netcdf/storage/draft/$', views.netcdf_storage_draft, name='netcdf_storage_draft'),
     re_path(r'^(?P<pk_bundle>\d+)/netcdf/storage/report/$', views.netcdf_storage_report, name='netcdf_storage_report'),
+    # Resumable NetCDF uploads (tus). Each upload has its own URL; finish adds it to the bundle.
+    re_path(r'^(?P<pk_bundle>\d+)/netcdf/uploads/$', views.netcdf_upload_create, name='netcdf_upload_create'),
+    path('<int:pk_bundle>/netcdf/uploads/check/', views.netcdf_upload_check, name='netcdf_upload_check'),
+    path('<int:pk_bundle>/netcdf/uploads/<uuid:upload_id>/', views.netcdf_upload, name='netcdf_upload'),
+    path('<int:pk_bundle>/netcdf/uploads/<uuid:upload_id>/finish/', views.netcdf_upload_finish,
+         name='netcdf_upload_finish'),
 
     # One generated label's XML, fetched on demand by the Files tree
     re_path(r'^(?P<pk_bundle>\d+)/label_content/$', views.label_content, name='label_content'),
@@ -149,6 +155,9 @@ urlpatterns = [
     
     # Submit Bundle for Review
     re_path(r'^(?P<pk_bundle>\d+)/submit/$', views.submit_bundle_internal, name='submit_bundle_internal'),
+
+    # Changes ELSA made to old labels by itself
+    re_path(r'^(?P<pk_bundle>\d+)/label-updates/seen/$', views.label_updates_seen, name='label_updates_seen'),
 
     # PDS validation. The bundle routes are used by the page, the report routes are staff-only.
     re_path(r'^(?P<pk_bundle>\d+)/validate/start/$', views.start_validation, name='start_validation'),

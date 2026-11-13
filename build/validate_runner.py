@@ -324,10 +324,15 @@ def _execute(validation_run):
     validation_run.status = ValidationRun.STATUS_RUNNING
     validation_run.started_at = timezone.now()
     validation_run.bundle_updated_at = validation_run.bundle.updated_at
-    # Repair before the fingerprint so the result isn't out of date as soon as it finishes.
+    # Upgrade and repair before the fingerprint so the result isn't out of date as soon as it finishes.
+    from build import label_upgrades
+    label_upgrades.safe_upgrade(validation_run.bundle, source=label_upgrades.SOURCE_CHECK,
+                                wait_seconds=120)
     repair_before_check(validation_run.bundle)
     # Taken here so an edit made before the JVM starts counts as a change.
     validation_run.content_fingerprint = validation_run.bundle.content_fingerprint()
+    from build.checker import checker_version
+    validation_run.checker_version = checker_version()
     validation_run.products_total = label_count(validation_run.bundle)
     validation_run.products_done = 0
     validation_run.phase = ValidationRun.PHASE_LOADING
@@ -595,7 +600,12 @@ def submission_block(bundle, user=None):
         # Cannot check is not the same as found a problem.
         return None
 
-    if latest.is_stale():
+    reason = latest.stale_reason()
+    if reason == ValidationRun.STALE_CHECKS:
+        return (BLOCK_STALE,
+                'ELSA\'s checks have been updated since this bundle was last checked. Run the '
+                'check again so the result is from the current checks.')
+    if reason is not None:
         return (BLOCK_STALE,
                 'This bundle changed after it was last checked. Run the check again '
                 'so the result describes what you are submitting.')

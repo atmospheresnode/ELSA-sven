@@ -35,7 +35,9 @@ since been answered and a Submit button disabled on it.
             <div class="alert alert-secondary py-2 px-3 small d-flex align-items-center gap-2 mb-4">
                <i class="bi bi-hourglass-split"></i>
                <span class="flex-grow-1">
-                  {% if validation_block.0 == 'stale' %}The bundle changed since its last check,
+                  {% if validation_block.0 == 'stale' and validation_run.stale_because_of_checks %}ELSA's checks
+                  were updated since this bundle was last checked, so it needs checking again before
+                  it can be submitted.{% elif validation_block.0 == 'stale' %}The bundle changed since its last check,
                   so it needs checking again before it can be submitted.{% else %}This bundle
                   needs checking against the PDS validation tool before it can be submitted.{% endif %}
                   It takes a few seconds.

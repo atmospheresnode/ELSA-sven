@@ -1,0 +1,27 @@
+{% comment %}Shown once after ELSA brings this bundle's labels up to date (build/label_upgrades.py).{% endcomment %}
+{% if label_update_failed %}
+<div class="alert alert-warning d-flex align-items-start gap-2 mb-3" role="status" id="label_update_failed_notice">
+   <i class="bi bi-exclamation-triangle-fill mt-1" aria-hidden="true"></i>
+   <div class="flex-grow-1">
+      <strong>ELSA couldn't finish updating the labels in this bundle.</strong>
+      Nothing was changed, and the ELSA team has been told. You can keep working on the bundle.
+      It can be submitted once the update has gone through.
+   </div>
+</div>
+{% endif %}
+{% if label_updates_unseen %}
+<div class="alert alert-info d-flex align-items-start gap-2 mb-3" role="status" id="label_updates_notice">
+   <i class="bi bi-info-circle-fill mt-1" aria-hidden="true"></i>
+   <div class="flex-grow-1">
+      <strong>ELSA updated {{ label_updates_unseen_files }} in this bundle.</strong>
+      They were written by an older version of ELSA, so they were brought up to date with how ELSA writes labels now.
+      <div class="mt-2 d-flex flex-wrap gap-2">
+         <button type="button" class="btn btn-sm btn-outline-secondary btn-keep-bg" data-bs-toggle="modal" data-bs-target="#label_updates_modal">See what changed</button>
+         <form method="post" action="{% url 'build:label_updates_seen' bundle.pk %}" class="label-updates-dismiss m-0">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm btn-link text-decoration-none px-1 btn-keep-bg">Dismiss</button>
+         </form>
+      </div>
+   </div>
+</div>
+{% endif %}

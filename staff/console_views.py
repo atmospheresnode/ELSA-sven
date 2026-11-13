@@ -189,6 +189,35 @@ def bundle_validate(request, pk):
 
 @console_view()
 @require_POST
+def bundle_label_upgrade(request, pk):
+    bundle = get_object_or_404(Bundle, pk=pk)
+    rows = _act(request, actions.apply_label_upgrades, None, bundle)
+    if rows is None:
+        pass
+    elif not rows:
+        messages.info(request, 'Nothing needed changing. The labels are up to date.')
+    else:
+        failed = [row for row in rows if row.status == 'failed']
+        if failed:
+            messages.error(request, 'Label update {:04d} failed and the files were put back: {}'.format(
+                failed[0].number, failed[0].error[:300]))
+        else:
+            messages.success(request, 'Labels updated: {} change{}.'.format(
+                len(rows), '' if len(rows) == 1 else 's'))
+    return redirect('staff:bundle', pk=bundle.pk)
+
+
+@console_view()
+@require_POST
+def bundle_label_upgrade_undo(request, pk, pk_upgrade):
+    from build.models import BundleUpgrade
+    row = get_object_or_404(BundleUpgrade.objects.select_related('bundle'), pk=pk_upgrade, bundle_id=pk)
+    _act(request, actions.undo_label_upgrade, 'Put back the files from before that change.', row)
+    return redirect('staff:bundle', pk=pk)
+
+
+@console_view()
+@require_POST
 def run_cancel(request, pk_run):
     run = get_object_or_404(ValidationRun.objects.select_related('bundle'), pk=pk_run)
     _act(request, actions.cancel_validation, 'Cancelled.', run)
