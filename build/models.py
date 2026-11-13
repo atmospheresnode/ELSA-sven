@@ -6133,12 +6133,22 @@ class DisplayDictionary(models.Model):
 
 # To handle NetCDF files
 
+def netcdf_storage():
+    """Local disk, whatever the default storage is.
+
+    ELSA reads, labels and moves NetCDF files on this server, so they can't live on remote
+    storage. Prod's default is SFTP, for the submit app's uploads.
+    """
+    from django.core.files.storage import FileSystemStorage
+    return FileSystemStorage()
+
+
 class NetCDFFile(models.Model):
     title = models.CharField(max_length=255)
     uploaded_at = models.DateTimeField(auto_now_add=True)
     # NetCDF files are validated by magic bytes (see chocolate.is_netcdf_file), not by
     # extension, so no FileExtensionValidator here — uploads may be extensionless.
-    file = models.FileField(upload_to='')
+    file = models.FileField(upload_to='', storage=netcdf_storage)
     bundle = models.ForeignKey(Bundle, on_delete=models.CASCADE, related_name='netcdf_files', null=True, blank=True)
     # Which collection this file was uploaded into. Null only for older rows.
     collection = models.ForeignKey(
