@@ -10,6 +10,8 @@ from queue import Empty
 from enum import unique
 from queue import Empty
 from django.db import models
+from django.db.models.signals import post_delete
+from django.dispatch import receiver
 from django.utils import timezone
 from django.conf import settings
 from django.contrib.auth.models import User
@@ -29,9 +31,13 @@ import logging
 import shutil
 import hashlib
 import os
+import uuid
 import copy
 
 
+
+from build.label_migrations import head as label_migrations_head
+from build.checker import checker_version as current_checker_version
 
 #    Final Variables ------------------------------------------------------------------------------------
 MAX_CHAR_FIELD = 255
@@ -2206,7 +2212,9 @@ class Bundle(models.Model):
     submitted_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
     updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)
-    
+    # Last label migration this bundle has had (build/label_migrations).
+    label_revision = models.PositiveIntegerField(default=label_migrations_head)
+
 
     class Meta:
         constraints = [
@@ -5199,6 +5207,9 @@ class Citation_Information(models.Model):
     publication_year = models.CharField(max_length=MAX_CHAR_FIELD)
     description = models.CharField(max_length=MAX_TEXT_FIELD)
     keyword = models.CharField(max_length=MAX_CHAR_FIELD, blank=True)
+    # True once the authors and editors are in Citation_Contributor. Before that they're only
+    # in the bundle label (label migration 0003 copies them over).
+    contributors_saved = models.BooleanField(default=False)
     
 
     def _recorded_citation_element(self):
@@ -6178,6 +6189,56 @@ class NetCDFFile(models.Model):
         return None
 
 
+class NetCDFUpload(models.Model):
+    """A NetCDF file on its way up in pieces (the tus protocol, see build/netcdf_uploads.py).
+
+    The bytes collect in a staging file named after the id. Once every byte is in, the finish
+    step turns it into a normal NetCDFFile and the row stays behind pointing at it.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='netcdf_uploads')
+    bundle = models.ForeignKey(Bundle, on_delete=models.CASCADE, related_name='netcdf_uploads')
+    collection = models.ForeignKey(
+        AdditionalCollections, on_delete=models.CASCADE, related_name='netcdf_uploads')
+    # The name the user picked, and the name it will have on disk.
+    filename = models.CharField(max_length=255)
+    stored_name = models.CharField(max_length=255)
+    length = models.BigIntegerField()
+    offset = models.BigIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(default=timezone.now)
+    expires_at = models.DateTimeField()
+    finished_at = models.DateTimeField(null=True, blank=True)
+    netcdf_file = models.ForeignKey(
+        NetCDFFile, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
+
+    class Meta:
+        indexes = [models.Index(fields=['user', 'finished_at'])]
+
+    def __str__(self):
+        return '{} ({} of {} bytes)'.format(self.filename, self.offset, self.length)
+
+    @property
+    def complete(self):
+        return self.offset >= self.length
+
+    def staging_path(self):
+        from build import netcdf_uploads
+        return netcdf_uploads.staging_path(self.id)
+
+
+@receiver(post_delete, sender=NetCDFUpload)
+def remove_staged_upload(sender, instance, **kwargs):
+    # Runs for cascades too, so deleting a bundle or collection mid-upload leaves nothing behind.
+    # After finish the staging file is already gone, and the archive copy is not touched.
+    try:
+        os.remove(instance.staging_path())
+    except FileNotFoundError:
+        pass
+    except OSError as exc:
+        logging.getLogger(__name__).warning('could not remove staged upload %s: %s', instance.id, exc)
+
+
 # --- AMA Discipline Dictionary user-supplied classes ---
 # The NetCDF harvest fills ama:Variable and ama:Coordinate. The rest comes from these models:
 # 
@@ -6494,6 +6555,11 @@ class ValidationRun(models.Model):
     # Nullable since older code may still insert rows without this column during a deploy.
     tool_version = models.CharField(max_length=32, null=True, blank=True, default='')
 
+    # build.checker.checker_version() when this ran. A different one means ELSA's checks changed.
+    # Rows from before this field have '', so they count as out of date.
+    checker_version = models.CharField(max_length=64, null=True, blank=True,
+                                       default=current_checker_version)
+
     # Why a run couldn't produce a report: validate or Java missing, a crash, a timeout.
     failure_reason = models.TextField(blank=True, default='')
 
@@ -6525,17 +6591,39 @@ class ValidationRun(models.Model):
 
         Runs recorded before the fingerprint existed fall back to the timestamp, which
         is wrong in the same old way but is all those rows have; they age out.
+
+        Also True when ELSA's checks changed after this run, see stale_reason().
+        """
+        return self.stale_reason() is not None
+
+    STALE_FILES = 'files'
+    STALE_CHECKS = 'checks'
+
+    def stale_reason(self):
+        """'files' if the bundle changed after this run, 'checks' if ELSA's checks did, else None.
+
+        A run with no checker version is from before it was recorded, so it counts as 'checks'.
         """
         if self.content_fingerprint:
             current = self.bundle.content_fingerprint()
             if not current:
                 # The directory is gone, so leave the last result. Re-running wouldn't help.
-                return False
-            return current != self.content_fingerprint
+                return None
+            if current != self.content_fingerprint:
+                return self.STALE_FILES
+        elif (self.bundle_updated_at is not None and self.bundle.updated_at is not None
+              and self.bundle.updated_at > self.bundle_updated_at):
+            return self.STALE_FILES
 
-        if self.bundle_updated_at is None or self.bundle.updated_at is None:
-            return False
-        return self.bundle.updated_at > self.bundle_updated_at
+        # Queued and running rows get their version when they start.
+        if self.status in (self.STATUS_DONE, self.STATUS_FAILED):
+            from build.checker import checker_version
+            if (self.checker_version or '') != checker_version():
+                return self.STALE_CHECKS
+        return None
+
+    def stale_because_of_checks(self):
+        return self.stale_reason() == self.STALE_CHECKS
 
     def duration_seconds(self):
         if self.started_at is None or self.finished_at is None:
@@ -6569,3 +6657,109 @@ class ValidationRun(models.Model):
             self.PHASE_REFERENCES: 'Checking references',
             self.PHASE_DONE: 'Finished',
         }.get(self.phase, self.phase)
+
+
+class BundleUpgrade(models.Model):
+    """One label migration ELSA ran on a bundle that changed something, or failed.
+
+    The owner sees these under "Changes made by ELSA". The snapshot is a copy of the labels
+    from just before, so the change can be undone.
+    """
+
+    STATUS_APPLIED = 'applied'
+    STATUS_FAILED = 'failed'
+    STATUS_RESTORED = 'restored'
+    STATUS_CHOICES = (
+        (STATUS_APPLIED, 'Applied'),
+        (STATUS_FAILED, 'Failed'),
+        (STATUS_RESTORED, 'Undone'),
+    )
+
+    bundle = models.ForeignKey(Bundle, on_delete=models.CASCADE, related_name='upgrades')
+    number = models.PositiveIntegerField()
+    name = models.CharField(max_length=MAX_CHAR_FIELD)
+    title = models.CharField(max_length=MAX_CHAR_FIELD)
+    status = models.CharField(max_length=16, choices=STATUS_CHOICES, default=STATUS_APPLIED)
+    # Short notes from the migration, and the files it changed.
+    changes = models.JSONField(default=list, blank=True)
+    files = models.JSONField(default=list, blank=True)
+    error = models.TextField(blank=True, default='')
+    # page, check, submit, sweep or staff
+    source = models.CharField(max_length=16, blank=True, default='')
+    snapshot = models.CharField(max_length=MAX_CHAR_FIELD, blank=True, default='')
+    applied_at = models.DateTimeField(auto_now_add=True)
+    # When the owner dismissed the notice.
+    seen_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-applied_at', '-pk']
+
+    def __str__(self):
+        return '{:04d}_{} on {} ({})'.format(self.number, self.name, self.bundle_id, self.status)
+
+    def change_summary(self):
+        """The notes in plain words, repeats counted."""
+        from build.label_upgrades import describe
+        return describe(self.changes)
+
+    def files_summary(self):
+        """e.g. '2 labels and 1 inventory table'."""
+        from build.label_upgrades import files_phrase
+        return files_phrase(self.files)
+
+    def file_entries(self):
+        """The files as {'path', 'removed'}, for linking to the File Viewer."""
+        return [{'path': path[:-len(' (removed)')], 'removed': True} if path.endswith(' (removed)')
+                else {'path': path, 'removed': False} for path in self.files or []]
+
+
+class Citation_Contributor(models.Model):
+    """One author or editor of a citation, a person or an organization.
+
+    The citation in every label is written from these (build.bundle_setup.write_citation).
+    The two fixed ATM editors aren't stored, they're always added.
+    """
+
+    ROLE_CHOICES = (('author', 'Author'), ('editor', 'Editor'))
+    KIND_CHOICES = (('person', 'Person'), ('organization', 'Organization'))
+
+    citation = models.ForeignKey(Citation_Information, on_delete=models.CASCADE,
+                                 related_name='contributors')
+    role = models.CharField(max_length=8, choices=ROLE_CHOICES)
+    kind = models.CharField(max_length=12, choices=KIND_CHOICES)
+    position = models.PositiveIntegerField(default=0)
+    # Person
+    given_name = models.CharField(max_length=MAX_CHAR_FIELD, blank=True, default='')
+    family_name = models.CharField(max_length=MAX_CHAR_FIELD, blank=True, default='')
+    orcid = models.CharField(max_length=MAX_CHAR_FIELD, blank=True, default='')
+    affiliation = models.CharField(max_length=MAX_CHAR_FIELD, blank=True, default='')
+    # Organization
+    name = models.CharField(max_length=MAX_CHAR_FIELD, blank=True, default='')
+    rorid = models.CharField(max_length=MAX_CHAR_FIELD, blank=True, default='')
+    sequence_number = models.CharField(max_length=MAX_CHAR_FIELD, blank=True, default='')
+    parent_org_name = models.CharField(max_length=MAX_CHAR_FIELD, blank=True, default='')
+
+    class Meta:
+        ordering = ['role', 'kind', 'position', 'pk']
+
+    PERSON_FIELDS = ('given_name', 'family_name', 'orcid', 'affiliation')
+    ORG_FIELDS = ('name', 'rorid', 'sequence_number', 'parent_org_name')
+
+    def group(self):
+        return '{}_{}'.format(self.role, 'people' if self.kind == 'person' else 'orgs')
+
+    def as_row(self):
+        fields = self.PERSON_FIELDS if self.kind == 'person' else self.ORG_FIELDS
+        return {field: getattr(self, field) for field in fields}
+
+    def __str__(self):
+        if self.kind == 'person':
+            return '{} {} ({})'.format(self.given_name, self.family_name, self.role)
+        return '{} ({})'.format(self.name, self.role)
+
+
+@receiver(post_delete, sender=Bundle)
+def remove_upgrade_snapshots(sender, instance, **kwargs):
+    # Snapshots live outside the bundle directory, so delete them with the bundle.
+    from build.label_upgrades import snapshot_dir_for
+    shutil.rmtree(snapshot_dir_for(instance.pk), ignore_errors=True)

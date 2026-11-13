@@ -1,0 +1,103 @@
+{% load tz %}
+{% if label_updates %}
+<div class="modal fade" id="label_updates_modal" tabindex="-1" aria-labelledby="label_updates_modal_title" aria-hidden="true">
+   <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+      <div class="modal-content">
+         <div class="modal-header">
+            <h3 class="modal-title w-100 text-center" id="label_updates_modal_title">Changes made by ELSA</h3>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+         </div>
+         <div class="modal-body">
+            <p class="text-muted small">
+               When ELSA changes how it writes labels, it updates labels made earlier too, so every
+               bundle follows the same rules. These are the changes it made to this one. Open a
+               file to see it as it is now.
+            </p>
+            <ul class="list-group">
+               {% for update in label_updates %}
+               <li class="list-group-item">
+                  <div class="d-flex justify-content-between align-items-start gap-2">
+                     <strong>{{ update.title }}</strong>
+                     {% if update.status == 'restored' %}<span class="badge rounded-pill bg-secondary">Undone</span>{% endif %}
+                  </div>
+                  <div class="text-muted small mb-1">
+                     {% timezone "America/Denver" %}{{ update.applied_at|date:"F j, Y \a\t g:i A T" }}{% endtimezone %}
+                  </div>
+                  {% with notes=update.change_summary %}
+                  {% if notes %}
+                  <ul class="small mb-1 ps-3">
+                     {% for note in notes %}<li>{{ note }}</li>{% endfor %}
+                  </ul>
+                  {% endif %}
+                  {% endwith %}
+                  {% if update.files %}
+                  <details class="small mt-1">
+                     <summary>{{ update.files_summary|capfirst }}</summary>
+                     <ul class="mb-0 font-monospace text-break">
+                        {% for file in update.file_entries %}
+                        <li>{% if file.removed %}{{ file.path }} <span class="text-muted">(removed)</span>{% else %}<a href="#" role="button" class="label-update-file" data-path="{{ file.path }}">{{ file.path }}</a>{% endif %}</li>
+                        {% endfor %}
+                     </ul>
+                  </details>
+                  {% endif %}
+               </li>
+               {% endfor %}
+            </ul>
+         </div>
+         <div class="modal-footer">
+            <button type="button" class="btn btn-secondary btn-keep-bg" data-bs-dismiss="modal">Close</button>
+         </div>
+      </div>
+   </div>
+</div>
+<script>
+// Viewing the list counts as seeing the notice.
+(function () {
+   var modal = document.getElementById('label_updates_modal');
+   // Opened from the bell. Bootstrap may load after this script.
+   if (modal && window.location.hash === '#label_updates') {
+      document.addEventListener('DOMContentLoaded', function () {
+         if (window.bootstrap) { bootstrap.Modal.getOrCreateInstance(modal).show(); }
+      });
+   }
+   // A file name opens that file in the File Viewer. Files the tree doesn't list stay plain text.
+   if (modal) {
+      document.addEventListener('DOMContentLoaded', function () {
+         modal.querySelectorAll('.label-update-file').forEach(function (button) {
+            var path = button.getAttribute('data-path');
+            if (!window.openBundleFile || !window.openBundleFile.has(path)) {
+               var text = document.createElement('span');
+               text.textContent = path;
+               button.replaceWith(text);
+               return;
+            }
+            button.addEventListener('click', function (event) {
+               event.preventDefault();
+               modal.addEventListener('hidden.bs.modal', function () {
+                  window.openBundleFile(path);
+               }, {once: true});
+               bootstrap.Modal.getOrCreateInstance(modal).hide();
+            });
+         });
+      });
+   }
+   var form = document.querySelector('form.label-updates-dismiss');
+   if (!modal || !form) { return; }
+   function dismiss() {
+      var notice = document.getElementById('label_updates_notice');
+      fetch(form.action, {
+         method: 'POST', credentials: 'same-origin',
+         headers: {'X-Requested-With': 'XMLHttpRequest',
+                   'X-CSRFToken': form.querySelector('[name=csrfmiddlewaretoken]').value}
+      }).then(function (response) {
+         if (response.ok && notice) { notice.remove(); }
+      });
+   }
+   modal.addEventListener('shown.bs.modal', dismiss, {once: true});
+   form.addEventListener('submit', function (event) {
+      event.preventDefault();
+      dismiss();
+   });
+})();
+</script>
+{% endif %}

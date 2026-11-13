@@ -1,0 +1,75 @@
+{% extends 'friends/email/_layout.html' %}
+{% comment %}
+Sent to the node when a bundle is submitted or resubmitted. Built in
+build/views.py submit_bundle_internal. The text version is bundle_submitted.txt.
+{% endcomment %}
+{% block headline %}{{ headline }}{% endblock %}
+{% block lead %}{{ lead }}{% endblock %}
+{% block content %}
+<tr>
+  <td style="padding:24px 32px 0;">
+    <p style="margin:0 0 8px;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#888888;font-weight:bold;">Details</p>
+    <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="font-size:13px;color:#333333;">
+      <tr>
+        <td valign="top" width="32%" style="padding:6px 0;color:#777777;border-bottom:1px solid #f0f0f0;">Bundle</td>
+        <td valign="top" style="padding:6px 0;border-bottom:1px solid #f0f0f0;word-break:break-word;font-weight:bold;">{{ bundle.name }}</td>
+      </tr>
+      <tr>
+        <td valign="top" style="padding:6px 0;color:#777777;border-bottom:1px solid #f0f0f0;">Bundle type</td>
+        <td valign="top" style="padding:6px 0;border-bottom:1px solid #f0f0f0;">{{ bundle.bundle_type }}</td>
+      </tr>
+      <tr>
+        <td valign="top" style="padding:6px 0;color:#777777;border-bottom:1px solid #f0f0f0;">Submitted by</td>
+        <td valign="top" style="padding:6px 0;border-bottom:1px solid #f0f0f0;word-break:break-word;">{{ submitter }}{% if submitter_email %}<br><a href="mailto:{{ submitter_email }}" style="color:#1f8a7f;text-decoration:none;">{{ submitter_email }}</a>{% endif %}</td>
+      </tr>
+      <tr>
+        <td valign="top" style="padding:6px 0;color:#777777;border-bottom:1px solid #f0f0f0;">Submitted</td>
+        <td valign="top" style="padding:6px 0;border-bottom:1px solid #f0f0f0;">{{ submitted }}{% if is_resubmission %} (resubmission){% endif %}</td>
+      </tr>
+      <tr>
+        <td valign="top" style="padding:6px 0;color:#777777;">On the server</td>
+        <td valign="top" style="padding:6px 0;font-size:12px;font-family:Menlo,Consolas,monospace;color:#1d3f3c;word-break:break-all;">{{ archive_path }}</td>
+      </tr>
+    </table>
+  </td>
+</tr>
+
+{% with tone=validation.tone %}
+<tr>
+  <td style="padding:24px 32px 0;">
+    <p style="margin:0 0 8px;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#888888;font-weight:bold;">PDS validation</p>
+    <div style="border-radius:4px;padding:14px 18px;{% if tone == 'ok' %}background-color:#edf7ee;border-left:4px solid #2e7d32;{% elif tone == 'attention' %}background-color:#fff8e1;border-left:4px solid #b26a00;{% elif tone == 'info' %}background-color:#eef7f6;border-left:4px solid #2bbbad;{% else %}background-color:#f8f8f8;border-left:4px solid #bbbbbb;{% endif %}">
+      <p style="margin:0;font-size:14px;color:#333333;line-height:1.6;">{{ validation.headline|capfirst }}</p>
+      {% for group in validation.groups %}
+      <p style="margin:12px 0 4px;font-size:13px;font-weight:bold;color:{% if tone == 'attention' and forloop.first %}#7a5d00{% else %}#333333{% endif %};">{{ group.title }}</p>
+      <ul style="margin:0;padding-left:20px;font-size:13px;color:#333333;line-height:1.6;">
+        {% for item in group.items %}<li style="word-break:break-word;">{{ item }}</li>{% endfor %}
+      </ul>
+      {% endfor %}
+      {% for note in validation.notes %}
+      <p style="margin:8px 0 0;font-size:13px;color:{% if tone == 'ok' %}#2e7d32{% else %}#666666{% endif %};line-height:1.5;">{{ note }}</p>
+      {% endfor %}
+    </div>
+  </td>
+</tr>
+{% endwith %}
+
+{% if case_url %}
+<tr>
+  <td style="padding:28px 32px 4px;" align="center">
+    <a href="{{ case_url }}" style="display:inline-block;background-color:#008080;color:#ffffff;text-decoration:none;font-weight:bold;font-size:15px;padding:12px 28px;border-radius:6px;">Review in the Admin Console</a>
+  </td>
+</tr>
+<tr>
+  <td style="padding:12px 32px 28px;">
+    <p style="margin:0;font-size:12px;color:#888888;line-height:1.5;">Review the files, the validate report and what changed since the last submission there, without downloading anything. Sign in with your ELSA staff account and confirm with your passkey if it asks. Reply to this email to write to the submitter.</p>
+  </td>
+</tr>
+{% else %}
+<tr>
+  <td style="padding:24px 32px 28px;">
+    <p style="margin:0;font-size:12px;color:#888888;line-height:1.5;">The Admin Console is not set up on this server. The bundle is in the folder above. Reply to this email to write to the submitter.</p>
+  </td>
+</tr>
+{% endif %}
+{% endblock %}

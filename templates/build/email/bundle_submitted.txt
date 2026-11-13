@@ -1,0 +1,30 @@
+{% autoescape off %}ELSA -- Educational Labeling System @Atmospheres
+
+{{ headline }}
+
+{{ lead }}
+
+Bundle: {{ bundle.name }}
+User: {{ submitter }}{% if submitter_email %} ({{ submitter_email }}){% endif %}
+Bundle Type: {{ bundle.bundle_type }}
+Submitted: {{ submitted }}
+
+Archive Path:
+{{ archive_path }}
+
+{{ validation_text }}
+
+{% if case_url %}Review in the Admin Console:
+{{ case_url }}
+
+Review the files, the validate report and what changed since the last
+submission there, without downloading anything. Sign in with your ELSA staff
+account and confirm with your passkey if it asks.{% else %}The Admin Console is not set up on this server. The bundle is in the folder
+above.{% endif %}
+
+Reply to this email to write to the submitter.
+
+--
+Sent automatically by ELSA, Planetary Data System Atmospheres Node,
+New Mexico State University.
+{% endautoescape %}

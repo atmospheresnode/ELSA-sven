@@ -85,7 +85,7 @@ keeps the translation table honest.
                   <span class="badge bg-secondary">Queued</span>
                 {% endif %}
                 {% if run.is_stale %}
-                  <span class="badge bg-warning text-dark" title="The bundle changed after this run">Stale</span>
+                  <span class="badge bg-warning text-dark" title="{% if run.stale_because_of_checks %}ELSA's checks changed after this run{% else %}The bundle changed after this run{% endif %}">Stale</span>
                 {% endif %}
               </td>
               <td class="text-end">{{ run.error_count }}</td>

@@ -202,6 +202,8 @@ ACTION_LABELS = {
     'broadcast.resume': 'Resumed sending an email to users',
     'broadcast.done': 'Finished sending an email to users',
     'validate.start': 'Started PDS validate',
+    'bundle.label_upgrade': 'Applied label updates to a bundle',
+    'bundle.label_upgrade_undo': 'Undid a label update',
     'validate.cancel': 'Cancelled a validate run',
     'validate.reap': 'Cleared stuck validate runs',
     'assistant.on': 'Switched the Assistant on',

@@ -1,0 +1,43 @@
+{% extends 'staff/base.html' %}
+
+{% block console %}
+<p class="mb-2"><a href="{% url 'staff:bundle' bundle.pk %}" class="staff-muted"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>{{ bundle.name }}</a></p>
+<h1 class="staff-title">Label updates for {{ bundle.name }}</h1>
+<p class="staff-subtitle">What the waiting updates would change, worked out on a copy. Nothing in the bundle has changed.</p>
+
+<style>
+    .label-diff { max-height: 32rem; overflow: auto; font-size: 0.78rem; line-height: 1.45; margin: 0; white-space: pre; }
+    .label-diff span { display: block; min-height: 1.45em; }
+    .label-diff .add { background: #e6f4ea; }
+    .label-diff .del { background: #fdecea; }
+    .label-diff .hunk { color: #6c757d; }
+    .label-diff .file { font-weight: 600; }
+</style>
+
+{% for result in results %}
+<section class="staff-card" aria-labelledby="update-{{ result.number }}">
+    <div class="staff-card-head">
+        <h2 id="update-{{ result.number }}">{{ result.number|stringformat:"04d" }}</h2>
+        <p>{{ result.title }}</p>
+    </div>
+    {% if result.error %}
+    <div class="staff-warning mb-0"><strong>This update would fail.</strong> <span class="staff-mono">{{ result.error|truncatechars:600 }}</span></div>
+    {% elif not result.diff %}
+    <p class="staff-muted mb-0">Nothing to change in this bundle.</p>
+    {% else %}
+    {% if result.notes %}<ul class="mb-3 ps-3">{% for note in result.notes %}<li>{{ note }}</li>{% endfor %}</ul>{% endif %}
+    <pre class="label-diff staff-mono">{% for line, kind in result.lines %}<span class="{{ kind }}">{{ line }}</span>{% endfor %}</pre>
+    {% endif %}
+</section>
+{% empty %}
+<div class="staff-card"><p class="staff-empty mb-0">Nothing is waiting. The labels are up to date.</p></div>
+{% endfor %}
+
+{% if results and can.review %}
+<form method="post" action="{% url 'staff:bundle_label_upgrade' bundle.pk %}" class="d-flex gap-2" data-once>
+    {% csrf_token %}
+    <a href="{% url 'staff:bundle' bundle.pk %}" class="btn btn-sm staff-btn-ghost">Back</a>
+    <button type="submit" class="btn btn-sm staff-btn">Update labels now</button>
+</form>
+{% endif %}
+{% endblock %}

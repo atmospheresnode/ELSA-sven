@@ -53,14 +53,15 @@ def _upload_paths():
     return [settings.ARCHIVE_DIR, settings.MEDIA_ROOT, temp_dir]
 
 
-def check_space(total_bytes):
+def check_space(total_bytes, paths=None):
     """Whether every filesystem can take total_bytes plus the margin.
 
-    Returns ok, needed and available. A path we can't inspect is skipped.
+    paths defaults to where a form upload lands. Returns ok, needed and available. A path we
+    can't inspect is skipped.
     """
     tightest = None
     seen_devices = set()
-    for path in _upload_paths():
+    for path in (paths or _upload_paths()):
         try:
             device = os.stat(path).st_dev
             if device in seen_devices:

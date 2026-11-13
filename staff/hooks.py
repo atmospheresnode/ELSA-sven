@@ -132,11 +132,25 @@ def forget_requester(user):
 
 def case_url(request, case):
     """Absolute console link for a staff email, or '' if there is no case."""
-    if case is None:
+    if case is None or not routed():
         return ''
     try:
         from django.urls import reverse
         return request.build_absolute_uri(reverse('staff:case', args=[case.pk]))
+    except Exception:
+        return ''
+
+
+def staff_download_path(user, bundle):
+    """Console download for a staff member opening someone else's bundle download, or ''."""
+    if not routed() or bundle is None:
+        return ''
+    try:
+        from django.urls import reverse
+        from . import roles
+        if not roles.is_member(user):
+            return ''
+        return reverse('staff:bundle_download', args=[bundle.pk])
     except Exception:
         return ''
 
@@ -315,6 +329,54 @@ def recent_requests(user, limit=3):
     except Exception:
         logger.exception('could not list requests for user %s', getattr(user, 'pk', None))
         return None
+
+
+def _site_path(path):
+    """reverse() has no mount point outside a request (cron), so add the one ELSA_BASE_URL has."""
+    from urllib.parse import urlparse
+
+    from django.conf import settings
+    from django.urls import get_script_prefix
+    if get_script_prefix() != '/':
+        return path
+    base = getattr(settings, 'ELSA_BASE_URL', '') or ('' if settings.DEBUG else 'https://atmos.nmsu.edu/elsa')
+    mount = urlparse(base).path.rstrip('/')
+    if mount and not path.startswith(mount + '/'):
+        return mount + path
+    return path
+
+
+def tell_owner_labels_updated(bundle, title, body, path):
+    """Bell notice for the owner after ELSA updated their bundle's labels. Not emailed."""
+    if not installed() or not bundle.user.is_active:
+        return None
+    try:
+        from .models import Notification
+        return Notification.objects.create(user=bundle.user, kind=Notification.UPDATE,
+                                           title=title[:200], body=body[:300], url=_site_path(path))
+    except Exception:
+        logger.exception('could not record the label update notice for bundle %s', bundle.pk)
+        return None
+
+
+def mark_label_notices_read(bundle, path):
+    """The owner saw the changes on the bundle page, so the bell notices about them are read."""
+    if not installed():
+        return 0
+    try:
+        from django.urls import get_script_prefix
+        from django.utils import timezone
+        from .models import Notification
+        # Notices written by cron carry the mount and page views may not, so match the tail.
+        prefix = get_script_prefix().rstrip('/')
+        if prefix and path.startswith(prefix + '/'):
+            path = path[len(prefix):]
+        return Notification.objects.filter(
+            user=bundle.user, kind=Notification.UPDATE, read_at__isnull=True,
+            url__endswith=path).update(read_at=timezone.now())
+    except Exception:
+        logger.exception('could not clear the label update notices for bundle %s', bundle.pk)
+        return 0
 
 
 def bell(user, limit=6):

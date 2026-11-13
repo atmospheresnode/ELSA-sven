@@ -93,6 +93,46 @@
 </div>
             {% else %}<p class="staff-muted mb-0">Never run.</p>{% endif %}
         </section>
+
+        <section class="staff-card" aria-labelledby="labels-heading">
+            <div class="staff-card-head">
+                <h2 id="labels-heading">Label updates</h2>
+                <p>{% if label_pending %}{{ label_pending|length }} waiting.{% if bundle.submitted_at %} Submitted bundles aren't updated by themselves.{% endif %}{% else %}Up to date.{% endif %}</p>
+                {% if can.review and on_disk and label_pending %}
+                <form method="post" action="{% url 'staff:bundle_label_upgrade' bundle.pk %}" class="staff-card-tools d-flex gap-2" data-once>
+                    {% csrf_token %}
+                    <a href="{% url 'staff:bundle_label_preview' bundle.pk %}" class="btn btn-sm staff-btn-ghost">Preview</a>
+                    <button type="submit" class="btn btn-sm staff-btn">{% if label_failed %}Try again{% else %}Update labels now{% endif %}</button>
+                </form>
+                {% endif %}
+            </div>
+            {% if label_failed %}
+            <div class="staff-warning mb-3"><strong>Update {{ label_failed.number|stringformat:"04d" }} failed {{ label_failed.applied_at|ago }}.</strong> The files were put back and the owner can't submit until it goes through. <span class="staff-mono">{{ label_failed.error|truncatechars:300 }}</span></div>
+            {% endif %}
+            {% if label_pending %}
+            <ul class="mb-3 ps-3">
+                {% for migration in label_pending %}<li>{{ migration.number|stringformat:"04d" }} <span class="staff-muted">{{ migration.title }}</span></li>{% endfor %}
+            </ul>
+            {% endif %}
+            {% if label_upgrades %}
+            <div class="table-responsive">
+            <table class="staff-table">
+                <thead><tr><th>Update</th><th>Result</th><th>Files</th><th>When</th><th></th></tr></thead>
+                <tbody>
+                {% for row in label_upgrades %}
+                <tr>
+                    <td>{{ row.number|stringformat:"04d" }} <span class="staff-muted">{{ row.title }}</span>{% with notes=row.change_summary %}{% if notes %}<div class="staff-muted small">{{ notes|join:"; " }}</div>{% endif %}{% endwith %}</td>
+                    <td>{{ row.get_status_display }}{% if row.error %} <span class="staff-muted">{{ row.error|truncatechars:160 }}</span>{% endif %}</td>
+                    <td>{{ row.files|length }}</td>
+                    <td class="text-nowrap">{{ row.applied_at|ago }} <span class="staff-muted">({{ row.source }})</span></td>
+                    <td class="text-end">{% if can.review and label_undo and row.pk == label_undo.pk and row.snapshot %}<button type="button" class="btn btn-sm staff-btn-ghost" data-bs-toggle="modal" data-bs-target="#undoLabelUpdateModal">Undo</button>{% endif %}</td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            </div>
+            {% else %}<p class="staff-muted mb-0">ELSA hasn't changed this bundle's labels by itself.</p>{% endif %}
+        </section>
     </div>
 
     <div>
@@ -133,6 +173,22 @@
                 <p class="staff-muted mt-2 mb-0">It starts a conversation they see under the bell, and is emailed unless they switched email off.</p>
             </div>
             <div class="modal-footer"><button type="button" class="btn staff-btn-ghost" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn staff-btn-primary">Send</button></div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+{% if can.review and label_undo and label_undo.snapshot %}
+<div class="modal fade" id="undoLabelUpdateModal" tabindex="-1" aria-labelledby="undoLabelUpdateLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form class="modal-content" method="post" action="{% url 'staff:bundle_label_upgrade_undo' bundle.pk label_undo.pk %}" data-once>
+            {% csrf_token %}
+            <div class="modal-header"><h5 class="modal-title" id="undoLabelUpdateLabel">Undo label update {{ label_undo.number|stringformat:"04d" }}?</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+            <div class="modal-body">
+                <p>This puts back the {{ label_undo.files_summary }} it changed, as they were before the update on {{ label_undo.applied_at|localtime|date:"M j, Y \a\t g:i A T" }}. Anything the owner changed in those files since is lost.</p>
+                <p class="staff-muted mb-0">The update won't run again by itself.</p>
+            </div>
+            <div class="modal-footer"><button type="button" class="btn staff-btn-ghost" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-danger btn-keep-bg">Undo it</button></div>
         </form>
     </div>
 </div>

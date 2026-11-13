@@ -4,6 +4,9 @@
 {% block console %}
 <h1 class="staff-title">Bundles</h1>
 <p class="staff-subtitle">Every bundle in ELSA, most recently changed first. Read-only: owners make their own changes.</p>
+{% if failed_count and labels != 'failed' %}
+<div class="staff-warning mb-3">{{ failed_count }} bundle{{ failed_count|pluralize }} {{ failed_count|pluralize:"has,have" }} a label update that failed, and can't be submitted until it goes through. <a href="{% url 'staff:bundles' %}?labels=failed">Show {{ failed_count|pluralize:"it,them" }}</a></div>
+{% endif %}
 
 <div class="staff-card">
     {% include 'staff/_saved_views.html' %}
@@ -14,12 +17,17 @@
             <option value="Archive" {% if bundle_type == 'Archive' %}selected{% endif %}>Archive</option>
             <option value="External" {% if bundle_type == 'External' %}selected{% endif %}>External</option>
         </select>
+        <select name="labels" class="form-select form-select-sm" aria-label="Labels">
+            <option value="">Any labels</option>
+            <option value="failed" {% if labels == 'failed' %}selected{% endif %}>Label update failed</option>
+            <option value="behind" {% if labels == 'behind' %}selected{% endif %}>Label updates waiting</option>
+        </select>
         <div class="form-check ms-1">
             <input class="form-check-input" type="checkbox" name="submitted" value="1" id="only-submitted" {% if submitted %}checked{% endif %}>
             <label class="form-check-label" for="only-submitted">Submitted only</label>
         </div>
         <button type="submit" class="btn btn-sm staff-btn" data-live-hide>Filter</button>
-        {% if query or bundle_type or submitted %}<a href="{% url 'staff:bundles' %}" class="btn btn-sm staff-btn-ghost">Clear</a>{% endif %}
+        {% if query or bundle_type or submitted or labels %}<a href="{% url 'staff:bundles' %}" class="btn btn-sm staff-btn-ghost">Clear</a>{% endif %}
     </form>
     <div id="bundles-results">
     {% if page.object_list %}
@@ -29,7 +37,7 @@
             <tbody>
             {% for bundle in page %}
             <tr>
-                <td><a href="{% url 'staff:bundle' bundle.pk %}">{{ bundle.name }}</a></td>
+                <td><a href="{% url 'staff:bundle' bundle.pk %}">{{ bundle.name }}</a>{% if bundle.label_update_failed %} <span class="badge rounded-pill text-bg-warning">Label update failed</span>{% endif %}</td>
                 <td><a href="{% url 'staff:user' bundle.user.pk %}">{{ bundle.user.username }}</a></td>
                 <td>{{ bundle.bundle_type }}</td>
                 <td class="text-nowrap">{{ bundle.updated_at|ago }}</td>

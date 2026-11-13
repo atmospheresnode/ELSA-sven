@@ -149,7 +149,7 @@ class SubmissionEmailSummaryTests(TestCase):
         self.client.post(
             reverse('build:submit_bundle_internal', args=[self.bundle.pk]))
         body = mail.outbox[0].body
-        for expected in ('Bundle: email bundle', 'Archive Path:', 'Download URL:'):
+        for expected in ('Bundle: email bundle', 'Archive Path:', 'Review in the Admin Console:'):
             self.assertIn(expected, body)
 
     def test_repeated_items_name_the_thing_they_are_about(self):
