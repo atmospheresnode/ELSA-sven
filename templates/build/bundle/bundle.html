@@ -278,7 +278,7 @@
                {% include 'build/bundle/_label_updates_link.html' %}
                <p class="card-body text-left z-depth-2">
                   Welcome to your Bundle View. Here you have the ability to edit and adjust parts of your bundle.
-                  In this section you have the ability to Delete your bundle should you need to and Download the entire bundle template set as a zip file.
+                  In this section you have the ability to Delete your bundle should you need to and Download it as a .tar file, whole or in parts.
                   Global settings in your bundle handled in the Investigation Area OR Context Product references can be edited here.
                   
                   <div class="bundle-actions">
@@ -287,10 +287,7 @@
                         Delete Bundle
                      </button>
 
-                     <a class="bundle-action bundle-action-download" href="{% url 'build:bundle_download' bundle.pk %}">
-                        <i class="bi bi-download" aria-hidden="true"></i>
-                        Download Bundle
-                     </a>
+                     {% include 'build/bundle/_download_menu.html' with button_class='bundle-action bundle-action-download' %}
                   </div>
                </p>
             </div>
@@ -2006,12 +2003,12 @@
                {% include 'build/bundle/_label_updates_link.html' %}
                <p class="card-body text-left z-depth-2">
                   Welcome to your Bundle View. Here you have the ability to edit and adjust parts of your bundle.
-                  In this section you have the ability to Delete your bundle should you need to and Download the entire bundle template set as a zip file.
+                  In this section you have the ability to Delete your bundle should you need to and Download it as a .tar file, whole or in parts.
                   Global settings in your bundle handled in the Investigation Area OR Context Product references can be edited here.
                   
                   <div class="col p-1 m-3 mt-0 text-center">
                      <a class="btn btn-danger text-light btn-keep-bg" data-bs-toggle="modal" data-bs-target="#delete_modal" aria-expanded="false" style="box-shadow: none;">Delete Bundle</a>
-                     <a class="btn btn-success text-light btn-keep-bg" href="{% url 'build:bundle_download' bundle.pk %}" aria-expanded="false" style="box-shadow: none;">Download Bundle</a>
+                     {% include 'build/bundle/_download_menu.html' with button_class='btn btn-success text-light btn-keep-bg' button_style='box-shadow: none;' %}
                   </div>
                </p>
             </div>

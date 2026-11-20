@@ -63,6 +63,26 @@
             </form>
             {% endif %}
         </section>
+
+        <section class="staff-card" aria-labelledby="label-sweep-heading" id="label-sweep">
+            <div class="staff-card-head"><h2 id="label-sweep-heading">Automatic label update</h2><p>Runs once a day and brings old bundles' labels up to date.</p></div>
+            {% if label_sweep.problem %}<p class="staff-warning">{{ label_sweep.problem }}</p>{% endif %}
+            <dl class="staff-rows">
+                {% if label_sweep.started_at %}
+                <dt>Last run</dt><dd>{{ label_sweep.started_at|ago }}{% if label_sweep.account %}, as {{ label_sweep.account }}{% endif %}</dd>
+                <dt>Result</dt><dd>{% if label_sweep.finished_at %}{{ label_sweep.done }} bundle{{ label_sweep.done|pluralize }} done, {{ label_sweep.changed }} change{{ label_sweep.changed|pluralize }}{% if label_sweep.busy %}, {{ label_sweep.busy }} busy{% endif %}{% if label_sweep.failed %} <span class="badge rounded-pill bg-danger">{{ label_sweep.failed }} failed</span>{% endif %}{% elif label_sweep.error %}Stopped with an error{% else %}Not finished{% endif %}</dd>
+                {% else %}
+                <dt>Last run</dt><dd>No run recorded yet</dd>
+                {% endif %}
+                <dt>Bundles behind</dt><dd>{{ labels_behind }} <span class="staff-muted">not submitted</span>{% if labels_behind %} <a href="{% url 'staff:bundles' %}?labels=behind">Show</a>{% endif %}</dd>
+            </dl>
+            {% if label_sweep_log %}
+            <details class="mt-2"><summary>Log of the last run</summary>
+                <pre class="staff-request mt-2 mb-1">{{ label_sweep_log }}</pre>
+                <div class="staff-muted small">From <code>label_upgrades/sweep.log</code> on the server.</div>
+            </details>
+            {% endif %}
+        </section>
     </div>
     <div>
         <section class="staff-card" aria-labelledby="admins-heading">

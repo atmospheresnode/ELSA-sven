@@ -18,7 +18,7 @@ from django.views.decorators.http import require_POST
 
 from build import document_files, netcdf_header, preflight, validate_report, validate_rules, validate_runner
 from staff import hooks as staff_hooks
-from build.downloads import bundle_tarball_response
+from build import downloads
 from build import bundle_setup, creation, label_upgrades, netcdf_uploads, walkthrough
 from build.label_repair import AMA_LID
 from django.shortcuts import render, redirect, get_object_or_404
@@ -2671,12 +2671,13 @@ def netcdf_file(request, pk_bundle, pk_netcdf):
     if path is None:
         raise Http404('This NetCDF file is no longer on disk.')
 
-    # FileResponse streams in blocks, so a multi-gigabyte file never sits in memory.
-    response = FileResponse(open(path, 'rb'), as_attachment=True,
-                            filename=os.path.basename(path), content_type='application/x-netcdf')
-    response['X-Content-Type-Options'] = 'nosniff'
-    response['Cache-Control'] = 'private, no-cache'
-    return response
+    # Sent in blocks, so a multi-gigabyte file never sits in memory, and a dropped download resumes.
+    try:
+        return downloads.file_response(request, path, os.path.basename(path), 'application/x-netcdf')
+    except downloads.DownloadsBusy:
+        return downloads.busy_response(request, reverse('build:bundle', kwargs={'pk_bundle': bundle.pk}))
+    except OSError:
+        raise Http404('This NetCDF file is no longer on disk.')
 
 
 @login_required
@@ -3224,7 +3225,7 @@ def submit_bundle_internal(request, pk_bundle):
 
 @login_required
 def bundle_download(request, pk_bundle):
-    """The bundle folder as a .tar.gz for its owner."""
+    """The bundle, or part of it (?part=), as a .tar for its owner. See build/downloads.py."""
     bundle = get_object_or_404(Bundle, pk=pk_bundle)
 
     if request.user != bundle.user:
@@ -3235,13 +3236,25 @@ def bundle_download(request, pk_bundle):
             return HttpResponseRedirect(console)
         return redirect('main:restricted_access')
 
-    directory = bundle.directory()
-    if not bundle.directory_is_contained() or not os.path.isdir(directory):
+    back = reverse('build:bundle', kwargs={'pk_bundle': bundle.pk})
+    folder = downloads.bundle_folder(bundle) if bundle.directory_is_contained() else None
+    if folder is None:
         messages.error(request, 'The files for this bundle could not be found on the server. '
                                 'Please contact the ELSA team.')
-        return HttpResponseRedirect(reverse('build:bundle', kwargs={'pk_bundle': bundle.pk}))
-
-    return bundle_tarball_response(directory)
+        return HttpResponseRedirect(back)
+    try:
+        response = downloads.bundle_response(request, folder, request.GET.get('part', downloads.PART_ALL),
+                                             request.GET.get('collection', ''))
+    except downloads.DownloadsBusy:
+        return downloads.busy_response(request, back)
+    except OSError as error:
+        print('bundle download {}: {}'.format(bundle.pk, error))
+        messages.error(request, "ELSA couldn't read this bundle's files on the server. "
+                                'Please contact the ELSA team.')
+        return HttpResponseRedirect(back)
+    if response is None:
+        raise Http404('No such part of this bundle.')
+    return response
 
 
 # The bundle_delete view is the page a user sees once they select the delete bundle button.  This view gives the user an option to confirm or take back their choice.  This view could be improved upon.

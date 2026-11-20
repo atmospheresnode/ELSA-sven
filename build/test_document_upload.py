@@ -459,10 +459,12 @@ class UploadViewTests(TestCase):
         return url + '?download=1' if download else url
 
     def body(self, response):
+        from build.test_downloads import close
         try:
             return b''.join(response.streaming_content)
         finally:
-            response.close()
+            # Closing fires request_finished; on MariaDB that would close the test's connection.
+            close(response)
 
     def test_the_owner_sees_a_pdf_in_place_on_both_bundle_types(self):
         for bundle_type, add in (('External', self.add_external),

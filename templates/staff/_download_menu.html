@@ -1,0 +1,15 @@
+{% load download_tags %}{% download_choices bundle as options %}
+{% if options %}
+<div class="dropdown">
+    <button class="btn btn-sm staff-btn-ghost dropdown-toggle" type="button" id="download-menu-{{ bundle.pk }}" data-bs-toggle="dropdown" aria-expanded="false">Download</button>
+    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="download-menu-{{ bundle.pk }}">
+        {% for option in options %}
+        {% if option.part == 'collection' %}{% ifchanged option.part %}<li><hr class="dropdown-divider"></li>{% endifchanged %}{% endif %}
+        <li><a class="dropdown-item" href="{% url 'staff:bundle_download' bundle.pk %}?part={{ option.part }}{% if option.collection %}&amp;collection={{ option.collection|urlencode }}{% endif %}">
+            {{ option.title }} <span class="staff-muted">.tar, {{ option.size|filesizeformat }}</span>
+            <div class="small staff-muted">{{ option.note }}</div>
+        </a></li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}

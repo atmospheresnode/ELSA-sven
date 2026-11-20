@@ -884,6 +884,12 @@ def run_validation(request, bundle, tier):
     return run
 
 
+def _label_upgrade_error(doing, error):
+    """What stopped a label update, said so staff know what to do next."""
+    from build import label_upgrades
+    return "ELSA couldn't {}. {}".format(doing, label_upgrades.explain(error))
+
+
 def apply_label_upgrades(request, bundle):
     """Bring a bundle's labels up to date, submitted or not."""
     from build import label_upgrades
@@ -893,6 +899,9 @@ def apply_label_upgrades(request, bundle):
                                              include_submitted=True, wait_seconds=30)
     except label_upgrades.UpgradeBusy:
         raise ActionError('This bundle is already being updated. Try again in a minute.')
+    except Exception as error:                           # noqa: BLE001 - shown, not a server error
+        logger.exception('label update of bundle %s failed', bundle.pk)
+        raise ActionError(_label_upgrade_error("update this bundle's labels", error))
     audit.record(request, 'bundle.label_upgrade', bundle,
                  changes={'upgrades': [row.pk for row in rows], 'revision': bundle.label_revision})
     return rows
@@ -907,6 +916,9 @@ def undo_label_upgrade(request, row):
         raise ActionError(str(error))
     except label_upgrades.UpgradeBusy:
         raise ActionError('This bundle is being updated right now. Try again in a minute.')
+    except Exception as error:                           # noqa: BLE001 - shown, not a server error
+        logger.exception('undo of label update %s failed', row.pk)
+        raise ActionError(_label_upgrade_error('undo that change', error))
     audit.record(request, 'bundle.label_upgrade_undo', row.bundle,
                  changes={'upgrade': row.pk, 'migration': row.number})
     return row

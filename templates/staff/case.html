@@ -373,7 +373,7 @@
             {% endif %}
             <div class="d-flex flex-wrap gap-2 mt-3">
                 <a class="btn btn-sm staff-btn" href="{% url 'staff:bundle_files' facts.bundle.pk %}">Browse files</a>
-                <a class="btn btn-sm staff-btn-ghost" href="{% url 'staff:bundle_download' facts.bundle.pk %}">Download .tar.gz</a>
+                {% include 'staff/_download_menu.html' with bundle=facts.bundle %}
             </div>
         </section>
         {% endif %}

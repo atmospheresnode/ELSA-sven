@@ -25,8 +25,7 @@ from django.utils.dateparse import parse_date
 from django.utils.http import url_has_allowed_host_and_scheme, urlencode
 from django.views.decorators.http import require_POST
 
-from build import label_migrations, label_upgrades, preflight, validate_report
-from build.downloads import bundle_tarball_response
+from build import downloads, label_migrations, label_upgrades, preflight, validate_report
 from build.models import Bundle, ValidationRun
 from friends import passkeys, throttle
 from friends.models import AccountEvent, UserProfile, UserSession
@@ -812,9 +811,11 @@ def bundles(request):
         Bundle.objects.filter(pk__in=[b.pk for b in page.object_list])).values_list('pk', flat=True))
     for item in page.object_list:
         item.label_update_failed = item.pk in failed_here
+    label_upgrades.alert_if_sweep_stopped()
     return render(request, 'staff/bundles.html', _console_context(
         request, section='bundles', page=page, query=query, labels=labels,
         failed_count=label_upgrades.failed_bundles().count(),
+        sweep_problem=label_upgrades.sweep_status()['problem'],
         bundle_type=bundle_type, submitted=submitted,
         saved_views=_saved_views(request, 'staff:bundles'), view_page='staff:bundles'))
 
@@ -865,23 +866,28 @@ def _diff_class(line):
     return {'+': 'add', '-': 'del'}.get(line[:1], '')
 
 
-def _inside_archive(path):
-    root = os.path.realpath(settings.ARCHIVE_DIR)
-    real = os.path.realpath(path)
-    return real == root or real.startswith(root + os.sep)
-
-
 @console_view()
 @limited('download')
 def bundle_download(request, pk):
-    """Bundle as a .tar.gz for review, in a temp file that's deleted when the response closes."""
+    """The bundle, or part of it (?part=), as a .tar made while it is sent. See build/downloads.py."""
     bundle = get_object_or_404(Bundle, pk=pk)
-    directory = bundle.directory()
-    if not _inside_archive(directory) or not os.path.isdir(directory):
+    folder = downloads.bundle_folder(bundle)
+    if folder is None:
         raise Http404('The bundle folder is missing.')
-
-    response = bundle_tarball_response(directory)
-    audit.record(request, 'bundle.download', bundle)
+    part = request.GET.get('part', downloads.PART_ALL)
+    collection = request.GET.get('collection', '')
+    try:
+        response = downloads.bundle_response(request, folder, part, collection)
+    except downloads.DownloadsBusy:
+        return downloads.busy_response(request, reverse('staff:bundle', args=[bundle.pk]))
+    except OSError as error:
+        messages.error(request, "ELSA couldn't read this bundle's files: {}".format(error))
+        return redirect('staff:bundle', pk=bundle.pk)
+    if response is None:
+        raise Http404('No such part of this bundle.')
+    if getattr(response, 'fresh', False):
+        audit.record(request, 'bundle.download', bundle, changes={
+            'part': part, 'collection': collection, 'bytes': response['Content-Length']})
     return response
 
 
@@ -987,6 +993,7 @@ def health(request):
     except Exception:
         validate_version = ''
 
+    label_upgrades.alert_if_sweep_stopped()
     security = None
     if roles.has(request.user, roles.MANAGE_ACCOUNTS):
         from . import selfcheck
@@ -1017,4 +1024,8 @@ def health(request):
         queued_runs=runs.filter(status=ValidationRun.STATUS_QUEUED).select_related('bundle')[:20],
         inbound_on=bool(comms.inbound_address()),
         mail_logging=settings.EMAIL_BACKEND == 'staff.mail_log.LoggingBackend',
+        label_sweep=label_upgrades.sweep_status(),
+        label_sweep_log=label_upgrades.sweep_log(),
+        labels_behind=Bundle.objects.filter(label_revision__lt=label_migrations.head(),
+                                            submitted_at__isnull=True).count(),
     ))
