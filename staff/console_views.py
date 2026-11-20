@@ -7,6 +7,7 @@ Every change is one call into actions or campaigns.
 from __future__ import unicode_literals
 
 import csv
+import mimetypes
 import os
 from collections import Counter, OrderedDict
 from datetime import timedelta
@@ -14,12 +15,14 @@ from datetime import timedelta
 from django.contrib import messages
 from django.contrib.auth.models import User
 from django.db.models import Count, Q
-from django.http import FileResponse, Http404, HttpResponse
+from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from django.views.decorators.http import require_POST
 
+from build import downloads
 from build.models import Bundle, ValidationRun
 
 from . import actions, audit, broadcasts, campaigns, review, roles
@@ -164,13 +167,18 @@ def bundle_file_download(request, pk):
     target = review.resolve(bundle, request.GET.get('path', ''))
     if target is None:
         raise Http404('No such file in this bundle.')
+    name = os.path.basename(target)
     try:
-        # O_NOFOLLOW: if the file was swapped for a link after the check, refuse.
-        handle = os.fdopen(os.open(target, os.O_RDONLY | getattr(os, 'O_NOFOLLOW', 0)), 'rb')
+        # Refuses a link, if the file was swapped for one after the check. Resumes a dropped download.
+        response = downloads.file_response(request, target, name,
+                                           mimetypes.guess_type(name)[0] or 'application/octet-stream')
+    except downloads.DownloadsBusy:
+        return downloads.busy_response(request, reverse('staff:bundle_files', args=[bundle.pk]))
     except OSError:
         raise Http404('No such file in this bundle.')
-    audit.record(request, 'bundle.file', bundle, changes={'path': request.GET.get('path', '')[:300]})
-    return FileResponse(handle, as_attachment=True, filename=os.path.basename(target))
+    if getattr(response, 'fresh', False):
+        audit.record(request, 'bundle.file', bundle, changes={'path': request.GET.get('path', '')[:300]})
+    return response
 
 
 @console_view()
@@ -199,8 +207,10 @@ def bundle_label_upgrade(request, pk):
     else:
         failed = [row for row in rows if row.status == 'failed']
         if failed:
-            messages.error(request, 'Label update {:04d} failed and the files were put back: {}'.format(
-                failed[0].number, failed[0].error[:300]))
+            # A failed row keeps its snapshot only when the files couldn't be put back.
+            messages.error(request, 'Label update {:04d} failed{}: {}'.format(
+                failed[0].number, '' if failed[0].snapshot else ' and the files were put back',
+                failed[0].error[:600]))
         else:
             messages.success(request, 'Labels updated: {} change{}.'.format(
                 len(rows), '' if len(rows) == 1 else 's'))

@@ -60,12 +60,12 @@ let a bundle through the submission gate, and the bundle page runs the check aga
 1. `python3 manage.py migrate` (build 0082 to 0084, staff 0012). Every existing bundle starts at
    revision 0 and every existing validation result counts as out of date once. 0084 lets the new
    tables hold names latin1 can't, like Dvořák.
-2. Make `LABEL_UPGRADE_DIR` (default `label_upgrades/` in the checkout) writable by `apache`,
-   the same way `validation/` is. If it isn't, page views can't take the lock and nothing upgrades
-   by itself.
-3. `python3 manage.py upgrade_bundles` to see what's pending, `--preview` on a bundle or two, then
-   `--apply` as `apache`.
-4. Add the nightly cron line below.
+2. Make `LABEL_UPGRADE_DIR` (default `label_upgrades/` in the checkout) belong to `apache`,
+   the same way `validation/` does, and everything in it too. If it doesn't, the lock and snapshot
+   files can't be written and those bundles fail to update.
+3. Add the nightly cron line below. There is no manual upgrade step: the nightly job does it.
+   `python3 manage.py upgrade_bundles` (no `--apply`) and `--preview` are safe to run as anyone
+   to see what's pending.
 
 ## Commands
 
@@ -77,10 +77,17 @@ python3 manage.py upgrade_bundles --apply --bundle 836 --include-submitted
 python3 manage.py upgrade_bundles --undo 42
 ```
 
-Run it as the user the web server runs as (`apache` on atmos). The labels belong to that user,
-and so do the lock and snapshot files page views use. Nightly, in apache's crontab, capped so it
-doesn't hog the shared server:
+`--apply` and `--undo` only run as the account that owns `ARCHIVE_DIR` (`apache` on atmos), and
+refuse before touching anything otherwise. Files written by anyone else stay theirs, and ELSA
+can't change them later. That is what stopped the first prod run on 2026-11-13. Nightly, in
+apache's crontab, capped so it doesn't hog the shared server:
 
 ```
 30 2 * * * cd /export/atmos1/htdocs/elsa && mkdir -p label_upgrades && /usr/local/venvs/ELSA_3.11/bin/python manage.py upgrade_bundles --apply --max-minutes 30 >> label_upgrades/sweep.log 2>&1
 ```
+
+One bundle that fails doesn't stop the run: it gets a failed row and staff get one email naming
+the file and the reason, and the run carries on. Each full run also records when it ran and how it
+went (System health in the Admin Console). If two nights pass with no run, or a run doesn't finish,
+the Admin Console shows a warning and staff get an email at most once a day. That check runs from
+page views, since a job that isn't running can't report itself.

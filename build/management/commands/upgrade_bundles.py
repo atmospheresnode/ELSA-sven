@@ -8,7 +8,11 @@
 
 Submitted bundles are left out unless --include-submitted, since someone may be reviewing them.
 Bundles also upgrade by themselves when opened, checked or submitted.
+
+--apply and --undo only run as the account that owns the bundle files (apache on atmos).
+Files written by anyone else would be left where ELSA can't change them.
 """
+import sys
 import time
 
 from django.core.management.base import BaseCommand, CommandError
@@ -36,6 +40,8 @@ class Command(BaseCommand):
                             help='Put back the files from before this upgrade.')
 
     def handle(self, *args, **options):
+        if options['undo'] is not None or (options['apply'] and not options['preview']):
+            self._refuse_other_accounts()
         if options['undo'] is not None:
             return self._undo(options['undo'])
 
@@ -72,6 +78,20 @@ class Command(BaseCommand):
                     'Nothing was written. Re-run with --apply, or --preview to see the diff.'))
             return
 
+        # A run over every bundle is the nightly job, and checks in so a stopped job shows up.
+        sweep = options['bundle'] is None
+        if sweep:
+            label_upgrades.sweep_started()
+        try:
+            counts = self._apply(bundles, options)
+        except Exception as error:
+            if sweep:
+                label_upgrades.sweep_stopped(error)
+            raise
+        if sweep:
+            label_upgrades.sweep_finished(**counts)
+
+    def _apply(self, bundles, options):
         started = time.monotonic()
         done = changed = failed = busy = 0
         for bundle in bundles:
@@ -87,12 +107,17 @@ class Command(BaseCommand):
             except label_upgrades.UpgradeBusy:
                 busy += 1
                 continue
+            except Exception as error:                   # noqa: BLE001 - one bundle mustn't stop the rest
+                failed += 1
+                self.stdout.write(self.style.ERROR('  {} (#{}): stopped: {}'.format(
+                    bundle.name, bundle.pk, label_upgrades.explain(error)[:500])))
+                continue
             done += 1
             for row in rows:
                 if row.status == BundleUpgrade.STATUS_FAILED:
                     failed += 1
                     self.stdout.write(self.style.ERROR('  {} (#{}): {:04d} failed: {}'.format(
-                        bundle.name, bundle.pk, row.number, row.error[:300])))
+                        bundle.name, bundle.pk, row.number, row.error[:500])))
                 else:
                     changed += 1
                     self.stdout.write('  {} (#{}): {:04d} changed {} file{}'.format(
@@ -107,9 +132,20 @@ class Command(BaseCommand):
             ', {} busy and skipped'.format(busy) if busy else '',
             pruned, '' if pruned == 1 else 's'))
         if failed:
-            self.stdout.write(self.style.WARNING('Failed bundles were put back as they were.'))
+            self.stdout.write(self.style.WARNING('Failed bundles were put back as they were, unless it says otherwise above.'))
         else:
             self.stdout.write(self.style.SUCCESS('Done.'))
+        return {'done': done, 'changed': changed, 'failed': failed, 'busy': busy}
+
+    def _refuse_other_accounts(self):
+        owner = label_upgrades.files_owner()
+        if owner is None or owner == label_upgrades.account():
+            return
+        raise CommandError(
+            'Nothing was changed. This runs as {me}, but the bundle files belong to {owner}. Files '
+            'written as {me} would be left where ELSA can\'t change them. ELSA\'s automatic label '
+            'update does this by itself. To run it now: sudo -u {owner} {python} manage.py upgrade_bundles ...'.format(
+                me=label_upgrades.account(), owner=owner, python=sys.executable))
 
     def _preview(self, bundles):
         for bundle in bundles:

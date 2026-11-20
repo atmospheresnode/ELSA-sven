@@ -16,6 +16,7 @@ import fcntl
 import hashlib
 import json
 import os
+import pwd
 import re
 import shutil
 import tempfile
@@ -53,6 +54,39 @@ def snapshot_dir_for(bundle_pk):
 
 def keep_days():
     return getattr(settings, 'LABEL_UPGRADE_KEEP_DAYS', 90)
+
+
+def _name_of(uid):
+    try:
+        return pwd.getpwuid(uid).pw_name
+    except KeyError:
+        return str(uid)
+
+
+def account():
+    """The account this process runs as, like apache."""
+    return _name_of(os.geteuid())
+
+
+def files_owner():
+    """Who owns the bundle files, or None when the archive folder isn't there.
+
+    Anything else that writes labels leaves files ELSA can't change later.
+    """
+    try:
+        return _name_of(os.stat(settings.ARCHIVE_DIR).st_uid)
+    except OSError:
+        return None
+
+
+def explain(error):
+    """An error in words staff can act on. Names the file the server couldn't write."""
+    text = '{}: {}'.format(type(error).__name__, error)
+    if isinstance(error, PermissionError):
+        text += ('. ELSA runs as {0} and isn\'t allowed to write {1}. That file or its folder belongs '
+                 'to another account, and needs to belong to {0}.').format(
+                     account(), error.filename or 'one of its files')
+    return text
 
 
 # -- which files a migration may touch --
@@ -129,6 +163,10 @@ def prune_snapshots(now=None):
     removed = 0
     for row in BundleUpgrade.objects.filter(applied_at__lt=cutoff).exclude(snapshot=''):
         shutil.rmtree(row.snapshot, ignore_errors=True)
+        if os.path.exists(row.snapshot):
+            # Keep pointing at it so the next run tries again.
+            print('label upgrade: could not remove {}'.format(row.snapshot))
+            continue
         row.snapshot = ''
         row.save(update_fields=['snapshot'])
         removed += 1
@@ -188,8 +226,9 @@ def _set_revision(bundle, number):
 def upgrade_bundle(bundle, source=SOURCE_PAGE, include_submitted=False, wait_seconds=0):
     """Apply this bundle's pending label migrations. Returns the BundleUpgrade rows made.
 
-    Raises UpgradeBusy only if wait_seconds runs out. Never raises for a failed migration:
-    that's recorded on a row, staff get an email, and the bundle stays where it was.
+    Raises UpgradeBusy only if wait_seconds runs out. Never raises when the update fails,
+    whether the migration broke or the server wouldn't let ELSA write a file: that's recorded
+    on a row, staff get an email, and the bundle stays where it was.
     """
     from build.models import Bundle
 
@@ -197,22 +236,34 @@ def upgrade_bundle(bundle, source=SOURCE_PAGE, include_submitted=False, wait_sec
         return []
 
     rows = []
-    with _BundleLock(bundle.pk, wait_seconds):
-        # Someone else may have finished it while this waited.
-        bundle.label_revision = Bundle.objects.filter(pk=bundle.pk).values_list(
-            'label_revision', flat=True).first() or 0
-        for migration in label_migrations.pending(bundle):
-            if not migration.applies_to(bundle):
+    try:
+        with _BundleLock(bundle.pk, wait_seconds):
+            # Someone else may have finished it while this waited.
+            bundle.label_revision = Bundle.objects.filter(pk=bundle.pk).values_list(
+                'label_revision', flat=True).first() or 0
+            for migration in label_migrations.pending(bundle):
+                if not migration.applies_to(bundle):
+                    _set_revision(bundle, migration.number)
+                    continue
+                if source == SOURCE_PAGE and _recently_failed(bundle, migration):
+                    break
+                row, ok = _apply_one(bundle, migration, source)
+                if row is not None:
+                    rows.append(row)
+                if not ok:
+                    break
                 _set_revision(bundle, migration.number)
-                continue
-            if source == SOURCE_PAGE and _recently_failed(bundle, migration):
-                break
-            row, ok = _apply_one(bundle, migration, source)
+    except UpgradeBusy:
+        raise
+    except Exception as error:                           # noqa: BLE001 - recorded on a row
+        # Outside the migration itself, like a lock or snapshot file ELSA can't write.
+        migration = next((m for m in label_migrations.pending(bundle) if m.applies_to(bundle)), None)
+        if migration is None:
+            print('label upgrade: bundle {}: {}'.format(bundle.pk, explain(error)))
+        else:
+            row = _record_failure(bundle, migration, source, explain(error))
             if row is not None:
                 rows.append(row)
-            if not ok:
-                break
-            _set_revision(bundle, migration.number)
     _tell_owner(bundle, rows, source)
     return rows
 
@@ -256,20 +307,18 @@ def _apply_one(bundle, migration, source):
             if broken:
                 raise RuntimeError('left labels that do not parse: {}'.format(', '.join(broken)))
     except Exception as error:                           # noqa: BLE001 - recorded on the row
-        _restore_snapshot(snapshot, directory)
-        shutil.rmtree(snapshot, ignore_errors=True)
-        first_failure = not BundleUpgrade.objects.filter(
-            bundle=bundle, number=migration.number, status=BundleUpgrade.STATUS_FAILED).exists()
-        row = BundleUpgrade.objects.create(
-            bundle=bundle, number=migration.number, name=migration.name, title=migration.title,
-            status=BundleUpgrade.STATUS_FAILED, changes=[], files=[], source=source,
-            # ASCII only, since the column may be latin1 (see the ELSA charset notes).
-            error='{}: {}'.format(type(error).__name__, error).encode(
-                'ascii', 'backslashreplace').decode('ascii')[:4000],
-            seen_at=timezone.now())
-        if first_failure:
-            _tell_staff(row)
-        return row, False
+        text, kept = explain(error), ''
+        try:
+            if _tracked_files(directory) != before:
+                _restore_snapshot(snapshot, directory)
+        except Exception as restore_error:               # noqa: BLE001 - recorded on the row
+            # Keep the copy so the files can be put back by hand.
+            text += '\nPutting the files back failed too: {}\nThe copy from before is in {}'.format(
+                explain(restore_error), snapshot)
+            kept = snapshot
+        else:
+            shutil.rmtree(snapshot, ignore_errors=True)
+        return _record_failure(bundle, migration, source, text, snapshot=kept), False
 
     after = _tracked_files(directory)
     changed = sorted(relative for relative in after
@@ -293,6 +342,26 @@ def _apply_one(bundle, migration, source):
         files=changed + ['{} (removed)'.format(relative) for relative in removed],
         source=source, snapshot=snapshot)
     return row, True
+
+
+def _record_failure(bundle, migration, source, text, snapshot=''):
+    """A failed row for this migration, and one email to staff the first time. None if skipped."""
+    from build.models import BundleUpgrade
+
+    # Page views that keep hitting the same problem don't pile up rows.
+    if source == SOURCE_PAGE and _recently_failed(bundle, migration):
+        return None
+    first_failure = not BundleUpgrade.objects.filter(
+        bundle=bundle, number=migration.number, status=BundleUpgrade.STATUS_FAILED).exists()
+    row = BundleUpgrade.objects.create(
+        bundle=bundle, number=migration.number, name=migration.name, title=migration.title,
+        status=BundleUpgrade.STATUS_FAILED, changes=[], files=[], source=source,
+        # ASCII only, since the column may be latin1 (see the ELSA charset notes).
+        error=text.encode('ascii', 'backslashreplace').decode('ascii')[:4000],
+        snapshot=snapshot, seen_at=timezone.now())
+    if first_failure:
+        _tell_staff(row)
+    return row
 
 
 def undo(row):
@@ -319,21 +388,31 @@ def undo(row):
     return row
 
 
+def _recipients():
+    return list(getattr(settings, 'LABEL_UPGRADE_RECIPIENTS', ['rupakdey@nmsu.edu']))
+
+
 def _tell_staff(row):
-    recipients = getattr(settings, 'LABEL_UPGRADE_RECIPIENTS', ['rupakdey@nmsu.edu'])
+    recipients = _recipients()
     if not recipients:
         return
     bundle = row.bundle
+    if row.snapshot:
+        state = 'Some files may still be changed. The bundle is still on revision {}.'
+    else:
+        state = 'Its files are as they were before, and it is still on revision {}.'
     body = (
         'ELSA could not apply label migration {:04d}_{} to bundle "{}" (#{}, owner {}).\n\n'
         '{}\n\n'
-        'The bundle was put back as it was and is still on revision {}. Page views won\'t retry '
-        'for {} hours; `manage.py upgrade_bundles --bundle {} --apply` retries now.\n'
+        '{} The automatic label update tries again each day, page views wait {} hours first. To retry now, press '
+        '"Update labels now" on the bundle in the Admin Console, or run '
+        '`sudo -u {} manage.py upgrade_bundles --bundle {} --apply`.\n'
     ).format(row.number, row.name, bundle.name, bundle.pk, bundle.user.username, row.error,
-             bundle.label_revision, PAGE_RETRY_HOURS, bundle.pk)
+             state.format(bundle.label_revision), PAGE_RETRY_HOURS, files_owner() or account(),
+             bundle.pk)
     try:
         EmailMessage(subject='ELSA label upgrade failed: {}'.format(bundle.name), body=body,
-                     from_email='atm-elsa@nmsu.edu', to=list(recipients)).send()
+                     from_email='atm-elsa@nmsu.edu', to=recipients).send()
     except Exception as error:                           # noqa: BLE001 - the row has it
         print('label upgrade: could not email staff: {}'.format(error))
 
@@ -456,7 +535,11 @@ def touched(rows):
 
 
 def safe_upgrade(bundle, source=SOURCE_PAGE, include_submitted=False, wait_seconds=0):
-    """upgrade_bundle for callers that must not fail because of it, like page views."""
+    """upgrade_bundle for callers that must not fail because of it, like page views.
+
+    Also where ELSA notices the nightly job has stopped, since that can't report itself.
+    """
+    alert_if_sweep_stopped()
     try:
         return upgrade_bundle(bundle, source=source, include_submitted=include_submitted,
                               wait_seconds=wait_seconds)
@@ -465,6 +548,132 @@ def safe_upgrade(bundle, source=SOURCE_PAGE, include_submitted=False, wait_secon
     except Exception as error:                           # noqa: BLE001 - see docstring
         print('label upgrade: bundle {}: {}: {}'.format(bundle.pk, type(error).__name__, error))
         return []
+
+
+# -- the nightly job --
+#
+# Each run of `upgrade_bundles --apply` writes down when it started and how it went, so a job
+# that stopped running (or was never installed) shows up instead of being guessed at.
+
+SWEEP_KEY = 'label_sweep'
+SWEEP_LATE_HOURS = 49     # two nights in a row missed, with an hour to spare
+SWEEP_STUCK_HOURS = 3     # it stops starting bundles after --max-minutes 30
+ALERT_KEY = 'label-sweep-alert'
+
+
+def _sweep_record():
+    from staff.models import ConsoleSnapshot
+    record, _ = ConsoleSnapshot.objects.get_or_create(
+        key=SWEEP_KEY, defaults={'data': {'watching_since': timezone.now().isoformat()}})
+    return record
+
+
+def _save_sweep(record, data):
+    record.data = data
+    record.computed_at = timezone.now()
+    record.save(update_fields=['data', 'computed_at'])
+
+
+def sweep_started():
+    record = _sweep_record()
+    _save_sweep(record, {'watching_since': record.data.get('watching_since'),
+                         'started_at': timezone.now().isoformat(), 'account': account()})
+
+
+def sweep_finished(**counts):
+    record = _sweep_record()
+    _save_sweep(record, dict(record.data, finished_at=timezone.now().isoformat(), **counts))
+
+
+def sweep_stopped(error):
+    record = _sweep_record()
+    _save_sweep(record, dict(record.data, error=explain(error)[:1000]))
+
+
+def _when(text):
+    return datetime.datetime.fromisoformat(text) if text else None
+
+
+def _date(moment):
+    return timezone.localtime(moment).strftime('%B %d, %Y at %I:%M %p %Z')
+
+
+def sweep_status(now=None):
+    """The last run, with 'problem' set when staff need to look at the server."""
+    now = now or timezone.now()
+    data = dict(_sweep_record().data)
+    for key in ('watching_since', 'started_at', 'finished_at'):
+        data[key] = _when(data.get(key))
+    late = datetime.timedelta(hours=SWEEP_LATE_HOURS)
+    started = data['started_at']
+    problem = ''
+    if started is None:
+        since = data['watching_since']
+        if since and now - since > late:
+            problem = 'The automatic label update has not run since ELSA started watching for it on {}.'.format(
+                _date(since))
+    elif now - started > late:
+        problem = 'The automatic label update last ran on {}. It should run every day.'.format(_date(started))
+    elif data.get('error'):
+        problem = 'The last automatic label update, on {}, stopped with an error: {}'.format(
+            _date(started), data['error'])
+    elif data['finished_at'] is None and now - started > datetime.timedelta(hours=SWEEP_STUCK_HOURS):
+        problem = "The last automatic label update started on {} and didn't finish.".format(_date(started))
+    data['problem'] = problem
+    return data
+
+
+LOG_TAIL_BYTES = 64 * 1024
+
+
+def sweep_log():
+    """The last run's part of sweep.log, which the cron line writes, for the console."""
+    path = os.path.join(upgrade_root(), 'sweep.log')
+    try:
+        with open(path, 'rb') as handle:
+            size = handle.seek(0, os.SEEK_END)
+            handle.seek(max(0, size - LOG_TAIL_BYTES))
+            text = handle.read().decode('utf-8', errors='replace')
+    except FileNotFoundError:
+        return ''
+    except OSError as error:
+        return 'ELSA could not read the log. {}'.format(explain(error))
+    # Every run starts with this line, so the last one is where the last run starts.
+    start = text.rfind('Newest label migration:')
+    if start >= 0:
+        text = text[start:]
+    elif size > LOG_TAIL_BYTES:
+        text = text.split('\n', 1)[-1]
+    return text.strip()
+
+
+def alert_if_sweep_stopped():
+    """Email staff, at most once a day, while the nightly job isn't running. Never raises."""
+    from django.core.cache import cache
+    try:
+        if cache.get(ALERT_KEY):
+            return
+        problem = sweep_status()['problem']
+        if not problem:
+            cache.set(ALERT_KEY, 'ok', 3600)
+            return
+        cache.set(ALERT_KEY, 'sent', 24 * 3600)
+        recipients = _recipients()
+        if not recipients:
+            return
+        body = (
+            '{}\n\n'
+            'Until it runs again, bundles only get label updates when their owners open, check or '
+            'submit them.\n\n'
+            'On the server, `sudo crontab -u {} -l` should list upgrade_bundles, and the end of '
+            '{} says how the last run went. System health in the Admin Console shows the last run '
+            'too.\n\n'
+            'ELSA sends this at most once a day while it lasts.\n'
+        ).format(problem, files_owner() or account(), os.path.join(upgrade_root(), 'sweep.log'))
+        EmailMessage(subject="ELSA's automatic label update isn't running", body=body,
+                     from_email='atm-elsa@nmsu.edu', to=recipients).send()
+    except Exception as error:                           # noqa: BLE001 - never break a page
+        print('label upgrade: could not check the nightly job: {}'.format(error))
 
 
 # -- preview --

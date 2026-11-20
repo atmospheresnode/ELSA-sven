@@ -4,6 +4,9 @@
 {% block console %}
 <h1 class="staff-title">Bundles</h1>
 <p class="staff-subtitle">Every bundle in ELSA, most recently changed first. Read-only: owners make their own changes.</p>
+{% if sweep_problem %}
+<div class="staff-warning mb-3">{{ sweep_problem }} <a href="{% url 'staff:health' %}#label-sweep">See the last run</a></div>
+{% endif %}
 {% if failed_count and labels != 'failed' %}
 <div class="staff-warning mb-3">{{ failed_count }} bundle{{ failed_count|pluralize }} {{ failed_count|pluralize:"has,have" }} a label update that failed, and can't be submitted until it goes through. <a href="{% url 'staff:bundles' %}?labels=failed">Show {{ failed_count|pluralize:"it,them" }}</a></div>
 {% endif %}

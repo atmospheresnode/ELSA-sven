@@ -18,7 +18,7 @@
         <section class="staff-card" aria-labelledby="facts-heading">
             <div class="staff-card-head">
                 <h2 id="facts-heading">Details</h2>
-                <div class="staff-card-tools d-flex gap-2">{% if on_disk %}<a class="btn btn-sm staff-btn" href="{% url 'staff:bundle_files' bundle.pk %}">Browse files</a><a class="btn btn-sm staff-btn-ghost" href="{% url 'staff:bundle_download' bundle.pk %}">Download .tar.gz</a>{% endif %}</div>
+                <div class="staff-card-tools d-flex gap-2">{% if on_disk %}<a class="btn btn-sm staff-btn" href="{% url 'staff:bundle_files' bundle.pk %}">Browse files</a>{% include 'staff/_download_menu.html' with bundle=bundle %}{% endif %}</div>
             </div>
             <dl class="staff-rows">
                 <dt>Bundle ID</dt><dd class="staff-mono">{{ bundle.bundleID|default:"" }}</dd>

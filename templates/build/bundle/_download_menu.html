@@ -1,0 +1,18 @@
+{% load download_tags %}{% download_choices bundle as options %}
+<div class="dropdown d-inline-block">
+   <button type="button" class="{{ button_class }} dropdown-toggle" id="download_menu" data-bs-toggle="dropdown" aria-expanded="false"{% if button_style %} style="{{ button_style }}"{% endif %}>
+      <i class="bi bi-download" aria-hidden="true"></i>
+      Download Bundle
+   </button>
+   <ul class="dropdown-menu" aria-labelledby="download_menu">
+      {% for option in options %}
+      {% if option.part == 'collection' %}{% ifchanged option.part %}<li><hr class="dropdown-divider"></li>{% endifchanged %}{% endif %}
+      <li><a class="dropdown-item" href="{% url 'build:bundle_download' bundle.pk %}?part={{ option.part }}{% if option.collection %}&amp;collection={{ option.collection|urlencode }}{% endif %}">
+         {{ option.title }} <span class="text-muted">.tar, {{ option.size|filesizeformat }}</span>
+         <div class="small text-muted">{{ option.note }}</div>
+      </a></li>
+      {% empty %}
+      <li><span class="dropdown-item-text text-muted">The bundle's files aren't on the server.</span></li>
+      {% endfor %}
+   </ul>
+</div>
